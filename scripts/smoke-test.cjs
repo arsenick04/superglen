@@ -47,6 +47,13 @@ async function sampleFps(page, n = 6) {
 }
 
 
+
+const logoInfo = () => {
+  const img = document.querySelector('.start-overlay .start-logo');
+  const r = img && img.getBoundingClientRect();
+  return { ok: !!img && img.complete && img.naturalWidth > 0 && r.width > 0 && r.height > 0 && getComputedStyle(img).display !== 'none' };
+};
+
 const dist2 = (a, b) => Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
 
 async function shot(page, name) {
@@ -107,12 +114,13 @@ const layoutInfo = () => {
 
 async function touchScenario(page, check) {
   await sleep(2500);
-  const overlayVisible = () =>
-    page.evaluate(() => {
-      const o = document.querySelector('.start-overlay');
-      return !!o && getComputedStyle(o).display !== 'none';
-    });
+  const overlayVisible = () => page.evaluate(() => !!document.querySelector('.start-overlay'));
   check('start overlay visible', await overlayVisible());
+  check('logo loaded and visible (touch)', (await page.evaluate(logoInfo)).ok);
+  check('touch start pill says Ketuk untuk mulai', await page.evaluate(() => {
+    const t = document.querySelector('.start-text-touch');
+    return getComputedStyle(t).display !== 'none' && t.textContent === 'Ketuk untuk mulai';
+  }));
   check('touchUi true before start', (await page.evaluate(state)).touchUi);
   const fingers = await makeFingers(page);
   const s0 = await page.evaluate(state);
@@ -294,8 +302,15 @@ async function main() {
     results.push(
       await runScenario(browser, 'desktop', { viewport: { width: 1280, height: 720 } }, async (page, check) => {
         await sleep(2000);
+        check('logo loaded and visible (desktop)', (await page.evaluate(logoInfo)).ok);
+        check('PC start pill says Klik untuk mulai', await page.evaluate(() => {
+          const t = document.querySelector('.start-text-pc');
+          return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai';
+        }));
+        await shot(page, 'start-desktop');
         await page.mouse.click(640, 360);
-        await sleep(300);
+        await sleep(600);
+        check('desktop start overlay gone', await page.evaluate(() => !document.querySelector('.start-overlay')));
         const a = await page.evaluate(state);
         await page.keyboard.down('w');
         await sleep(1500);

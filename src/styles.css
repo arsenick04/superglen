@@ -86,13 +86,6 @@ body {
   pointer-events: none; /* clicks fall through to the canvas (pointer lock) */
 }
 
-.hud-title {
-  font-size: 40px;
-  font-weight: 800;
-  color: #e8453c;
-  line-height: 1.1;
-}
-
 .hud-start {
   margin-top: 6px;
   font-size: 26px;
@@ -111,9 +104,6 @@ body {
 @media (max-height: 450px) {
   .hud-card {
     padding: 12px 22px;
-  }
-  .hud-title {
-    font-size: 30px;
   }
   .hud-start {
     font-size: 22px;
@@ -198,7 +188,7 @@ html.touch-ui.game-started .touch-layer {
   box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.5);
 }
 
-/* ---- Touch start screen ---- */
+/* ---- Start screen (logo) ---- */
 .start-overlay {
   position: absolute;
   inset: 0;
@@ -207,38 +197,88 @@ html.touch-ui.game-started .touch-layer {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  background: linear-gradient(180deg, rgba(232, 69, 60, 0.82), rgba(255, 159, 28, 0.82));
-  pointer-events: auto;
+  box-sizing: border-box;
+  padding: 0 0 calc(env(safe-area-inset-bottom) + 6px);
+  background: #000;
+  pointer-events: none; /* PC: the first click must reach the canvas for pointer lock */
   touch-action: none;
+  animation: start-in 0.5s ease-out both;
+  transition: opacity 0.3s ease-out;
+}
+html.touch-ui .start-overlay {
+  pointer-events: auto;
+}
+.start-overlay.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.start-logo {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+  /* feather the image edges so no rectangle shows against the pure black background */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 4%, #000 94%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 4%, #000 94%, transparent);
+  mask-composite: intersect;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 .start-title {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
   font-size: min(18vh, 96px);
   font-weight: 900;
-  color: #fff;
-  text-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
-  letter-spacing: 1px;
+  color: #ffd23f;
+  text-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
   line-height: 1;
 }
 .start-hint {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 26px 10px 16px;
+  gap: 12px;
+  margin-top: -2vh;
+  padding: 6px 24px 6px 14px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.25);
+  background: linear-gradient(180deg, #e8453c, #c2261f);
+  border: 3px solid #ffd23f;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: min(9vh, 40px);
+  font-size: min(7vh, 34px);
   font-weight: 800;
   animation: start-pulse 1.1s ease-in-out infinite;
 }
 .start-icon {
-  width: min(12vh, 52px);
-  height: min(12vh, 52px);
+  width: min(9vh, 44px);
+  height: min(9vh, 44px);
 }
 .start-icon svg {
   width: 100%;
   height: 100%;
+}
+.start-text-touch {
+  display: none;
+}
+html.touch-ui .start-text-touch {
+  display: inline;
+}
+html.touch-ui .start-text-pc {
+  display: none;
+}
+@keyframes start-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 @keyframes start-pulse {
   0%,
@@ -246,7 +286,13 @@ html.touch-ui.game-started .touch-layer {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-overlay,
+  .start-hint {
+    animation: none;
   }
 }
 
