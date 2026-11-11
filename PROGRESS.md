@@ -48,7 +48,48 @@ Sesi ini berjalan di cloud, jadi tidak ada link dev server lokal yang bisa saya 
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Paket malam A2 (11 November 2026): selesai
+
+### Yang selesai
+- **Joystick virtual** di kiri: muncul di tempat jempol menyentuh (seluruh 45% kiri layar), radius 60 px.
+- **Dua tombol besar** di kanan bawah untuk mode Glen: Lompat (emas, 104 px) dan Bicara/Ambil (merah, 88 px). Ikon saja, tanpa tulisan.
+- **Geser jari di area kosong** untuk memutar kamera.
+- Multi-sentuh: joystick, kamera, dan tombol bisa dipakai bersamaan.
+- **Layar "Ketuk untuk mulai"** di perangkat sentuh. Ketukan ini juga disiapkan sebagai pembuka audio iOS untuk paket B4.
+- **Layar "Putar HP ke samping"** kalau HP dipegang tegak.
+- Deteksi otomatis: PC tetap memakai keyboard dan mouse, perangkat sentuh memakai kontrol sentuh. `?touch=1` memaksa kontrol sentuh di PC untuk uji coba.
+- Pencegahan zoom, scroll, dan menu tekan-lama di Safari iOS.
+
+### Yang belum
+- Tombol Lompat sudah terbaca tapi Glen belum melompat. Itu paket A3.
+- Tombol Bicara/Ambil belum punya fungsi sampai Bab 1 (paket B1).
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` dan `npm run typecheck` | Lulus |
+| Error console | 0 |
+| Desktop 1280x720 | Lulus 3 dari 3 |
+| iPhone landscape 844x390, sentuhan disimulasikan | Lulus 24 dari 24: layar mulai, joystick, geser kamera, multi-sentuh, tombol |
+| Tata letak 667x375 (iPhone SE) dan 1024x768 (iPad) | Lulus: tidak terpotong, tidak tumpang tindih |
+| Layar putar HP di 390x844 | Lulus |
+
+Frame rate headless (renderer software, hanya perkiraan): desktop 10 sampai 11 fps, iPhone landscape 14 sampai 23 fps. **Fps di perangkat asli belum diukur.** Angka FPS di kiri atas layar adalah angka yang perlu dicatat dari iPhone dan PC.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Rasa joystick (zona mati, radius) dan kecepatan putar kamera untuk jari anak.
+- Posisi tombol terhadap poni layar dan garis home.
+- Arah geser kamera naik-turun (sekarang sama dengan mouse; bisa dibalik kalau terasa aneh).
+
+### Keputusan yang diambil sendiri
+- Joystick dibuat "mengambang" (muncul di tempat jempol), karena lebih mudah untuk anak daripada joystick di posisi tetap.
+- Di laptop layar sentuh, sekali layar disentuh game pindah ke mode sentuh dan mouse tidak lagi mengunci kursor. Dibiarkan karena target utama adalah iPhone dan PC biasa.
+- Akses jaringan lokal sudah aktif dari A1 (`npm run dev` mencetak alamat "Network"). Cara termudah tetap lewat GitHub Pages.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Untuk dicoba besok pagi
-1. **Merge PR, lalu buka https://arsenick04.github.io/superglen/ di PC.** Klik layar, jalan dengan WASD, putar kamera dengan mouse. Rasakan: apakah kecepatan jalan dan putaran kamera enak?
-2. **Jelajahi area uji**: maju lurus (W) untuk naik 3 anak tangga, ke kiri lalu maju untuk naik tanjakan ke panggung kuning, berdiri membelakangi dinding tinggi di sisi kiri untuk melihat kamera merapat.
-3. **Buka link yang sama di Safari iPhone (landscape)** hanya untuk melihat tampilannya dan angka FPS di kiri atas. Glen belum bisa digerakkan di iPhone sampai paket A2.
+1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone, posisi landscape.** Ketuk untuk mulai. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
+2. **Biarkan anak mencoba**: jempol kiri untuk jalan, geser jari kanan untuk memutar kamera. Perhatikan: apakah joystick mudah dipakai, apakah kamera terlalu cepat atau lambat, apakah tombol mudah dijangkau.
+3. **Catat angka FPS** di kiri atas, di iPhone dan di PC. Tombol Lompat belum berfungsi sampai paket A3.

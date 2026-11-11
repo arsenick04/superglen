@@ -7,6 +7,9 @@ import { Player } from '../player/Player';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { TestArea } from '../world/TestArea';
 import { Hud } from '../ui/Hud';
+import { TouchSource } from '../input/TouchSource';
+import { startGate } from './StartGate';
+import { touchMode } from './TouchMode';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -18,6 +21,9 @@ export interface DebugHandle {
   fps: number;
   player: { x: number; y: number; z: number };
   grounded: boolean;
+  started: boolean;
+  touchUi: boolean;
+  cameraYaw: number;
 }
 
 declare global {
@@ -48,7 +54,11 @@ export class Game {
 
   private fpsFrames = 0;
   private fpsTime = 0;
-  private readonly debug: DebugHandle = { fps: 0, player: { x: 0, y: 0, z: 0 }, grounded: false };
+  private readonly debug: DebugHandle = { fps: 0, player: { x: 0, y: 0, z: 0 }, grounded: false,
+    started: false,
+    touchUi: false,
+    cameraYaw: 0,
+  };
 
   constructor(container: HTMLElement) {
     this.renderer = new Renderer(container);
@@ -56,7 +66,8 @@ export class Game {
 
     this.input = new Input();
     this.input.addSource(new KeyboardMouseSource(this.renderer.canvas, CameraConfig.mouseSensitivity));
-    // A2: this.input.addSource(new TouchSource(...)) - gameplay code does not change.
+    const ui = document.getElementById('ui');
+    if (ui) this.input.addSource(new TouchSource(ui, () => touchMode.active));
 
     this.world = new TestArea();
     this.world.build(this.scene, this.physics);
@@ -69,7 +80,6 @@ export class Game {
     this.cameraRig.update(0, this.player.visualPosition);
     this.world.update(this.player.visualPosition);
 
-    const ui = document.getElementById('ui');
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
 
     window.__superglen = this.debug;
@@ -138,6 +148,9 @@ export class Game {
     this.debug.player.y = p.y;
     this.debug.player.z = p.z;
     this.debug.grounded = this.player.grounded;
+    this.debug.started = startGate.started;
+    this.debug.touchUi = touchMode.active;
+    this.debug.cameraYaw = this.cameraRig.yaw;
   }
 
   private readonly onVisibility = (): void => {

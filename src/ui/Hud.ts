@@ -1,21 +1,28 @@
+import { startGate } from '../core/StartGate';
+import { touchMode } from '../core/TouchMode';
+
+const TAP_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="14" r="8" fill="none" stroke="#fff" stroke-width="3" opacity="0.8"/><circle cx="32" cy="14" r="13" fill="none" stroke="#fff" stroke-width="2" opacity="0.4"/><rect x="26" y="10" width="12" height="32" rx="6" fill="#fff"/><rect x="16" y="34" width="32" height="24" rx="10" fill="#fff"/></svg>';
+
+const ROTATE_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><g class="rotate-phone"><rect x="22" y="6" width="20" height="36" rx="5" fill="none" stroke="#fff" stroke-width="4"/><circle cx="32" cy="35" r="2" fill="#fff"/></g><path d="M10 54 Q32 66 54 54" fill="none" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/><path d="M54 54 L46 52 M54 54 L53 62" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/></svg>';
+
 /**
- * DOM HUD overlay: FPS meter, PC start/help card, touch note.
- * Mounted in the #ui root. All text is Indonesian. The DOM is only touched when something changes
- * (fps text at most ~2x per second).
+ * DOM HUD overlay: FPS meter, PC start/help card, touch start screen, rotate-phone screen.
+ * Mounted in the #ui root. All text is Indonesian. The DOM is only touched when something changes.
  */
 export class Hud {
   private readonly fpsEl: HTMLDivElement | null;
-  private readonly card: HTMLDivElement | null;
-  private readonly isTouch: boolean;
+  private readonly card: HTMLDivElement;
+  private touchStart: HTMLDivElement | null = null;
   private readonly canLock: boolean;
   private lastFpsShown = -1;
   private dismissed = false;
 
   constructor(
-    root: HTMLElement,
+    private readonly root: HTMLElement,
     private readonly canvas: HTMLElement,
   ) {
-    this.isTouch = window.matchMedia('(pointer: coarse)').matches;
     this.canLock = typeof canvas.requestPointerLock === 'function' && 'pointerLockElement' in document;
 
     const showFps = new URLSearchParams(window.location.search).get('fps') !== '0';
@@ -26,34 +33,39 @@ export class Hud {
       this.fpsEl = null;
     }
 
-    if (this.isTouch) {
-      this.card = null;
-      root.appendChild(el('div', 'hud-note', 'Kontrol sentuh segera hadir'));
-    } else {
-      const card = el('div', 'hud-card');
-      card.appendChild(el('div', 'hud-title', 'Superglen'));
-      card.appendChild(el('div', 'hud-start', 'Klik untuk mulai'));
-      const list = el('ul', 'hud-controls');
-      for (const t of ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
-        list.appendChild(el('li', '', t));
-      }
-      card.appendChild(list);
-      root.appendChild(card);
-      this.card = card;
-
-      if (this.canLock) {
-        document.addEventListener('pointerlockchange', this.syncCard);
-      } else {
-        // No pointer lock (e.g. some browsers): hide after the first click or key press.
-        const dismiss = (): void => {
-          this.dismissed = true;
-          this.syncCard();
-        };
-        window.addEventListener('mousedown', dismiss, { once: true });
-        window.addEventListener('keydown', dismiss, { once: true });
-      }
-      this.syncCard();
+    const card = el('div', 'hud-card');
+    card.appendChild(el('div', 'hud-title', 'Superglen'));
+    card.appendChild(el('div', 'hud-start', 'Klik untuk mulai'));
+    const list = el('ul', 'hud-controls');
+    for (const t of ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
+      list.appendChild(el('li', '', t));
     }
+    card.appendChild(list);
+    root.appendChild(card);
+    this.card = card;
+
+    if (this.canLock) {
+      document.addEventListener('pointerlockchange', this.onLockChange);
+    } else {
+      // No pointer lock (e.g. some browsers): start after the first click or key press.
+      const dismiss = (): void => {
+        this.dismissed = true;
+        this.syncCard();
+        if (!touchMode.active) startGate.start();
+      };
+      window.addEventListener('mousedown', dismiss, { once: true });
+      window.addEventListener('keydown', dismiss, { once: true });
+    }
+
+    // Rotate-phone screen: always in the DOM, CSS shows it only for touch UI in portrait.
+    const rotate = el('div', 'rotate-overlay');
+    const ri = el('div', 'rotate-icon');
+    ri.innerHTML = ROTATE_ICON;
+    rotate.appendChild(ri);
+    rotate.appendChild(el('div', 'rotate-text', 'Putar HP ke samping'));
+    root.appendChild(rotate);
+
+    touchMode.onChange(() => this.syncMode());
   }
 
   /** Call whenever the game's fps value is refreshed; the DOM is only written when it changed. */
@@ -63,11 +75,49 @@ export class Hud {
     this.fpsEl.textContent = `FPS ${fps}`;
   }
 
-  private readonly syncCard = (): void => {
-    if (!this.card) return;
-    const locked = this.canLock && document.pointerLockElement === this.canvas;
-    this.card.style.display = locked || this.dismissed ? 'none' : '';
+  private syncMode(): void {
+    if (touchMode.active && !startGate.started && !this.touchStart) this.buildTouchStart();
+    this.syncCard();
+  }
+
+  private buildTouchStart(): void {
+    const o = el('div', 'start-overlay');
+    o.appendChild(el('div', 'start-title', 'Superglen'));
+    const hint = el('div', 'start-hint');
+    const icon = el('div', 'start-icon');
+    icon.innerHTML = TAP_ICON;
+    hint.appendChild(icon);
+    hint.appendChild(el('div', 'start-text', 'Ketuk untuk mulai'));
+    o.appendChild(hint);
+    // pointerup (a real user gesture on iOS) rather than pointerdown: audio/fullscreen need it.
+    o.addEventListener('pointerup', this.onStartTap);
+    this.root.appendChild(o);
+    this.touchStart = o;
+    startGate.onStart(() => {
+      o.remove();
+      this.touchStart = null;
+    });
+  }
+
+  private readonly onStartTap = (): void => {
+    try {
+      const p = document.documentElement.requestFullscreen?.() as Promise<void> | undefined;
+      p?.catch?.(() => undefined);
+    } catch {
+      // iPhone Safari has no fullscreen API; ignore.
+    }
+    startGate.start();
   };
+
+  private readonly onLockChange = (): void => {
+    if (document.pointerLockElement === this.canvas && !touchMode.active) startGate.start();
+    this.syncCard();
+  };
+
+  private syncCard(): void {
+    const locked = this.canLock && document.pointerLockElement === this.canvas;
+    this.card.style.display = touchMode.active || locked || this.dismissed ? 'none' : '';
+  }
 }
 
 function el(tag: string, className: string, text?: string): HTMLDivElement {
