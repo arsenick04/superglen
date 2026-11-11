@@ -14,7 +14,6 @@ const ROTATE_ICON =
 export class Hud {
   private readonly fpsEl: HTMLDivElement | null;
   private readonly card: HTMLDivElement;
-  private touchStart: HTMLDivElement | null = null;
   private readonly canLock: boolean;
   private lastFpsShown = -1;
   private dismissed = false;
@@ -34,15 +33,15 @@ export class Hud {
     }
 
     const card = el('div', 'hud-card');
-    card.appendChild(el('div', 'hud-title', 'Superglen'));
-    card.appendChild(el('div', 'hud-start', 'Klik untuk mulai'));
+    card.appendChild(el('div', 'hud-start', 'Klik untuk lanjut'));
     const list = el('ul', 'hud-controls');
-    for (const t of ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
+    for (const t of ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
       list.appendChild(el('li', '', t));
     }
     card.appendChild(list);
     root.appendChild(card);
     this.card = card;
+    this.buildStartScreen();
 
     if (this.canLock) {
       document.addEventListener('pointerlockchange', this.onLockChange);
@@ -76,26 +75,43 @@ export class Hud {
   }
 
   private syncMode(): void {
-    if (touchMode.active && !startGate.started && !this.touchStart) this.buildTouchStart();
     this.syncCard();
   }
 
-  private buildTouchStart(): void {
+  /**
+   * Full-screen logo start screen for PC and touch. On PC it ignores pointer events so the first
+   * click lands on the canvas (pointer lock needs that gesture); on touch it takes the tap itself.
+   */
+  private buildStartScreen(): void {
     const o = el('div', 'start-overlay');
-    o.appendChild(el('div', 'start-title', 'Superglen'));
+    const fallback = el('div', 'start-title', 'Superglen');
+    fallback.style.display = 'none';
+    const img = document.createElement('img');
+    img.className = 'start-logo';
+    img.alt = 'Superglen';
+    img.draggable = false;
+    img.decoding = 'async';
+    img.addEventListener('error', () => {
+      img.style.display = 'none';
+      fallback.style.display = '';
+    });
+    img.src = `${import.meta.env.BASE_URL}img/logo.webp`;
     const hint = el('div', 'start-hint');
     const icon = el('div', 'start-icon');
     icon.innerHTML = TAP_ICON;
     hint.appendChild(icon);
-    hint.appendChild(el('div', 'start-text', 'Ketuk untuk mulai'));
-    o.appendChild(hint);
+    hint.appendChild(el('span', 'start-text start-text-touch', 'Ketuk untuk mulai'));
+    hint.appendChild(el('span', 'start-text start-text-pc', 'Klik untuk mulai'));
+    o.append(img, fallback, hint);
     // pointerup (a real user gesture on iOS) rather than pointerdown: audio/fullscreen need it.
-    o.addEventListener('pointerup', this.onStartTap);
+    o.addEventListener('pointerup', () => {
+      if (touchMode.active) this.onStartTap();
+    });
     this.root.appendChild(o);
-    this.touchStart = o;
     startGate.onStart(() => {
-      o.remove();
-      this.touchStart = null;
+      o.classList.add('leaving');
+      window.setTimeout(() => o.remove(), 300);
+      this.syncCard();
     });
   }
 
@@ -116,7 +132,8 @@ export class Hud {
 
   private syncCard(): void {
     const locked = this.canLock && document.pointerLockElement === this.canvas;
-    this.card.style.display = touchMode.active || locked || this.dismissed ? 'none' : '';
+    this.card.style.display =
+      touchMode.active || locked || this.dismissed || !startGate.started ? 'none' : '';
   }
 }
 

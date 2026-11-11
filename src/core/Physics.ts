@@ -5,7 +5,7 @@ export const FIXED_DT = 1 / 60;
 
 /**
  * World gravity (m/s^2) for dynamic bodies (balls, props added later).
- * The player is kinematic and applies its own gravity (PlayerConfig.gravity).
+ * The player is kinematic and applies its own gravity (ModeTunings.gravityUp in player/PlayerConfig).
  */
 export const WORLD_GRAVITY = -25;
 

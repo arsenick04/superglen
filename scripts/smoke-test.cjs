@@ -47,6 +47,13 @@ async function sampleFps(page, n = 6) {
 }
 
 
+
+const logoInfo = () => {
+  const img = document.querySelector('.start-overlay .start-logo');
+  const r = img && img.getBoundingClientRect();
+  return { ok: !!img && img.complete && img.naturalWidth > 0 && r.width > 0 && r.height > 0 && getComputedStyle(img).display !== 'none' };
+};
+
 const dist2 = (a, b) => Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
 
 async function shot(page, name) {
@@ -102,17 +109,270 @@ const layoutInfo = () => {
       if (a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b) overlap = true;
     }
   const minBtn = Math.min(...q('.tc-button').map((r) => Math.min(r.width, r.height)));
-  return { vw, vh, n: boxes.length, inside, overlap, minBtn };
+  const actions = [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action);
+  const tr = document.querySelector('.tc-button[data-action=transform]');
+  const trr = tr && tr.getBoundingClientRect();
+  const transformOk = !!trr && trr.width >= 80 && trr.height >= 80 && trr.top >= 0 && trr.right <= vw && getComputedStyle(tr).display !== 'none';
+  return { vw, vh, n: boxes.length, inside, overlap, minBtn, actions, transformOk };
 };
+
+/** Deterministic driver: real key events, but the game loop is paused and stepped in 1/60 s frames. */
+function makeBot(page) {
+  const held = new Set();
+  const bot = { last: null, prev: null };
+  bot.step = async (n = 1, render = false) => {
+    bot.prev = bot.last;
+    bot.last = await page.evaluate(([n, r]) => {
+      const g = window.__superglen;
+      g.advance(n, r);
+      return {
+        x: g.player.x, y: g.feetY, z: g.player.z, yaw: g.cameraYaw, g: !g.airborne, vy: g.verticalVelocity,
+        peak: g.peakFeetY, mode: g.mode, h: g.airHeight, jumps: g.jumps, dj: g.doubleJumps, stomps: g.stomps,
+        pr: g.pixelRatio,
+      };
+    }, [n, render]);
+    return bot.last;
+  };
+  bot.pause = (on) => page.evaluate((on) => window.__superglen.pause(on), on);
+  bot.setKeys = async (want) => {
+    for (const k of ['w', 'a', 's', 'd']) {
+      if (want.has(k) && !held.has(k)) { await page.keyboard.down(k); held.add(k); }
+      if (!want.has(k) && held.has(k)) { await page.keyboard.up(k); held.delete(k); }
+    }
+  };
+  // World-space wish direction -> WASD keys for the current camera yaw (auto-follow may rotate it).
+  bot.keysFor = (wx, wz, yaw) => {
+    const out = new Set();
+    const m = Math.hypot(wx, wz);
+    if (m < 1e-6) return out;
+    wx /= m; wz /= m;
+    const mx = wx * Math.cos(yaw) - wz * Math.sin(yaw);
+    const my = -wx * Math.sin(yaw) - wz * Math.cos(yaw);
+    if (mx > 0.38) out.add('d');
+    if (mx < -0.38) out.add('a');
+    if (my > 0.38) out.add('w');
+    if (my < -0.38) out.add('s');
+    return out;
+  };
+  // Predictive bang-bang steering toward (tx, tz) using position deltas as velocity.
+  bot.steer = async (tx, tz, accel, tol) => {
+    const s = bot.last;
+    const p = bot.prev;
+    const vx = p ? (s.x - p.x) * 60 : 0;
+    const vz = p ? (s.z - p.z) * 60 : 0;
+    const ex = tx - (s.x + (vx * Math.abs(vx)) / (2 * accel));
+    const ez = tz - (s.z + (vz * Math.abs(vz)) / (2 * accel));
+    await bot.setKeys(bot.keysFor(Math.abs(ex) < tol ? 0 : Math.sign(ex), Math.abs(ez) < tol ? 0 : Math.sign(ez), s.yaw));
+  };
+  bot.goTo = async (tx, tz, maxFrames = 900) => {
+    bot.prev = null;
+    await bot.step(1);
+    for (let i = 0; i < maxFrames; i++) {
+      await bot.steer(tx, tz, 50, 0.05);
+      await bot.step(1);
+      const s = bot.last;
+      const moved = Math.hypot(s.x - bot.prev.x, s.z - bot.prev.z);
+      if (Math.hypot(tx - s.x, tz - s.z) < 0.1 && moved < 0.004) break;
+    }
+    await bot.setKeys(new Set());
+    return bot.step(2);
+  };
+  bot.tap = async (key) => {
+    await page.keyboard.down(key);
+    await bot.step(1);
+    await page.keyboard.up(key);
+  };
+  bot.release = () => bot.setKeys(new Set());
+  return bot;
+}
+
+async function jumpScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const bot = makeBot(page);
+  await bot.pause(true);
+  let s = await bot.step(30);
+
+  /** Press jump, then run until landing; optional second press at frame `second`. Returns peak above takeoff. */
+  async function jumpOnce(second, shotName) {
+    const s0 = bot.last;
+    await bot.tap('Space');
+    let frames = 1;
+    for (let i = 0; i < 200; i++) {
+      if (shotName && i === 12) {
+        await bot.step(1, true);
+        await shot(page, shotName);
+      }
+      if (second !== undefined && i === second) await bot.tap('Space');
+      else await bot.step(1);
+      frames++;
+      if (bot.last.g && i > 4) break;
+    }
+    await bot.step(10);
+    return { peak: bot.last.peak - s0.y, frames, end: bot.last };
+  }
+
+  // ---- 1. Glen ------------------------------------------------------------
+  check('starts in Glen mode', s.mode === 'glen');
+  let r = await jumpOnce(undefined, 'glen-jump-desktop');
+  check('Glen jump peak 0.6-1.2 m', r.peak > 0.6 && r.peak < 1.2, `${r.peak.toFixed(3)} m`);
+  check('Glen lands grounded', r.end.g && Math.abs(r.end.y) < 0.05, `y=${r.end.y.toFixed(3)}`);
+  check('Glen landing is no stomp', r.end.stomps === 0);
+  const j1 = r.end.jumps;
+  r = await jumpOnce(14);
+  check('Glen: second press in the air does nothing', r.peak < 1.2 && r.end.jumps === j1 + 1 && r.end.dj === 0,
+    `peak ${r.peak.toFixed(3)}, jumps +${r.end.jumps - j1}, double ${r.end.dj}`);
+  // Jump buffer (Glen): press while still falling, just above the ground -> jumps again on landing.
+  {
+    const before = bot.last.jumps;
+    await bot.tap('Space');
+    let pressed = false;
+    for (let i = 0; i < 120; i++) {
+      await bot.step(1);
+      if (!pressed && bot.last.vy < 0 && bot.last.h < 0.3 && !bot.last.g) {
+        await bot.tap('Space');
+        pressed = true;
+      }
+      if (pressed && bot.last.jumps > before + 1) break;
+    }
+    check('Glen jump buffer: press just before landing still jumps', pressed && bot.last.jumps === before + 2, `jumps +${bot.last.jumps - before}`);
+    for (let i = 0; i < 150 && !bot.last.g; i++) await bot.step(1);
+    await bot.step(20);
+  }
+
+  // ---- 2. Superglen ---------------------------------------------------------
+  await bot.tap('e');
+  s = await bot.step(20);
+  check('E switches to Superglen', s.mode === 'superglen');
+  const st0 = s.stomps;
+  r = await jumpOnce();
+  check('Superglen jump peak 2.0-2.9 m', r.peak > 2.0 && r.peak < 2.9, `${r.peak.toFixed(3)} m`);
+  check('Superglen landing registers a stomp', r.end.stomps === st0 + 1, `stomps ${st0} -> ${r.end.stomps}`);
+  r = await jumpOnce(26); // second press close to the apex (apex at ~26 frames)
+  check('Superglen double jump peak 3.6-4.8 m', r.peak > 3.6 && r.peak < 4.8, `${r.peak.toFixed(3)} m`);
+  check('double jump counted and stomp again', r.end.dj === 1 && r.end.stomps === st0 + 2, `dj ${r.end.dj}, stomps ${r.end.stomps}`);
+  // A step down is not a stomp: nothing to test without a ledge here; a tiny hop must not stomp.
+  // Hold Space: no auto repeat (also emulate OS key repeat with a second keydown).
+  {
+    const before = bot.last.jumps;
+    await page.keyboard.down('Space');
+    await bot.step(1);
+    for (let i = 0; i < 150; i++) {
+      if (i % 10 === 0) await page.keyboard.down('Space'); // repeat=true
+      await bot.step(1);
+    }
+    await page.keyboard.up('Space');
+    await bot.step(5);
+    check('holding Space does not re-jump on landing', bot.last.jumps === before + 1 && bot.last.g, `jumps +${bot.last.jumps - before}`);
+  }
+  // Jump buffer (Superglen): a press near the ground while falling is a buffered ground jump, not the air jump.
+  {
+    const before = bot.last.jumps;
+    const djBefore = bot.last.dj;
+    await bot.tap('Space');
+    let pressed = false;
+    for (let i = 0; i < 200; i++) {
+      await bot.step(1);
+      if (!pressed && bot.last.vy < 0 && bot.last.h < 1.2 && bot.last.h > 0.3 && !bot.last.g) {
+        await bot.tap('Space');
+        pressed = true;
+      }
+      if (pressed && bot.last.jumps > before + 1) break;
+    }
+    check('Superglen jump buffer: press just before landing jumps again (no air jump used)',
+      pressed && bot.last.jumps === before + 2 && bot.last.dj === djBefore, `jumps +${bot.last.jumps - before}, double +${bot.last.dj - djBefore}`);
+    for (let i = 0; i < 200 && !bot.last.g; i++) await bot.step(1);
+    await bot.step(20);
+  }
+
+  // ---- 3. Poles (Superglen) -----------------------------------------------------
+  const poles = [[-5, 1], [-3, 1.5], [-1, 2], [1, 2.5], [3, 3], [5, 3.5]];
+  async function hopTo(px, useDouble) {
+    const dj0 = bot.last.dj;
+    await bot.tap('Space');
+    bot.prev = null;
+    for (let i = 0; i < 160; i++) {
+      const c = bot.last;
+      if (useDouble && c.dj === dj0 && c.vy < 1 && c.vy > -3 && c.y > 1.5) await bot.tap('Space');
+      await bot.steer(px, -23, 37, 0.03);
+      await bot.step(1);
+      if (bot.last.g && i > 5) break;
+    }
+    await bot.release();
+    return bot.step(10);
+  }
+  await bot.goTo(-5, -21.4);
+  const hopResults = [];
+  s = await hopTo(-5, false);
+  hopResults.push(s);
+  check('pole 1.0 m: standing on top (single jump from the ground)', s.g && Math.abs(s.y - 1.0) < 0.1 && Math.abs(s.x + 5) < 0.4, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)}`);
+  s = await hopTo(-3, false);
+  check('pole 1.5 m: hopped from the 1.0 m pole', s.g && Math.abs(s.y - 1.5) < 0.1 && Math.abs(s.x + 3) < 0.4, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)}`);
+  let chainOk = true;
+  const chainLog = [];
+  for (let k = 2; k < 6; k++) {
+    s = await hopTo(poles[k][0], false);
+    chainLog.push(s.y.toFixed(2));
+    if (!(s.g && Math.abs(s.y - poles[k][1]) < 0.1)) chainOk = false;
+  }
+  check('pole-to-pole hopping up the whole row to 3.5 m', chainOk, `tops ${chainLog.join(', ')}`);
+  // Down again, then the tallest pole straight from the ground with a double jump.
+  await bot.setKeys(new Set(['s']));
+  await bot.step(60);
+  await bot.release();
+  await bot.step(60);
+  await bot.goTo(5, -20.2);
+  s = await hopTo(5, true);
+  check('tallest pole 3.5 m reachable from the ground with a double jump', s.g && Math.abs(s.y - 3.5) < 0.1, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)}`);
+  await bot.setKeys(new Set(['s']));
+  await bot.step(80);
+  await bot.release();
+  await bot.step(60);
+
+  // ---- 4. Coyote time (Glen, 1.2 m platform edge) --------------------------------
+  await bot.tap('e');
+  s = await bot.step(10);
+  check('E switches back to Glen', s.mode === 'glen');
+  async function climbAndWalkOff(waitFrames) {
+    await bot.goTo(-12, -1);
+    await bot.goTo(-12, -8.5); // up the 20 deg ramp onto the platform (top 1.2 m)
+    const onTop = bot.last.y > 1.1;
+    bot.prev = null;
+    for (let i = 0; i < 200; i++) {
+      await bot.setKeys(bot.keysFor(1, 0, bot.last.yaw));
+      await bot.step(1);
+      if (!bot.last.g) break; // first airborne frame = left the edge
+    }
+    const left = !bot.last.g;
+    await bot.step(waitFrames - 1);
+    const hBefore = bot.last.h;
+    const stillAirborne = !bot.last.g;
+    await bot.tap('Space'); // the press is processed in this step
+    // Rising right after the press = a coyote jump. (A press that only buffers fires after landing.)
+    const out = { onTop, left, airbornePress: stillAirborne && hBefore > 0.1, jumped: bot.last.vy > 0, vy: bot.last.vy, hBefore };
+    await bot.release();
+    for (let i = 0; i < 200 && !bot.last.g; i++) await bot.step(1);
+    await bot.step(10);
+    return out;
+  }
+  let c = await climbAndWalkOff(6); // ~0.1 s after leaving the edge
+  check('coyote: jump 0.1 s after walking off the platform edge still jumps', c.onTop && c.left && c.airbornePress && c.jumped, `onTop ${c.onTop}, left ${c.left}, h ${c.hBefore.toFixed(2)}, vy ${c.vy.toFixed(1)}`);
+  c = await climbAndWalkOff(11); // 0.18 s after: too late for coyote (the press only buffers for the landing)
+  check('coyote: jump 0.18 s after walking off does not jump in mid-air (Glen has no air jump)', c.onTop && c.left && c.airbornePress && !c.jumped, `h ${c.hBefore.toFixed(2)}, vy ${c.vy.toFixed(1)}`);
+
+  await bot.pause(false);
+}
 
 async function touchScenario(page, check) {
   await sleep(2500);
-  const overlayVisible = () =>
-    page.evaluate(() => {
-      const o = document.querySelector('.start-overlay');
-      return !!o && getComputedStyle(o).display !== 'none';
-    });
+  const overlayVisible = () => page.evaluate(() => !!document.querySelector('.start-overlay'));
   check('start overlay visible', await overlayVisible());
+  check('logo loaded and visible (touch)', (await page.evaluate(logoInfo)).ok);
+  check('touch start pill says Ketuk untuk mulai', await page.evaluate(() => {
+    const t = document.querySelector('.start-text-touch');
+    return getComputedStyle(t).display !== 'none' && t.textContent === 'Ketuk untuk mulai';
+  }));
   check('touchUi true before start', (await page.evaluate(state)).touchUi);
   const fingers = await makeFingers(page);
   const s0 = await page.evaluate(state);
@@ -143,7 +403,7 @@ async function touchScenario(page, check) {
       text: [...document.querySelectorAll('.tc-button')].every((e) => e.textContent.trim() === ''),
     };
   });
-  check('2 buttons', ui.n === 2, `${ui.n}`);
+  check('Glen layout: jump + interact + transform buttons', ui.n === 3, `${ui.n}`);
   check('buttons >= 80x80', ui.big);
   check('buttons inside viewport', ui.inside);
   check('buttons have no text', ui.text);
@@ -207,6 +467,57 @@ async function touchScenario(page, check) {
   check('sliding off a button releases it', slid);
   await fingers.up(3);
 
+  // ---- Superglen layout (deterministic stepping from here) ----
+  const bot = makeBot(page);
+  const centerOf = (action) => page.evaluate((a) => {
+    const r = document.querySelector(`.tc-button[data-action=${a}]`).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, action);
+  const tapAction = async (action, id = 7) => {
+    const p = await centerOf(action);
+    await fingers.down(id, p.x, p.y);
+    await bot.step(2);
+    await fingers.up(id);
+    await bot.step(3);
+    await sleep(200); // let the button press/scale CSS transition finish before measuring layout
+  };
+  await bot.pause(true);
+  await bot.step(30);
+  let li = await page.evaluate(layoutInfo);
+  check('Glen layout: transform button visible, >= 80 px', li.transformOk && li.actions.join() === 'jump,interact,transform', li.actions.join());
+  await tapAction('transform');
+  let sg = await bot.step(1);
+  check('tapping the transform button switches to Superglen', sg.mode === 'superglen');
+  li = await page.evaluate(layoutInfo);
+  check('Superglen layout: 3 action buttons + transform', li.actions.join() === 'jump,laser,shield,transform', li.actions.join());
+  check('844x390 Superglen: inside viewport, no overlap, >= 80', li.inside && !li.overlap && li.minBtn >= 80 && li.transformOk, `min ${li.minBtn}`);
+  const jp = await centerOf('jump');
+  const jumpsBefore = sg.jumps;
+  await fingers.down(8, jp.x, jp.y);
+  await bot.step(4);
+  const air1 = await bot.step(1);
+  check('jump button tap leaves the ground', !air1.g && air1.jumps === jumpsBefore + 1, `y=${air1.y.toFixed(2)}`);
+  for (let i = 0; i < 40 && bot.last.h < 1.6; i++) await bot.step(1);
+  await bot.step(1, true);
+  await shot(page, 'superglen-touch');
+  await fingers.up(8);
+  for (let i = 0; i < 200 && !bot.last.g; i++) await bot.step(1);
+  await bot.step(20);
+  check('touch: laser/shield taps are harmless (do nothing yet)', await (async () => {
+    await tapAction('laser', 9);
+    await tapAction('shield', 10);
+    return bot.last.g && bot.last.mode === 'superglen';
+  })());
+  // Peak with the touch jump button (hold: no repeat, one jump).
+  {
+    const j0 = bot.last.jumps;
+    await fingers.down(11, jp.x, jp.y);
+    await bot.step(150);
+    await fingers.up(11);
+    await bot.step(5);
+    check('touch: holding the jump button does not re-jump', bot.last.jumps === j0 + 1, `jumps +${bot.last.jumps - j0}`);
+  }
+
   // Layout at other sizes (leave the fullscreen the start tap entered, or Chromium refuses to resize)
   await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
   await sleep(500);
@@ -216,11 +527,17 @@ async function touchScenario(page, check) {
   ]) {
     await page.setViewportSize({ width: w, height: h });
     await sleep(500);
-    const li = await page.evaluate(layoutInfo);
-    check(`${w}x${h}: controls inside viewport`, li.inside && li.n === 3, `n=${li.n}`);
-    check(`${w}x${h}: no overlap, buttons >= 80`, !li.overlap && li.minBtn >= 80, `min ${li.minBtn}`);
-    await shot(page, name);
+    for (let pass = 0; pass < 2; pass++) {
+      await bot.step(1);
+      const li2 = await page.evaluate(layoutInfo);
+      const expect = bot.last.mode === 'superglen' ? 'jump,laser,shield,transform' : 'jump,interact,transform';
+      check(`${w}x${h} ${bot.last.mode}: controls inside viewport`, li2.inside && li2.actions.join() === expect, li2.actions.join());
+      check(`${w}x${h} ${bot.last.mode}: no overlap, buttons >= 80, transform visible`, !li2.overlap && li2.minBtn >= 80 && li2.transformOk, `min ${li2.minBtn}`);
+      await shot(page, `${name}-${bot.last.mode}`);
+      await tapAction('transform');
+    }
   }
+  await bot.pause(false);
 
   // Portrait
   await page.setViewportSize({ width: 390, height: 844 });
@@ -294,26 +611,41 @@ async function main() {
     results.push(
       await runScenario(browser, 'desktop', { viewport: { width: 1280, height: 720 } }, async (page, check) => {
         await sleep(2000);
+        check('logo loaded and visible (desktop)', (await page.evaluate(logoInfo)).ok);
+        check('PC start pill says Klik untuk mulai', await page.evaluate(() => {
+          const t = document.querySelector('.start-text-pc');
+          return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai';
+        }));
+        await shot(page, 'start-desktop');
         await page.mouse.click(640, 360);
-        await sleep(300);
+        await sleep(600);
+        check('desktop start overlay gone', await page.evaluate(() => !document.querySelector('.start-overlay')));
+        // Deterministic stepping (real key events, loop stepped in 1/60 s frames): the headless
+        // software renderer can stall for up to a second per frame, which made wall-clock
+        // movement checks flaky.
+        const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+        await page.evaluate(() => window.__superglen.pause(true));
         const a = await page.evaluate(state);
         await page.keyboard.down('w');
-        await sleep(1500);
+        await adv(90);
         await page.keyboard.up('w');
-        await sleep(200);
+        await adv(12);
         const b = await page.evaluate(state);
         const dist = Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
         check('hold W 1.5 s moves >= 1 m', dist >= 1, `${dist.toFixed(2)} m`);
         check('grounded after walking', b.grounded, `y=${b.player.y.toFixed(3)}`);
         await page.keyboard.down('d');
-        await sleep(1000);
+        await adv(60);
         await page.keyboard.up('d');
-        await sleep(200);
+        await adv(12);
         const c = await page.evaluate(state);
+        await page.evaluate(() => window.__superglen.pause(false));
         const d2 = Math.hypot(c.player.x - b.player.x, c.player.z - b.player.z);
         check('hold D 1 s changes x/z', d2 > 0.5, `${d2.toFixed(2)} m`);
       }),
     );
+
+    results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
 
     results.push(
       await runScenario(
