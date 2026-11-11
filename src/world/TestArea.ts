@@ -8,7 +8,7 @@ const GROUND_SIZE = 60;
 
 /**
  * Flat test area: 60 x 60 m ground, morning lighting, sun shadows that follow the player.
- * Add obstacles in `buildProps()` using the StaticProps helper.
+ * Obstacle course is built in `buildProps()`.
  */
 export class TestArea {
   private sun!: THREE.DirectionalLight;
@@ -67,9 +67,83 @@ export class TestArea {
     physics.addFixedCuboid({ x: GROUND_SIZE / 2, y: 0.5, z: GROUND_SIZE / 2 }, { x: 0, y: -0.5, z: 0 });
   }
 
-  /** Obstacles for the test area (boxes, poles, ramps) go here. */
-  protected buildProps(_props: StaticProps): void {
-    // Intentionally empty in A1 core; gameplay-dev adds the obstacle course.
+  /**
+   * Obstacle course (spawn is 0,0; w = -Z, d = +X). ~8 m around spawn stays clear.
+   *  - Steps (x 0, z -10..-19): hold W from spawn.
+   *  - 20 deg ramp + platform (x -12): hold A to x = -12, then W.
+   *  - 55 deg ramp (x +12): hold D to x = +12, then W (must NOT be climbable).
+   *  - Tall boxes + 1.5 m corridor (z +9..+16): walk backwards (S).
+   *  - Poles (z -23), tall wall (x -22), border wall around the edge.
+   */
+  private buildProps(props: StaticProps): void {
+    const RED = 0xff5a5f;
+    const GOLD = 0xffc94d;
+    const ORANGE = 0xff9f43;
+    const TEAL = 0x2ec4b6;
+    const BLUE = 0x4dabf7;
+    const PINK = 0xff8fb1;
+
+    // --- Low steps: autostep staircase (heights 0.15, 0.25, 0.30) ---
+    props.box({ size: [3, 0.15, 3], position: [0, 0.075, -11.5], color: TEAL });
+    props.box({ size: [3, 0.25, 3], position: [0, 0.125, -14.5], color: GOLD });
+    props.box({ size: [3, 0.3, 3], position: [0, 0.15, -17.5], color: ORANGE });
+
+    // --- Taller boxes (walk around, jump on later) ---
+    // Narrow corridor: faces at x = -0.75 and +0.75 (1.5 m wide), z 12..16.
+    props.box({ size: [2.5, 2, 4], position: [-2, 1, 14], color: RED });
+    props.box({ size: [2.5, 1.2, 4], position: [2, 0.6, 14], color: BLUE });
+    props.box({ size: [2, 2.5, 2], position: [10, 1.25, 10], color: GOLD });
+    props.box({ size: [1.5, 1, 1.5], position: [-10, 0.5, 9], color: TEAL });
+    props.box({ size: [2.5, 1.6, 2.5], position: [6, 0.8, 13], color: PINK });
+
+    // --- 20 degree ramp up to a 1.2 m platform (5 x 5 m) ---
+    this.buildRamp(props, { x: -12, platformFrontZ: -6, topY: 1.2, angleDeg: 20, width: 3, color: ORANGE });
+    props.box({ size: [5, 1.2, 5], position: [-12, 0.6, -8.5], color: GOLD });
+
+    // --- 55 degree ramp (too steep: player slides off) up to a 2 m block ---
+    this.buildRamp(props, { x: 12, platformFrontZ: -9, topY: 2, angleDeg: 55, width: 3, color: RED });
+    props.box({ size: [4, 2, 4], position: [12, 1, -11], color: BLUE });
+
+    // --- Lion-dance poles: radius 0.3, heights 1 -> 3.5, 2 m apart ---
+    const poleColors = [RED, GOLD, ORANGE, TEAL, BLUE, PINK];
+    for (let i = 0; i < 6; i++) {
+      const h = 1 + i * 0.5;
+      props.cylinder({ radius: 0.3, height: h, position: [-5 + i * 2, h / 2, -23], color: poleColors[i] });
+    }
+
+    // --- 3 m tall wall, 10 m long, to test camera pull-in ---
+    props.box({ size: [0.6, 3, 10], position: [-22, 1.5, 0], color: PINK });
+
+    // --- Low border wall (0.6 m tall, 0.5 m thick) around the 60 x 60 edge ---
+    const e = 29.75;
+    props.box({ size: [60, 0.6, 0.5], position: [0, 0.3, -e], color: TEAL });
+    props.box({ size: [60, 0.6, 0.5], position: [0, 0.3, e], color: TEAL });
+    props.box({ size: [0.5, 0.6, 59], position: [-e, 0.3, 0], color: TEAL });
+    props.box({ size: [0.5, 0.6, 59], position: [e, 0.3, 0], color: TEAL });
+  }
+
+  /**
+   * Ramp rising toward -Z. Its top surface ends exactly at (x, topY, platformFrontZ) and its
+   * lower end touches the ground (y = 0), so there is no lip at either end.
+   */
+  private buildRamp(
+    props: StaticProps,
+    o: { x: number; platformFrontZ: number; topY: number; angleDeg: number; width: number; color: number },
+  ): void {
+    const th = (o.angleDeg * Math.PI) / 180;
+    const thickness = 0.4;
+    const length = o.topY / Math.sin(th);
+    const s = Math.sin(th);
+    const c = Math.cos(th);
+    // Centre of the top surface, then pushed down along the normal by half the thickness.
+    const midY = o.topY - (length / 2) * s;
+    const midZ = o.platformFrontZ + (length / 2) * c;
+    props.box({
+      size: [o.width, thickness, length],
+      position: [o.x, midY - (thickness / 2) * c, midZ - (thickness / 2) * s],
+      rotation: [th, 0, 0],
+      color: o.color,
+    });
   }
 }
 

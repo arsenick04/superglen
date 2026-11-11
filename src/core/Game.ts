@@ -6,6 +6,7 @@ import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { TestArea } from '../world/TestArea';
+import { Hud } from '../ui/Hud';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -38,6 +39,7 @@ export class Game {
   readonly player: Player;
   readonly cameraRig: ThirdPersonCamera;
   readonly world: TestArea;
+  private readonly hud: Hud | null = null;
 
   private accumulator = 0;
   private lastTime = 0;
@@ -66,6 +68,9 @@ export class Game {
     // Settle the camera before the first frame.
     this.cameraRig.update(0, this.player.visualPosition);
     this.world.update(this.player.visualPosition);
+
+    const ui = document.getElementById('ui');
+    if (ui) this.hud = new Hud(ui, this.renderer.canvas);
 
     window.__superglen = this.debug;
     document.addEventListener('visibilitychange', this.onVisibility);
@@ -124,6 +129,7 @@ export class Game {
     this.fpsTime += dt;
     if (this.fpsTime >= 0.5) {
       this.debug.fps = Math.round(this.fpsFrames / this.fpsTime);
+      this.hud?.setFps(this.debug.fps);
       this.fpsFrames = 0;
       this.fpsTime = 0;
     }

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "node scripts/smoke-test.cjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
