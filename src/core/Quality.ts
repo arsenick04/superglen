@@ -14,6 +14,8 @@ export interface QualityPreset {
   /** Half-size (m) of the directional light's orthographic shadow frustum around the player. */
   readonly shadowArea: number;
   readonly cameraFar: number;
+  /** Frame rate the adaptive resolution tries to hold. */
+  readonly targetFps: number;
 }
 
 function detectTouch(): boolean {
@@ -42,6 +44,7 @@ function pickPreset(): QualityPreset {
       shadowMapSize: 2048,
       shadowArea: 25,
       cameraFar: 300,
+      targetFps: 60,
     };
   }
   return {
@@ -54,6 +57,7 @@ function pickPreset(): QualityPreset {
     shadowMapSize: 1024,
     shadowArea: 18,
     cameraFar: 150,
+    targetFps: 30,
   };
 }
 

@@ -28,7 +28,54 @@ export const CameraConfig = {
   zoomOutSharpness: 4,
   /** Gap kept between the camera and a wall hit (m). */
   wallPadding: 0.25,
+
+  // --- Auto-follow: a child often never drags the camera, so it eases itself behind the movement ---
+  /** Seconds without manual look input before auto-follow may start. */
+  followDelay: 1.5,
+  /** Player must move faster than this (m/s) horizontally. */
+  followMinSpeed: 1.5,
+  /** Fastest auto yaw (rad/s). */
+  followMaxRate: 1.2,
+  /** Yaw rate per radian of misalignment (1/s), capped by followMaxRate. Low = gentle. */
+  followGain: 1.0,
+  /** Seconds to ramp the follow rate from 0 to full (no sudden swing). */
+  followRampTime: 0.8,
+  /** Rate starts fading beyond this angle between camera-behind and movement direction (rad)... */
+  followFadeFrom: 90 * DEG,
+  /** ...and is zero at this angle: moving almost straight toward the camera never spins it. 180 - 35 deg. */
+  followCutoff: 145 * DEG,
+  /** Look input smaller than this (rad per frame) does not count as manual (mouse jitter). */
+  followManualEpsilon: 0.0004,
+
+  // --- Airborne: lift the view so the landing spot stays visible while jumping high ---
+  /** Feet height (m) at which the lift starts and where it is full. */
+  airStartHeight: 0.8,
+  airFullHeight: 3.5,
+  /** Extra pitch (looking more downward) and distance at full lift. */
+  airExtraPitch: 9 * DEG,
+  airExtraDistance: 1.0,
+  /** How fast the lift follows (1/s): subtle, smooth. */
+  airSharpness: 3,
+
+  // --- Landing bump (stomp) ---
+  bumpDuration: 0.1,
+  /** Peak downward camera dip (m). */
+  bumpAmount: 0.07,
 } as const;
+
+/** What the camera needs to know about the thing it follows. */
+export interface CameraSubject {
+  readonly velocity: THREE.Vector3;
+  /** Feet height above the ground below (m). */
+  readonly airHeight: number;
+}
+
+function angleDelta(from: number, to: number): number {
+  let d = (to - from) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  else if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
 
 /**
  * Orbit-follow camera. yaw/pitch come from Input look deltas; follows the player's interpolated
@@ -44,6 +91,12 @@ export class ThirdPersonCamera {
   private readonly target = new THREE.Vector3();
   private currentDistance: number = CameraConfig.distance;
   private initialized = false;
+  private manualThisFrame = false;
+  private idleTime = 0;
+  private followBlend = 0;
+  private airLift = 0;
+  private bumpTime = 1e9;
+  private readonly reducedMotion: boolean;
 
   private readonly ray: RAPIER.Ray;
   private readonly dir = new THREE.Vector3();
@@ -61,18 +114,38 @@ export class ThirdPersonCamera {
       Quality.cameraFar,
     );
     this.ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+    this.reducedMotion =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /** Tiny camera dip on a hard landing. Ignored under prefers-reduced-motion. */
+  bump(): void {
+    if (!this.reducedMotion) this.bumpTime = 0;
   }
 
   /** Apply look input. Call once per frame BEFORE the fixed steps so movement uses the new yaw. */
   handleInput(): void {
     const look = this.input.consumeLookDelta();
+    if (Math.abs(look.x) > CameraConfig.followManualEpsilon || Math.abs(look.y) > CameraConfig.followManualEpsilon) {
+      this.manualThisFrame = true;
+    }
     this.yaw -= look.x;
     this.pitch = THREE.MathUtils.clamp(this.pitch + look.y, CameraConfig.minPitch, CameraConfig.maxPitch);
   }
 
   /** Call once per frame after the player visual was interpolated. `focus` = capsule center. */
-  update(dt: number, focus: THREE.Vector3): void {
+  update(dt: number, focus: THREE.Vector3, subject?: CameraSubject): void {
     const c = CameraConfig;
+    if (subject) {
+      this.autoFollow(dt, subject);
+      const want = THREE.MathUtils.clamp(
+        (subject.airHeight - c.airStartHeight) / (c.airFullHeight - c.airStartHeight),
+        0,
+        1,
+      );
+      this.airLift += (want - this.airLift) * (1 - Math.exp(-c.airSharpness * dt));
+    }
+    const lift = this.airLift;
     this.desiredTarget.set(focus.x, focus.y + c.targetHeight, focus.z);
 
     if (!this.initialized) {
@@ -87,11 +160,13 @@ export class ThirdPersonCamera {
     }
 
     // Direction from target to camera.
-    const cp = Math.cos(this.pitch);
-    this.dir.set(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp);
+    const pitch = Math.min(this.pitch + lift * c.airExtraPitch, 75 * DEG);
+    const cp = Math.cos(pitch);
+    this.dir.set(Math.sin(this.yaw) * cp, Math.sin(pitch), Math.cos(this.yaw) * cp);
+    const maxDist = c.distance + lift * c.airExtraDistance;
 
     // Wall avoidance: cast from the target toward the desired camera spot.
-    let allowed: number = c.distance;
+    let allowed: number = maxDist;
     this.ray.origin.x = this.target.x;
     this.ray.origin.y = this.target.y;
     this.ray.origin.z = this.target.z;
@@ -100,7 +175,7 @@ export class ThirdPersonCamera {
     this.ray.dir.z = this.dir.z;
     const hit = this.physics.world.castRay(
       this.ray,
-      c.distance + c.wallPadding,
+      maxDist + c.wallPadding,
       true,
       undefined,
       undefined,
@@ -116,5 +191,46 @@ export class ThirdPersonCamera {
 
     this.camera.position.copy(this.target).addScaledVector(this.dir, this.currentDistance);
     this.camera.lookAt(this.target);
+    if (this.bumpTime < c.bumpDuration) {
+      this.bumpTime += dt;
+      const t = Math.min(this.bumpTime / c.bumpDuration, 1);
+      this.camera.position.y -= Math.sin(t * Math.PI) * c.bumpAmount;
+    }
+  }
+
+  /**
+   * Gently turn the camera behind the direction of travel when the player has not touched the look
+   * control for a while. Never fights manual input, and never spins when walking toward the camera.
+   */
+  private autoFollow(dt: number, subject: CameraSubject): void {
+    const c = CameraConfig;
+    if (this.manualThisFrame) {
+      this.idleTime = 0;
+      this.followBlend = 0;
+      this.manualThisFrame = false;
+      return;
+    }
+    this.idleTime += dt;
+    const vx = subject.velocity.x;
+    const vz = subject.velocity.z;
+    const speed = Math.hypot(vx, vz);
+    let active = this.idleTime >= c.followDelay && speed >= c.followMinSpeed;
+    let diff = 0;
+    let fade = 0;
+    if (active) {
+      // Camera sits at (sin yaw, cos yaw) from the target, so "behind the movement" is the opposite of velocity.
+      diff = angleDelta(this.yaw, Math.atan2(-vx, -vz));
+      const a = Math.abs(diff);
+      if (a >= c.followCutoff) active = false;
+      else fade = a <= c.followFadeFrom ? 1 : 1 - (a - c.followFadeFrom) / (c.followCutoff - c.followFadeFrom);
+    }
+    if (!active) {
+      this.followBlend = Math.max(0, this.followBlend - dt / 0.25);
+      return;
+    }
+    this.followBlend = Math.min(1, this.followBlend + dt / c.followRampTime);
+    const ease = this.followBlend * this.followBlend * (3 - 2 * this.followBlend);
+    const rate = THREE.MathUtils.clamp(diff * c.followGain, -c.followMaxRate, c.followMaxRate);
+    this.yaw += rate * fade * ease * dt;
   }
 }

@@ -1,5 +1,5 @@
 import type { Action, InputSource, Vec2 } from './Input';
-import { TouchControls } from '../ui/TouchControls';
+import { TouchControls, type TouchButtonDef } from '../ui/TouchControls';
 import { startGate } from '../core/StartGate';
 
 /**
@@ -63,6 +63,15 @@ export class TouchSource implements InputSource {
     document.addEventListener('gesturestart', this.onPrevent);
     document.addEventListener('gesturechange', this.onPrevent);
     document.addEventListener('contextmenu', this.onContext);
+  }
+
+  /** Swap the button layout (Glen <-> Superglen). Fingers resting on removed buttons are released. */
+  setLayout(defs: readonly TouchButtonDef[]): void {
+    this.controls.setLayout(defs);
+    for (const [id, h] of this.held) {
+      if (h.kind === 'button' && h.action && !this.controls.buttons.has(h.action)) this.held.delete(id);
+    }
+    for (const a of this.controls.buttons.keys()) this.syncButton(a);
   }
 
   /** Input is live only on touch devices, after the start tap, and in landscape. */

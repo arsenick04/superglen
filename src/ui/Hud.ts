@@ -35,7 +35,7 @@ export class Hud {
     const card = el('div', 'hud-card');
     card.appendChild(el('div', 'hud-start', 'Klik untuk lanjut'));
     const list = el('ul', 'hud-controls');
-    for (const t of ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
+    for (const t of ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
       list.appendChild(el('li', '', t));
     }
     card.appendChild(list);

@@ -16,9 +16,13 @@
  * `consumeLookDelta()` is per frame (the camera reads it once per rendered frame).
  */
 
-export type Action = 'jump' | 'laser' | 'shield' | 'interact';
+/**
+ * 'transform' is the touch-only Glen <-> Superglen button of the test area (PC uses E = 'interact').
+ * Remove together with ModeController when the lab transformation exists.
+ */
+export type Action = 'jump' | 'laser' | 'shield' | 'interact' | 'transform';
 
-export const ACTIONS: readonly Action[] = ['jump', 'laser', 'shield', 'interact'];
+export const ACTIONS: readonly Action[] = ['jump', 'laser', 'shield', 'interact', 'transform'];
 
 export interface Vec2 {
   x: number;

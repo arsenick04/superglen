@@ -11,6 +11,8 @@ export interface TouchButtonDef {
   /** Distance of the button's right/bottom edge from the screen corner (safe area is added). */
   right: number;
   bottom: number;
+  /** If set, the button hangs from the top edge instead of standing on the bottom edge. */
+  top?: number;
 }
 
 const JUMP_ICON =
@@ -19,10 +21,49 @@ const JUMP_ICON =
 const INTERACT_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 10 H52 A8 8 0 0 1 60 18 V38 A8 8 0 0 1 52 46 H34 L20 58 V46 H12 A8 8 0 0 1 4 38 V18 A8 8 0 0 1 12 10 Z" fill="#fff"/><circle cx="20" cy="28" r="4.5" fill="#e8453c"/><circle cx="32" cy="28" r="4.5" fill="#e8453c"/><circle cx="44" cy="28" r="4.5" fill="#e8453c"/></svg>';
 
-/** Glen mode: Lompat (big, bottom-right) and Bicara/Ambil (raised, to its left). */
+// Lompat Barongsai: two stacked chevrons (jump + air jump).
+const BARONGSAI_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M10 32 L32 10 L54 32" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 54 L32 32 L54 54" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/></svg>';
+
+// Laser: lightning bolt.
+const LASER_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M38 4 L14 36 H28 L24 60 L50 26 H35 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
+
+// Perisai: shield.
+const SHIELD_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L54 14 V32 C54 45 45 54 32 59 C19 54 10 45 10 32 V14 Z" fill="#fff"/><path d="M32 16 L45 21 V32 C45 40 40 46 32 50 Z" fill="#1fb5a8" opacity="0.55"/></svg>';
+
+// Berubah: star.
+const STAR_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 L39.5 23 L59 24.5 L44 37 L48.8 56 L32 45.5 L15.2 56 L20 37 L5 24.5 L24.5 23 Z" fill="#ffe066" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
+
+/** Transform star, top right below the safe-area inset; present in both layouts (test area only). */
+const TRANSFORM_BUTTON: TouchButtonDef = {
+  action: 'transform',
+  icon: STAR_ICON,
+  color: '#6c5ce7',
+  size: 84,
+  right: 20,
+  bottom: 0,
+  top: 12,
+};
+
+/** Glen mode: Lompat (big, bottom-right) and Bicara/Ambil (raised, to its left). Jump must stay first. */
 export const GLEN_BUTTONS: readonly TouchButtonDef[] = [
   { action: 'jump', icon: JUMP_ICON, color: '#ff9f1c', size: 104, right: 26, bottom: 24 },
   { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66 },
+  TRANSFORM_BUTTON,
+];
+
+/**
+ * Superglen mode: Lompat Barongsai (largest, gold, in the corner), Laser to its left and Perisai above it,
+ * forming an arc around the thumb. Gaps of >= 22 px between buttons.
+ */
+export const SUPERGLEN_BUTTONS: readonly TouchButtonDef[] = [
+  { action: 'jump', icon: BARONGSAI_ICON, color: '#f2b705', size: 104, right: 24, bottom: 24 },
+  { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 30 },
+  { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150 },
+  TRANSFORM_BUTTON,
 ];
 
 /** DOM for the touch controls. Pure view: TouchSource owns all the event logic. */
@@ -60,9 +101,11 @@ export class TouchControls {
     this.buttons.clear();
     for (const d of defs) {
       const b = div('tc-button');
+      b.dataset.action = d.action;
       b.style.width = b.style.height = `${d.size}px`;
       b.style.right = `calc(env(safe-area-inset-right) + ${d.right}px)`;
-      b.style.bottom = `calc(env(safe-area-inset-bottom) + ${d.bottom}px)`;
+      if (d.top !== undefined) b.style.top = `calc(env(safe-area-inset-top) + ${d.top}px)`;
+      else b.style.bottom = `calc(env(safe-area-inset-bottom) + ${d.bottom}px)`;
       b.style.background = d.color;
       b.innerHTML = d.icon;
       this.layer.appendChild(b);
