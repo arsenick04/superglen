@@ -89,7 +89,65 @@ Frame rate headless (renderer software, hanya perkiraan): desktop 10 sampai 11 f
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Logo dan paket malam A3 (11 November 2026): selesai
+
+### Yang selesai
+- **Logo Superglen di layar awal** (PC dan iPhone), dengan tombol "Ketuk untuk mulai" atau "Klik untuk mulai". Asli di `art/logo/`, versi ringan 117 KB di `public/img/logo.webp`.
+- **Lompat Glen**: lompat kecil setinggi 0,9 m.
+- **Lompat Barongsai (Superglen)**: lompat 2,4 m, tekan lagi di udara untuk double jump dengan putaran (total sekitar 4,4 m), hentakan mendarat dengan cincin emas.
+- **Ganti mode Glen dan Superglen**: tombol bintang di kanan atas (sentuh) atau E (PC). Kapsul oranye menjadi merah dengan sabuk emas. Ini sementara untuk area uji; nanti terjadi di lab.
+- **Tombol sentuh Superglen**: Lompat Barongsai, Laser, Perisai tersusun melengkung. Laser dan Perisai belum berfungsi (paket B2).
+- **Tuning untuk anak**: masih bisa lompat 0,15 detik setelah lewat tepi, tekan lompat sedikit sebelum mendarat tetap dihitung, tinggi lompat selalu sama, menahan tombol tidak melompat berulang.
+- **Kamera mengikuti otomatis** ke arah jalan setelah 1,5 detik tanpa geser kamera, dan naik sedikit saat melompat tinggi.
+- **Bayangan bulat di bawah karakter** untuk memperkirakan tempat mendarat.
+- **Joystick**: dorong sedikit untuk jalan pelan, dorong 70% ke atas untuk lari.
+- **Resolusi adaptif**: kalau fps di bawah target (30 di HP, 60 di PC) selama 2 detik, resolusi turun bertahap, lalu naik lagi saat lancar. `?adaptive=0` mematikannya.
+
+### Angka tuning
+| | Glen | Superglen |
+|---|---|---|
+| Tinggi lompat | 0,9 m | 2,4 m |
+| Double jump | tidak ada | +2,0 m dari titik tekan |
+| Kecepatan lari | 5 m/s | 6 m/s |
+| Hentakan mendarat | tidak ada | ada, radius 3 m |
+
+Semua angka ada di `src/player/PlayerConfig.ts` dan `CameraConfig` di `src/camera/ThirdPersonCamera.ts`.
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` dan `npm run typecheck` | Lulus |
+| Error console | 0 |
+| Desktop 1280x720 | Lulus 6 dari 6 |
+| Lompat di desktop (Glen, Superglen, double jump, hentakan, coyote, buffer, tiang) | Lulus 20 dari 20 |
+| iPhone landscape 844x390, sentuhan disimulasikan | Lulus 37 dari 37 |
+| Tata letak tombol 667x375 dan 1024x768, kedua mode | Lulus |
+| Smoke test diulang 4 kali | Lulus 4 dari 4 |
+
+Tinggi terukur: Glen 0,90 m, Superglen 2,40 m, double jump 4,40 m. Tiang 1 m dan 1,5 m bisa dinaiki dengan satu lompatan, lompat dari tiang ke tiang sampai 3,5 m berhasil, dan tiang 3,5 m bisa dicapai dari tanah dengan double jump.
+
+**Frame rate di perangkat asli belum diukur.** Sesi ini berjalan di cloud tanpa akses ke iPhone atau GPU, jadi butir "cek fps di kedua perangkat" dari paket A3 belum bisa dipenuhi. Di Chromium headless dengan renderer software: desktop 10 sampai 22 fps, ukuran iPhone 23 sampai 40 fps. Angka itu hanya perkiraan kasar. Mohon catat angka FPS di kiri atas layar dari iPhone dan PC.
+
+### Catatan tes
+- Satu pemeriksaan desktop ("tahan D 1 detik") sempat gagal tidak konsisten. Penyebabnya renderer software headless yang kadang macet sampai 1 detik per frame, bukan bug game. Pemeriksaan itu sekarang memakai langkah waktu deterministik.
+- `qa-tester` (haiku) terhenti di tengah karena batas pemakaian. Sisa pemeriksaannya dijalankan orkestrator.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Apakah anak bisa mendarat di atas tiang (radius 0,3 m). Kalau terlalu sulit, tiang bisa dilebarkan atau diberi bantuan mendarat.
+- Rasa lompat: kontrol di udara dan kecepatan jatuh.
+- Kamera otomatis: saat joystick ditahan menyamping, Glen berjalan melengkung lebar. Perlu dirasakan apakah ini nyaman.
+- Apakah putaran double jump terlihat jelas di kapsul.
+
+### Keputusan yang diambil sendiri
+- Tombol Bicara/Ambil di mode Glen untuk sementara juga mengganti mode, karena belum ada yang bisa diajak bicara.
+- Logo dipakai apa adanya dengan latar hitam, jadi layar awal berlatar hitam.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Untuk dicoba besok pagi
-1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone, posisi landscape.** Ketuk untuk mulai. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
-2. **Biarkan anak mencoba**: jempol kiri untuk jalan, geser jari kanan untuk memutar kamera. Perhatikan: apakah joystick mudah dipakai, apakah kamera terlalu cepat atau lambat, apakah tombol mudah dijangkau.
-3. **Catat angka FPS** di kiri atas, di iPhone dan di PC. Tombol Lompat belum berfungsi sampai paket A3.
+1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Layar logo muncul, ketuk untuk mulai. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
+2. **Biarkan anak mencoba melompat**: tombol kuning untuk lompat. Ketuk tombol bintang di kanan atas untuk jadi Superglen, lalu lompat dua kali untuk berputar di udara. Jalan lurus ke depan untuk menemukan deretan tiang, lalu coba naik ke atasnya.
+3. **Perhatikan dan catat**: angka FPS di kiri atas (iPhone dan PC), apakah lompat terasa enak, dan apakah mendarat di atas tiang terlalu sulit.
+
+**Fase A selesai.** Ini checkpoint: mohon dimainkan bersama anak sebelum lanjut ke Fase B (paket B1: Bab 1).

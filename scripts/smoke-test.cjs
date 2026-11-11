@@ -620,20 +620,26 @@ async function main() {
         await page.mouse.click(640, 360);
         await sleep(600);
         check('desktop start overlay gone', await page.evaluate(() => !document.querySelector('.start-overlay')));
+        // Deterministic stepping (real key events, loop stepped in 1/60 s frames): the headless
+        // software renderer can stall for up to a second per frame, which made wall-clock
+        // movement checks flaky.
+        const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+        await page.evaluate(() => window.__superglen.pause(true));
         const a = await page.evaluate(state);
         await page.keyboard.down('w');
-        await sleep(1500);
+        await adv(90);
         await page.keyboard.up('w');
-        await sleep(200);
+        await adv(12);
         const b = await page.evaluate(state);
         const dist = Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
         check('hold W 1.5 s moves >= 1 m', dist >= 1, `${dist.toFixed(2)} m`);
         check('grounded after walking', b.grounded, `y=${b.player.y.toFixed(3)}`);
         await page.keyboard.down('d');
-        await sleep(1000);
+        await adv(60);
         await page.keyboard.up('d');
-        await sleep(200);
+        await adv(12);
         const c = await page.evaluate(state);
+        await page.evaluate(() => window.__superglen.pause(false));
         const d2 = Math.hypot(c.player.x - b.player.x, c.player.z - b.player.z);
         check('hold D 1 s changes x/z', d2 > 0.5, `${d2.toFixed(2)} m`);
       }),
