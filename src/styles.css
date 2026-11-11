@@ -108,20 +108,6 @@ body {
   line-height: 1.5;
 }
 
-.hud-note {
-  position: absolute;
-  left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 10px);
-  transform: translateX(-50%);
-  padding: 6px 18px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #2b3a55;
-  font-size: 18px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 @media (max-height: 450px) {
   .hud-card {
     padding: 12px 22px;
@@ -136,4 +122,183 @@ body {
     font-size: 15px;
     margin-top: 8px;
   }
+}
+
+/* ---- Touch controls ---- */
+.touch-layer {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html.touch-ui.game-started .touch-layer {
+  display: block;
+}
+
+.tc-hint,
+.tc-base {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+.tc-hint {
+  left: calc(env(safe-area-inset-left) + 40px);
+  bottom: calc(env(safe-area-inset-bottom) + 28px);
+  opacity: 0.45;
+}
+.tc-base {
+  left: 0;
+  top: 0;
+  display: none;
+  opacity: 0.8;
+}
+.tc-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  border-radius: 50%;
+  background: rgba(255, 159, 28, 0.9);
+  border: 4px solid #fff;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+.tc-button {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 5px solid rgba(255, 255, 255, 0.9);
+  opacity: 0.82;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.06s, opacity 0.06s, filter 0.06s;
+  pointer-events: none; /* the layer does the hit testing */
+}
+.tc-button svg {
+  width: 62%;
+  height: 62%;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+.tc-button.pressed {
+  transform: scale(0.9);
+  opacity: 1;
+  filter: brightness(1.25);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+/* ---- Touch start screen ---- */
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(232, 69, 60, 0.82), rgba(255, 159, 28, 0.82));
+  pointer-events: auto;
+  touch-action: none;
+}
+.start-title {
+  font-size: min(18vh, 96px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.start-hint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 26px 10px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: min(9vh, 40px);
+  font-weight: 800;
+  animation: start-pulse 1.1s ease-in-out infinite;
+}
+.start-icon {
+  width: min(12vh, 52px);
+  height: min(12vh, 52px);
+}
+.start-icon svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes start-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* ---- Rotate phone (touch UI + portrait only) ---- */
+.rotate-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #3b6fd4;
+  color: #fff;
+  pointer-events: auto;
+  touch-action: none;
+}
+@media (orientation: portrait) {
+  html.touch-ui .rotate-overlay {
+    display: flex;
+  }
+}
+.rotate-icon {
+  width: 38vw;
+  max-width: 180px;
+  height: 38vw;
+  max-height: 180px;
+}
+.rotate-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.rotate-phone {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: rotate-phone 2s ease-in-out infinite;
+}
+@keyframes rotate-phone {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: rotate(-90deg);
+  }
+}
+.rotate-text {
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 20px;
 }
