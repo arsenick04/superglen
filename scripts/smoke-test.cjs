@@ -54,6 +54,59 @@ const logoInfo = () => {
   return { ok: !!img && img.complete && img.naturalWidth > 0 && r.width > 0 && r.height > 0 && getComputedStyle(img).display !== 'none' };
 };
 
+const startLayoutInfo = () => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const img = document.querySelector('.start-overlay .start-logo');
+  const pill = document.querySelector('.start-overlay .start-hint');
+  const a = img.getBoundingClientRect();
+  const b = pill.getBoundingClientRect();
+  const ins = (r) => r.left >= -0.5 && r.top >= -0.5 && r.right <= vw + 0.5 && r.bottom <= vh + 0.5;
+  const cs = getComputedStyle(img);
+  return {
+    logoInside: ins(a),
+    pillInside: ins(b),
+    overlap: a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom,
+    maskNone: (cs.maskImage || cs.webkitMaskImage || 'none') === 'none' && (cs.webkitMaskImage || 'none') === 'none',
+    pillH: b.height,
+    logoH: a.height,
+    scrolls: document.documentElement.scrollHeight > vh + 1 || document.documentElement.scrollWidth > vw + 1,
+  };
+};
+
+/** Luminance (0..1) of a screenshot pixel, decoded in the page through a canvas. */
+async function cornerLuminance(page, x, y) {
+  const buf = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const [r, gg, bb] = g.getImageData(0, 0, 1, 1).data;
+    return (0.2126 * r + 0.7152 * gg + 0.0722 * bb) / 255;
+  }, buf.toString('base64'));
+}
+
+async function startScreenChecks(page, check, sizes, tag) {
+  const orig = page.viewportSize();
+  for (const [w, h] of sizes) {
+    await page.setViewportSize({ width: w, height: h });
+    await sleep(900);
+    const l = await page.evaluate(startLayoutInfo);
+    const t = `start ${tag} ${w}x${h}`;
+    check(`${t}: logo and pill inside viewport, no overlap, no scroll`, l.logoInside && l.pillInside && !l.overlap && !l.scrolls, JSON.stringify(l));
+    check(`${t}: logo has no mask, pill >= 80 high`, l.maskNone && l.pillH >= 79.5, `pill ${l.pillH}`);
+    const lum = await cornerLuminance(page, 2, Math.min(h - 40, h * 0.5));
+    check(`${t}: background is light (not black)`, lum > 0.55, lum.toFixed(2));
+    if (w === 844 && h === 250) await shot(page, 'start-844x250');
+  }
+  await page.setViewportSize(orig);
+  await sleep(700);
+}
+
 const dist2 = (a, b) => Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
 
 async function shot(page, name) {
@@ -384,6 +437,8 @@ async function touchScenario(page, check) {
   const s0b = await page.evaluate(state);
   check('player does not move before start', dist2(s0, s0b) < 0.05 && !s0b.started, `${dist2(s0, s0b).toFixed(3)} m`);
   await shot(page, 'start-overlay');
+  await shot(page, 'start-844x281');
+  await startScreenChecks(page, check, [[844, 281], [844, 250], [667, 250]], 'touch');
   await fingers.up(1);
   await sleep(500);
   const s1 = await page.evaluate(state);
@@ -842,6 +897,12 @@ async function main() {
           return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai';
         }));
         await shot(page, 'start-desktop');
+        {
+          const l = await page.evaluate(startLayoutInfo);
+          check('start desktop 1280x720: logo/pill inside, no overlap, no mask', l.logoInside && l.pillInside && !l.overlap && l.maskNone, JSON.stringify(l));
+          const lum = await cornerLuminance(page, 2, 2);
+          check('start desktop: background is light (not black)', lum > 0.55, lum.toFixed(2));
+        }
         await page.mouse.click(640, 360);
         await sleep(600);
         check('desktop start overlay gone', await page.evaluate(() => !document.querySelector('.start-overlay')));
