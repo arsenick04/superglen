@@ -383,12 +383,14 @@ Menahan tombol lompat membuat Superglen memantul sendiri. Setelah terbang terbuk
 | `npm run build` | Lulus |
 | Mekanik parkour (tinggi tiap tingkat, jendela waktu, mode mudah, mantle, suara, terbang) | Lulus 82 dari 82 |
 | Arena dan genteng (menara, tambur, rumah, ruko, 74 titik uji atap) | Lulus 54 dari 54 |
-| Smoke test penuh | Belum selesai saat catatan ini ditulis; hasilnya menyusul di commit berikutnya |
+| Smoke test penuh (31 skenario) | 874 dari 875. Satu pemeriksaan anggaran memori saat memantul meleset (17,9 KB per frame, batas 16 KB) |
+| Pemeriksaan memori itu diulang sendiri 3 kali | Lulus 3 kali (10,6 sampai 13,6 KB per frame) |
 | Error console | 0 |
 
 Tinggi terukur per tingkat: 1,62 / 2,12 / 2,72 / 3,46 / 4,22 m. Arena: paling banyak 100 draw call dan 10,9 ribu segitiga. **Fps di perangkat asli belum diukur**, karena sesi ini berjalan di cloud; butir "tes di iPhone, catat fps" dari P1 belum terpenuhi.
 
 ### Masalah yang diketahui
+- **Tes anggaran memori tidak stabil di run penuh.** Pengukurannya bergantung pada waktu pembersihan memori browser dan bisa meleset sekitar 30%. Memantul memakai sekitar 3 KB per frame lebih banyak daripada berjalan, jadi marginnya tipis. Batasnya tidak dilonggarkan; alokasi saat memantul perlu dikurangi di P2.
 - Menara Irama dirancang agar tiap lantai butuh lompat + double jump + mantle pada tingkatnya. Bot tes melakukannya dengan tepat; belum diketahui apakah anak 5 tahun bisa.
 - Dengan mode mudah saja (tahan tombol) pemain mencapai lantai 0 dan 1. Lantai sampai tingkat 3 butuh tambahan double jump. Spesifikasi menyebut mode mudah naik sampai tingkat 3, dan itu benar untuk tingkatnya, tetapi belum tentu cukup untuk lantainya.
 - Ruko mini: dengan double jump, balkonnya bisa dicapai di tingkat 1, bukan tingkat 2 sampai 3 seperti di spesifikasi. Tanpa double jump butuh tingkat 3.
