@@ -4,7 +4,7 @@ import type { SaveStore } from '../core/Save';
 import type { Player } from '../player/Player';
 import type { PlayerMode } from '../player/PlayerConfig';
 import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
-import type { Input } from '../input/Input';
+import type { Action, Input } from '../input/Input';
 import type { GroundRings } from '../fx/GroundRings';
 import type { Interactions } from '../gameplay/Interactions';
 import type { Dialog } from '../gameplay/Dialog';
@@ -49,6 +49,10 @@ export interface LevelGame {
   setTransformAllowed(allowed: boolean): void;
   /** Touch buttons for unlocked skills in Superglen mode (jump and Bicara are always there). Reset to none. */
   setSkillButtons(skills: { laser: boolean; shield: boolean }): void;
+  /** Pulse a touch button ("press me now"). Cleared on every level load. No effect without touch UI. */
+  pulseButton(action: Action, on: boolean): void;
+  /** Free-form values a level publishes for the smoke test (`__superglen.levelInfo`). Emptied on every load. */
+  readonly debugInfo: Record<string, number | string | boolean>;
   /** Used by the `test` level only: the old full button sets. */
   setLegacyTestControls(on: boolean): void;
 }

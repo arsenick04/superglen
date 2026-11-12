@@ -15,6 +15,7 @@ export class Hud {
   private readonly fpsEl: HTMLDivElement | null;
   private readonly card: HTMLDivElement;
   private readonly canLock: boolean;
+  private readonly list: HTMLUListElement | HTMLDivElement;
   private lastFpsShown = -1;
   private dismissed = false;
 
@@ -34,11 +35,9 @@ export class Hud {
 
     const card = el('div', 'hud-card');
     card.appendChild(el('div', 'hud-start', 'Klik untuk lanjut'));
-    const list = el('ul', 'hud-controls');
-    for (const t of ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera', 'Esc: lepas kursor']) {
-      list.appendChild(el('li', '', t));
-    }
-    card.appendChild(list);
+    this.list = el('ul', 'hud-controls');
+    this.setStoryHelp(false);
+    card.appendChild(this.list);
     root.appendChild(card);
     this.card = card;
     this.buildStartScreen();
@@ -65,6 +64,14 @@ export class Hud {
     root.appendChild(rotate);
 
     touchMode.onChange(() => this.syncMode());
+  }
+
+  /** Key help on the PC card: the test area shows the temporary transform key, story levels the real ones. */
+  setStoryHelp(story: boolean): void {
+    const lines = story
+      ? ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Spasi: lompat', 'E: bicara / ambil', 'Esc: lepas kursor']
+      : ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera', 'Esc: lepas kursor'];
+    this.list.replaceChildren(...lines.map((t) => el('li', '', t)));
   }
 
   /** Call whenever the game's fps value is refreshed; the DOM is only written when it changed. */

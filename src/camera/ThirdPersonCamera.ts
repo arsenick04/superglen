@@ -112,6 +112,14 @@ export class ThirdPersonCamera {
   private bumpTime = 1e9;
   private readonly reducedMotion: boolean;
 
+  // ---- Story framing (cutscenes): look partly at a point, optionally steer yaw and pull back ----
+  private frameOn = false;
+  private frameBlend = 0;
+  private frameWeight = 0.5;
+  private frameYaw: number | null = null;
+  private frameExtra = 0;
+  private readonly framePoint = new THREE.Vector3();
+
   private readonly ray: RAPIER.Ray;
   private readonly dir = new THREE.Vector3();
   private readonly desiredTarget = new THREE.Vector3();
@@ -150,6 +158,25 @@ export class ThirdPersonCamera {
     this.moveWasActive = false;
     this.manualThisFrame = false;
     this.bumpTime = 1e9;
+    this.frameOn = false;
+    this.frameBlend = 0;
+  }
+
+  /**
+   * Gentle cutscene framing: the look target moves `weight` (0..1) of the way from the player to `point`,
+   * the camera eases toward `yaw` (camera-on-the-+Z-side convention of `yaw`) and backs off by `distance` m.
+   * `null` returns to the normal follow view. Input look is still honoured (it simply fights the ease).
+   */
+  setFraming(point: THREE.Vector3 | null, opts: { weight?: number; yaw?: number; distance?: number } = {}): void {
+    if (!point) {
+      this.frameOn = false;
+      return;
+    }
+    this.frameOn = true;
+    this.framePoint.copy(point);
+    this.frameWeight = opts.weight ?? 0.5;
+    this.frameYaw = opts.yaw ?? null;
+    this.frameExtra = opts.distance ?? 0;
   }
 
   /** Tiny camera dip on a hard landing. Ignored under prefers-reduced-motion. */
@@ -195,6 +222,14 @@ export class ThirdPersonCamera {
     }
     const lift = this.airLift;
     this.desiredTarget.set(focus.x, focus.y + c.targetHeight, focus.z);
+    const fk = 1 - Math.exp(-2.2 * dt);
+    this.frameBlend += ((this.frameOn ? 1 : 0) - this.frameBlend) * fk;
+    if (this.frameBlend > 0.001) {
+      this.desiredTarget.lerp(this.framePoint, this.frameBlend * this.frameWeight);
+      if (this.frameOn && this.frameYaw !== null) {
+        this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
+      }
+    }
 
     if (!this.initialized) {
       this.target.copy(this.desiredTarget);
@@ -211,7 +246,7 @@ export class ThirdPersonCamera {
     const pitch = Math.min(this.pitch + lift * c.airExtraPitch, 75 * DEG);
     const cp = Math.cos(pitch);
     this.dir.set(Math.sin(this.yaw) * cp, Math.sin(pitch), Math.cos(this.yaw) * cp);
-    const maxDist = c.distance + lift * c.airExtraDistance;
+    const maxDist = c.distance + lift * c.airExtraDistance + this.frameExtra * this.frameBlend;
 
     // Wall avoidance: cast from the target toward the desired camera spot.
     let allowed: number = maxDist;

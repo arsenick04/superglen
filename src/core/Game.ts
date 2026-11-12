@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Renderer } from './Renderer';
 import { Physics, FIXED_DT } from './Physics';
-import { Input } from '../input/Input';
+import { Input, type Action, type InputSource, type Vec2 } from '../input/Input';
 import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
@@ -70,8 +70,17 @@ export interface DebugHandle {
   dialog: { open: boolean; text: string; speaker: string; id: string };
   /** The in-world prompt icon of the nearest interactable. */
   prompt: { visible: boolean; icon: string; inRange: boolean };
-  /** The objective marker. */
-  objective: { active: boolean; offscreen: boolean; arrow: boolean };
+  /** The objective marker (x, z = where it points). */
+  objective: { active: boolean; offscreen: boolean; arrow: boolean; x: number; z: number };
+  /** Values the current level publishes for tests (see LevelGame.debugInfo). */
+  levelInfo: Record<string, number | string | boolean>;
+  /**
+   * Test helper: steer the player to (x, z) through the normal input path (a synthetic stick, not a teleport).
+   * `walking` is true until it arrives (within 0.2 m) or `cancelWalk` is called.
+   */
+  walkTo: (x: number, z: number) => void;
+  cancelWalk: () => void;
+  walking: boolean;
   /** Live save store (tests round-trip it). */
   save: SaveStore;
   /** The level-control API levels get (setPlayerMode, setSkillButtons, ...), for tests. */
@@ -80,7 +89,15 @@ export interface DebugHandle {
   loadLevel: (id: string) => Promise<void>;
   setCameraYaw: (yaw: number) => void;
   /** Resource counts: geometries/textures from three, colliders/bodies from Rapier. */
-  debugCounts: () => { geometries: number; textures: number; colliders: number; bodies: number; sceneChildren: number };
+  debugCounts: () => {
+    geometries: number;
+    textures: number;
+    colliders: number;
+    bodies: number;
+    sceneChildren: number;
+    calls: number;
+    triangles: number;
+  };
 }
 
 declare global {
@@ -109,6 +126,7 @@ export class Game {
   readonly levels: LevelManager;
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
+  private readonly walker: WalkSource;
   private paused = false;
 
   // ---- Controls gating and the touch button profile (see the level context API) ----
@@ -151,7 +169,11 @@ export class Game {
     controlsEnabled: true,
     dialog: { open: false, text: '', speaker: '', id: '' },
     prompt: { visible: false, icon: '', inRange: false },
-    objective: { active: false, offscreen: false, arrow: false },
+    objective: { active: false, offscreen: false, arrow: false, x: 0, z: 0 },
+    levelInfo: {},
+    walkTo: (x: number, z: number) => this.walker.start(x, z),
+    cancelWalk: () => this.walker.stop(),
+    walking: false,
     save: undefined as unknown as SaveStore,
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),
@@ -164,6 +186,8 @@ export class Game {
         colliders: this.physics.colliderCount,
         bodies: this.physics.bodyCount,
         sceneChildren: this.scene.children.length,
+        calls: this.renderer.renderer.info.render.calls,
+        triangles: this.renderer.renderer.info.render.triangles,
       };
     },
   };
@@ -180,6 +204,11 @@ export class Game {
       this.input.addSource(this.touch);
     }
 
+    this.walker = new WalkSource(
+      () => this.player.visualPosition,
+      () => this.cameraRig.steeringYaw,
+    );
+    this.input.addSource(this.walker);
     this.save = new SaveStore();
     this.debug.save = this.save;
 
@@ -219,6 +248,8 @@ export class Game {
     const self = this;
     this.api = {
       loadLevel: (id) => this.levels.load(id),
+      pulseButton: (action, on) => this.touch?.controls.setPulse(action, on),
+      debugInfo: this.debug.levelInfo,
       setControlsEnabled: (on) => {
         this.levelControls = on;
         this.updateControls();
@@ -271,6 +302,8 @@ export class Game {
         this.profile.transform = false;
         this.profile.laser = false;
         this.profile.shield = false;
+        for (const a of ['jump', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
+        for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];
         this.player.setMode('glen');
         this.updateControls();
         this.applyLayout();
@@ -280,6 +313,7 @@ export class Game {
         this.updateControls();
       },
       onAfterBuild: () => {
+        this.hud?.setStoryHelp(this.levels.currentId !== 'test');
         this.applyLayout();
         this.syncDebug();
       },
@@ -468,6 +502,9 @@ export class Game {
     d.objective.active = this.objectives.active;
     d.objective.offscreen = this.objectives.offscreen;
     d.objective.arrow = this.objectives.edgeArrowVisible;
+    d.objective.x = this.objectives.position.x;
+    d.objective.z = this.objectives.position.z;
+    d.walking = this.walker.walking;
   }
 
   private readonly onVisibility = (): void => {
@@ -478,4 +515,63 @@ export class Game {
       this.start();
     }
   };
+}
+
+/**
+ * Test-only input source: a synthetic stick that walks the player to a point. It is merged by Input like
+ * the keyboard and the touch stick, so the player code path is exactly the real one. Idle (zero move) unless started.
+ */
+class WalkSource implements InputSource {
+  readonly move: Vec2 = { x: 0, y: 0 };
+  walking = false;
+  private tx = 0;
+  private tz = 0;
+
+  constructor(
+    private readonly pos: () => THREE.Vector3,
+    private readonly yaw: () => number,
+  ) {}
+
+  start(x: number, z: number): void {
+    this.tx = x;
+    this.tz = z;
+    this.walking = true;
+  }
+
+  stop(): void {
+    this.walking = false;
+    this.move.x = 0;
+    this.move.y = 0;
+  }
+
+  update(): void {
+    if (!this.walking) return;
+    const p = this.pos();
+    const dx = this.tx - p.x;
+    const dz = this.tz - p.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.2) {
+      this.stop();
+      return;
+    }
+    // Inverse of the player's mapping: world wish direction -> stick (see Player.fixedUpdate).
+    const wx = dx / d;
+    const wz = dz / d;
+    const y = this.yaw();
+    const mag = Math.min(1, 0.35 + d * 0.5);
+    this.move.x = (wx * Math.cos(y) - wz * Math.sin(y)) * mag;
+    this.move.y = (-wx * Math.sin(y) - wz * Math.cos(y)) * mag;
+  }
+
+  drainLook(): void {}
+  isDown(_a: Action): boolean {
+    return false;
+  }
+  drainPressed(_a: Action): boolean {
+    return false;
+  }
+  reset(): void {
+    this.stop();
+  }
+  dispose(): void {}
 }

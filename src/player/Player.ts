@@ -513,6 +513,16 @@ export class Player {
     return feetY;
   }
 
+  /** Story checkpoint: a fall returns the player here (feet position). */
+  markSafe(x: number, feetY: number, z: number): void {
+    this.safePos.set(x, feetY + CENTER_TO_FEET + C.skinOffset, z);
+  }
+
+  /** A hop on its own (cutscene fun): same as a jump press, even while input is disabled. */
+  hop(): void {
+    this.jumpBufferTimer = C.jumpBuffer;
+  }
+
   /** Back to the last safe ground (same floor resolution as a level spawn). */
   respawn(): void {
     const feet = this.safePos.y - CENTER_TO_FEET - C.skinOffset;
