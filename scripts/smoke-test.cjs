@@ -127,7 +127,7 @@ function makeBot(page) {
       const g = window.__superglen;
       g.advance(n, r);
       return {
-        x: g.player.x, y: g.feetY, z: g.player.z, yaw: g.cameraYaw, g: !g.airborne, vy: g.verticalVelocity,
+        x: g.player.x, y: g.feetY, z: g.player.z, yaw: g.cameraYaw, syaw: g.steeringYaw, g: !g.airborne, vy: g.verticalVelocity,
         peak: g.peakFeetY, mode: g.mode, h: g.airHeight, jumps: g.jumps, dj: g.doubleJumps, stomps: g.stomps,
         pr: g.pixelRatio,
       };
@@ -141,7 +141,7 @@ function makeBot(page) {
       if (!want.has(k) && held.has(k)) { await page.keyboard.up(k); held.delete(k); }
     }
   };
-  // World-space wish direction -> WASD keys for the current camera yaw (auto-follow may rotate it).
+  // World-space wish direction -> WASD keys for the current steering yaw (the player steers by the latched yaw, not the live camera yaw).
   bot.keysFor = (wx, wz, yaw) => {
     const out = new Set();
     const m = Math.hypot(wx, wz);
@@ -163,7 +163,7 @@ function makeBot(page) {
     const vz = p ? (s.z - p.z) * 60 : 0;
     const ex = tx - (s.x + (vx * Math.abs(vx)) / (2 * accel));
     const ez = tz - (s.z + (vz * Math.abs(vz)) / (2 * accel));
-    await bot.setKeys(bot.keysFor(Math.abs(ex) < tol ? 0 : Math.sign(ex), Math.abs(ez) < tol ? 0 : Math.sign(ez), s.yaw));
+    await bot.setKeys(bot.keysFor(Math.abs(ex) < tol ? 0 : Math.sign(ex), Math.abs(ez) < tol ? 0 : Math.sign(ez), s.syaw));
   };
   bot.goTo = async (tx, tz, maxFrames = 900) => {
     bot.prev = null;
@@ -341,7 +341,7 @@ async function jumpScenario(page, check) {
     const onTop = bot.last.y > 1.1;
     bot.prev = null;
     for (let i = 0; i < 200; i++) {
-      await bot.setKeys(bot.keysFor(1, 0, bot.last.yaw));
+      await bot.setKeys(bot.keysFor(1, 0, bot.last.syaw));
       await bot.step(1);
       if (!bot.last.g) break; // first airborne frame = left the edge
     }
@@ -600,6 +600,185 @@ async function touchScenario(page, check) {
   check('landscape: rotate overlay hidden again', back === 'none');
 }
 
+// ---- Steering latch: no circling with a steady off-axis stick (camera auto-follow feedback loop) ----
+const angDiff = (a, b) => {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+};
+/** Advance n frames one fixed step at a time and sample [x, z, yaw] after each. */
+const sampleFrames = (page, n) =>
+  page.evaluate((n) => {
+    const g = window.__superglen;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      out.push([g.player.x, g.player.z, g.cameraYaw]);
+    }
+    return out;
+  }, n);
+/** World heading of the displacement between samples i and j (same convention as atan2(dx, dz)). */
+const headingOf = (sm, i, j) => Math.atan2(sm[j][0] - sm[i][0], sm[j][1] - sm[i][1]);
+const pathStats = (sm, from = 0) => {
+  let path = 0;
+  for (let i = from + 1; i < sm.length; i++) path += Math.hypot(sm[i][0] - sm[i - 1][0], sm[i][1] - sm[i - 1][1]);
+  const net = Math.hypot(sm[sm.length - 1][0] - sm[from][0], sm[sm.length - 1][1] - sm[from][1]);
+  return { path, net, straight: path > 0 ? net / path : 0 };
+};
+
+async function startTouchGame(page) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 300);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const bot = makeBot(page);
+  await bot.step(30);
+  return { fingers, bot };
+}
+
+/** Turn the camera by finger drags (right area) until its yaw is within one drag of `targetYaw`. */
+async function alignCamera(fingers, bot, targetYaw) {
+  const drag = async (px) => {
+    const x0 = px > 0 ? 450 : 650;
+    await fingers.down(2, x0, 120);
+    await fingers.move(2, x0 + px, 120, 10);
+    await fingers.up(2);
+    await bot.step(2);
+  };
+  const y = (await bot.step(1)).yaw;
+  await drag(150);
+  const perDrag = bot.last.yaw - y; // yaw change of one 150 px right drag
+  const n = Math.round((targetYaw - bot.last.yaw) / perDrag);
+  for (let i = 0; i < Math.abs(n); i++) await drag(n > 0 ? 150 : -150);
+  await bot.step(5);
+  console.log(`   [steering] yaw after setup drags ${bot.last.yaw.toFixed(3)} (per 150 px drag ${perDrag.toFixed(3)})`);
+}
+
+async function steeringTouchScenario(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  // Turn the camera so the diagonal path avoids the obstacle course:
+  // target yaw about -2.25 rad gives a heading of roughly +X along z = 0 for stick (-30,-30).
+  await alignCamera(fingers, bot, -2.25);
+
+  // 1+2: diagonal stick (-30,-30), 5 s
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 80, 270, 4);
+  const sm = await sampleFrames(page, 300);
+  const eastHeading = headingOf(sm, 60, 299);
+  const hA = headingOf(sm, 60, 120);
+  const hB = headingOf(sm, 240, 299);
+  const st = pathStats(sm);
+  check('diagonal stick (-30,-30) 5 s: straight line, no circling', st.straight >= 0.97,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, path ${st.path.toFixed(1)} m (before fix: circling, radius ~5 m)`);
+  check('diagonal stick: world heading stays constant', Math.abs(angDiff(hA, hB)) < 0.15 && Math.abs(angDiff(headingOf(sm, 60, 180), eastHeading)) < 0.15,
+    `heading t1-2s ${hA.toFixed(3)}, t4-5s ${hB.toFixed(3)}, d ${angDiff(hA, hB).toFixed(3)} rad, t1-5s ${eastHeading.toFixed(3)}`);
+  // Camera convergence: diff = camera yaw vs the "behind the heading" yaw
+  const behind = (i) => Math.atan2(-(sm[i + 6][0] - sm[i - 6][0]), -(sm[i + 6][1] - sm[i - 6][1]));
+  const diffAt = (i) => angDiff(sm[i][2], behind(i));
+  const log = [];
+  for (const t of [1, 1.5, 2, 3, 4, 4.8]) log.push(`${t}s:${diffAt(Math.round(t * 60)).toFixed(3)}`);
+  console.log(`   [steering] |behind-heading minus yaw| over time (rad): ${log.join(' ')}`);
+  const rateLast = Math.abs(angDiff(sm[240][2], sm[299][2])) / (59 / 60);
+  const d15 = Math.abs(diffAt(90));
+  const d5 = Math.abs(diffAt(290));
+  check('camera converges: yaw rate in last second < 0.1 rad/s', rateLast < 0.1, `${rateLast.toFixed(3)} rad/s`);
+  check('camera converges: misalignment smaller at 5 s than at 1.5 s', d5 < d15, `${d15.toFixed(3)} -> ${d5.toFixed(3)} rad`);
+  // No jitter: yaw is monotonic after auto-follow started (allow tiny noise)
+  let reversals = 0;
+  const sgn = Math.sign(angDiff(sm[90][2], sm[299][2]));
+  for (let i = 120; i < 300; i++) if (sgn * angDiff(sm[i - 1][2], sm[i][2]) < -1e-4) reversals++;
+  check('camera yaw has no jitter while converging', reversals === 0, `${reversals} reversals`);
+
+  // 6: release, then press stick straight up -> walks where the camera looks
+  await fingers.up(1);
+  await bot.step(20);
+  const yawRel = bot.last.yaw;
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 110, 240, 4);
+  const sm6 = await sampleFrames(page, 30);
+  const camFwd = Math.atan2(-Math.sin(yawRel), -Math.cos(yawRel));
+  const h6 = headingOf(sm6, 10, 29);
+  check('release and re-press: forward stick walks toward where the camera looks', Math.abs(angDiff(camFwd, h6)) < 0.2,
+    `heading ${h6.toFixed(3)} vs camera forward ${camFwd.toFixed(3)} (d ${angDiff(camFwd, h6).toFixed(3)} rad)`);
+  await fingers.up(1);
+}
+
+async function steeringTouchScenario2(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  // 4: stick straight up, yaw unchanged
+  const y0 = bot.last.yaw;
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 110, 240, 4);
+  const sm = await sampleFrames(page, 90);
+  const st = pathStats(sm);
+  const dy = Math.abs(angDiff(y0, sm[89][2]));
+  check('stick straight up: straight line and yaw unchanged', st.straight >= 0.97 && dy < 0.02,
+    `straightness ${st.straight.toFixed(4)}, yaw change ${dy.toFixed(4)} rad, net ${st.net.toFixed(1)} m`);
+  // 5: drag a second finger 150 px while walking: heading rotates with the camera
+  const before = await sampleFrames(page, 20);
+  const hBefore = headingOf(before, 5, 19);
+  const yBefore = before[19][2];
+  await fingers.down(2, 450, 120);
+  await fingers.move(2, 600, 120, 10);
+  await fingers.up(2);
+  const after = await sampleFrames(page, 60);
+  const hAfter = headingOf(after, 40, 59);
+  const dYaw = angDiff(yBefore, after[59][2]);
+  const dHead = angDiff(hBefore, hAfter);
+  const moved = Math.hypot(after[59][0] - after[40][0], after[59][1] - after[40][1]);
+  check('manual drag while walking: heading rotates with the camera and keeps walking',
+    Math.abs(dHead - dYaw) < 0.2 && Math.abs(dYaw) > 0.3 && moved > 0.5,
+    `yaw change ${dYaw.toFixed(3)} rad, heading change ${dHead.toFixed(3)} rad, last 0.33 s moved ${moved.toFixed(2)} m`);
+  await fingers.up(1);
+}
+
+/**
+ * Back-right diagonal (+30,+30) in its own page so it always starts from the spawn point with a clear
+ * path (camera yaw ~ +0.75 gives a heading of roughly +X along z = 0, 4 s ~ 19 m stays inside the world).
+ */
+async function steeringTouchScenario3(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  await alignCamera(fingers, bot, 0.785);
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 140, 330, 4);
+  const sm = await sampleFrames(page, 240);
+  const st = pathStats(sm);
+  const h1 = headingOf(sm, 60, 120);
+  const h2 = headingOf(sm, 180, 239);
+  check('diagonal stick (+30,+30) 4 s: straight line', st.straight >= 0.97,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, path ${st.path.toFixed(1)} m`);
+  check('diagonal stick (+30,+30): heading constant', Math.abs(angDiff(h1, h2)) < 0.15,
+    `heading t1-2s ${h1.toFixed(3)}, t3-4s ${h2.toFixed(3)}`);
+  await fingers.up(1);
+}
+
+async function steeringDesktopScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => window.__superglen.advance(30, false));
+  await page.keyboard.down('d');
+  const sm = await sampleFrames(page, 300);
+  await page.keyboard.up('d');
+  const st = pathStats(sm);
+  const hA = headingOf(sm, 60, 120);
+  const hB = headingOf(sm, 240, 299);
+  check('keyboard D held 5 s: straight line', st.straight >= 0.97 && Math.abs(angDiff(hA, hB)) < 0.15,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, heading ${hA.toFixed(3)} -> ${hB.toFixed(3)}`);
+  const rate = Math.abs(angDiff(sm[240][2], sm[299][2])) / (59 / 60);
+  const rateEarly = Math.abs(angDiff(sm[120][2], sm[179][2])) / (59 / 60);
+  const behind = (i) => Math.atan2(-(sm[i + 6][0] - sm[i - 6][0]), -(sm[i + 6][1] - sm[i - 6][1]));
+  const d15 = Math.abs(angDiff(sm[90][2], behind(90)));
+  const d5 = Math.abs(angDiff(sm[290][2], behind(290)));
+  console.log(`   [steering] desktop D: yaw ${sm[0][2].toFixed(3)} -> ${sm[299][2].toFixed(3)}, yaw rate 2-3 s ${rateEarly.toFixed(3)}, last second ${rate.toFixed(3)} rad/s, misalignment ${d15.toFixed(3)} -> ${d5.toFixed(3)}`);
+  check('keyboard D: camera converges (rate falling, misalignment shrinking)', rate < rateEarly && d5 < d15, `rate ${rateEarly.toFixed(3)} -> ${rate.toFixed(3)}, misalignment ${d15.toFixed(3)} -> ${d5.toFixed(3)}`);
+}
+
 async function runScenario(browser, name, ctxOpts, body) {
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
@@ -615,7 +794,7 @@ async function runScenario(browser, name, ctxOpts, body) {
     await body(page, check);
     result.fps = await sampleFps(page);
   } catch (e) {
-    check('scenario ran without exception', false, e.message);
+    check('scenario ran without exception', false, (e.stack || e.message).split('\n').slice(0,4).join(' | '));
   }
   fs.mkdirSync(OUT, { recursive: true });
   try {
@@ -690,6 +869,12 @@ async function main() {
         check('hold D 1 s changes x/z', d2 > 0.5, `${d2.toFixed(2)} m`);
       }),
     );
+
+    results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
+    const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
+    results.push(await runScenario(browser, 'steering-touch', iphone, steeringTouchScenario));
+    results.push(await runScenario(browser, 'steering-touch-2', iphone, steeringTouchScenario2));
+    results.push(await runScenario(browser, 'steering-touch-3', iphone, steeringTouchScenario3));
 
     results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
 

@@ -145,6 +145,41 @@ Tinggi terukur: Glen 0,90 m, Superglen 2,40 m, double jump 4,40 m. Tiang 1 m dan
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Perbaikan gerak melingkar (12 November 2026): selesai
+
+### Masalah
+Dilaporkan dari rekaman iPhone: setelah berjalan sebentar, gerak Glen terasa terseret dan mampet. FPS di rekaman tetap 60, jadi bukan masalah performa.
+
+### Penyebab
+Kamera otomatis dari paket A3 mulai berputar 1,5 detik setelah berjalan. Arah joystick relatif terhadap kamera, jadi dengan jempol miring, kamera berputar lalu arah jalan ikut berputar lagi. Pemain berjalan melingkar terus (radius sekitar 5 m, satu putaran sekitar 9 detik). Di PC hal yang sama terjadi saat hanya menahan tombol D.
+
+### Perbaikan
+- **Arah jalan dikunci selama jempol belum diangkat.** Kamera tetap berputar ke belakang pemain, tetapi arah jalan di dunia tidak ikut berbelok. Pemain berjalan lurus.
+- Menggeser kamera dengan jari lain saat berjalan tetap memutar arah jalan bersama kamera, seperti sebelumnya.
+- Setelah jempol diangkat lalu ditekan lagi, "maju di joystick" berarti maju ke arah layar saat itu. Ini disengaja.
+- Perubahan ada di `src/camera/ThirdPersonCamera.ts` (`steeringYaw`) dan `src/core/Game.ts`.
+
+### Hasil tes
+| Pemeriksaan | Sebelum | Sesudah |
+|---|---|---|
+| Jempol miring 5 detik, kelurusan jalur | Melingkar, radius sekitar 5 m | Lurus (1,00) |
+| Arah jalan berubah | Terus berputar | 0,00 rad |
+| Tombol D ditahan 5 detik di PC | Melingkar | Lurus (1,00) |
+| Geser kamera sambil jalan | Berfungsi | Berfungsi, arah ikut berputar |
+| Angkat dan tekan ulang joystick | Berfungsi | Berjalan ke arah kamera |
+| Kamera berhenti berputar setelah di belakang pemain | Tidak pernah berhenti | Berhenti dalam sekitar 4 sampai 5 detik |
+
+Smoke test: 76 pemeriksaan lulus, diulang 5 kali berturut-turut, 0 error console.
+
+### Catatan tes
+- Satu pemeriksaan diagonal kanan-bawah sempat gagal sesekali karena dimulai dari posisi sisa tes sebelumnya dan menabrak kotak. Pemeriksaan itu sekarang berjalan di halaman sendiri dari titik awal dengan jalur kosong.
+- `qa-tester` menemukan kegagalan sesekali itu pada run ke-2 dari 3.
+
+### Yang perlu dicoba di iPhone
+- Berjalan dengan jempol miring 10 detik atau lebih. Jalur harus lurus dan kamera menyusul ke belakang.
+- Kamera butuh sekitar 4 sampai 5 detik untuk berhenti di belakang pemain. Kalau terasa lambat, angka `followGain` di `CameraConfig` bisa dinaikkan.
+- Pagar tepi dunia (30 m dari titik awal) menahan gerak, dan kecepatan turun saat menyusuri pagar. Belum diubah.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
