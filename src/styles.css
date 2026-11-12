@@ -974,3 +974,56 @@ html.b2-hold .tc-button[data-action='jump']::after {
   .b2-bar i { transform: scaleX(1); }
   html.b2-hold .tc-button[data-action='jump']::after { opacity: 1; }
 }
+
+/* ---- Lompat Irama: five drum icons, top-left under the fps pill (stays left of the touch dialog bubble) ---- */
+.drums {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 42px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(20, 30, 60, 0.35);
+  pointer-events: none;
+  z-index: 2;
+}
+.drums[hidden] {
+  display: none;
+}
+.drum {
+  width: 34px;
+  height: 34px;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+html.touch-ui .drum {
+  width: 22px;
+  height: 22px;
+}
+.drum svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.drum .db { fill: #8a93a6; }
+.drum .dt { fill: #cfd6e4; }
+.drum .dr { stroke: #fff; opacity: 0.8; }
+.drum .dl { stroke: #fff; opacity: 0.5; }
+.drum.on {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 210, 63, 0.9));
+}
+.drum.on .db { fill: #e8453c; }
+.drum.on .dt { fill: #fff3d6; }
+.drum.on .dr { stroke: #ffc400; opacity: 1; }
+.drum.on .dl { stroke: #ffc400; opacity: 1; }
+.drum.pop {
+  animation: drum-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes drum-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}

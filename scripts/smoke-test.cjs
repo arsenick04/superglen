@@ -304,10 +304,11 @@ async function jumpScenario(page, check) {
   check('E switches to Superglen', s.mode === 'superglen');
   const st0 = s.stomps;
   r = await jumpOnce();
-  check('Superglen jump peak 2.0-2.9 m', r.peak > 2.0 && r.peak < 2.9, `${r.peak.toFixed(3)} m`);
+  check('Superglen first jump (rhythm level 0) peak 1.52-1.68 m', r.peak > 1.52 && r.peak < 1.68, `${r.peak.toFixed(3)} m`);
   check('Superglen landing registers a stomp', r.end.stomps === st0 + 1, `stomps ${st0} -> ${r.end.stomps}`);
-  r = await jumpOnce(26); // second press close to the apex (apex at ~26 frames)
-  check('Superglen double jump peak 3.6-4.8 m', r.peak > 3.6 && r.peak < 4.8, `${r.peak.toFixed(3)} m`);
+  await bot.step(45); // stand for 0.75 s: a late press is a plain level-0 jump (see the parkour scenarios for the rhythm)
+  r = await jumpOnce(20); // second press at the top of the jump (apex at ~22 frames)
+  check('Superglen double jump peak 2.6-3.0 m (1.6 + 1.2 above the press point)', r.peak > 2.6 && r.peak < 3.0, `${r.peak.toFixed(3)} m`);
   check('double jump counted and stomp again', r.end.dj === 1 && r.end.stomps === st0 + 2, `dj ${r.end.dj}, stomps ${r.end.stomps}`);
   // A step down is not a stomp: nothing to test without a ledge here; a tiny hop must not stomp.
   // Hold Space: no auto repeat (also emulate OS key repeat with a second keydown).
@@ -321,7 +322,9 @@ async function jumpScenario(page, check) {
     }
     await page.keyboard.up('Space');
     await bot.step(5);
-    check('holding Space does not re-jump on landing', bot.last.jumps === before + 1 && bot.last.g, `jumps +${bot.last.jumps - before}`);
+    check('holding Space bounces by itself (easy mode, flight locked)', bot.last.jumps >= before + 3, `jumps +${bot.last.jumps - before}`);
+    for (let i = 0; i < 200 && !bot.last.g; i++) await bot.step(1);
+    await bot.step(5);
   }
   // Jump buffer (Superglen): a press near the ground while falling is a buffered ground jump, not the air jump.
   {
@@ -345,7 +348,8 @@ async function jumpScenario(page, check) {
 
   // ---- 3. Poles (Superglen) -----------------------------------------------------
   const poles = [[-5, 1], [-3, 1.5], [-1, 2], [1, 2.5], [3, 3], [5, 3.5]];
-  async function hopTo(px, useDouble) {
+  async function hopTo(px, useDouble, level) {
+    if (level !== undefined) await page.evaluate((l) => window.__superglen.rhythm.setLevel(l), level);
     const dj0 = bot.last.dj;
     await bot.tap('Space');
     bot.prev = null;
@@ -379,9 +383,16 @@ async function jumpScenario(page, check) {
   await bot.step(60);
   await bot.release();
   await bot.step(60);
+  await bot.goTo(1, -20.2);
+  s = await hopTo(1, true, 0);
+  check('pole 2.5 m reachable from the ground at level 0 only with a double jump (1.6 + 1.2 m)', s.g && Math.abs(s.y - 2.5) < 0.1, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)}`);
+  await bot.setKeys(new Set(['s']));
+  await bot.step(60);
+  await bot.release();
+  await bot.step(60);
   await bot.goTo(5, -20.2);
-  s = await hopTo(5, true);
-  check('tallest pole 3.5 m reachable from the ground with a double jump', s.g && Math.abs(s.y - 3.5) < 0.1, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)}`);
+  s = await hopTo(5, false, 4);
+  check('tallest pole 3.5 m reachable from the ground at rhythm level 4 (Lompat Singa, 4.2 m)', s.g && Math.abs(s.y - 3.5) < 0.1, `y=${s.y.toFixed(2)} x=${s.x.toFixed(2)} z=${s.z.toFixed(2)}`);
   await bot.setKeys(new Set(['s']));
   await bot.step(80);
   await bot.release();
@@ -392,6 +403,8 @@ async function jumpScenario(page, check) {
   s = await bot.step(10);
   check('E switches back to Glen', s.mode === 'glen');
   async function climbAndWalkOff(waitFrames) {
+    await page.evaluate(() => window.__superglen.placePlayer(-12, 3)); // start in front of the ramp (the pole section ends elsewhere)
+    await bot.step(5);
     await bot.goTo(-12, -1);
     await bot.goTo(-12, -8.5); // up the 20 deg ramp onto the platform (top 1.2 m)
     const onTop = bot.last.y > 1.1;
@@ -2728,22 +2741,23 @@ async function skillsDesktopScenario(page, check) {
       peak = Math.max(peak, d.last.y - y0);
       if (d.last.grounded && i > 4) break;
     }
-    check('tap jump: normal Superglen jump (peak 2.0-2.9 m), no flight', peak > 2.0 && peak < 2.9 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
+    check('tap jump: normal Superglen jump (level 0, peak 1.52-1.68 m), no flight', peak > 1.52 && peak < 1.68 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
     await d.step(10);
     const st = d.last.stomps;
     await d.tap('Space');
     peak = 0;
     for (let i = 0; i < 200; i++) {
-      if (i === 26) await d.tap('Space');
+      if (i === 22) await d.tap('Space');
       else await d.step(1);
       peak = Math.max(peak, d.last.y - y0);
       if (d.last.grounded && i > 30) break;
     }
     await d.step(10);
-    check('tap-tap: double jump unchanged (peak 3.6-4.8 m), stomp on landing, no flight', peak > 3.6 && peak < 4.8 && d.last.dj >= 1 && d.last.stomps === st + 1 && d.last.flights === f0, `${peak.toFixed(2)} m`);
+    check('tap-tap: double jump (second tap near the top, peak 3.0-3.5 m), stomp on landing, no flight', peak > 3.0 && peak < 3.5 && d.last.dj >= 1 && d.last.stomps === st + 1 && d.last.flights === f0, `${peak.toFixed(2)} m`);
   }
 
   // ---- Flight: hold from the ground ----------------------------------------------------------------------
+  await d.step(30); // stand for 0.5 s first: a hold right after a timed landing would be a bounce chain, not a flight
   let ground = d.last;
   await d.down('Space');
   let startFrame = -1;
@@ -2802,22 +2816,23 @@ async function skillsDesktopScenario(page, check) {
     check('no input: hovers in place', Math.hypot(d.last.x - p0[0], d.last.z - p0[1]) < 0.02, `${Math.hypot(d.last.x - p0[0], d.last.z - p0[1]).toFixed(3)} m`);
   }
 
-  // ---- release: slow descent and a soft landing -----------------------------------------------------------
+  // ---- release: the jets stop at once, normal gravity, harmless landing --------------------------------------------
   {
     const st = d.last.stomps;
+    await d.down('d'); // keep steering through the fall
+    await d.step(20);
+    const y0 = d.last.y;
     await d.up('Space');
-    await d.step(50);
+    await d.step(2);
+    const vyNow = d.last.vy;
+    await d.step(18);
     const vy1 = d.last.vy;
-    const y1 = d.last.y;
-    await d.step(30);
-    check('release: slow glide at about -2.2 m/s (1.5-3 m/s down), still airborne', vy1 < -1.5 && vy1 > -3 && d.last.y < y1 && !d.last.grounded, `vy ${vy1.toFixed(2)}`);
-    // steer while gliding
-    await d.down('d');
-    await d.step(30);
+    report('after releasing at the ceiling', `vy after 2 frames ${vyNow.toFixed(2)}, after 20 frames ${vy1.toFixed(2)} m/s`);
+    check('release: the jets stop at once (vy < 0 within 2 frames), no slow glide plateau', vyNow < 0 && vy1 < -9 && !d.last.flying && d.last.y < y0, `vy ${vyNow.toFixed(2)} -> ${vy1.toFixed(2)}`);
     const x0 = d.last.x;
-    await d.step(6);
-    const vx = (d.last.x - x0) / 0.1;
-    check('full horizontal control while gliding (reaches 6-8 m/s sideways)', vx > 6 && vx < 8, `${vx.toFixed(2)} m/s`);
+    await d.step(4);
+    const vx = (d.last.x - x0) / (4 / 60);
+    check('...horizontal control is kept while falling (6-8 m/s sideways)', vx > 6 && vx < 8.2, `${vx.toFixed(2)} m/s`);
     await d.up('d');
     let worst = 0;
     for (let i = 0; i < 700 && !d.last.grounded; i++) {
@@ -2825,22 +2840,25 @@ async function skillsDesktopScenario(page, check) {
       worst = Math.min(worst, d.last.vy);
     }
     await d.step(20);
-    check('lands from flight without a stomp, at <= 3 m/s', d.last.grounded && d.last.stomps === st && worst > -3.2 && !d.last.flying, `fastest ${worst.toFixed(2)} m/s, stomps ${st}->${d.last.stomps}`);
+    check('lands from the fall unharmed: grounded, not flying, no error', d.last.grounded && !d.last.flying, `fastest ${worst.toFixed(2)} m/s, stomps ${st}->${d.last.stomps}`);
   }
 
-  // ---- re-ignite during the descent -----------------------------------------------------------------------
+  // ---- re-ignite after a release -----------------------------------------------------------------------------------
   {
     await d.maxFly(6);
     await d.down('Space');
     await d.step(120);
     check('ceiling 6 m (per level): rises to 5.6-6.2 m', d.last.flying && d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)} m`);
     await d.up('Space');
-    await d.step(60);
+    await d.step(8);
     const hDown = d.last.h;
-    check('released: descending', d.last.vy < -1.5 && hDown < 5.5, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    check('released: falling under normal gravity at once', d.last.vy < -1.5 && hDown < 5.9 && !d.last.flying, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    const f0 = d.last.flights;
     await d.down('Space');
+    await d.step(10);
+    check('hold Space again in the air: the air jump fires first (the jets follow after the 0.45 s hold)', d.last.vy > 0 && !d.last.flying, `vy ${d.last.vy.toFixed(2)}`);
     await d.step(30);
-    check('hold Space again during the descent: rises again', d.last.vy > 0.3 && d.last.h > hDown, `vy ${d.last.vy.toFixed(2)}`);
+    check('...then the jets re-ignite (a child can catch themselves)', d.last.flying && d.last.flights === f0 + 1, `flying ${d.last.flying}, flights +${d.last.flights - f0}`);
     await d.step(120);
     check('...up to the ceiling again, no limit on re-ignitions', d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)}`);
     await d.land();
@@ -3318,11 +3336,725 @@ async function skillsTouchScenario(page, check) {
   check('touch: holding the laser button repeats (3-4 shots in 1.7 s)', d.last.shots - n0 >= 3 && d.last.shots - n0 <= 4, `${d.last.shots - n0}`);
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Parkour (Lompat Irama Barongsai, auto mantle, drum icons, drum synth): deterministic stepping, real key events.
+// ---------------------------------------------------------------------------------------------------------------
+
+const parkourSnap = () => {
+  const g = window.__superglen;
+  const r = g.rhythm;
+  return {
+    y: g.feetY, vy: g.verticalVelocity, grounded: !g.airborne, level: r.level, q: r.lastQuality, perfect: r.perfect, good: r.good,
+    misses: r.misses, autos: r.autos, bounces: r.bounces, normals: r.normals, eta: Number.isFinite(r.landEta) ? r.landEta : 99,
+    mantles: r.mantles, mantling: r.mantling, lit: r.lit, drums: r.drumsVisible, writes: r.drumWrites, chain: r.chain, easy: r.easy,
+    sounds: r.sounds, audio: r.audio, muted: r.muted, jumps: g.jumps, dj: g.doubleJumps, peak: g.peakFeetY, flying: g.skills.flying,
+    flights: g.skills.flights, x: g.player.x, z: g.player.z, mode: g.mode, stomps: g.stomps, programs: g.debugCounts().programs,
+  };
+};
+
+const PARKOUR_HZ = [196.0, 220.0, 246.94, 293.66, 329.63];
+const PARKOUR_APEX = [1.6, 2.1, 2.7, 3.4, 4.2];
+
+function makeParkourDriver(page) {
+  const d = { last: null };
+  d.snap = async () => (d.last = await page.evaluate(parkourSnap));
+  d.step = async (n = 1, render = false) => {
+    await page.evaluate(([n, r]) => window.__superglen.advance(n, r), [n, render]);
+    return d.snap();
+  };
+  d.down = (k = 'Space') => page.keyboard.down(k);
+  d.up = (k = 'Space') => page.keyboard.up(k);
+  d.tap = async () => {
+    await page.keyboard.down('Space');
+    await d.step(1);
+    await page.keyboard.up('Space');
+    return d.last;
+  };
+  /** Superglen on flat ground at (x, z), rhythm level `level`, standing (the teleport settle is not a landing). */
+  d.setup = async (level = 0, x = 0, z = 0, mode = 'superglen') => {
+    for (const k of ['Space', 'w', 'a', 's', 'd']) await page.keyboard.up(k);
+    await page.evaluate(([m, l, x, z]) => {
+      const g = window.__superglen;
+      g.game.setPlayerMode(m);
+      g.placePlayer(x, z);
+      g.setCameraYaw(0);
+      g.rhythm.setLevel(l);
+    }, [mode, level, x, z]);
+    return d.step(4);
+  };
+  d.untilEta = async (maxEta, limit = 400) => {
+    for (let i = 0; i < limit; i++) {
+      await d.step(1);
+      if (!d.last.grounded && d.last.eta <= maxEta && d.last.vy < 0) break;
+    }
+    return d.last;
+  };
+  d.untilGrounded = async (limit = 600) => {
+    for (let i = 0; i < limit && !d.last.grounded; i++) await d.step(1);
+    return d.last;
+  };
+  d.untilJump = async (j0, limit = 60) => {
+    for (let i = 0; i < limit && d.last.jumps <= j0; i++) await d.step(1);
+    return d.last;
+  };
+  /** Highest feet Y reached while stepping until the next touchdown. */
+  d.flyUntilLanded = async () => {
+    let peak = d.last.y;
+    for (let i = 0; i < 600; i++) {
+      await d.step(1);
+      peak = Math.max(peak, d.last.y);
+      if (d.last.grounded && i > 3) break;
+    }
+    return peak;
+  };
+  return d;
+}
+
+/** Overlap of the drum strip with every other piece of HUD that is on screen (and the touch dialog-bubble lane). */
+const drumOverlapInfo = () => {
+  const dr = document.querySelector('.drums');
+  if (!dr || dr.hidden) return { visible: false };
+  const a = dr.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const touch = document.documentElement.classList.contains('touch-ui');
+  const hit = [];
+  const sels = ['.tc-button', '.tc-hint', '.tc-base', '.hud-fps', '.b2-row', '.dlg-card', '.interact-prompt', '.prompt', '.objective', '.hud-card'];
+  for (const sel of sels) {
+    for (const e of document.querySelectorAll(sel)) {
+      const hidden = e.hidden || getComputedStyle(e).display === 'none';
+      const r = e.getBoundingClientRect();
+      if (hidden || r.width === 0) continue;
+      if (a.left < r.right && r.left < a.right && a.top < r.bottom && r.top < a.bottom) hit.push(sel);
+    }
+  }
+  // The touch dialog bubble lives between 130 px from each side at the top.
+  const bubbleOverlap = touch && a.right > 130;
+  return { visible: true, inside: a.left >= 0 && a.top >= 0 && a.right <= vw && a.bottom <= vh, hit, bubbleOverlap, rect: [a.left, a.top, a.right, a.bottom].map(Math.round), lit: document.querySelectorAll('.drums .drum.on').length };
+};
+
+/** Bab2's progress row is hidden until an exercise runs: unhide it to measure, then restore. */
+const drumOverlapWithRow = () => {
+  const rows = [...document.querySelectorAll('.b2-row')];
+  const was = rows.map((r) => r.hidden);
+  rows.forEach((r) => { r.hidden = false; });
+  const info = drumOverlapInfo();
+  rows.forEach((r, i) => { r.hidden = was[i]; });
+  return info;
+};
+
+async function parkourDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  const report = (label, v) => console.log(`   [parkour] ${label}: ${v}`);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+
+  // ---- 1. Config: no jump numbers outside src/config/parkour.ts ------------------------------------------------------
+  {
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith('.ts') ? [path.join(dir, e.name)] : []));
+    const pc = fs.readFileSync(path.join(ROOT, 'src/player/PlayerConfig.ts'), 'utf8');
+    const banned = ['jumpApex', 'doubleJumpApex', 'doubleJumpSpeed', 'jumpSpeed', 'gravityUp', 'fallMultiplier', 'coyoteTime', 'jumpBuffer', 'stompMinImpact', 'stompRadius', 'launchSpeed', 'maxFallSpeed', 'squashMinImpact', 'spinTime', 'doubleJumpMin'];
+    const found = banned.filter((t) => pc.includes(t));
+    check('PlayerConfig.ts holds no jump numbers any more', found.length === 0, found.join(','));
+    const re = /\b(jumpApex|doubleJumpApex|gravityUp|fallMultiplier|coyoteTime|jumpBuffer|stompMinImpact|glenApex|windows|idleDrop|maxFallSpeed)\s*[:=]\s*[-\d.{]/;
+    const strays = walk(path.join(ROOT, 'src')).filter((f) => !f.endsWith(path.join('config', 'parkour.ts')) && re.test(fs.readFileSync(f, 'utf8')));
+    check('no jump number is defined anywhere except src/config/parkour.ts', strays.length === 0, strays.map((f) => path.relative(ROOT, f)).join(','));
+  }
+
+  // ---- 2. Five levels: apex heights while chaining perfect presses -----------------------------------------------------
+  {
+    await d.setup(0);
+    check('easy mode is on by default', d.last.easy === true && d.last.level === 0 && d.last.mode === 'superglen');
+    const heights = [];
+    const quals = [];
+    await d.tap(); // first jump after standing: level 0, no penalty
+    for (let k = 0; k < 5; k++) {
+      let peak = 0;
+      for (let i = 0; i < 400; i++) {
+        await d.step(1);
+        peak = Math.max(peak, d.last.y);
+        if (d.last.eta <= 0.05 && !d.last.grounded && d.last.vy < 0) break;
+      }
+      heights.push(peak);
+      if (k === 3) {
+        await d.step(1, true);
+        await shot(page, 'parkour-ring');
+      }
+      if (k < 4) {
+        const j0 = d.last.jumps;
+        await d.tap();
+        await d.untilJump(j0);
+        quals.push(`${d.last.q}/${d.last.level}`);
+      }
+    }
+    report('apex per level', heights.map((h) => h.toFixed(2)).join(' / '));
+    for (let k = 0; k < 5; k++) check(`rhythm level ${k}: apex ${PARKOUR_APEX[k]} m +-0.08`, Math.abs(heights[k] - PARKOUR_APEX[k]) <= 0.08, `${heights[k].toFixed(3)} m`);
+    check('chained presses 50 ms before touchdown are all perfect and raise one level each', quals.join() === 'perfect/1,perfect/2,perfect/3,perfect/4', quals.join());
+    check('level 4 is reachable by timed presses in easy mode', d.last.level === 4 && d.last.perfect >= 4);
+    await d.untilGrounded();
+  }
+
+  // ---- 3. Double jump: +1.2 m above the point of pressing at level 0 and level 4 --------------------------------------------
+  for (const lvl of [0, 4]) {
+    await d.setup(lvl);
+    await d.tap();
+    for (let i = 0; i < 100 && !(d.last.vy < 1.0 && d.last.y > 0.5); i++) await d.step(1);
+    const yPress = d.last.y;
+    const dj0 = d.last.dj;
+    await d.tap();
+    const peak = await d.flyUntilLanded();
+    const add = peak - yPress;
+    report(`double jump at level ${lvl}`, `pressed at ${yPress.toFixed(2)} m, peak ${peak.toFixed(2)} m, adds ${add.toFixed(2)} m`);
+    check(`double jump at level ${lvl} adds 1.1-1.3 m above the press point`, d.last.dj === dj0 + 1 && add > 1.1 && add < 1.3, `${add.toFixed(3)} m`);
+    await d.step(60);
+  }
+
+  // ---- 4. Timing windows ------------------------------------------------------------------------------------------------------
+  const startRun = async (level) => {
+    await d.setup(level);
+    await d.tap(); // fresh jump at `level`
+    return d.last.level;
+  };
+  {
+    // 100 ms before touchdown
+    await startRun(2);
+    let j0 = d.last.jumps;
+    await d.untilEta(0.1);
+    const etaAt = d.last.eta;
+    await d.tap();
+    await d.untilJump(j0);
+    check('press 100 ms before touchdown: perfect, level 2 -> 3', d.last.q === 'perfect' && d.last.level === 3, `eta ${etaAt.toFixed(3)} -> ${d.last.q}/${d.last.level}`);
+    await d.untilGrounded();
+    await d.step(30);
+    // 100 ms after touchdown
+    await startRun(2);
+    j0 = d.last.jumps;
+    await d.untilGrounded();
+    await d.step(5);
+    await d.tap();
+    check('press 100 ms after touchdown: perfect, level 2 -> 3, jumps at once', d.last.q === 'perfect' && d.last.level === 3 && d.last.jumps === j0 + 1, `${d.last.q}/${d.last.level}`);
+    await d.untilGrounded();
+    await d.step(30);
+    // 250 ms before touchdown
+    await startRun(2);
+    j0 = d.last.jumps;
+    await d.untilEta(0.25);
+    const eta2 = d.last.eta;
+    await d.tap();
+    await d.untilJump(j0);
+    check('press 250 ms before touchdown: good, level 2 -> 3', d.last.q === 'good' && d.last.level === 3, `eta ${eta2.toFixed(3)} -> ${d.last.q}/${d.last.level}`);
+    await d.untilGrounded();
+    await d.step(30);
+    // 400 ms after touchdown: a miss drops ONE level (not to zero)
+    await startRun(2);
+    j0 = d.last.jumps;
+    const m0 = d.last.misses;
+    await d.untilGrounded();
+    await d.step(23);
+    await d.tap();
+    check('press 400 ms after touchdown: a miss, level 2 -> 1 (not 0), plain jump', d.last.q === 'normal' && d.last.level === 1 && d.last.misses === m0 + 1 && d.last.jumps === j0 + 1, `${d.last.q}/${d.last.level} misses +${d.last.misses - m0}`);
+    await d.untilGrounded();
+    await d.step(30);
+    // idle on the ground
+    await startRun(3);
+    await d.untilGrounded();
+    await d.step(96);
+    const l1 = d.last.level;
+    await d.step(90);
+    const l2 = d.last.level;
+    check('standing 1.6 s after a landing: level 3 -> 2; 3.1 s: -> 1', l1 === 2 && l2 === 1, `${l1}, ${l2}`);
+    // first jump after standing: no penalty
+    await d.step(60);
+    const lv = d.last.level;
+    const mm = d.last.misses;
+    await d.tap();
+    await d.step(2);
+    check('the first jump after standing (more than 1.5 s) has no penalty: level and misses unchanged', d.last.level === lv && d.last.misses === mm && d.last.q === 'normal', `${lv} -> ${d.last.level}`);
+    await d.setup(3);
+    await d.tap();
+    check('the very first jump (after the spawn) has no penalty and uses the current level (3.4 m)', d.last.level === 3 && d.last.misses === mm && d.last.q === 'normal');
+    const pk = await d.flyUntilLanded();
+    check('...its apex is the level-3 apex', Math.abs(pk - 3.4) <= 0.08, `${pk.toFixed(3)} m`);
+  }
+
+  // ---- 5. Easy mode: holding the jump button (flight locked) ------------------------------------------------------------------
+  {
+    await d.setup(0);
+    await d.down();
+    let maxLevel = 0;
+    let sawFour = false;
+    for (let i = 0; i < 600; i++) {
+      await d.step(1);
+      maxLevel = Math.max(maxLevel, d.last.level);
+      if (d.last.level >= 4) sawFour = true;
+      if (i === 400) {
+        await d.step(1, true);
+        await shot(page, 'parkour-level3-hold');
+      }
+    }
+    await d.up();
+    report('easy hold for 10 s', `max level ${maxLevel}, autos ${d.last.autos}, jumps ${d.last.jumps}`);
+    check('easy mode: holding Space (flight locked) bounces by itself and climbs to level 3 but never 4', maxLevel === 3 && !sawFour && d.last.autos >= 8, `max ${maxLevel}, autos ${d.last.autos}`);
+    await d.untilGrounded();
+  }
+
+  // ---- 6. Flight unlocked: holding flies; release falls at once; re-hold re-ignites ---------------------------------------------------
+  {
+    await page.evaluate(() => window.__superglen.game.setSkills({ fly: true }));
+    await d.setup(0);
+    await d.step(30);
+    const f0 = d.last.flights;
+    await d.down();
+    let start = -1;
+    for (let i = 1; i <= 120; i++) {
+      await d.step(1);
+      if (d.last.flying) {
+        start = i;
+        break;
+      }
+    }
+    check('flight unlocked: holding Space from the ground flies (jets within 0.45-0.9 s), no automatic bounce', start >= 27 && start <= 54 && d.last.autos === 0 && d.last.flights === f0 + 1, `jets after ${start} frames, autos ${d.last.autos}`);
+    await d.step(90);
+    const yUp = d.last.y;
+    await d.up();
+    await d.step(2);
+    const v2 = d.last.vy;
+    await d.step(8);
+    const v10 = d.last.vy;
+    report('release while flying', `vy after 2 frames ${v2.toFixed(2)}, after 10 frames ${v10.toFixed(2)} m/s (height ${yUp.toFixed(1)} m)`);
+    check('release: flying stops at once, vertical speed goes negative under normal gravity (no -2.2 m/s plateau)', v2 < 0 && v10 < -5 && !d.last.flying, `${v2.toFixed(2)} -> ${v10.toFixed(2)}`);
+    await d.untilGrounded();
+    check('...and lands without trouble', d.last.grounded && !d.last.flying);
+    // re-hold in the air
+    await d.step(30);
+    await d.down();
+    await d.step(120);
+    await d.up();
+    await d.step(10);
+    const f1 = d.last.flights;
+    await d.down();
+    let again = -1;
+    for (let i = 1; i <= 60; i++) {
+      await d.step(1);
+      if (d.last.flying) {
+        again = i;
+        break;
+      }
+    }
+    check('press and hold again in the air: the jets re-ignite (after the 0.45 s hold)', again > 0 && again <= 45 && d.last.flights === f1 + 1, `after ${again} frames`);
+    await d.up();
+    await d.untilGrounded();
+    await d.step(30);
+    // A held bounce chain (level 2+, timed press) keeps bouncing even with flight unlocked.
+    await d.setup(2);
+    await d.tap();
+    await d.untilEta(0.05);
+    const f2 = d.last.flights;
+    await d.down();
+    await d.step(240);
+    check('flight unlocked: a held button inside a bounce chain (level 2+) keeps bouncing instead of flying', d.last.autos >= 2 && d.last.flights === f2 && d.last.chain, `autos ${d.last.autos}, flights +${d.last.flights - f2}`);
+    await d.up();
+    await d.untilGrounded();
+    await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  }
+
+  // ---- 7. Bounce drum hook ---------------------------------------------------------------------------------------------------------
+  {
+    await page.evaluate(() => window.__superglen.testBox(4, 0.1, 4, 1.5, 0.1, 1.5, true));
+    await d.setup(1, 0, 0);
+    const b0 = d.last.bounces;
+    const p0 = d.last.perfect;
+    await page.evaluate(() => window.__superglen.teleportFeet(4, 3, 4));
+    let jumped = false;
+    for (let i = 0; i < 90; i++) {
+      await d.step(1);
+      if (d.last.bounces > b0 && d.last.vy > 0) {
+        jumped = true;
+        break;
+      }
+    }
+    check('landing on a bounce drum: level +1, counts as perfect, throws the player up', jumped && d.last.level === 2 && d.last.bounces === b0 + 1 && d.last.perfect === p0 + 1 && d.last.q === 'perfect', `level ${d.last.level}, ${d.last.q}, vy ${d.last.vy.toFixed(1)}`);
+    const pk = await d.flyUntilLanded();
+    check('...the bounce launches with the new level (2.7 m)', Math.abs(pk - 0.2 - 2.7) <= 0.1, `peak ${pk.toFixed(2)} m above the floor`);
+    // a plain landing is no bounce
+    await d.setup(1, -4, -4);
+    const b1 = d.last.bounces;
+    await page.evaluate(() => window.__superglen.teleportFeet(-4, 3, -4));
+    await d.untilGrounded();
+    await d.step(5);
+    check('landing on the plain floor: no bounce, level unchanged', d.last.bounces === b1 && d.last.level === 1);
+  }
+
+  // ---- 8. Auto mantle ---------------------------------------------------------------------------------------------------------------
+  {
+    // Wall face at x = -6.2; the player starts 0.4 m in front of it, feet 1.0 m up (head 2.1 m). Heading +X = key d at camera yaw 0.
+    const mantleCase = async (z, top, press, shotName) => {
+      await page.evaluate(([z, top]) => window.__superglen.testBox(-4.7, top / 2, z, 1.5, top / 2, 1.2), [z, top]);
+      await d.setup(0, 0, 0, 'glen');
+      await page.evaluate((z) => { window.__superglen.teleportFeet(-6.6, 1.0, z); window.__superglen.setCameraYaw(0); }, z);
+      const m0 = (await d.step(1)).mantles;
+      if (press) await d.down('d');
+      let sawMantling = false;
+      for (let i = 0; i < 110; i++) {
+        await d.step(1);
+        if (d.last.mantling && !sawMantling) {
+          sawMantling = true;
+          if (shotName) {
+            await d.step(7, true);
+            await shot(page, shotName);
+          }
+        }
+      }
+      await d.up('d');
+      await d.step(20);
+      return { mantles: d.last.mantles - m0, y: d.last.y, x: d.last.x, grounded: d.last.grounded, sawMantling, lvl: d.last.level };
+    };
+    let r = await mantleCase(2, 2.5, true, 'parkour-mantle');
+    report('ledge 0.4 m above the head', JSON.stringify(r));
+    check('ledge 0.4 m above the head: mantled, standing on top', r.mantles === 1 && r.sawMantling && r.grounded && Math.abs(r.y - 2.5) < 0.1 && r.x > -6.2, `y ${r.y.toFixed(2)}, x ${r.x.toFixed(2)}`);
+    check('...the rhythm level is unchanged by a mantle', r.lvl === 0);
+    r = await mantleCase(5, 3.0, true);
+    check('ledge 0.9 m above the head: not mantled (falls back down)', r.mantles === 0 && r.y < 0.2, `y ${r.y.toFixed(2)}, mantles ${r.mantles}`);
+    r = await mantleCase(8, 8.0, true);
+    check('tall wall: not mantled', r.mantles === 0 && r.y < 0.2, `y ${r.y.toFixed(2)}, mantles ${r.mantles}`);
+    r = await mantleCase(11, 2.5, false);
+    check('no movement toward the ledge: no mantle', r.mantles === 0 && r.y < 0.2, `y ${r.y.toFixed(2)}, mantles ${r.mantles}`);
+    // Controls are locked during the animation: a stick pushed away does not pull the body back.
+    // A pole top (cylinder) edge and a too-small ledge are covered by the room check; here: no room (ceiling slab above the ledge).
+    await page.evaluate(() => { window.__superglen.testBox(-4.7, 2.0 / 2, 14, 1.5, 1.0, 1.2); window.__superglen.testBox(-4.7, 3.2, 14, 1.5, 0.2, 1.2); });
+    await d.setup(0, 0, 0, 'glen');
+    await page.evaluate(() => { window.__superglen.teleportFeet(-6.6, 1.0, 14); window.__superglen.setCameraYaw(0); });
+    await d.step(1);
+    const m1 = d.last.mantles;
+    await d.down('d');
+    await d.step(100);
+    await d.up('d');
+    check('ledge with no standing room above it (ceiling slab): not mantled', d.last.mantles === m1, `mantles +${d.last.mantles - m1}`);
+  }
+
+  // ---- 9. Drum icons ------------------------------------------------------------------------------------------------------------------
+  {
+    await d.setup(0, 0, 0, 'glen');
+    await d.step(2);
+    check('drum icons hidden in Glen mode', (await page.evaluate(drumOverlapInfo)).visible === false && d.last.lit === 0);
+    let ok = true;
+    const seen = [];
+    for (let lvl = 0; lvl < 5; lvl++) {
+      await d.setup(lvl);
+      await d.step(2);
+      const o = await page.evaluate(drumOverlapInfo);
+      seen.push(`${lvl}:${o.lit}`);
+      if (!(o.visible && o.lit === lvl + 1 && d.last.lit === lvl + 1)) ok = false;
+    }
+    check('drum icons: level 0..4 lights 1..5 drums (lit follows the level)', ok, seen.join(' '));
+    const o = await page.evaluate(drumOverlapInfo);
+    check('desktop 1280x720 (test): drum icons overlap no other HUD', o.hit.length === 0 && o.inside, JSON.stringify(o));
+    await d.setup(4);
+    await d.tap();
+    for (let i = 0; i < 25; i++) await d.step(1);
+    await d.step(1, true);
+    await shot(page, 'parkour-level4');
+  }
+
+  // ---- 10. Cleanup check of the stray test boxes is implicit (level reload) ----
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+/** Touch: the same rules through the on-screen jump button, plus layout at both phone heights. */
+async function parkourTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  const d = makeParkourDriver(page);
+  const report = (label, v) => console.log(`   [parkour] ${label}: ${v}`);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await d.setup(0);
+  const center = () => page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  let jb = await center();
+  const tapBtn = async () => {
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  // timed taps with the on-screen button: level 0 -> 4
+  await tapBtn();
+  const quals = [];
+  for (let k = 0; k < 4; k++) {
+    await d.untilEta(0.05);
+    const j0 = d.last.jumps;
+    await tapBtn();
+    await d.untilJump(j0);
+    quals.push(`${d.last.q}/${d.last.level}`);
+  }
+  check('touch: timed taps on the jump button chain to level 4 (5 lit drums)', quals.join() === 'perfect/1,perfect/2,perfect/3,perfect/4' && d.last.lit === 5, quals.join());
+  for (let i = 0; i < 24; i++) await d.step(1);
+  await d.step(1, true);
+  await shot(page, 'parkour-touch-281');
+  const o281 = await page.evaluate(drumOverlapInfo);
+  check('touch 844x281 (test): drum icons overlap no touch button, joystick hint, star or fps pill and stay out of the dialog lane', o281.hit.length === 0 && o281.inside && !o281.bubbleOverlap, JSON.stringify(o281));
+  check('touch: jump button still >= 80 x 80', await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect(); return r.width >= 80 && r.height >= 80; }));
+  await d.untilGrounded();
+  // holding the on-screen button (flight locked): easy bounce
+  await d.setup(0);
+  await fingers.down(7, jb.x, jb.y);
+  let maxL = 0;
+  for (let i = 0; i < 480; i++) {
+    await d.step(1);
+    maxL = Math.max(maxL, d.last.level);
+  }
+  await fingers.up(7);
+  check('touch: holding the jump button bounces by itself up to level 3', maxL === 3 && d.last.autos >= 6, `max ${maxL}, autos ${d.last.autos}`);
+  await d.untilGrounded();
+  // layout at both phone heights, Glen hidden / Superglen visible
+  for (const h of [390, 281]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    await d.setup(3, 0, 0, 'glen');
+    await d.step(3);
+    const hid = await page.evaluate(drumOverlapInfo);
+    await d.setup(4);
+    await d.step(3);
+    const o = await page.evaluate(drumOverlapInfo);
+    check(`touch 844x${h} (test): hidden in Glen, 5 lit in Superglen, no overlap`, hid.visible === false && o.visible && o.lit === 5 && o.hit.length === 0 && o.inside && !o.bubbleOverlap, JSON.stringify(o));
+  }
+  // story levels
+  for (const h of [390, 281]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); return g.loadLevel('bab1'); });
+    await d.step(60);
+    await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+    await d.step(5);
+    const a = await page.evaluate(drumOverlapInfo);
+    check(`touch 844x${h} (bab1 after the chapter): drum icons visible, no overlap`, a.visible && a.hit.length === 0 && a.inside && !a.bubbleOverlap, JSON.stringify(a));
+    await page.evaluate(() => { const g = window.__superglen; return g.loadLevel('bab2'); });
+    await d.step(60);
+    await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+    await d.step(5);
+    const b = await page.evaluate(drumOverlapWithRow);
+    check(`touch 844x${h} (bab2, progress row shown): drum icons visible, no overlap`, b.visible && b.hit.length === 0 && b.inside && !b.bubbleOverlap, JSON.stringify(b));
+  }
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+/** easy=0: a held button gives a single jump. */
+async function parkourNoEasyScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await d.setup(0);
+  check('?easy=0 turns easy mode off', d.last.easy === false);
+  const j0 = d.last.jumps;
+  await d.down();
+  await d.step(300);
+  await d.up();
+  check('?easy=0: holding Space gives a single jump (no automatic bounce)', d.last.jumps === j0 + 1 && d.last.autos === 0, `jumps +${d.last.jumps - j0}, autos ${d.last.autos}`);
+  // timed presses still work
+  await d.untilGrounded();
+  await d.setup(0);
+  await d.tap();
+  await d.untilEta(0.05);
+  const j1 = d.last.jumps;
+  await d.tap();
+  await d.untilJump(j1);
+  check('?easy=0: timed presses still raise the level', d.last.level === 1 && d.last.q === 'perfect');
+  // flight unlocked: holding right after a timed press at level >= 2 flies (no chain without easy mode)
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: true }));
+  await d.setup(2);
+  await d.tap();
+  await d.untilEta(0.05);
+  await d.down();
+  await d.step(120);
+  check('?easy=0 with flight unlocked: holding always flies', d.last.flying && d.last.autos === 0, `flying ${d.last.flying}`);
+  await d.up();
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+const AUDIO_STUB = () => {
+  const aud = { ctxs: 0, oscs: [], noises: 0 };
+  window.__aud = aud;
+  class Param {
+    constructor() { this.sets = []; this.value = 0; }
+    setValueAtTime(v) { this.sets.push(['set', v]); return this; }
+    linearRampToValueAtTime(v) { this.sets.push(['lin', v]); return this; }
+    exponentialRampToValueAtTime(v) { this.sets.push(['exp', v]); return this; }
+  }
+  class Node { connect() { return this; } disconnect() {} }
+  class Gain extends Node { constructor() { super(); this.gain = new Param(); } }
+  class Osc extends Node {
+    constructor() { super(); this.type = 'sine'; this.frequency = new Param(); }
+    start() { aud.oscs.push({ type: this.type, sets: this.frequency.sets }); }
+    stop() {}
+  }
+  class Src extends Node { start() { aud.noises++; } stop() {} }
+  class Filt extends Node { constructor() { super(); this.frequency = new Param(); this.Q = { value: 0 }; } }
+  window.AudioContext = class {
+    constructor() { aud.ctxs++; this.currentTime = 1; this.sampleRate = 8000; this.state = 'running'; this.destination = new Node(); }
+    createGain() { return new Gain(); }
+    createOscillator() { return new Osc(); }
+    createBuffer(c, l) { return { getChannelData: () => new Float32Array(l) }; }
+    createBufferSource() { return new Src(); }
+    createBiquadFilter() { return new Filt(); }
+    resume() { return Promise.resolve(); }
+  };
+};
+
+const finalHz = (o) => { const ex = o.sets.filter((s) => s[0] === 'exp'); return ex.length ? ex[ex.length - 1][1] : -1; };
+
+async function parkourAudioScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  check('audio: the AudioContext is created inside the first tap (startGate.onStart)', await page.evaluate(() => window.__aud.ctxs === 1 && window.__superglen.rhythm.audio));
+  const notes = [];
+  for (let lvl = 0; lvl < 5; lvl++) {
+    await d.setup(lvl);
+    const n0 = await page.evaluate(() => window.__aud.oscs.length);
+    await d.tap();
+    await d.step(2);
+    const got = await page.evaluate((n0) => window.__aud.oscs.slice(n0).map((o) => ({ type: o.type, sets: o.sets })), n0);
+    notes.push(got.length === 1 ? finalHz(got[0]) : `n=${got.length}`);
+    await d.untilGrounded();
+    await d.step(10);
+  }
+  report: console.log(`   [parkour] drum notes per level: ${notes.join(', ')}`);
+  check('audio: a rhythm jump schedules exactly one drum note at the pentatonic frequency of its level (levels 0-4)', notes.every((n, i) => Math.abs(n - PARKOUR_HZ[i]) < 0.01), notes.join(', '));
+  // a timed jump into level 4 adds the lion cheer
+  await d.setup(3);
+  await d.tap();
+  await d.untilEta(0.05);
+  const n1 = await page.evaluate(() => window.__aud.oscs.length);
+  await d.tap();
+  await d.step(8);
+  const extra = await page.evaluate((n1) => window.__aud.oscs.length - n1, n1);
+  check('audio: a timed jump that reaches level 4 plays the drum plus the lion cheer (2 oscillators)', extra === 2, `${extra} oscillators`);
+  // soft boing on a big landing
+  await d.untilGrounded();
+  await d.step(5);
+  await d.setup(0);
+  const n2 = await page.evaluate(() => window.__aud.oscs.length);
+  await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.untilGrounded();
+  await d.step(3);
+  const boing = await page.evaluate((n2) => window.__aud.oscs.slice(n2).length, n2);
+  check('audio: a big landing plays one soft boing', boing === 1, `${boing} oscillators`);
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+async function parkourMuteScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  await d.step(10);
+  await d.setup(2);
+  await d.tap();
+  await d.untilEta(0.05);
+  await d.tap();
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.untilGrounded();
+  const aud = await page.evaluate(() => ({ oscs: window.__aud.oscs.length, noises: window.__aud.noises, muted: window.__superglen.rhythm.muted, sounds: window.__superglen.rhythm.sounds }));
+  check('?mute=1: jumps, a perfect press and a big landing schedule no sound at all', aud.muted && aud.oscs === 0 && aud.noises === 0 && aud.sounds === 0, JSON.stringify(aud));
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+async function parkourNoAudioScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  await d.step(10);
+  await d.setup(2);
+  await d.tap();
+  await d.untilEta(0.05);
+  await d.tap();
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.untilGrounded();
+  check('no Web Audio at all: no exception, the game plays on (level 3 reached by a timed press)', !d.last.audio && d.last.level === 3 && d.last.grounded, `audio ${d.last.audio}, level ${d.last.level}`);
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+async function parkourPerfScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  const report = (label, v) => console.log(`   [parkour] ${label}: ${v}`);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  // warm up once (a first bounce shows every effect), then measure
+  await d.setup(0);
+  await d.down();
+  await d.step(240, true);
+  await d.up();
+  await d.untilGrounded();
+  await d.setup(0);
+  await d.step(3, true);
+  const p0 = d.last.programs;
+  const w0 = d.last.writes;
+  await d.down();
+  const res = await page.evaluate(() => {
+    const g = window.__superglen;
+    let changes = 0;
+    let last = g.rhythm.level;
+    const hasHeap = typeof performance.memory !== 'undefined' && typeof window.gc === 'function';
+    if (hasHeap) window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = hasHeap ? heap() : 0;
+    let acc = 0;
+    const n = 600; // 10 s
+    for (let i = 0; i < n; i++) {
+      g.advance(1, i % 15 === 0 && false);
+      if (g.rhythm.level !== last) { changes++; last = g.rhythm.level; }
+      if (hasHeap) { const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+    }
+    return { changes, bpf: hasHeap ? acc / n : -1, hasHeap };
+  });
+  // rendered frames in the same run (every effect on screen once)
+  for (let i = 0; i < 40; i++) await d.step(15, true);
+  await d.up();
+  await d.snap();
+  report('10 s of rhythm bouncing', `level changes ${res.changes}, heap ${Math.round(res.bpf)} B/frame, programs ${p0} -> ${d.last.programs}, DOM writes ${d.last.writes - w0}`);
+  check('10 s of rhythm bouncing (and rendering every effect): no shader program growth', d.last.programs === p0 && p0 > 0, `${p0} -> ${d.last.programs}`);
+  if (res.hasHeap) check('10 s of rhythm bouncing: allocation budget < 16000 bytes per frame', res.bpf < 16000, `${Math.round(res.bpf)} B/frame`);
+  check('drum icons: the DOM is written only when the level changes (writes <= level changes + 1)', res.changes >= 3 && d.last.writes - w0 <= res.changes + 1 + 4, `${res.changes} changes in the stepped run, ${d.last.writes - w0} writes (incl. the rendered run)`);
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
-  const ctx = await browser.newContext(ctxOpts);
+  const { initScript, ...ctxOptions } = ctxOpts;
+  const ctx = await browser.newContext(ctxOptions);
+  if (initScript) await ctx.addInitScript(initScript);
   // Switches on the test-only debug numbers of the story level (pole cover, camera position).
   await ctx.addInitScript(() => { window.__SG_TEST = true; });
   const page = await ctx.newPage();
@@ -3442,6 +4174,14 @@ async function main() {
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, skillsTouchScenario, '?level=test&fps=0'));
+
+    results.push(await runScenario(browser, 'parkour', { viewport: { width: 1280, height: 720 } }, parkourDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'parkour-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, parkourTouchScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'parkour-noeasy', { viewport: { width: 1280, height: 720 } }, parkourNoEasyScenario, '?level=test&fps=0&easy=0'));
+    results.push(await runScenario(browser, 'parkour-audio', { viewport: { width: 1280, height: 720 }, initScript: AUDIO_STUB }, parkourAudioScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'parkour-mute', { viewport: { width: 1280, height: 720 }, initScript: AUDIO_STUB }, parkourMuteScenario, '?level=test&fps=0&mute=1'));
+    results.push(await runScenario(browser, 'parkour-noaudio', { viewport: { width: 1280, height: 720 }, initScript: () => { window.AudioContext = undefined; window.webkitAudioContext = undefined; } }, parkourNoAudioScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'parkour-perf', { viewport: { width: 1280, height: 720 } }, parkourPerfScenario, '?level=test&fps=0'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 

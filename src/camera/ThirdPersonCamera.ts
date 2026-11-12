@@ -4,6 +4,7 @@ import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
 import { Quality } from '../core/Quality';
 import { PlayerConfig } from '../player/PlayerConfig';
+import { Parkour, tableAt } from '../config/parkour';
 
 const DEG = Math.PI / 180;
 
@@ -75,6 +76,8 @@ export interface CameraSubject {
   readonly airHeight: number;
   /** In flight mode (jets or glide). */
   readonly flying?: boolean;
+  /** Rhythm level 0..4 (the camera backs off a little more in the air at higher levels). */
+  readonly rhythmLevel?: number;
 }
 
 function angleDelta(from: number, to: number): number {
@@ -116,6 +119,7 @@ export class ThirdPersonCamera {
   private followBlend = 0;
   private airLift = 0;
   private flyLift = 0;
+  private rhythmEase = 0;
   private bumpTime = 1e9;
   private readonly reducedMotion: boolean;
 
@@ -163,6 +167,7 @@ export class ThirdPersonCamera {
     this.currentDistance = CameraConfig.distance;
     this.airLift = 0;
     this.flyLift = 0;
+    this.rhythmEase = 0;
     this.followBlend = 0;
     this.idleTime = 0;
     this.moveWasActive = false;
@@ -234,6 +239,7 @@ export class ThirdPersonCamera {
       );
       this.airLift += (want - this.airLift) * (1 - Math.exp(-c.airSharpness * dt));
       this.flyLift += ((subject.flying ? 1 : 0) - this.flyLift) * (1 - Math.exp(-c.flySharpness * dt));
+      this.rhythmEase += ((subject.rhythmLevel ?? 0) - this.rhythmEase) * (1 - Math.exp(-Parkour.camera.sharpness * dt));
     }
     const lift = this.airLift;
     const fly = this.flyLift;
@@ -265,10 +271,13 @@ export class ThirdPersonCamera {
     }
 
     // Direction from target to camera.
-    const pitch = Math.min(this.pitch + lift * c.airExtraPitch + fly * c.flyExtraPitch, 75 * DEG);
+    // Higher rhythm levels back off a little more, only while in the air (lift).
+    const rExtraPitch = lift * tableAt(Parkour.camera.extraPitchDeg, this.rhythmEase) * DEG;
+    const rExtraDist = lift * tableAt(Parkour.camera.extraDistance, this.rhythmEase);
+    const pitch = Math.min(this.pitch + lift * c.airExtraPitch + fly * c.flyExtraPitch + rExtraPitch, 75 * DEG);
     const cp = Math.cos(pitch);
     this.dir.set(Math.sin(this.yaw) * cp, Math.sin(pitch), Math.cos(this.yaw) * cp);
-    const maxDist = c.distance + lift * c.airExtraDistance + fly * c.flyExtraDistance + this.frameExtra * this.frameBlend;
+    const maxDist = c.distance + lift * c.airExtraDistance + fly * c.flyExtraDistance + rExtraDist + this.frameExtra * this.frameBlend;
 
     // Wall avoidance: cast from the target toward the desired camera spot.
     let allowed: number = maxDist;
