@@ -132,6 +132,26 @@ export class ThirdPersonCamera {
       typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  /**
+   * Snap the camera behind a player who faces `facing` (0 = +Z): no easing, no auto-follow carry-over.
+   * Used when a level loads.
+   */
+  snapBehind(facing: number): void {
+    let y = (facing + Math.PI) % (Math.PI * 2);
+    if (y > Math.PI) y -= Math.PI * 2;
+    this.yaw = Math.abs(y) < 1e-9 ? 0 : y; // the default spawn (facing -Z) gives exactly yaw 0
+    this.steeringYaw = this.yaw;
+    this.pitch = CameraConfig.defaultPitch;
+    this.initialized = false;
+    this.currentDistance = CameraConfig.distance;
+    this.airLift = 0;
+    this.followBlend = 0;
+    this.idleTime = 0;
+    this.moveWasActive = false;
+    this.manualThisFrame = false;
+    this.bumpTime = 1e9;
+  }
+
   /** Tiny camera dip on a hard landing. Ignored under prefers-reduced-motion. */
   bump(): void {
     if (!this.reducedMotion) this.bumpTime = 0;

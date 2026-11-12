@@ -45,9 +45,21 @@ export class StaticProps {
   private readonly quat = new THREE.Quaternion();
 
   constructor(
-    private readonly scene: THREE.Scene,
+    /** Parent for the meshes: the level root (`ctx.root`). */
+    private readonly parent: THREE.Object3D,
     private readonly physics: Physics,
   ) {}
+
+  /**
+   * Dispose the shared geometries and materials. Colliders are removed by Physics.disposeLevelBodies()
+   * and the meshes by the level root; the LevelManager does both, so levels rarely call this themselves.
+   */
+  dispose(): void {
+    this.boxGeometry.dispose();
+    this.cylinderGeometry.dispose();
+    for (const m of this.materials.values()) m.dispose();
+    this.materials.clear();
+  }
 
   /** Shared material per colour (keeps draw-state changes and memory low). */
   material(color: THREE.ColorRepresentation): THREE.MeshStandardMaterial {
@@ -105,7 +117,7 @@ export class StaticProps {
     // Static: compute the matrix once and stop per-frame matrix updates.
     mesh.updateMatrix();
     mesh.matrixAutoUpdate = false;
-    this.scene.add(mesh);
+    this.parent.add(mesh);
     return rot;
   }
 }

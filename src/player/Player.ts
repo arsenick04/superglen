@@ -59,6 +59,12 @@ export class Player {
   /** Body yaw in radians; 0 faces +Z. */
   facing = Math.PI;
 
+  /**
+   * False while a cutscene/fade/locked dialog runs: stick and jump are ignored (the player brakes
+   * to a stop). Set through Game.setControlsEnabled / the level context, not directly.
+   */
+  inputEnabled = true;
+
   /** Interpolated capsule-center position for rendering and the camera. */
   readonly visualPosition = new THREE.Vector3();
 
@@ -189,8 +195,8 @@ export class Player {
   fixedUpdate(dt: number, cameraYaw: number): void {
     const T = this.tuning;
     // ---- Horizontal: camera-relative input -> target velocity ----------------
-    let mx = this.input.move.x;
-    let my = this.input.move.y;
+    let mx = this.inputEnabled ? this.input.move.x : 0;
+    let my = this.inputEnabled ? this.input.move.y : 0;
     const len = Math.hypot(mx, my);
     if (len < C.inputDeadZone) {
       mx = 0;
@@ -245,7 +251,7 @@ export class Player {
     }
 
     // Edge-triggered only: holding the button never repeats (wasPressed fires once per press).
-    if (this.input.wasPressed('jump')) this.jumpBufferTimer = C.jumpBuffer;
+    if (this.inputEnabled && this.input.wasPressed('jump')) this.jumpBufferTimer = C.jumpBuffer;
     let jumped = false;
     if (this.jumpBufferTimer > 0) {
       if (wasGrounded || this.timeSinceGrounded <= C.coyoteTime) {
@@ -458,6 +464,8 @@ export class Player {
     this.next.z = z;
     this.body.setTranslation(this.next, true);
     this.body.setNextKinematicTranslation(this.next);
+    // The character controller reads the collider's pose: bring it up to date without waiting for a step.
+    this.world.propagateModifiedBodyPositionsToColliders();
     this.currPos.set(x, y, z);
     this.prevPos.copy(this.currPos);
     this.velocity.set(0, 0, 0);
@@ -474,8 +482,41 @@ export class Player {
     this.peakFeetY = y - CENTER_TO_FEET;
   }
 
+  /**
+   * Put the player on a level spawn: `feetY` is the standing height of the feet, `yaw` the direction
+   * to face (0 = +Z; omit to keep the current facing). Resets velocity, the safe-respawn point and the
+   * visual, so nothing streaks. The feet are resolved onto the floor below the spawn (see resolveFloor),
+   * so a spawn at or slightly above (or a bit inside) a floor ends up standing on its surface.
+   * Rapier's scene queries must know the colliders: call Physics.refreshQueries() after building a level.
+   */
+  placeAt(x: number, feetY: number, z: number, yaw: number = this.facing): void {
+    const floor = this.resolveFloor(x, feetY, z);
+    const cy = floor + CENTER_TO_FEET + C.skinOffset;
+    this.teleport(x, cy, z);
+    this.safePos.set(x, cy, z);
+    this.facing = yaw;
+    this.prevFacing = yaw;
+    this.updateVisual(1, 0);
+  }
+
+  /**
+   * Floor height under (x, z): ray down from 1 m above `feetY` (up to 8 m). If nothing is found (or the
+   * ray starts inside solid geometry) the requested height is kept.
+   */
+  private resolveFloor(x: number, feetY: number, z: number): number {
+    const r = this.groundRay;
+    r.origin.x = x;
+    r.origin.y = feetY + 1;
+    r.origin.z = z;
+    const hit = this.world.castRay(r, 9, true, undefined, undefined, this.collider);
+    if (hit && hit.timeOfImpact > 1e-4) return feetY + 1 - hit.timeOfImpact;
+    return feetY;
+  }
+
+  /** Back to the last safe ground (same floor resolution as a level spawn). */
   respawn(): void {
-    this.teleport(this.safePos.x, this.safePos.y + 0.5, this.safePos.z);
+    const feet = this.safePos.y - CENTER_TO_FEET - C.skinOffset;
+    this.placeAt(this.safePos.x, feet + 0.5, this.safePos.z);
   }
 
   /**

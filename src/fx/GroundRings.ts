@@ -57,6 +57,14 @@ export class GroundRings {
     r.mesh.visible = true;
   }
 
+  /** Hide all running rings (level unload). */
+  clear(): void {
+    for (const r of this.rings) {
+      r.active = false;
+      r.mesh.visible = false;
+    }
+  }
+
   update(dt: number): void {
     for (const r of this.rings) {
       if (!r.active) continue;

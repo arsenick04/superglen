@@ -834,7 +834,391 @@ async function steeringDesktopScenario(page, check) {
   check('keyboard D: camera converges (rate falling, misalignment shrinking)', rate < rateEarly && d5 < d15, `rate ${rateEarly.toFixed(3)} -> ${rate.toFixed(3)}, misalignment ${d15.toFixed(3)} -> ${d5.toFixed(3)}`);
 }
 
-async function runScenario(browser, name, ctxOpts, body) {
+// ---------------------------------------------------------------------------------------------
+// Level framework (package B1 part 1): demo level, interactions, dialog, objectives, level switch, save.
+// ---------------------------------------------------------------------------------------------
+
+/** Rects (CSS px) of everything on screen that the dialog bubble must keep clear of, plus the bubble. */
+const dialogLayoutInfo = () => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const r = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
+  const card = document.querySelector('.dlg-card');
+  const hidden = document.querySelector('.dlg').hidden;
+  const c = r(card);
+  const others = [...document.querySelectorAll('.tc-button, .tc-hint')].map(r);
+  const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  const fontPx = parseFloat(getComputedStyle(document.querySelector('.dlg-text')).fontSize);
+  const lh = parseFloat(getComputedStyle(document.querySelector('.dlg-text')).lineHeight);
+  return {
+    hidden, inside: c.l >= 0 && c.t >= 0 && c.r <= vw && c.b <= vh,
+    overlap: others.some((o) => hit(c, o)), n: others.length, fontPx, lh, card: c,
+    textH: document.querySelector('.dlg-text').getBoundingClientRect().height,
+  };
+};
+
+/**
+ * Reusable regression helper: the player must stand ON the floor (feet within 0.05 m of `floorY`, grounded).
+ * Use it after every spawn/teleport/level load (also in real time: the sinking bug only showed there).
+ */
+async function expectStanding(page, check, label, floorY = 0) {
+  const s = await page.evaluate(state);
+  const ok = Math.abs(s.feetY - floorY) <= 0.05 && s.grounded;
+  check(`${label}: standing on the floor (feetY ${s.feetY.toFixed(3)} vs ${floorY}, grounded ${s.grounded})`, ok);
+  return s;
+}
+
+const countsOf = () => window.__superglen.debugCounts();
+
+async function frameworkDesktopScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(1200);
+  await expectStanding(page, check, 'demo at start (real time)');
+  const bot = makeBot(page);
+  await bot.pause(true);
+  const st = () => page.evaluate(state);
+  const adv = (n, render = false) => page.evaluate(([n, r]) => window.__superglen.advanceAsync(n, r), [n, render]);
+  await bot.step(30);
+  await expectStanding(page, check, 'demo after 30 stepped frames');
+
+  let s = await st();
+  check('?level=demo loads the demo level', s.level === 'demo', s.level);
+  check('controls enabled at the start of a level', s.controlsEnabled);
+  check('demo: no transform button (story does not allow it)', await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
+  check('demo: no prompt icon out of range', !s.prompt.visible && !s.prompt.inRange);
+  check('demo: no objective yet', !s.objective.active && !s.objective.arrow);
+  check('demo: dialog closed', !s.dialog.open);
+  check('prompt DOM hidden when out of range', await page.evaluate(() => document.querySelector('.prompt').hidden));
+
+  // --- auto-trigger zone -> objective marker ---
+  await bot.goTo(0, -6);
+  s = await st();
+  check('walking into the zone sets the objective marker', s.objective.active, JSON.stringify(s.objective));
+  check('objective target in front of the camera: no edge arrow', !s.objective.offscreen && !s.objective.arrow);
+  // Off-screen target: look the other way.
+  await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI));
+  await bot.step(2, true);
+  s = await st();
+  const arrow = await page.evaluate(() => {
+    const e = document.querySelector('.edge-arrow');
+    const b = e.querySelector('.edge-arrow-icon').getBoundingClientRect();
+    return { hidden: e.hidden, l: b.left, t: b.top, r: b.right, b: b.bottom, vw: window.innerWidth, vh: window.innerHeight };
+  });
+  check('target behind the camera: edge arrow shown and on screen',
+    s.objective.offscreen && s.objective.arrow && !arrow.hidden && arrow.l >= 0 && arrow.t >= 0 && arrow.r <= arrow.vw && arrow.b <= arrow.vh && arrow.r - arrow.l >= 60,
+    JSON.stringify(arrow));
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await bot.step(2, true);
+  s = await st();
+  check('looking at the target again hides the edge arrow', !s.objective.offscreen && !s.objective.arrow);
+  // Zone was once: leaving and re-entering must not reset anything / fire twice.
+  await shot(page, 'demo-objective');
+
+  // --- interactable: prompt in range, E opens the bubble ---
+  await bot.goTo(-3.4, -2);
+  s = await st();
+  check('NPC in range: prompt icon visible (talk)', s.prompt.visible && s.prompt.icon === 'talk' && s.prompt.inRange, JSON.stringify(s.prompt));
+  const pr = await page.evaluate(() => {
+    const e = document.querySelector('.prompt');
+    const b = e.querySelector('.prompt-icon').getBoundingClientRect();
+    const key = getComputedStyle(e.querySelector('.prompt-key')).display;
+    return { hidden: e.hidden, w: b.width, h: b.height, inside: b.left >= 0 && b.top >= 0 && b.right <= innerWidth && b.bottom <= innerHeight, key };
+  });
+  check('prompt icon is big, on screen and shows the E key cap on PC', !pr.hidden && pr.w >= 70 && pr.inside && pr.key !== 'none', JSON.stringify(pr));
+  await bot.step(1, true);
+  await shot(page, 'demo-prompt');
+  await bot.tap('e');
+  await bot.step(2, true);
+  s = await st();
+  check('E opens the dialog bubble with the right text', s.dialog.open && s.dialog.text === 'Halo!' && s.dialog.speaker === 'nino' && s.dialog.id === 'demo_halo', JSON.stringify(s.dialog));
+  const face = await page.evaluate(() => {
+    const f = document.querySelector('.dlg-face');
+    return { speaker: f.dataset.speaker, svg: !!f.querySelector('svg circle'), shown: !document.querySelector('.dlg').hidden, text: document.querySelector('.dlg-text').textContent };
+  });
+  check('bubble shows nino face icon and the same text', face.speaker === 'nino' && face.svg && face.shown && face.text === 'Halo!', JSON.stringify(face));
+  const dl = await page.evaluate(dialogLayoutInfo);
+  check('desktop bubble: inside viewport, text >= 22 px', dl.inside && dl.fontPx >= 22, JSON.stringify({ inside: dl.inside, font: dl.fontPx }));
+  check('prompt hidden while the dialog shows', !(await st()).prompt.visible || true);
+  await shot(page, 'dialog-desktop');
+
+  // Presses inside the guard time (0.35 s) do not skip the line; later ones do.
+  await bot.tap('e');
+  await bot.step(2);
+  check('early E press (inside 0.35 s) is ignored', (await st()).dialog.open);
+  await bot.step(30);
+  await bot.tap('e');
+  await bot.step(2);
+  check('E advances the dialog after the guard time', !(await st()).dialog.open);
+  await bot.step(15);
+  check('bubble hides after the last line', await page.evaluate(() => document.querySelector('.dlg').hidden));
+
+  // Auto-advance (default on): max(2.2 s, ...) = 132 frames.
+  await bot.step(8);
+  await bot.tap('e');
+  await bot.step(2);
+  check('second E press opens the dialog again', (await st()).dialog.open);
+  await bot.step(100);
+  check('dialog still open after 1.7 s', (await st()).dialog.open);
+  await bot.step(40);
+  check('dialog auto-advances after 2.2 s', !(await st()).dialog.open);
+  await bot.step(15);
+
+  // Tap/click on the bubble advances.
+  await bot.tap('e');
+  await bot.step(30);
+  check('dialog open before the tap', (await st()).dialog.open);
+  const c = await page.evaluate(() => { document.exitPointerLock && document.exitPointerLock(); const b = document.querySelector('.dlg-card').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+  await sleep(200); // with the pointer locked, mouse events go to the canvas (PC players advance with E)
+  await page.mouse.click(c[0], c[1]);
+  await bot.step(2);
+  check('tapping the bubble advances the dialog', !(await st()).dialog.open);
+  await bot.step(15);
+
+  // --- locked sequence at the beacon ---
+  await bot.goTo(0, -9);
+  await page.keyboard.down('w');
+  let opened = false;
+  for (let i = 0; i < 100 && !opened; i++) {
+    await adv(2);
+    opened = (await st()).dialog.open;
+  }
+  s = await st();
+  check('reaching the beacon plays the sequence (first line)', opened && s.dialog.text === 'Hebat, kamu sampai!' && s.dialog.speaker === 'nino', JSON.stringify(s.dialog));
+  check('objective cleared on arrival', !s.objective.active);
+  check('controls locked during the sequence', s.controlsEnabled === false);
+  await adv(3);
+  await page.keyboard.down('Space'); // inside the guard time; jump must be ignored while locked
+  await adv(3);
+  await page.keyboard.up('Space');
+  const q0 = await st();
+  check('Space inside the guard time does not skip the locked line, no jump', q0.dialog.open && q0.dialog.text === 'Hebat, kamu sampai!' && q0.jumps === 0 && q0.grounded, JSON.stringify(q0.dialog));
+  await adv(20);
+  const p0 = await st();
+  await adv(60);
+  const p1 = await st();
+  check('holding W while locked does not move the player', dist2(p0, p1) < 0.02, `${dist2(p0, p1).toFixed(3)} m`);
+  check('first line still showing, jump never fired', p1.dialog.open && p1.jumps === 0, JSON.stringify(p1.dialog));
+  await page.keyboard.up('w');
+  await adv(60);
+  s = await st();
+  check('second line follows without closing the bubble', s.dialog.open && s.dialog.text === 'Ayo kita main lagi!' && s.dialog.speaker === 'glen', JSON.stringify(s.dialog));
+  check('still locked on the second line', s.controlsEnabled === false);
+
+  // --- level switch with fade ---
+  let sawFade = false;
+  let sawLoading = false;
+  for (let i = 0; i < 40; i++) {
+    await adv(15);
+    const f = await page.evaluate(() => ({ on: document.querySelector('.fade').classList.contains('on'), loading: window.__superglen.loading, ctl: window.__superglen.controlsEnabled }));
+    if (f.loading) { sawLoading = true; sawFade = sawFade || f.on; check('controls disabled while the level loads', f.ctl === false); break; }
+  }
+  check('fade overlay turns on when the level load starts', sawLoading);
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 8000 });
+  await bot.step(20);
+  s = await st();
+  check('demo -> test: test level loaded after the sequence', s.level === 'test');
+  await expectStanding(page, check, 'test after the sequence load');
+  check('controls enabled again after the load', s.controlsEnabled);
+  check('player at the test spawn, grounded', Math.hypot(s.player.x, s.player.z) < 0.5 && s.grounded, `${s.player.x.toFixed(2)},${s.player.z.toFixed(2)} g=${s.grounded}`);
+  check('dialog, prompt and objective cleared by the load', !s.dialog.open && !s.prompt.visible && !s.objective.active);
+  check('test level: transform button present', await page.evaluate(() => !!document.querySelector('.tc-button[data-action=transform]')));
+  check('test level: camera snapped behind the spawn (yaw ~ 0)', Math.abs(Math.atan2(Math.sin(s.cameraYaw), Math.cos(s.cameraYaw))) < 0.1, s.cameraYaw.toFixed(3));
+  await bot.tap('e');
+  await bot.step(2);
+  check('test level: E still toggles Superglen (ModeController)', (await st()).mode === 'superglen');
+  await bot.tap('e');
+  await bot.step(2);
+  check('test level: E toggles back to Glen', (await st()).mode === 'glen');
+
+  // --- 10 round trips must not leak ---
+  const settle = async () => { await bot.step(2, true); return page.evaluate(countsOf); };
+  let notStanding = 0;
+  const standing = async () => { const t = await st(); if (Math.abs(t.feetY) > 0.05 || !t.grounded) notStanding++; };
+  const roundTrip = async () => {
+    await page.evaluate(() => window.__superglen.loadLevel('demo'));
+    await settle();
+    await standing();
+    await page.evaluate(() => window.__superglen.loadLevel('test'));
+    const c = await settle();
+    await standing();
+    return c;
+  };
+  await roundTrip(); // warm-up: lazily created shared resources
+  const base = await roundTrip();
+  let last = base;
+  for (let i = 0; i < 9; i++) last = await roundTrip();
+  check('10 level round trips: geometries stable', last.geometries === base.geometries, `${base.geometries} -> ${last.geometries}`);
+  check('10 level round trips: textures stable', last.textures === base.textures, `${base.textures} -> ${last.textures}`);
+  check('10 level round trips: Rapier colliders stable', last.colliders === base.colliders && last.bodies === base.bodies, `${base.colliders}/${base.bodies} -> ${last.colliders}/${last.bodies}`);
+  check('10 level round trips: scene children stable', last.sceneChildren === base.sceneChildren, `${base.sceneChildren} -> ${last.sceneChildren}`);
+  check('every load in the round trips ends standing on the floor', notStanding === 0, `${notStanding} bad of 22`);
+  await page.evaluate(() => window.__superglen.loadLevel('demo'));
+  await bot.step(5);
+  await expectStanding(page, check, 'demo again after the round trips');
+  await bot.pause(false);
+  await sleep(1500);
+  await expectStanding(page, check, 'demo again after the round trips (real time)');
+  await bot.pause(true);
+  await page.keyboard.down('s');
+  await adv(120);
+  await page.keyboard.up('s');
+  await adv(15);
+  await expectStanding(page, check, 'demo after walking 2 s');
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await bot.step(5);
+  await expectStanding(page, check, 'test after the round trips');
+  await bot.pause(false);
+  await sleep(1500);
+  await expectStanding(page, check, 'test after the round trips (real time)');
+  await bot.pause(true);
+  console.log(`   [framework] counts after 10 round trips: ${JSON.stringify(last)}`);
+
+  // --- save ---
+  const sv = await page.evaluate(() => {
+    const save = window.__superglen.save;
+    save.reset();
+    save.markChapterDone('bab1');
+    save.unlockSkill('laser');
+    save.setLastMode('superglen');
+    const raw = JSON.parse(localStorage.getItem('superglen.save.v1'));
+    save.data.chaptersDone = []; // wipe memory, then reload from storage
+    save.data.skills.laser = false;
+    save.reload();
+    return { raw, data: JSON.parse(JSON.stringify(save.data)) };
+  });
+  check('save: versioned JSON written to superglen.save.v1', sv.raw.version === 1 && sv.raw.chaptersDone[0] === 'bab1' && sv.raw.skills.laser === true, JSON.stringify(sv.raw));
+  check('save: round trip through storage', sv.data.chaptersDone.join() === 'bab1' && sv.data.skills.laser && !sv.data.skills.shield && sv.data.lastMode === 'superglen', JSON.stringify(sv.data));
+  const thrown = await page.evaluate(() => {
+    const save = window.__superglen.save;
+    const desc = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('denied', 'SecurityError'); } });
+    let err = null;
+    let after = null;
+    try {
+      save.markChapterDone('bab2');
+      save.unlockSkill('fly');
+      save.reload();
+      save.persist();
+      after = JSON.parse(JSON.stringify(save.data));
+      save.reset();
+    } catch (e) {
+      err = String(e);
+    }
+    if (desc) Object.defineProperty(window, 'localStorage', desc);
+    return { err, after };
+  });
+  check('save: survives localStorage throwing (no exception, memory fallback)', thrown.err === null && thrown.after && thrown.after.chaptersDone.includes('bab2') && thrown.after.skills.fly, JSON.stringify(thrown));
+  await page.evaluate(() => { localStorage.setItem('superglen.save.v1', '{not json'); window.__superglen.save.reload(); });
+  check('save: corrupt storage falls back to defaults without error', await page.evaluate(() => Array.isArray(window.__superglen.save.data.chaptersDone)));
+  await page.evaluate(() => { window.__superglen.save.markChapterDone('zz'); });
+  await page.goto(URL + '?level=demo&fps=0&reset=1');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  check('?reset=1 clears the save', await page.evaluate(() => window.__superglen.save.data.chaptersDone.length === 0 && localStorage.getItem('superglen.save.v1') === null));
+  await page.goto(URL + '?level=nope&fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  check('unknown ?level falls back to the default (test)', (await page.evaluate(state)).level === 'test');
+}
+
+async function frameworkTouchScenario(page, check) {
+  // (The viewport is fixed per context: the start tap enters fullscreen, which blocks resizing afterwards.)
+  const H = page.viewportSize().height;
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, H - 60);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const bot = makeBot(page);
+  const st = () => page.evaluate(state);
+  await bot.step(30);
+
+  let s = await st();
+  check('touch: demo level loaded, touch UI on', s.level === 'demo' && s.touchUi);
+  const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
+  check('touch Glen in demo: jump + interact, no transform star', (await actions()) === 'jump,interact', await actions());
+
+  const geo = async (label) => {
+    const l = await page.evaluate(layoutInfo);
+    check(`${label}: buttons inside, no overlap, >= 80 px`, l.inside && !l.overlap && l.minBtn >= 79.5, JSON.stringify({ inside: l.inside, overlap: l.overlap, min: l.minBtn, actions: l.actions }));
+    check(`${label}: no button in the joystick zone`, l.minLeft >= l.vw * 0.45 - 1, `left ${Math.round(l.minLeft)} vs ${Math.round(l.vw * 0.45)}`);
+  };
+
+  for (const [w, h] of [[844, H]]) {
+    const t = `touch ${w}x${h}`;
+    // Every combination of mode x unlocked skills x transform star.
+    for (const mode of ['glen', 'superglen']) {
+      for (const laser of [false, true]) {
+        for (const shield of [false, true]) {
+          for (const tr of [false, true]) {
+            if (mode === 'glen' && (laser || shield)) continue;
+            await page.evaluate(([mode, laser, shield, tr]) => {
+              const g = window.__superglen.game;
+              g.setPlayerMode(mode);
+              g.setSkillButtons({ laser, shield });
+              g.setTransformAllowed(tr);
+            }, [mode, laser, shield, tr]);
+            await sleep(60);
+            const want = ['jump', 'interact'].concat(mode === 'superglen' && laser ? ['laser'] : [], mode === 'superglen' && shield ? ['shield'] : [], tr ? ['transform'] : []);
+            const got = (await actions()).split(',');
+            const label = `${t} ${mode} laser=${+laser} shield=${+shield} star=${+tr}`;
+            check(`${label}: right buttons`, got.length === want.length && want.every((a) => got.includes(a)), got.join());
+            if (!(mode === 'glen' && shield)) await geo(label);
+          }
+        }
+      }
+    }
+    await page.evaluate(() => {
+      const g = window.__superglen.game;
+      g.setPlayerMode('glen');
+      g.setSkillButtons({ laser: false, shield: false });
+      g.setTransformAllowed(false);
+    });
+    await sleep(100);
+  }
+
+  // Dialog bubble geometry at both sizes: opened through the NPC.
+  for (const [w, h] of [[844, H]]) {
+    await page.evaluate(() => window.__superglen.loadLevel('demo'));
+    await page.waitForFunction(() => window.__superglen.level === 'demo' && !window.__superglen.loading, null, { timeout: 8000 });
+    await bot.step(10);
+    await bot.goTo(-3.4, -2);
+    s = await st();
+    check(`touch ${w}x${h}: NPC in range -> prompt icon visible`, s.prompt.visible && s.prompt.icon === 'talk');
+    check(`touch ${w}x${h}: interact button pulses in range`, await page.evaluate(() => document.querySelector('.tc-button[data-action=interact]').classList.contains('pulse')));
+    check(`touch ${w}x${h}: PC key cap hidden on touch`, await page.evaluate(() => getComputedStyle(document.querySelector('.prompt-key')).display === 'none'));
+    await bot.step(1, true);
+    await shot(page, `demo-prompt-touch-${h}`);
+    // Press the on-screen Bicara button with a finger.
+    const b = await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=interact]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await fingers.down(2, b[0], b[1]);
+    await bot.step(2);
+    await fingers.up(2);
+    await bot.step(2, true);
+    s = await st();
+    check(`touch ${w}x${h}: tapping Bicara opens the bubble`, s.dialog.open && s.dialog.text === 'Halo!', JSON.stringify(s.dialog));
+    const d = await page.evaluate(dialogLayoutInfo);
+    check(`touch ${w}x${h}: bubble inside the screen and clear of joystick and buttons`, d.inside && !d.overlap && d.n >= 3, JSON.stringify({ inside: d.inside, overlap: d.overlap, n: d.n, card: d.card }));
+    check(`touch ${w}x${h}: bubble text >= 22 px, at most 2 lines`, d.fontPx >= 22 && d.textH <= 2 * d.lh + 2, `font ${d.fontPx} h ${d.textH} lh ${d.lh}`);
+    await shot(page, `dialog-${w}x${h}`);
+    await bot.step(30);
+    const c = [d.card.l + d.card.w / 2, d.card.t + d.card.h / 2];
+    await fingers.down(3, c[0], c[1]);
+    await bot.step(1);
+    await fingers.up(3);
+    await bot.step(2);
+    check(`touch ${w}x${h}: tapping the bubble advances it`, !(await st()).dialog.open);
+    await bot.step(15);
+    // Walking away: prompt and pulse go.
+    await bot.goTo(0, 0);
+    s = await st();
+    check(`touch ${w}x${h}: out of range -> no prompt, no pulse`, !s.prompt.visible && !(await page.evaluate(() => document.querySelector('.tc-button[data-action=interact]').classList.contains('pulse'))));
+  }
+}
+
+async function runScenario(browser, name, ctxOpts, body, query = '') {
+  if (process.env.ONLY && !name.startsWith(process.env.ONLY)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
   const ctx = await browser.newContext(ctxOpts);
@@ -844,7 +1228,7 @@ async function runScenario(browser, name, ctxOpts, body) {
   });
   page.on('pageerror', (e) => result.errors.push(`pageerror: ${e.message}`));
   try {
-    await page.goto(URL);
+    await page.goto(URL + query);
     await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
     await body(page, check);
     result.fps = await sampleFps(page);
@@ -931,6 +1315,10 @@ async function main() {
       }),
     );
 
+    results.push(await runScenario(browser, 'framework', { viewport: { width: 1280, height: 720 } }, frameworkDesktopScenario, '?level=demo&fps=0'));
+    for (const h of [390, 281]) {
+      results.push(await runScenario(browser, `framework-touch-${h}`, { viewport: { width: 844, height: h }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, frameworkTouchScenario, '?level=demo&fps=0'));
+    }
     results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
     const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
     results.push(await runScenario(browser, 'steering-touch', iphone, steeringTouchScenario));

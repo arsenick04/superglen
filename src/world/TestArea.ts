@@ -1,7 +1,11 @@
 import * as THREE from 'three';
-import type { Physics } from '../core/Physics';
 import { Quality } from '../core/Quality';
-import { StaticProps } from './StaticProps';
+import { ModeController } from '../player/ModeController';
+import { PlayerConfig } from '../player/PlayerConfig';
+import type { Level, LevelContext } from './Level';
+import type { Player } from '../player/Player';
+import type { StaticProps } from './StaticProps';
+import type { Physics } from '../core/Physics';
 
 const SKY_COLOR = 0x8fd3ff; // cheerful morning sky
 const GROUND_SIZE = 60;
@@ -10,26 +14,46 @@ const GROUND_SIZE = 60;
  * Flat test area: 60 x 60 m ground, morning lighting, sun shadows that follow the player.
  * Obstacle course is built in `buildProps()`.
  */
-export class TestArea {
+export class TestArea implements Level {
+  readonly id = 'test';
+  readonly spawn = { x: PlayerConfig.spawn.x, y: PlayerConfig.spawn.y, z: PlayerConfig.spawn.z };
+
   private sun!: THREE.DirectionalLight;
   private readonly sunOffset = new THREE.Vector3(12, 22, 8);
+  private player!: Player;
+  private modeController!: ModeController;
 
-  build(scene: THREE.Scene, physics: Physics): void {
+  build(ctx: LevelContext): void {
+    const { scene, root, physics } = ctx;
+    this.player = ctx.player;
     scene.background = new THREE.Color(SKY_COLOR);
     scene.fog = new THREE.Fog(SKY_COLOR, Quality.cameraFar * 0.45, Quality.cameraFar * 0.95);
 
-    this.buildLights(scene);
-    this.buildGround(scene, physics);
-    this.buildProps(new StaticProps(scene, physics));
+    this.buildLights(root);
+    this.buildGround(root, physics);
+    this.buildProps(ctx.props);
+
+    // The test area owns the TEMPORARY Glen <-> Superglen toggle (E / star) and the full button sets.
+    ctx.game.setLegacyTestControls(true);
+    this.modeController = new ModeController(ctx.player, ctx.input, (m) => ctx.game.setPlayerMode(m));
+  }
+
+  fixedUpdate(): void {
+    this.modeController.fixedUpdate();
   }
 
   /** Keep the shadow-casting sun centered on the player. Call once per frame. */
-  update(focus: THREE.Vector3): void {
+  update(): void {
+    const focus = this.player.visualPosition;
     this.sun.position.copy(focus).add(this.sunOffset);
     this.sun.target.position.copy(focus);
   }
 
-  private buildLights(scene: THREE.Scene): void {
+  dispose(): void {
+    // Everything lives under ctx.root / in StaticProps: the LevelManager cleans it up.
+  }
+
+  private buildLights(scene: THREE.Object3D): void {
     const hemi = new THREE.HemisphereLight(0xcfeeff, 0x6fae4f, 1.4);
     scene.add(hemi);
 
@@ -53,7 +77,7 @@ export class TestArea {
     scene.add(this.sun.target);
   }
 
-  private buildGround(scene: THREE.Scene, physics: Physics): void {
+  private buildGround(scene: THREE.Object3D, physics: Physics): void {
     const geo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshStandardMaterial({ map: makeCheckerTexture(GROUND_SIZE / 4), roughness: 0.95 });

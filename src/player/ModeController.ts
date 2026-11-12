@@ -3,15 +3,16 @@ import type { Player } from './Player';
 import type { PlayerMode } from './PlayerConfig';
 
 /**
- * TEMPORARY test-area switch Glen <-> Superglen. Later the transformation happens in the lab
- * (story trigger); delete this file and its use in core/Game.ts then.
+ * TEMPORARY test-area switch Glen <-> Superglen. Owned by the `test` level only (world/TestArea.ts);
+ * story levels change the mode through the level context (`ctx.game.setPlayerMode`).
  * PC: E ('interact'). Touch: the star button ('transform'), or the Bicara/Ambil button in Glen mode.
  */
 export class ModeController {
   constructor(
     private readonly player: Player,
     private readonly input: Input,
-    private readonly onChange: (mode: PlayerMode) => void,
+    /** Applies the mode (player, touch layout, flash ring): ctx.game.setPlayerMode. */
+    private readonly setMode: (mode: PlayerMode) => void,
   ) {}
 
   /** Call once per fixed step, before the player update (reads the press edge). */
@@ -25,7 +26,6 @@ export class ModeController {
 
   set(mode: PlayerMode): void {
     if (mode === this.player.mode) return;
-    this.player.setMode(mode);
-    this.onChange(mode);
+    this.setMode(mode);
   }
 }
