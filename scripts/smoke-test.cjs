@@ -1117,7 +1117,7 @@ async function frameworkDesktopScenario(page, check) {
   check('?reset=1 clears the save', await page.evaluate(() => window.__superglen.save.data.chaptersDone.length === 0 && localStorage.getItem('superglen.save.v1') === null));
   await page.goto(URL + '?level=nope&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
-  check('unknown ?level falls back to the default (test)', (await page.evaluate(state)).level === 'test');
+  check('unknown ?level falls back to the default (bab1)', (await page.evaluate(state)).level === 'bab1');
 }
 
 async function frameworkTouchScenario(page, check) {
@@ -1217,7 +1217,401 @@ async function frameworkTouchScenario(page, check) {
   }
 }
 
-async function runScenario(browser, name, ctxOpts, body, query = '') {
+
+// ============================ Bab 1 ============================
+const FLOOR = -0.9;
+
+/** Small driver for the story: steps with advanceAsync (story scripts need promise flushes) and logs dialog ids. */
+function makeStoryDriver(page, check) {
+  const d = { seen: [], calls: {} };
+  const st = () => page.evaluate(state);
+  d.st = st;
+  d.adv = async (n, render = false) => {
+    let left = n;
+    while (left > 0) {
+      const c = Math.min(left, 6);
+      await page.evaluate(([c, r]) => window.__superglen.advanceAsync(c, r), [c, left - c <= 0 && render]);
+      left -= c;
+      const id = await page.evaluate(() => window.__superglen.dialog.id);
+      if (id && d.seen[d.seen.length - 1] !== id) d.seen.push(id);
+    }
+  };
+  d.until = async (cond, maxFrames = 1200, chunk = 6) => {
+    for (let i = 0; i < maxFrames; i += chunk) {
+      const s = await st();
+      if (cond(s)) return s;
+      await d.adv(chunk);
+    }
+    return null;
+  };
+  d.tap = async (key) => {
+    await page.keyboard.down(key);
+    await d.adv(2);
+    await page.keyboard.up(key);
+    await d.adv(2);
+  };
+  d.walk = async (x, z, maxFrames = 900) => {
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [x, z]);
+    for (let i = 0; i < maxFrames; i += 12) {
+      await d.adv(12);
+      if (!(await page.evaluate(() => window.__superglen.walking))) break;
+    }
+    await page.evaluate(() => window.__superglen.cancelWalk());
+    await d.adv(4);
+    return st();
+  };
+  d.press = async (icon, label) => {
+    const s = await d.until((s) => !s.dialog.open && s.prompt.inRange && s.prompt.icon === icon, 1500);
+    check(`${label}: prompt '${icon}' appears in range`, !!s, s ? '' : 'timeout');
+    if (s) await d.tap('e');
+    return s;
+  };
+  d.calls = {};
+  d.area = async (name) => {
+    await page.evaluate(() => window.__superglen.advance(2, true));
+    const c = await page.evaluate(() => window.__superglen.debugCounts());
+    d.calls[name] = c.calls;
+    check(`draw calls in ${name} < 150`, c.calls < 150, `${c.calls} calls, ${c.triangles} tris`);
+  };
+  return d;
+}
+
+/** The whole chapter. `beat(name, d)` is called at the interesting moments (screenshots / overlap sampling). */
+async function playChapter(page, check, d, beat, opts = {}) {
+  let s = await d.st();
+  // --- A. street ---
+  await d.adv(20);
+  s = await d.st();
+  check('first line shown: bab1_glen_pulang', d.seen.includes('bab1_glen_pulang'), d.seen.join());
+  check('objective beam points down the street', s.objective.active && s.objective.z < -30, JSON.stringify(s.objective));
+  await beat('street', d);
+  await d.area('street');
+  s = await d.walk(0, -8.0, 600);
+  check('jump obstacle cannot be walked through', s.player.z > -8.7, `z=${s.player.z.toFixed(2)}`);
+  s = await d.until((s) => s.levelInfo.hint === true, 120);
+  check('jump hint shown near the barrier', !!s);
+  check('lompat line shown', d.seen.includes('bab1_glen_lompat'), d.seen.join());
+  await d.adv(4, true);
+  await beat('jump', d);
+  // Jump over: run at it and press Space as a player would.
+  await page.evaluate(() => window.__superglen.walkTo(0, -14));
+  await d.adv(3);
+  await d.tap('Space');
+  s = await d.until((s) => s.player.z < -10.5, 200, 3);
+  check('Glen can jump over the barrier', !!s, s ? `z=${s.player.z.toFixed(2)} jumps=${s.jumps}` : '');
+  await page.evaluate(() => window.__superglen.cancelWalk());
+  await d.adv(10);
+  s = await d.st();
+  check('hint off after crossing', s.levelInfo.hint === false);
+  check('no plank needed when the jump was made', s.levelInfo.plank === false);
+  s = await d.walk(0, -35, 900);
+  s = await d.until((s) => d.seen.includes('bab1_glen_gedung'), 400);
+  check('street end: gedung line', !!s, d.seen.join());
+  s = await d.st();
+  check('objective now points at the fence gap', Math.abs(s.objective.x - 4.8) < 0.3 && Math.abs(s.objective.z + 38.2) < 0.3, JSON.stringify(s.objective));
+  await d.adv(30);
+  await beat('building', d);
+  await d.walk(4.8, -35.5, 400);
+  await d.area('building exterior');
+  // The fence blocks everywhere but the gap.
+  await d.walk(-2, -39.5, 400);
+  s = await d.st();
+  check('fence blocks outside the gap', s.player.z > -38.0, `z=${s.player.z.toFixed(2)}`);
+  await d.walk(4.8, -37.6, 400);
+  await d.walk(4.8, -39.6, 300);
+  s = await d.st();
+  check('gap is passable', s.player.z < -39.2, `z=${s.player.z.toFixed(2)}`);
+  check('pagar line shown', d.seen.includes('bab1_glen_pagar'), d.seen.join());
+  s = await d.st();
+  check('objective points at the door', Math.abs(s.objective.z + 43.6) < 0.3);
+  // --- C. hall ---
+  await d.walk(0, -39.6, 300);
+  await d.walk(0, -45, 300);
+  s = await d.until((s) => d.seen.includes('bab1_glen_gelap'), 300);
+  check('gelap line shown on entering', !!s);
+  s = await d.until((s) => s.levelInfo.flashlight === true, 200);
+  check('flashlight turns on inside', !!s);
+  await d.adv(60, true);
+  await d.walk(-1, -51, 300);
+  await d.adv(30, true);
+  await beat('inside', d);
+  await d.area('hall');
+  await d.walk(-4, -55.5, 600);
+  s = await d.st();
+  check('objective at the panel', Math.abs(s.objective.x + 4) < 0.5);
+  check('panel line shown', d.seen.includes('bab1_glen_panel') || !!(await d.until(() => d.seen.includes('bab1_glen_panel'), 200)), d.seen.join());
+  await d.walk(0, -59.5, 200);
+  s = await d.st();
+  check('back wall blocks before the panel is pressed', s.player.z > -58.1, `z=${s.player.z.toFixed(2)}`);
+  await d.walk(-4, -55.5, 400);
+  await d.press('press', 'panel');
+  s = await d.until((s) => s.levelInfo.step === 'wall', 100);
+  check('panel pressed starts the wall opening', !!s);
+  s = await d.until((s) => d.seen.includes('bab1_glen_dinding'), 600);
+  check('dinding line shown', !!s, d.seen.join());
+  await d.adv(120, true);
+  await beat('wall', d);
+  s = await d.until((s) => s.levelInfo.wallOpen === true && s.objective.active && s.objective.z < -59, 600);
+  check('wall open and objective leads into the lab', !!s);
+  await d.adv(150);
+  s = await d.walk(0, -66.8, 900);
+  check('player walked through the opened wall into the lab', s.player.z < -63 && Math.abs(s.feetY - FLOOR) < 0.1, `z=${s.player.z.toFixed(2)} feetY=${s.feetY.toFixed(2)}`);
+  check('lab line shown', d.seen.includes('bab1_glen_lab'), d.seen.join());
+  await d.area('lab');
+  check('flashlight is off in the lab', (await d.until((s) => s.levelInfo.flashlight === false, 200)) !== null);
+  await d.adv(60, true);
+  await beat('lab', d);
+  check('tombol line shown', !!(await d.until(() => d.seen.includes('bab1_glen_tombol'), 300)), d.seen.join());
+  s = await d.st();
+  check('objective at the button', Math.abs(s.objective.z + 69) < 0.5);
+  // --- E. activation ---
+  await d.press('press', 'button');
+  await d.adv(3);
+  s = await d.st();
+  check('button starts the sequence: controls locked', s.controlsEnabled === false && s.levelInfo.step === 'activation', s.levelInfo.step);
+  await d.adv(200, true);
+  await beat('sequence', d);
+  s = await d.until((s) => d.seen.includes('bab1_nino_halo'), 900);
+  check('Nino speaks: halo', !!s);
+  await d.adv(10, true);
+  await beat('nino', d);
+  s = await d.until((s) => d.seen.includes('bab1_nino_kostum'), 1500);
+  check('dialog order halo -> siapa -> terpilih -> kostum', ['bab1_nino_halo', 'bab1_glen_siapa', 'bab1_nino_terpilih', 'bab1_nino_kostum'].every((id, i, a) => d.seen.indexOf(id) > (i ? d.seen.indexOf(a[i - 1]) : -1)), d.seen.join());
+  await beat('costume', d);
+  s = await d.until((s) => s.controlsEnabled && s.levelInfo.step === 'costume', 900);
+  check('controls unlocked after the sequence', !!s);
+  s = await d.st();
+  check('objective on the costume', Math.abs(s.objective.x + 4.6) < 0.5 && Math.abs(s.objective.z + 71.5) < 0.5, JSON.stringify(s.objective));
+  await d.walk(-4.6, -69.0, 600);
+  await d.press('hand', 'costume');
+  s = await d.until((s) => s.mode === 'superglen', 200);
+  check('taking the costume sets mode superglen', !!s);
+  await d.adv(40, true);
+  await beat('superglen', d);
+  s = await d.until((s) => d.seen.includes('bab1_glen_superglen'), 200);
+  check('superglen line shown', !!s);
+  s = await d.until((s) => d.seen.includes('bab1_nino_semua_nyala'), 400);
+  check('funny ending: semua_nyala line, controls locked', !!s && s.controlsEnabled === false);
+  const j0 = (await d.st()).jumps;
+  await d.adv(120, true);
+  await beat('funny', d);
+  s = await d.st();
+  check('funny ending: auto-hops happen', s.jumps > j0, `jumps +${s.jumps - j0}`);
+  s = await d.until((s) => d.seen.includes('bab1_glen_tertawa'), 600);
+  check('funny ending: tertawa line', !!s);
+  s = await d.until((s) => d.seen.includes('bab1_nino_besok'), 900);
+  check('calm down lines: lompat_barongsai then besok', !!s && d.seen.indexOf('bab1_nino_lompat_barongsai') < d.seen.indexOf('bab1_nino_besok'), d.seen.join());
+  s = await d.until((s) => s.levelInfo.step === 'done', 900);
+  check('chapter done step reached', !!s);
+  await d.adv(30, true);
+  await beat('done', d);
+  s = await d.st();
+  check('save: chaptersDone contains bab1', s.save.data.chaptersDone.includes('bab1'));
+  check('controls enabled in free play', s.controlsEnabled);
+  if (opts.skipPoles) return;
+  // --- F. practice poles ---
+  await d.adv(200);
+  const poles = [[-5.8, -64.2, 0.1], [-5.8, -66.4, 0.9], [-5.8, -68.6, 1.7]];
+  await d.walk(-5.6, -63.0, 600);
+  let ok = true;
+  const tops = [];
+  for (const [x, z, top] of poles) {
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [x, z]);
+    await d.tap('Space');
+    const r = await d.until((s) => s.grounded && s.feetY > top - 0.15 && Math.abs(s.player.x - x) < 0.7, 120, 6);
+    tops.push(r ? r.feetY.toFixed(2) : 'x');
+    if (!r) ok = false;
+    await page.evaluate(() => window.__superglen.cancelWalk());
+    await d.adv(20);
+  }
+  s = await d.st();
+  check('practice platforms reachable with Lompat Barongsai', ok, `tops ${tops.join(',')}`);
+  check('coins collected from the platforms', s.levelInfo.coinsTaken >= 2, `${s.levelInfo.coinsTaken}`);
+}
+
+async function bab1DesktopScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(800);
+  const s0 = await page.evaluate(state);
+  check('default level is bab1 (no ?level)', s0.level === 'bab1', s0.level);
+  await expectStanding(page, check, 'bab1 at start (real time)');
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  await d.adv(20);
+  await expectStanding(page, check, 'bab1 after 20 frames');
+  check('starts as Glen', (await d.st()).mode === 'glen');
+  check('PC help card lists story keys', await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('E: bicara / ambil') && !document.querySelector('.hud-controls').textContent.includes('Superglen')));
+  await playChapter(page, check, d, async (name) => {
+    const map = { street: 'bab1-street', jump: 'bab1-jump', building: 'bab1-building', inside: 'bab1-inside', lab: 'bab1-lab', nino: 'bab1-nino', costume: 'bab1-costume', superglen: 'bab1-superglen', funny: 'bab1-funny', sequence: 'bab1-sequence', wall: 'bab1-wall', done: 'bab1-done' };
+    if (map[name]) {
+      await page.evaluate(() => window.__superglen.advance(2, true));
+      await shot(page, map[name]);
+    }
+  });
+  // Respawn at 3 sampled spots.
+  const spots = [];
+  for (const [x, z, y, label] of [[3.0, -62.2, FLOOR, 'lab entrance'], [0, -66.5, FLOOR, 'lab centre']]) {
+    await d.walk(x, z, 600);
+    await d.adv(30);
+    await page.evaluate(() => window.__superglen.testFall());
+    await d.adv(30);
+    const s = await d.st();
+    spots.push(`${label}: y=${s.feetY.toFixed(2)}`);
+    check(`fall at ${label}: respawn puts the player back on the floor`, s.feetY > FLOOR - 0.1 && s.feetY < 3.5 && s.player.z < -58, `${s.feetY.toFixed(2)} z=${s.player.z.toFixed(1)}`);
+  }
+  // Calls summary
+  console.log('   bab1 draw calls:', JSON.stringify(d.calls));
+  // Leak: unload bab1 -> test -> bab1
+  await page.evaluate(() => window.__superglen.pause(false));
+  const cyc = async (id) => {
+    await page.evaluate((id) => window.__superglen.loadLevel(id), id);
+    await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, id, { timeout: 8000 });
+    await sleep(200);
+  };
+  await cyc('test');
+  await cyc('bab1');
+  await sleep(1200);
+  const c1 = await page.evaluate(countsOf);
+  await cyc('test');
+  await cyc('bab1');
+  await sleep(1200);
+  const c2 = await page.evaluate(countsOf);
+  const same = ['geometries', 'textures', 'colliders', 'bodies', 'sceneChildren'].every((k) => c1[k] === c2[k]);
+  check('bab1 -> test -> bab1 does not leak', same, `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
+  await page.evaluate(() => window.__superglen.save.reset());
+  const reset = await page.evaluate(() => { const g = window.__superglen; return g.save.data.chaptersDone.length; });
+  check('save reset for the next runs', reset === 0);
+}
+
+async function bab1PlankScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  await d.adv(20);
+  await d.walk(0, -8.0, 600);
+  await d.adv(1250);
+  let s = await d.st();
+  check('fallback plank appears after ~20 s without crossing', s.levelInfo.plank === true && s.player.z > -8.7, `plank ${s.levelInfo.plank}`);
+  check('objective leads to the plank', Math.abs(s.objective.x - 3.2) < 0.4 && s.objective.z > -9, JSON.stringify(s.objective));
+  await d.adv(10, true);
+  await shot(page, 'bab1-plank');
+  const j0 = s.jumps;
+  await d.walk(3.2, -6.8, 300);
+  await d.walk(3.2, -14, 600);
+  s = await d.st();
+  check('plank lets the player over the barrier without jumping', s.player.z < -11 && s.jumps === j0, `z=${s.player.z.toFixed(2)} jumps ${s.jumps - j0}`);
+  check('hint off and objective back down the street', (await d.st()).levelInfo.hint === false && (await d.st()).objective.z < -30);
+}
+
+async function bab1ReturnScenario(page, check) {
+  // Runs on a page where the save says bab1 is done (set before the reload).
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  await d.adv(40, true);
+  let s = await d.st();
+  check('returning player starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `mode ${s.mode} z ${s.player.z.toFixed(1)}`);
+  await expectStanding(page, check, 'returning start in the lab', FLOOR);
+  check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false && !s.objective.active);
+  await shot(page, 'bab1-return');
+  await d.walk(2.2, -69.5, 600);
+  await d.adv(10);
+  s = await d.st();
+  check('Nino offers a friendly talk line', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
+  await d.tap('e');
+  check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  // Way out stays open: walk back to the street through the hall.
+  await d.adv(200);
+  await d.walk(0, -60, 600);
+  await d.walk(0, -50, 600);
+  s = await d.st();
+  check('way back out through the wall stays open', s.player.z > -52, `z=${s.player.z.toFixed(1)}`);
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.goto(URL + '?reset=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+  s = await page.evaluate(state);
+  check('?reset=1 starts the story again at the school', s.level === 'bab1' && s.mode === 'glen' && s.player.z > -2 && s.save.data.chaptersDone.length === 0, `z ${s.player.z.toFixed(1)}`);
+}
+
+async function bab1TouchScenario(page, check) {
+  const H = page.viewportSize().height;
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, H - 60);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
+  check('touch: Glen buttons are jump + interact only', (await actions()) === 'jump,interact', await actions());
+  check('touch: default level bab1', (await d.st()).level === 'bab1');
+  let overlaps = 0;
+  const samples = [];
+  const sample = async (name) => {
+    const r = await page.evaluate(() => {
+      const rect = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom }; };
+      const vis = (e) => e && !e.hidden && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
+      const items = [];
+      const dlg = document.querySelector('.dlg-card');
+      if (vis(document.querySelector('.dlg')) && dlg) items.push(['dialog', rect(dlg)]);
+      const pr = document.querySelector('.prompt');
+      if (pr && !pr.hidden) items.push(['prompt', rect(pr.querySelector('.prompt-icon'))]);
+      for (const b of document.querySelectorAll('.tc-button')) items.push(['button:' + b.dataset.action, rect(b)]);
+      const bad = [];
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const a = items[i][1], c = items[j][1];
+        if (items[i][0].startsWith('button') && items[j][0].startsWith('button')) continue;
+        if (a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b) bad.push(items[i][0] + '/' + items[j][0]);
+      }
+      return { n: items.length, bad };
+    });
+    samples.push(`${name}:${r.n}`);
+    if (r.bad.length) { overlaps++; console.log(`   overlap at ${name}: ${r.bad.join(',')}`); }
+  };
+  const origUntil = d.until;
+  d.until = async (cond, maxFrames = 1200, chunk = 6) => {
+    for (let i = 0; i < maxFrames; i += chunk) {
+      const s = await d.st();
+      if (cond(s)) return s;
+      await d.adv(chunk);
+      if (i % 24 === 0) await sample(s.levelInfo.step || '');
+    }
+    return null;
+  };
+  void origUntil;
+  // Jump button pulses during the lesson on touch.
+  let pulsed = false;
+  const quiet = (name, ok) => {};
+  await playChapter(page, (label, ok, detail) => { if (!/draw calls/.test(label)) check('touch: ' + label, ok, detail); }, d, async (name) => {
+    await sample(name);
+    if (name === 'jump') {
+      pulsed = await page.evaluate(() => document.querySelector('.tc-button[data-action=jump]').classList.contains('pulse'));
+    }
+    if (name === 'superglen') {
+      await page.evaluate(() => window.__superglen.advance(2, true));
+      await shot(page, 'bab1-touch-281');
+    }
+  }, { skipPoles: true });
+  void quiet;
+  check('touch: jump button pulses during the jump lesson', pulsed);
+  check('touch: dialog bubble, prompt icon and buttons never overlap at any sampled beat', overlaps === 0, `${overlaps} overlaps in ${samples.length} samples`);
+  const a = await actions();
+  check('touch: Superglen buttons after the chapter: jump + interact only (no laser/shield/star)', a === 'jump,interact', a);
+  void fingers;
+}
+
+async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !name.startsWith(process.env.ONLY)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
@@ -1326,6 +1720,11 @@ async function main() {
     results.push(await runScenario(browser, 'steering-touch-3', iphone, steeringTouchScenario3));
 
     results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
+
+    results.push(await runScenario(browser, 'bab1', { viewport: { width: 1280, height: 720 } }, bab1DesktopScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
 
     results.push(
       await runScenario(

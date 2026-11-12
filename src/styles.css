@@ -754,3 +754,47 @@ html:not(.touch-ui) .prompt-key {
     transition: none;
   }
 }
+
+/* Bab 1: chapter-done star and the transformation flash */
+.bab1-star {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  z-index: 40;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.bab1-star.show {
+  display: flex;
+  animation: bab1-star-pop 2.5s ease-out forwards;
+}
+.bab1-star svg {
+  width: min(34vh, 170px);
+  height: min(34vh, 170px);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+.bab1-star-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+@keyframes bab1-star-pop {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-40deg); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.25) rotate(8deg); opacity: 1; }
+  40% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+  85% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+}
+.bab1-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, #fffbe0 0%, #ffe27a 60%, #ffc94d 100%);
+}

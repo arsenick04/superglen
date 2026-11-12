@@ -86,8 +86,8 @@ export class BuildingExterior {
 
     // --- Two lion-ish guardians and two red lanterns in front of the door ---
     for (const s of [-1, 1]) {
-      const x = s * 3.2;
-      const z = FACE_Z + 1.7;
+      const x = s * 4.4;
+      const z = FACE_Z + 1.0;
       kit.solidCyl(0.55, 1.0, [x, 0.5, z], 0xe2cf9d);
       kit.lit.cyl(0.62, 0.15, [x, 0.08, z], C.GOLD);
       kit.lit.sph(0.62, [x, 1.5, z], C.RED, [1, 0.9, 0.9]);

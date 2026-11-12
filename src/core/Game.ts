@@ -81,6 +81,8 @@ export interface DebugHandle {
   walkTo: (x: number, z: number) => void;
   cancelWalk: () => void;
   walking: boolean;
+  /** Test helper: drop the player far below the world, to exercise the safe-spot respawn. */
+  testFall: () => void;
   /** Live save store (tests round-trip it). */
   save: SaveStore;
   /** The level-control API levels get (setPlayerMode, setSkillButtons, ...), for tests. */
@@ -174,6 +176,10 @@ export class Game {
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
+    testFall: () => {
+      const p = this.player.visualPosition;
+      this.player.teleport(p.x, -16, p.z);
+    },
     save: undefined as unknown as SaveStore,
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),

@@ -81,7 +81,7 @@ function bike(kit: Kit, x: number, z: number, color: number): void {
  */
 export function buildStreet(kit: Kit): void {
   // --- Ground, road, sidewalks, markings (visual only; the one big slab is added by the level) ---
-  kit.lit.box([70, 0.2, 150], [0, -0.1, -35], 0x86d16a);
+  kit.lit.box([70, 0.2, 98.6], [0, -0.1, -9.3], 0x86d16a);
   kit.lit.box([6.4, 0.04, 42], [0, 0.02, -15], 0x69707d);
   for (const s of [-1, 1]) {
     kit.lit.box([3.5, 0.06, 42], [s * 4.95, 0.03, -15], 0xeadcb9);

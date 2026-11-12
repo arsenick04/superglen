@@ -48,7 +48,7 @@ export class Atmosphere {
   ) {
     this.presets = [
       mk(0x8fd3ff, 0xcfeeff, 0x6fae4f, 1.4, 2.6, Quality.cameraFar * 0.45, Quality.cameraFar * 0.95),
-      mk(0x1a2147, 0x8da0ff, 0x4a4678, 0.95, 0, 6, 34),
+      mk(0x232b5c, 0xa8b8ff, 0x6c68a8, 1.6, 0, 8, 40),
       mk(0x2a4a78, 0xeaf4ff, 0xb9c9ea, 1.9, 0, 30, 90),
     ];
     this.sun.position.copy(this.sunOffset);
