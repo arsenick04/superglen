@@ -309,7 +309,7 @@ Higgsfield: 0. ElevenLabs: 0.
 |---|---|
 | `npm run build` dan `npm run typecheck` | Lulus |
 | Smoke test penuh oleh `qa-tester` | 657 dari 658; satu skenario (`bab2-flow`) kehabisan waktu tunggu, lulus saat diulang |
-| Setelah batas tunggu tes dinaikkan | `bab2-flow` dan `bab1-return` lulus 2 kali; run penuh ulang: lihat catatan di PR |
+| Run penuh ulang setelah batas tunggu tes dinaikkan | Lulus: 21 skenario, 758 pemeriksaan, 0 kegagalan |
 | Chapter 2 dimainkan otomatis sampai selesai (desktop) | Lulus 90 dari 90 |
 | Chapter 2 di layar sentuh 844x281 | Lulus 81 dari 81 |
 | Tiga skill di level uji | Lulus 71 dari 71 |
