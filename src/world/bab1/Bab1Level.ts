@@ -99,7 +99,7 @@ export class Bab1Level implements Level {
     this.sparkles.update(dt);
     this.exterior.update(dt);
     this.hall.update(dt);
-    this.lab.update(dt);
+    this.lab.update(dt, zone >= 1);
     this.jump.update(dt);
     this.funny.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
@@ -112,12 +112,18 @@ export class Bab1Level implements Level {
     info.coinsTaken = this.story.coinsTaken;
     info.zone = zone;
     info.hint = this.jump.hinting;
-    info.poleCover = this.poleCover();
-    const cp = this.ctx.cameraRig.camera.position;
-    info.camX = Math.round(cp.x * 100) / 100;
-    info.camY = Math.round(cp.y * 100) / 100;
-    info.camZ = Math.round(cp.z * 100) / 100;
+    if (this.testInfo) {
+      // Camera/pole numbers for the automated tests only (the pole projection costs ~100 matrix maths a frame).
+      info.poleCover = this.poleCover();
+      const cp = this.ctx.cameraRig.camera.position;
+      info.camX = Math.round(cp.x * 100) / 100;
+      info.camY = Math.round(cp.y * 100) / 100;
+      info.camZ = Math.round(cp.z * 100) / 100;
+    }
   }
+
+  /** True when the page was opened by the smoke test (it sets window.__SG_TEST before the game loads). */
+  private readonly testInfo = (window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true;
 
   private readonly corner = new THREE.Vector3();
 

@@ -1701,11 +1701,346 @@ async function bab1TouchScenario(page, check) {
   void fingers;
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// Perf scenario: frame pacing, adaptive resolution, DOM/layout work, GC pressure, shader programs, triangles,
+// the ?perf=1 panel. Deterministic: the loop is fed synthetic rAF timestamps (window.__superglen.simFrame).
+// ---------------------------------------------------------------------------------------------------------------
+const PACING_SCENARIOS = {
+  exact60: { R: 1000 / 60 },
+  hz5994: { R: 1000 / 59.94 },
+  jitter: { R: 1000 / 60, jitter: 2 },
+  hz120: { R: 1000 / 120 },
+  hitch: { R: 1000 / 60, hitch: { every: 3000, ms: 40 } },
+};
+const PACING_LEVELS = {
+  test: { query: '?level=test&fps=0', route: { x: -17, z0: 24, z1: -24 }, passSec: 8.4, passes: 2, warmMs: 3000 },
+  bab1: { query: '?fps=0&reset=1', route: { x: 1.3, z0: -9.6, z1: -36 }, passSec: 4.6, passes: 4, warmMs: 1800 },
+};
+
+/** Walk straight passes with synthetic rAF timestamps; return per-frame camera and player positions. */
+async function recordPacing(page, L, S, smooth) {
+  return page.evaluate(({ L, S, smooth }) => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.smoothing(smooth);
+    g.resetTiming();
+    let seed = 12345;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const R = S.R;
+    const passFrames = Math.round((L.passSec * 1000) / R);
+    const out = { cam: [], pl: [], f: [], hitchAt: [] };
+    let T = 1000;
+    let nextHitch = S.hitch ? S.hitch.every : 1e12;
+    let elapsed = 0;
+    g.simFrame(T, false);
+    for (let k = 0; k < passFrames * L.passes; k++) {
+      const pf = k % passFrames;
+      if (pf === 0) {
+        g.placePlayer(L.route.x, L.route.z0);
+        g.setCameraYaw(0);
+        g.walkTo(L.route.x, L.route.z1);
+      }
+      if (S.hitch && elapsed >= nextHitch) {
+        T += S.hitch.ms;
+        nextHitch += S.hitch.every;
+        out.hitchAt.push(k);
+      } else T += R;
+      elapsed += R;
+      const j = S.jitter ? (rnd() * 2 - 1) * S.jitter : 0;
+      g.simFrame(T + j, false);
+      out.cam.push([g.camera.x, g.camera.y, g.camera.z]);
+      out.pl.push([g.player.x, g.player.y, g.player.z]);
+      out.f.push(pf);
+    }
+    g.cancelWalk();
+    g.smoothing(true);
+    g.resetTiming();
+    return out;
+  }, { L, S, smooth });
+}
+
+function pacingStats(rec, S, warmMs) {
+  const warm = Math.round(warmMs / S.R);
+  const skip = new Set();
+  for (const h of rec.hitchAt) for (let d = -1; d <= 4; d++) skip.add(h + d);
+  const camD = [];
+  const relD = [];
+  for (let k = 1; k < rec.cam.length; k++) {
+    if (rec.f[k] < warm || rec.f[k - 1] < warm || skip.has(k)) continue;
+    const c = rec.cam[k], c0 = rec.cam[k - 1], p = rec.pl[k], p0 = rec.pl[k - 1];
+    camD.push(Math.hypot(c[0] - c0[0], c[1] - c0[1], c[2] - c0[2]));
+    relD.push(Math.hypot(p[0] - c[0] - (p0[0] - c0[0]), p[1] - c[1] - (p0[1] - c0[1]), p[2] - c[2] - (p0[2] - c0[2])));
+  }
+  const n = camD.length;
+  const mean = camD.reduce((a, v) => a + v, 0) / n;
+  const sd = Math.sqrt(camD.reduce((a, v) => a + (v - mean) ** 2, 0) / n);
+  return {
+    n,
+    meanMm: mean * 1000,
+    cv: sd / mean,
+    maxDev: Math.max(...camD.map((v) => Math.abs(v - mean))) / mean,
+    relRmsMm: Math.sqrt(relD.reduce((a, v) => a + v * v, 0) / n) * 1000,
+    relMaxMm: Math.max(...relD) * 1000,
+  };
+}
+
+async function loadFresh(page, query) {
+  await page.goto(URL + query);
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1200);
+}
+
+async function perfScenario(page, check) {
+  const report = (label, v) => console.log(`   [perf] ${label}: ${v}`);
+
+  // ---- 1. Frame pacing (walk speed must be constant frame to frame) ----
+  const PACING_LIMITS = {
+    exact60: { cv: 0.005, rel: 1.0 },
+    hz5994: { cv: 0.005, rel: 1.0 },
+    jitter: { cv: 0.04, rel: 1.0 },
+    hz120: { cv: 0.005, rel: 1.0 },
+    hitch: { cv: 0.01, rel: 1.5 },
+  };
+  for (const [lname, L] of Object.entries(PACING_LEVELS)) {
+    await loadFresh(page, L.query);
+    for (const [sname, S] of Object.entries(PACING_SCENARIOS)) {
+      const st = pacingStats(await recordPacing(page, L, S, true), S, L.warmMs);
+      const lim = PACING_LIMITS[sname];
+      report(`pacing ${lname}/${sname}`, `camera step CV ${(st.cv * 100).toFixed(2)}% maxDev ${(st.maxDev * 100).toFixed(1)}% player-vs-camera rms ${st.relRmsMm.toFixed(2)}mm max ${st.relMaxMm.toFixed(2)}mm (n=${st.n})`);
+      check(`pacing ${lname}/${sname}: walking is smooth (camera step CV < ${lim.cv * 100}%, player stays put on screen)`, st.n > 300 && st.cv < lim.cv && st.relRmsMm < lim.rel, `CV ${(st.cv * 100).toFixed(2)}% rel rms ${st.relRmsMm.toFixed(2)}mm`);
+    }
+    if (lname === 'test') {
+      // The dt filter must beat raw timestamps when they jitter.
+      const S = PACING_SCENARIOS.jitter;
+      const raw = pacingStats(await recordPacing(page, L, S, false), S, L.warmMs);
+      const sm = pacingStats(await recordPacing(page, L, S, true), S, L.warmMs);
+      report('pacing jitter without/with dt filter', `CV ${(raw.cv * 100).toFixed(2)}% -> ${(sm.cv * 100).toFixed(2)}%`);
+      check('pacing: the dt filter at least halves the camera step CV under +-2 ms timestamp jitter', sm.cv < raw.cv * 0.5, `${(raw.cv * 100).toFixed(2)}% -> ${(sm.cv * 100).toFixed(2)}%`);
+    }
+  }
+
+  // ---- 2. Shadow map follows the player in whole texels (no swimming shadows) ----
+  await loadFresh(page, '?fps=0&reset=1');
+  const phase = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    const run = (snap) => {
+      g.shadowSnap(snap);
+      g.placePlayer(0, -4);
+      g.advance(5, false);
+      const a = [];
+      for (let i = 0; i < 40; i++) {
+        g.placePlayer(0.0137 * i, -4 - 0.0071 * i);
+        g.advance(1, false);
+        a.push(g.shadowPhase());
+      }
+      const spread = (k) => Math.max(...a.map((p) => p[k])) - Math.min(...a.map((p) => p[k]));
+      return Math.max(spread(0), spread(1));
+    };
+    const off = run(false);
+    const on = run(true);
+    g.shadowSnap(true);
+    return { off, on };
+  });
+  report('shadow texel phase spread over 0.5 m of walking (texels)', `unsnapped ${phase.off.toFixed(3)} -> snapped ${phase.on.toFixed(3)}`);
+  check('shadow camera is snapped to whole shadow-map texels while walking', phase.on < 0.05 && phase.off > 0.3, `snapped ${phase.on.toFixed(3)}, unsnapped ${phase.off.toFixed(3)}`);
+
+  // ---- 3. Adaptive resolution: no flapping, hard cap ----
+  const adapt = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.adaptReset();
+    const res = {};
+    const run = (name, frames, moving, startT) => {
+      let T = startT;
+      const times = [];
+      let last = g.adaptive().changes;
+      for (const dtMs of frames) {
+        T += dtMs;
+        g.adaptFrame(T, typeof moving === 'function' ? moving(T) : moving);
+        const c = g.adaptive().changes;
+        if (c !== last) { times.push(T); last = c; }
+      }
+      return { T, times };
+    };
+    // a) steady 60 fps for 60 s while walking
+    const steady = Array.from({ length: 3600 }, () => 1000 / 60);
+    const a = run('steady', steady, true, 1e6);
+    res.steadyChanges = a.times.length;
+    res.steadyStep = g.adaptive().step;
+    // b) a phone hovering around the 27 fps threshold for 5 minutes (noise included)
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const hover = [];
+    for (let i = 0; i < 9000; i++) {
+      const phase = Math.floor(i / 180) % 2; // 3 s slow-ish, 3 s ok-ish
+      hover.push((phase ? 1000 / 31 : 1000 / 24) + (rnd() - 0.5) * 8);
+    }
+    const b = run('hover', hover, true, a.T);
+    res.hoverChanges = b.times.length;
+    let worst = 0;
+    for (let i = 0; i < b.times.length; i++) {
+      let n = 0;
+      for (let j = i; j < b.times.length && b.times[j] - b.times[i] < 60000; j++) n++;
+      worst = Math.max(worst, n);
+    }
+    res.hoverWorstPerMinute = worst;
+    // c) after a real slow patch (fresh state), a fast walk must not step back up within 25 s
+    g.adaptReset();
+    const slow = Array.from({ length: 5 * 15 }, () => 1000 / 15);
+    const c1 = run('slow', slow, true, b.T + 1e6);
+    res.droppedOnSlow = g.adaptive().step > 0;
+    const fast = Array.from({ length: 60 * 25 }, () => 1000 / 60);
+    const c2 = run('recover', fast, true, c1.T);
+    res.upWhileWalking25s = c2.times.length;
+    return res;
+  });
+  report('adaptive resolution', JSON.stringify(adapt));
+  check('adaptive: zero pixel-ratio changes during 60 s of steady 60 fps walking on the phone preset', adapt.steadyChanges === 0 && adapt.steadyStep === 0, `${adapt.steadyChanges} changes`);
+  check('adaptive: a phone hovering at the threshold for 5 min changes the ratio at most 3 times per minute', adapt.hoverWorstPerMinute <= 3, `worst ${adapt.hoverWorstPerMinute}/min, total ${adapt.hoverChanges}`);
+  check('adaptive: a slow patch steps down, and it does not step back up while walking within 25 s', adapt.droppedOnSlow && adapt.upWhileWalking25s === 0, JSON.stringify({ d: adapt.droppedOnSlow, up: adapt.upWhileWalking25s }));
+
+  // ---- 4. Resize storms: Safari bars / visualViewport events must not reallocate the drawing buffer ----
+  await loadFresh(page, '?level=test&fps=0');
+  const resizes = await page.evaluate(async () => {
+    const canvas = document.querySelector('canvas');
+    let sets = 0;
+    const d = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'width');
+    Object.defineProperty(canvas, 'width', { configurable: true, get() { return d.get.call(this); }, set(v) { sets++; d.set.call(this, v); } });
+    for (let i = 0; i < 40; i++) {
+      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event('orientationchange'));
+      window.visualViewport && window.visualViewport.dispatchEvent(new Event('resize'));
+    }
+    await new Promise((r) => setTimeout(r, 400));
+    return sets;
+  });
+  check('resize events with an unchanged size never touch the canvas size (120 events)', resizes === 0, `${resizes} canvas width writes`);
+
+  // ---- 5. DOM writes and layout reads per frame while walking, GC pressure ----
+  for (const [lname, q, dest] of [['test', '?level=test', [0, -20]], ['bab1', '?reset=1', [0, -7.5]]]) {
+    await loadFresh(page, q);
+    const dom = await page.evaluate(({ dest }) => {
+      const g = window.__superglen;
+      g.pause(true);
+      g.resetTiming();
+      const counts = { layout: 0 };
+      const rect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function () { counts.layout++; return rect.apply(this, arguments); };
+      const ow = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get() { counts.layout++; return ow.get.call(this); } });
+      const gcs = window.getComputedStyle;
+      window.getComputedStyle = function () { counts.layout++; return gcs.apply(window, arguments); };
+      const mo = new MutationObserver(() => {});
+      mo.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+      let T = 5000;
+      g.simFrame(T, false);
+      g.walkTo(dest[0], dest[1]);
+      let frames = 0;
+      for (let i = 0; i < 240; i++) { T += 1000 / 60; g.simFrame(T, false); frames++; }
+      const records = mo.takeRecords().length;
+      mo.disconnect();
+      Element.prototype.getBoundingClientRect = rect;
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', ow);
+      window.getComputedStyle = gcs;
+      g.cancelWalk();
+      return { records, layout: counts.layout, frames };
+    }, { dest });
+    report(`DOM ${lname}`, `${dom.records} mutations, ${dom.layout} layout reads in ${dom.frames} walking frames`);
+    check(`DOM (${lname}): <= 10 DOM mutations and 0 layout reads in 240 walking frames`, dom.records <= 10 && dom.layout === 0, `${dom.records} mutations, ${dom.layout} layout reads`);
+  }
+
+  // GC pressure: heap growth per frame (needs --enable-precise-memory-info; skipped when unavailable).
+  const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+  if (!heapOk) {
+    report('heap', 'performance.memory/gc unavailable: skipped');
+  } else {
+    const HEAP_LIMIT = { test: 16000, bab1: 16000 }; // bytes per frame; before the fixes: ~22000 and ~38000, after ~6000-12000
+    for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?fps=0&reset=1', [0, -7.5]]]) {
+      await loadFresh(page, q);
+      const bpf = await page.evaluate(({ dest }) => {
+        const g = window.__superglen;
+        g.pause(true);
+        g.advance(5, true);
+        g.walkTo(dest[0], dest[1]);
+        g.advance(30, false);
+        window.gc();
+        const heap = () => performance.memory.usedJSHeapSize;
+        let prev = heap();
+        let acc = 0;
+        const n = 400;
+        for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+        g.cancelWalk();
+        return acc / n;
+      }, { dest });
+      report(`heap ${lname}`, `${Math.round(bpf)} bytes per frame`);
+      check(`heap (${lname}): < ${HEAP_LIMIT[lname]} bytes allocated per walking frame`, bpf < HEAP_LIMIT[lname], `${Math.round(bpf)} B/frame`);
+    }
+  }
+
+  // ---- 6. Shader programs stay constant, triangle budget (story level) ----
+  await loadFresh(page, '?fps=0&reset=1');
+  const prog = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.advance(3, true);
+    const p0 = g.debugCounts().programs;
+    let maxTris = 0;
+    const tris = {};
+    for (const [name, x, z] of [['street start', 0, 0], ['street mid', 0, -20], ['plaza', 0, -36], ['hall door', 0, -45], ['hall', 0, -55], ['lab', 0, -70]]) {
+      g.placePlayer(x, z);
+      g.setCameraYaw(0);
+      g.advance(40, false);
+      g.advance(1, true);
+      const c = g.debugCounts();
+      tris[name] = c.triangles;
+      maxTris = Math.max(maxTris, c.triangles);
+    }
+    // Exercise things that appear mid-play: Superglen flash ring, objective beam, mode back.
+    g.game.setPlayerMode('superglen');
+    g.advance(20, true);
+    g.game.setPlayerMode('glen');
+    g.advance(20, true);
+    return { p0, p1: g.debugCounts().programs, maxTris, tris };
+  });
+  report('programs / triangles', JSON.stringify(prog));
+  check('shader programs: none compiled after warm-up while walking all areas and switching mode', prog.p1 === prog.p0 && prog.p0 > 0, `${prog.p0} -> ${prog.p1}`);
+  check('bab1 triangles per frame (incl. shadow pass) <= 60000 at every sampled spot', prog.maxTris <= 60000, `max ${prog.maxTris}: ${JSON.stringify(prog.tris)}`);
+
+  // ---- 7. ?perf=1 panel ----
+  await loadFresh(page, '?level=test&fps=0');
+  check('perf panel is absent without ?perf=1', await page.evaluate(() => !document.querySelector('.perf-panel')));
+  await loadFresh(page, '?level=test&fps=0&perf=1');
+  await sleep(1800);
+  const pn = await page.evaluate(() => {
+    const el = document.querySelector('.perf-panel');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const c = el.querySelector('canvas');
+    return { text: el.innerText, w: r.width, h: r.height, cx: r.left + r.width / 2, vw: window.innerWidth, top: r.top, cw: c && c.width, ch: c && c.height };
+  });
+  check('perf panel appears with ?perf=1, top-centre, small, with a 240x48 graph', !!pn && pn.cw === 240 && pn.ch === 48 && Math.abs(pn.cx - pn.vw / 2) < 2 && pn.top < 12 && pn.w < 280 && pn.h < 110, JSON.stringify(pn));
+  check('perf panel shows median/p99, hitches, steps, ratio, calls/tri and the worst hitch', !!pn && /med [\d.]+ p99 [\d.]+/.test(pn.text) && /hitch\/10s/.test(pn.text) && /steps 0:/.test(pn.text) && /ratio [\d.]+ chg \d+/.test(pn.text) && /calls \d+ tri \d+/.test(pn.text) && /worst/.test(pn.text), pn && pn.text.replace(/\n/g, ' | '));
+  await page.click('.perf-panel');
+  const t1 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  await sleep(1200);
+  const t2 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  check('tapping the perf panel freezes it', t1 === t2, '');
+  await page.click('.perf-panel');
+  await sleep(900);
+  const t3 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  check('tapping again resumes it', t3 !== t2, '');
+  await shot(page, 'perf-panel');
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !name.startsWith(process.env.ONLY)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
   const ctx = await browser.newContext(ctxOpts);
+  // Switches on the test-only debug numbers of the story level (pole cover, camera position).
+  await ctx.addInitScript(() => { window.__SG_TEST = true; });
   const page = await ctx.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error') result.errors.push(`console: ${m.text()}`);
@@ -1753,7 +2088,7 @@ async function main() {
   try {
     await waitForServer(30000);
     browser = await chromium.launch({
-      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'],
     });
 
     results.push(
@@ -1815,6 +2150,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 
     results.push(
       await runScenario(

@@ -10,6 +10,7 @@ import { Sequence } from '../gameplay/Sequence';
 import type { Fade } from '../ui/Fade';
 import type { Level, LevelContext, LevelFactory } from './Level';
 import { StaticProps } from './StaticProps';
+import { perfMark, PerfMark } from '../core/PerfMarks';
 
 /** Everything a level context shares with the game (the per-level parts are created here). */
 export type SharedContext = Omit<LevelContext, 'root' | 'props' | 'seq' | 'onDispose'>;
@@ -141,6 +142,7 @@ export class LevelManager {
       console.warn(`LevelManager: unknown level "${id}"`);
       return;
     }
+    perfMark(PerfMark.LOAD);
     this.unload();
     const d = this.deps;
     d.onBeforeBuild();

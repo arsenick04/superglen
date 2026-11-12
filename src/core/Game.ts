@@ -21,10 +21,13 @@ import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
 import { startGate } from './StartGate';
 import { touchMode } from './TouchMode';
+import { FrameClock } from './FrameClock';
+import { ShadowFollower } from './ShadowSnap';
+import { PerfOverlay, type PerfStats } from '../ui/PerfOverlay';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
-/** Max physics steps per rendered frame. Leftover time is dropped. */
+/** Max physics steps per rendered frame. Leftover whole steps are dropped (the sub-step phase is kept). */
 const MAX_SUBSTEPS = 5;
 
 /** Read-only debug data for automated smoke tests and the browser console. */
@@ -90,6 +93,32 @@ export interface DebugHandle {
   /** Test helpers. */
   loadLevel: (id: string) => Promise<void>;
   setCameraYaw: (yaw: number) => void;
+  /** Camera world position (updated every frame). */
+  camera: { x: number; y: number; z: number };
+  /** Fixed steps run by the most recent frame. */
+  lastSteps: number;
+  /**
+   * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
+   * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
+   * `resetTiming` forgets the clock, `adaptFrame` feeds the adaptive-resolution logic without drawing.
+   */
+  simFrame: (nowMs: number, render: boolean) => number;
+  smoothing: (on: boolean) => void;
+  resetTiming: () => void;
+  adaptFrame: (nowMs: number, moving: boolean) => void;
+  /** Test helper: put the player on the floor at (x, z). */
+  placePlayer: (x: number, z: number) => void;
+  /**
+   * Fractional shadow-map texel position (0..1, x and y) of a fixed world point, or null without a shadow light.
+   * While the player walks this must stay constant (snapped shadow camera); a drifting value = swimming shadows.
+   */
+  shadowPhase: () => number[] | null;
+  /** Switch the shadow-camera texel snapping on/off (test comparison). */
+  shadowSnap: (on: boolean) => void;
+  /** Test helper: reset the adaptive-resolution logic to full resolution. */
+  adaptReset: () => void;
+  /** Adaptive resolution state: step index and number of ratio changes so far. */
+  adaptive: () => { step: number; changes: number; ratio: number };
   /** Resource counts: geometries/textures from three, colliders/bodies from Rapier. */
   debugCounts: () => {
     geometries: number;
@@ -99,6 +128,7 @@ export interface DebugHandle {
     sceneChildren: number;
     calls: number;
     triangles: number;
+    programs: number;
   };
 }
 
@@ -141,9 +171,11 @@ export class Game {
   private readonly api: LevelGame;
 
   private accumulator = 0;
-  private lastTime = 0;
   private rafId = 0;
   private running = false;
+  private readonly clock = new FrameClock();
+  private readonly perfPanel: PerfOverlay | null = null;
+  private lastSteps = 0;
 
   private fpsFrames = 0;
   private fpsTime = 0;
@@ -184,6 +216,24 @@ export class Game {
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),
     setCameraYaw: (yaw: number) => this.cameraRig.snapBehind(yaw - Math.PI),
+    camera: { x: 0, y: 0, z: 0 },
+    lastSteps: 0,
+    simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
+    smoothing: (on: boolean) => {
+      this.clock.enabled = on;
+    },
+    resetTiming: () => {
+      this.clock.reset();
+      this.accumulator = 0;
+    },
+    adaptFrame: (nowMs: number, moving: boolean) => this.renderer.observeFrame(nowMs, moving),
+    placePlayer: (x: number, z: number) => this.player.placeAt(x, 0, z),
+    shadowPhase: () => this.shadowPhase(),
+    shadowSnap: (on: boolean) => {
+      ShadowFollower.snapEnabled = on;
+    },
+    adaptReset: () => this.renderer.resetAdaptive(),
+    adaptive: () => ({ step: this.renderer.step, changes: this.renderer.ratioChanges, ratio: this.renderer.pixelRatio }),
     debugCounts: () => {
       const m = this.renderer.renderer.info.memory;
       return {
@@ -194,6 +244,7 @@ export class Game {
         sceneChildren: this.scene.children.length,
         calls: this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
+        programs: this.renderer.renderer.info.programs?.length ?? 0,
       };
     },
   };
@@ -229,6 +280,9 @@ export class Game {
 
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
+    if (new URLSearchParams(window.location.search).get('perf') === '1') {
+      this.perfPanel = new PerfOverlay(uiRoot, (out) => this.collectPerfStats(out));
+    }
 
     const bubble = new DialogBubble(uiRoot, () => this.dialog.tap());
     bubble.faceFor = (sp) => (sp === 'glen' && this.player.mode === 'superglen' ? 'superglen' : sp);
@@ -324,6 +378,7 @@ export class Game {
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
         this.applyLayout();
         this.syncDebug();
+        this.renderer.prewarm(this.scene, this.cameraRig.camera);
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
@@ -343,7 +398,7 @@ export class Game {
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.lastTime = performance.now();
+    this.clock.reset();
     this.accumulator = 0;
     this.rafId = requestAnimationFrame(this.frame);
   }
@@ -356,10 +411,26 @@ export class Game {
   private readonly frame = (now: number): void => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.frame);
-
-    const dt = Math.min(Math.max((now - this.lastTime) / 1000, 0), MAX_FRAME_DT);
-    this.lastTime = now;
     if (this.paused) return;
+    const panel = this.perfPanel;
+    const t0 = panel ? performance.now() : 0;
+    const steps = this.runFrame(now, true);
+    if (panel) panel.frame(now, performance.now() - t0, steps);
+  };
+
+  /** Tests: one whole frame at a made-up timestamp, even while the real loop is paused. */
+  private simFrame(nowMs: number, render: boolean): number {
+    const steps = this.runFrame(nowMs, render);
+    this.syncDebug();
+    return steps;
+  }
+
+  /**
+   * One rendered frame: input -> camera look -> fixed 60 Hz steps (exact accumulator) -> interpolate -> camera ->
+   * level -> render. `now` = rAF timestamp in ms. Returns the number of fixed steps that ran.
+   */
+  private runFrame(now: number, render: boolean): number {
+    const dt = Math.min(this.clock.tick(now), MAX_FRAME_DT);
 
     this.input.update();
     this.cameraRig.handleInput();
@@ -371,7 +442,9 @@ export class Game {
       this.accumulator -= FIXED_DT;
       steps++;
     }
-    if (steps === MAX_SUBSTEPS && this.accumulator >= FIXED_DT) this.accumulator = 0;
+    // Too far behind (a long hitch): drop the whole steps we cannot catch up, keep the sub-step phase so the
+    // interpolation does not jump.
+    if (this.accumulator >= FIXED_DT) this.accumulator %= FIXED_DT;
 
     const alpha = this.accumulator / FIXED_DT;
     this.player.updateVisual(alpha, dt);
@@ -379,9 +452,43 @@ export class Game {
     this.rings.update(dt);
     this.frameUpdate(dt);
 
-    this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.render(this.scene, this.cameraRig.camera, now, this.playerMoving());
+    this.lastSteps = steps;
     this.updateDebug(dt);
-  };
+    return steps;
+  }
+
+  private shadowPhase(): number[] | null {
+    let light: THREE.DirectionalLight | null = null;
+    this.scene.traverse((o) => {
+      const d = o as THREE.DirectionalLight;
+      if (d.isDirectionalLight && d.castShadow) light = d;
+    });
+    if (!light) return null;
+    const l = light as THREE.DirectionalLight;
+    l.updateMatrixWorld();
+    l.target.updateMatrixWorld();
+    l.shadow.updateMatrices(l);
+    const cam = l.shadow.camera;
+    const v = new THREE.Vector3(3.3, 0.2, -7.7).applyMatrix4(cam.matrixWorldInverse).applyMatrix4(cam.projectionMatrix);
+    const size = l.shadow.mapSize.x;
+    const f = (n: number): number => n - Math.floor(n);
+    return [f((v.x * 0.5 + 0.5) * size), f((v.y * 0.5 + 0.5) * size)];
+  }
+
+  private playerMoving(): boolean {
+    const v = this.player.velocity;
+    return v.x * v.x + v.z * v.z > 0.25;
+  }
+
+  private collectPerfStats(out: PerfStats): void {
+    const info = this.renderer.renderer.info;
+    out.pixelRatio = this.renderer.pixelRatio;
+    out.ratioChanges = this.renderer.ratioChanges;
+    out.calls = info.render.calls;
+    out.triangles = info.render.triangles;
+    out.programs = info.programs ? info.programs.length : 0;
+  }
 
   /** Per rendered frame, after the camera moved: level visuals, prompt icon and objective marker. */
   private frameUpdate(dt: number): void {
@@ -435,7 +542,10 @@ export class Game {
 
   private setPaused(on: boolean): void {
     this.paused = on;
-    if (!on) this.accumulator = 0;
+    if (!on) {
+      this.accumulator = 0;
+      this.clock.reset();
+    }
   }
 
   /** Test helper: run `frames` virtual frames of exactly one fixed step each, then render once (unless `render` is false). */
@@ -449,7 +559,7 @@ export class Game {
       this.rings.update(FIXED_DT);
     }
     this.frameUpdate(frames * FIXED_DT);
-    if (render) this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -459,7 +569,7 @@ export class Game {
       this.advance(1, false);
       for (let k = 0; k < 8; k++) await Promise.resolve();
     }
-    if (render) this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -483,6 +593,11 @@ export class Game {
     this.debug.grounded = this.player.grounded;
     this.debug.started = startGate.started;
     this.debug.touchUi = touchMode.active;
+    const cp = this.cameraRig.camera.position;
+    this.debug.camera.x = cp.x;
+    this.debug.camera.y = cp.y;
+    this.debug.camera.z = cp.z;
+    this.debug.lastSteps = this.lastSteps;
     this.debug.cameraYaw = this.cameraRig.yaw;
     this.debug.steeringYaw = this.cameraRig.steeringYaw;
     const pl = this.player;

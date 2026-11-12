@@ -26,6 +26,8 @@ export const TouchConfig = {
   buttonReleaseMargin: 14,
 } as const;
 
+const ACTION_KEYS: readonly Action[] = ['jump', 'laser', 'shield', 'interact', 'transform'];
+
 interface Held {
   kind: 'stick' | 'look' | 'button';
   x: number;
@@ -38,7 +40,13 @@ export class TouchSource implements InputSource {
   readonly controls: TouchControls;
 
   private readonly held = new Map<number, Held>();
+  /** How many fingers rest on each button (isDown runs every frame: no iterating the map there). */
+  private readonly buttonCount: Record<Action, number> = { jump: 0, laser: 0, shield: 0, interact: 0, transform: 0 };
   private readonly latch = new Set<Action>();
+  /** The stick picture is redrawn once per frame at most (pointermove can arrive faster than frames). */
+  private stickDirty = false;
+  private stickKx = 0;
+  private stickKy = 0;
   private lookX = 0;
   private lookY = 0;
   private stickId = -1;
@@ -69,7 +77,7 @@ export class TouchSource implements InputSource {
   setLayout(defs: readonly TouchButtonDef[]): void {
     this.controls.setLayout(defs);
     for (const [id, h] of this.held) {
-      if (h.kind === 'button' && h.action && !this.controls.buttons.has(h.action)) this.held.delete(id);
+      if (h.kind === 'button' && h.action && !this.controls.buttons.has(h.action)) this.release(id);
     }
     for (const a of this.controls.buttons.keys()) this.syncButton(a);
   }
@@ -83,6 +91,10 @@ export class TouchSource implements InputSource {
     const en = this.enabled;
     if (!en && this.wasEnabled) this.reset();
     this.wasEnabled = en;
+    if (this.stickDirty) {
+      this.stickDirty = false;
+      this.controls.showStick(this.cx, this.cy, this.stickKx, this.stickKy);
+    }
   }
 
   drainLook(out: Vec2): void {
@@ -93,8 +105,19 @@ export class TouchSource implements InputSource {
   }
 
   isDown(action: Action): boolean {
-    for (const h of this.held.values()) if (h.kind === 'button' && h.action === action) return true;
-    return false;
+    return this.buttonCount[action] > 0;
+  }
+
+  private hold(id: number, h: Held): void {
+    this.held.set(id, h);
+    if (h.kind === 'button' && h.action) this.buttonCount[h.action]++;
+  }
+
+  private release(id: number): void {
+    const h = this.held.get(id);
+    if (!h) return;
+    this.held.delete(id);
+    if (h.kind === 'button' && h.action) this.buttonCount[h.action]--;
   }
 
   drainPressed(action: Action): boolean {
@@ -103,6 +126,8 @@ export class TouchSource implements InputSource {
 
   reset(): void {
     this.held.clear();
+    for (const a of ACTION_KEYS) this.buttonCount[a] = 0;
+    this.stickDirty = false;
     this.latch.clear();
     this.lookX = 0;
     this.lookY = 0;
@@ -170,7 +195,9 @@ export class TouchSource implements InputSource {
       this.move.x = (dx / (mag * R)) * scaled;
       this.move.y = (-dy / (mag * R)) * scaled;
     }
-    this.controls.showStick(this.cx, this.cy, dx, dy);
+    this.stickKx = dx;
+    this.stickKy = dy;
+    this.stickDirty = true;
   }
 
   private readonly onDown = (e: PointerEvent): void => {
@@ -184,17 +211,17 @@ export class TouchSource implements InputSource {
     const y = e.clientY;
     const action = this.hitButton(x, y, TouchConfig.buttonHitMargin);
     if (action) {
-      this.held.set(e.pointerId, { kind: 'button', x, y, action });
+      this.hold(e.pointerId, { kind: 'button', x, y, action });
       this.latch.add(action);
       this.syncButton(action);
     } else if (this.stickId < 0 && x < window.innerWidth * TouchConfig.joystickZone) {
-      this.held.set(e.pointerId, { kind: 'stick', x, y });
+      this.hold(e.pointerId, { kind: 'stick', x, y });
       this.stickId = e.pointerId;
       this.cx = x;
       this.cy = y;
       this.updateStick(x, y);
     } else {
-      this.held.set(e.pointerId, { kind: 'look', x, y });
+      this.hold(e.pointerId, { kind: 'look', x, y });
     }
   };
 
@@ -212,7 +239,7 @@ export class TouchSource implements InputSource {
       h.y = y;
     } else if (h.action && this.hitButton(x, y, TouchConfig.buttonReleaseMargin) !== h.action) {
       // Finger slid off the button: release it (and ignore the rest of this touch).
-      this.held.delete(e.pointerId);
+      this.release(e.pointerId);
       this.syncButton(h.action);
     }
   };
@@ -220,8 +247,9 @@ export class TouchSource implements InputSource {
   private readonly onUp = (e: PointerEvent): void => {
     const h = this.held.get(e.pointerId);
     if (!h) return;
-    this.held.delete(e.pointerId);
+    this.release(e.pointerId);
     if (h.kind === 'stick') {
+      this.stickDirty = false;
       this.stickId = -1;
       this.move.x = 0;
       this.move.y = 0;

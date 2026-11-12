@@ -26,7 +26,7 @@ export class BuildingExterior {
       kit.lit.box([bw, 0.25, 0.1], [s * (DOOR_HALF + bw / 2), 0.9, FACE_Z + 0.03], C.GOLD);
       kit.lit.box([bw, 0.25, 0.1], [s * (DOOR_HALF + bw / 2), 4.3, FACE_Z + 0.03], C.GOLD);
       // Cream studs row (a faded-gold "gate" pattern).
-      for (let i = 0; i < 6; i++) kit.lit.sph(0.1, [s * (DOOR_HALF + 0.5 + i * 0.95), 4.6, FACE_Z + 0.07], C.CREAM);
+      for (let i = 0; i < 6; i++) kit.deco.sph(0.1, [s * (DOOR_HALF + 0.5 + i * 0.95), 4.6, FACE_Z + 0.07], C.CREAM);
       // Wing walls out to the boundary.
       kit.solid([BOUNDARY + 0.5 - half, 5.4, 0.6], [s * (half + (BOUNDARY + 0.5 - half) / 2), 2.7, FACE_Z - 0.3], 0x9c3a2a);
       kit.lit.box([BOUNDARY + 0.5 - half, 0.3, 0.8], [s * (half + (BOUNDARY + 0.5 - half) / 2), 5.5, FACE_Z - 0.3], C.GOLD);
@@ -71,8 +71,8 @@ export class BuildingExterior {
       kit.lit.pyr(hip, hipH, hip * (depth / w), [0, y + 0.2 + hipH / 2, -50], 0xb5382b);
       for (const sx of [-1, 1])
         for (const sz of [-1, 1]) {
-          kit.lit.add('cone', [sx * (w / 2 + 0.2), y + 0.55, -50 + sz * (depth / 2 + 0.2)], [0.22, 1.1, 0.22], C.GOLD, [sz * 0.7, 0, -sx * 0.7]);
-          kit.lit.sph(0.2, [sx * (w / 2 + 0.55), y + 0.95, -50 + sz * (depth / 2 + 0.55)], C.CREAM);
+          kit.deco.add('cone', [sx * (w / 2 + 0.2), y + 0.55, -50 + sz * (depth / 2 + 0.2)], [0.22, 1.1, 0.22], C.GOLD, [sz * 0.7, 0, -sx * 0.7]);
+          kit.deco.sph(0.2, [sx * (w / 2 + 0.55), y + 0.95, -50 + sz * (depth / 2 + 0.55)], C.CREAM);
         }
       // Roof tiles stripe on the front slope.
       for (let i = -3; i <= 3; i++) kit.lit.box([0.12, 0.08, hip * 0.5], [i * hip * 0.14, y + 0.2 + hipH * 0.3, -50 + depth / 2 - hip * 0.3], C.GOLD, [0.7, 0, 0]);
@@ -102,11 +102,11 @@ export class BuildingExterior {
       kit.lit.add('cone', [x, 2.3, z + 0.1], [0.14, 0.5, 0.14], C.GOLD);
       // Lantern hanging from the roof beam.
       const lx = s * 5.6;
-      kit.lit.cyl(0.02, 1.2, [lx, 4.0, FACE_Z + 1.0], C.GOLD);
-      kit.lit.cyl(0.25, 0.12, [lx, 3.35, FACE_Z + 1.0], C.GOLD);
+      kit.deco.cyl(0.02, 1.2, [lx, 4.0, FACE_Z + 1.0], C.GOLD);
+      kit.deco.cyl(0.25, 0.12, [lx, 3.35, FACE_Z + 1.0], C.GOLD);
       kit.glow.sph(0.5, [lx, 2.85, FACE_Z + 1.0], 0xff7a45, [1, 1.2, 1]);
-      kit.lit.cyl(0.25, 0.12, [lx, 2.3, FACE_Z + 1.0], C.GOLD);
-      kit.lit.add('cone', [lx, 2.0, FACE_Z + 1.0], [0.08, 0.5, 0.08], C.RED);
+      kit.deco.cyl(0.25, 0.12, [lx, 2.3, FACE_Z + 1.0], C.GOLD);
+      kit.deco.add('cone', [lx, 2.0, FACE_Z + 1.0], [0.08, 0.5, 0.08], C.RED);
     }
     kit.lit.box([13.4, 0.18, 0.18], [0, 4.0, FACE_Z + 1.0], 0x6b2a20); // beam the lanterns hang from
     kit.lit.box([0.18, 0.18, 1.2], [-6.7, 4.0, FACE_Z + 0.5], 0x6b2a20);
@@ -119,19 +119,19 @@ export class BuildingExterior {
       kit.solid([x1 - x0, 0.12, 0.14], [cx, 1.5, fz], 0x6c7a8c);
       kit.solid([x1 - x0, 0.12, 0.14], [cx, 0.25, fz], 0x6c7a8c);
       kit.collider([x1 - x0, 1.6, 0.2], [cx, 0.8, fz]);
-      for (let x = x0 + 0.2; x < x1; x += 0.42) kit.lit.cyl(0.04, 1.6, [x, 0.8, fz], 0x8c9aae);
-      for (let x = x0 + 0.2; x < x1; x += 0.42) kit.lit.sph(0.07, [x, 1.62, fz], C.GOLD);
+      for (let x = x0 + 0.2; x < x1; x += 0.42) kit.deco.cyl(0.04, 1.6, [x, 0.8, fz], 0x8c9aae);
+      for (let x = x0 + 0.2; x < x1; x += 0.42) kit.deco.sph(0.07, [x, 1.62, fz], C.GOLD);
     };
     bars(-BOUNDARY - 0.5, FENCE_GAP.x0);
     bars(FENCE_GAP.x1, BOUNDARY + 0.5);
     for (const px of [-12, -8, -4, 3.6, 6.0, 9, 12.5]) {
-      kit.lit.cyl(0.12, 1.9, [px, 0.95, fz], 0x5b6878);
-      kit.lit.sph(0.17, [px, 1.95, fz], C.GOLD);
+      kit.deco.cyl(0.12, 1.9, [px, 0.95, fz], 0x5b6878);
+      kit.deco.sph(0.17, [px, 1.95, fz], C.GOLD);
     }
     // Bent bars at both edges of the gap, leaning outward.
     for (let i = 0; i < 3; i++) {
-      kit.lit.cyl(0.04, 1.5, [FENCE_GAP.x0 - 0.2 - i * 0.2 - 0.25, 0.7, fz], 0xb5c2d6, [0, 0, 0.55 + i * 0.12]);
-      kit.lit.cyl(0.04, 1.5, [FENCE_GAP.x1 + 0.2 + i * 0.2 + 0.25, 0.7, fz], 0xb5c2d6, [0, 0, -(0.55 + i * 0.12)]);
+      kit.deco.cyl(0.04, 1.5, [FENCE_GAP.x0 - 0.2 - i * 0.2 - 0.25, 0.7, fz], 0xb5c2d6, [0, 0, 0.55 + i * 0.12]);
+      kit.deco.cyl(0.04, 1.5, [FENCE_GAP.x1 + 0.2 + i * 0.2 + 0.25, 0.7, fz], 0xb5c2d6, [0, 0, -(0.55 + i * 0.12)]);
     }
     // A golden doormat arrow pointing through the gap (flat glow pieces).
     kit.glow.box([0.5, 0.03, 0.5], [FENCE_GAP_X, 0.08, fz + 0.9], 0xffe27a);

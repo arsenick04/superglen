@@ -87,7 +87,8 @@ export class KeyboardMouseSource implements InputSource {
   }
 
   isDown(action: Action): boolean {
-    for (const code of KEY_ACTIONS[action]) if (this.keys.has(code)) return true;
+    const codes = KEY_ACTIONS[action];
+    for (let i = 0; i < codes.length; i++) if (this.keys.has(codes[i])) return true;
     const btn = MOUSE_ACTIONS[action];
     return btn !== undefined && this.mouseButtons.has(btn);
   }
@@ -119,7 +120,7 @@ export class KeyboardMouseSource implements InputSource {
   }
 
   private anyKey(codes: readonly string[]): boolean {
-    for (const c of codes) if (this.keys.has(c)) return true;
+    for (let i = 0; i < codes.length; i++) if (this.keys.has(codes[i])) return true;
     return false;
   }
 

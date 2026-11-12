@@ -5,7 +5,9 @@ const ARROW =
 export class EdgeArrow {
   readonly element: HTMLDivElement;
   private shown = false;
-  private lastKey = '';
+  private lastX = NaN;
+  private lastY = NaN;
+  private lastA = NaN;
 
   constructor(root: HTMLElement) {
     this.element = document.createElement('div');
@@ -28,9 +30,13 @@ export class EdgeArrow {
       this.shown = true;
       this.element.hidden = false;
     }
-    const key = `${Math.round(x)},${Math.round(y)},${Math.round(angle * 50)}`;
-    if (key === this.lastKey) return;
-    this.lastKey = key;
+    const rx = Math.round(x);
+    const ry = Math.round(y);
+    const ra = Math.round(angle * 50);
+    if (rx === this.lastX && ry === this.lastY && ra === this.lastA) return;
+    this.lastX = rx;
+    this.lastY = ry;
+    this.lastA = ra;
     this.element.style.transform = `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) rotate(${angle.toFixed(2)}rad)`;
   }
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Quality } from '../../core/Quality';
+import { ShadowFollower } from '../../core/ShadowSnap';
 import type { Player } from '../../player/Player';
 
 interface Preset {
@@ -35,9 +36,11 @@ export class Atmosphere {
   /** Soft fill that follows the player on the camera side (no shadow); only used in the hall, high preset. */
   readonly fill = new THREE.PointLight(0xffdcb0, 0, 5.5, 1.4);
   private fillYaw = 0;
+  private readonly follower: ShadowFollower;
   private readonly sunOffset = new THREE.Vector3(12, 22, 8);
   private readonly w = [1, 0, 0];
   private zone: Zone = 0;
+  private dirty = true;
   private readonly presets: Preset[];
   private readonly bg = new THREE.Color();
   private readonly fog: THREE.Fog;
@@ -71,6 +74,7 @@ export class Atmosphere {
       s.normalBias = 0.03;
     }
     root.add(this.hemi, this.sun, this.sun.target);
+    this.follower = new ShadowFollower(this.sun, this.sunOffset, Quality.shadowArea, Quality.shadowMapSize);
     if (Quality.level !== 'low') root.add(this.fill);
     this.fog = new THREE.Fog(0x8fd3ff, this.presets[0].fogNear, this.presets[0].fogFar);
     scene.background = this.bg.copy(this.presets[0].bg);
@@ -94,14 +98,32 @@ export class Atmosphere {
 
   /** `camYaw` = camera yaw (camera sits at sin/cos of it around the player): the fill comes from that side. */
   update(dt: number, focus: THREE.Vector3, camYaw = 0): void {
+    // Blend the mood only while it is still moving; a settled mood costs nothing (no colour maths, no uniform changes).
     const k = 1 - Math.exp(-4 * dt);
-    for (let i = 0; i < 3; i++) this.w[i] += ((i === this.zone ? 1 : 0) - this.w[i]) * k;
-    this.apply();
-    this.sun.position.copy(focus).add(this.sunOffset);
-    this.sun.target.position.copy(focus);
+    let moving = false;
+    for (let i = 0; i < 3; i++) {
+      const target = i === this.zone ? 1 : 0;
+      const d = target - this.w[i];
+      if (Math.abs(d) > 1e-4) {
+        this.w[i] += d * k;
+        moving = true;
+      } else if (d !== 0) {
+        this.w[i] = target;
+        moving = true; // one last apply with the exact weights
+      }
+    }
+    if (moving || this.dirty) {
+      this.dirty = false;
+      this.apply();
+    }
+    this.follower.follow(focus);
     this.fillYaw = camYaw;
-    this.fill.intensity = this.hallAmount * 5;
-    this.fill.position.set(focus.x + Math.sin(this.fillYaw) * 1.9, focus.y + 1.3, focus.z + Math.cos(this.fillYaw) * 1.9);
+    // The fill light always exists (its intensity just drops to 0): adding/removing lights recompiles every material.
+    const fi = this.hallAmount * 5;
+    if (fi !== this.fill.intensity || this.hallAmount > 0) {
+      this.fill.intensity = fi;
+      this.fill.position.set(focus.x + Math.sin(this.fillYaw) * 1.9, focus.y + 1.3, focus.z + Math.cos(this.fillYaw) * 1.9);
+    }
   }
 
   private apply(): void {
@@ -190,7 +212,9 @@ export class Flashlight {
   /** `scale` 0..1 lets the caller dim it outside the hall. */
   update(dt: number, player: Player, scale: number): void {
     const want = this.enabled ? scale : 0;
+    if (want === 0 && this.amount === 0) return; // fully off: nothing to move or upload
     this.amount += (want - this.amount) * (1 - Math.exp(-5 * dt));
+    if (want === 0 && this.amount < 1e-3) this.amount = 0;
     const a = this.amount;
     this.cone.visible = a > 0.02;
     this.coneMat.opacity = a;

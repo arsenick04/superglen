@@ -84,11 +84,12 @@ export class Player {
   private airTime = 0;
   private jumpBufferTimer = 0;
   private doubleUsed = false;
-  private snapEnabled = true;
   /** Height of the feet above the ground below (m), 0 when grounded. Used by the camera. */
   airHeight = 0;
   private groundY = 0;
   private hasGround = false;
+  private probeSkip = 0;
+  private safeSkip = 0;
 
   /** Counters and peak for the debug handle / tests. */
   jumps = 0;
@@ -142,7 +143,9 @@ export class Player {
     this.controller.setMaxSlopeClimbAngle(C.maxSlopeClimb);
     this.controller.setMinSlopeSlideAngle(C.minSlopeSlide);
     this.controller.enableAutostep(C.stepHeight, C.stepMinWidth, false);
-    this.controller.enableSnapToGround(C.snapToGround);
+    // Snap-to-ground stays OFF in the controller; fixedUpdate asks for it only on steps where the plain move lost
+    // the ground (see there). Always-on snapping made the capsule hop up and down by several mm on flat ground.
+    this.controller.disableSnapToGround();
     this.controller.setSlideEnabled(true);
     this.controller.setApplyImpulsesToDynamicBodies(true);
 
@@ -280,23 +283,38 @@ export class Player {
       }
     }
 
-    // Snap-to-ground would glue us back down on the first frames of a jump: off while rising.
-    const wantSnap = this.verticalVelocity <= 0;
-    if (wantSnap !== this.snapEnabled) {
-      if (wantSnap) this.controller.enableSnapToGround(C.snapToGround);
-      else this.controller.disableSnapToGround();
-      this.snapEnabled = wantSnap;
-    }
-
     // ---- Move through the character controller -------------------------------
     const vyAtMove = this.verticalVelocity;
     this.desired.x = this.velocity.x * dt;
     this.desired.y = this.verticalVelocity * dt;
     this.desired.z = this.velocity.z * dt;
-    this.controller.computeColliderMovement(this.collider, this.desired);
-    const moved = this.controller.computedMovement();
+    const ctl = this.controller;
+    ctl.computeColliderMovement(this.collider, this.desired);
+    let groundedNow = ctl.computedGrounded();
+    // Lost the ground while not rising (walked down a step or slope): ask again with snap-to-ground so the
+    // player stays glued to the floor. On flat ground the plain move already is grounded and snapping is skipped.
+    if (!groundedNow && vyAtMove <= 0) {
+      ctl.enableSnapToGround(C.snapToGround);
+      ctl.computeColliderMovement(this.collider, this.desired);
+      groundedNow = ctl.computedGrounded();
+      ctl.disableSnapToGround();
+    }
+    let moved = ctl.computedMovement();
+    // Rapier occasionally returns a zero horizontal move for a single step while resting on flat ground (the
+    // contact normal comes out exactly vertical and the slide degenerates). A real wall blocks the retry as
+    // well; this only recovers the numerical stall, which felt like a hiccup in the walk every second or so.
+    if (groundedNow && vyAtMove <= 0) {
+      const wantH = this.desired.x * this.desired.x + this.desired.z * this.desired.z;
+      if (wantH > 4e-4 && moved.x * moved.x + moved.z * moved.z < wantH * 0.01) {
+        const dy = this.desired.y;
+        this.desired.y = 0;
+        ctl.computeColliderMovement(this.collider, this.desired);
+        this.desired.y = dy;
+        moved = ctl.computedMovement();
+      }
+    }
     // Rising is never "grounded": the controller can report contact while sliding up a wall or pole.
-    this.grounded = this.controller.computedGrounded() && !jumped && vyAtMove <= 0;
+    this.grounded = groundedNow && !jumped && vyAtMove <= 0;
 
     // Bumped a ceiling while going up: stop rising.
     if (this.desired.y > 0 && moved.y < this.desired.y * 0.5) this.verticalVelocity = 0;
@@ -308,7 +326,9 @@ export class Player {
       if (Math.abs(vz) < Math.abs(this.velocity.z)) this.velocity.z = vz;
     }
 
-    const p = this.body.translation();
+    // The kinematic body sits exactly where we last put it (currPos), so no need to ask Rapier (each translation()
+    // call allocates a wrapper object).
+    const p = this.currPos;
     this.next.x = p.x + moved.x;
     this.next.y = p.y + moved.y;
     this.next.z = p.z + moved.z;
@@ -321,8 +341,9 @@ export class Player {
     // ---- Safety: remember safe ground, respawn after a fall ------------------
     if (this.grounded) {
       this.groundedTime += dt;
-      if (this.groundedTime >= C.safeGroundTime && this.hasGroundBelowCenter(this.next)) {
-        this.safePos.set(this.next.x, this.next.y, this.next.z);
+      if (this.groundedTime >= C.safeGroundTime && ++this.safeSkip >= 6) {
+        this.safeSkip = 0; // the safe spot is refreshed 10 times a second, not 60
+        if (this.hasGroundBelowCenter(this.next)) this.safePos.set(this.next.x, this.next.y, this.next.z);
       }
     } else {
       this.groundedTime = 0;
@@ -382,6 +403,14 @@ export class Player {
 
   /** Ray straight down from the capsule center: ground height under the player for shadow, camera, jump rules. */
   private probeGround(): void {
+    // Grounded and settled: the ground height only matters for the blob shadow, so look every 4th step.
+    // Airborne (or just landed/left the ground): every step, the jump rules need the exact height.
+    if (this.grounded && this.hasGround && this.probeSkip < 3) {
+      this.probeSkip++;
+      this.airHeight = 0;
+      return;
+    }
+    this.probeSkip = 0;
     this.groundRay.origin.x = this.currPos.x;
     this.groundRay.origin.y = this.currPos.y;
     this.groundRay.origin.z = this.currPos.z;
@@ -412,8 +441,7 @@ export class Player {
   /** Call right after physics.step(). */
   postStep(): void {
     this.prevPos.copy(this.currPos);
-    const p = this.body.translation();
-    this.currPos.set(p.x, p.y, p.z);
+    this.currPos.set(this.next.x, this.next.y, this.next.z);
   }
 
   /** Interpolate the visual between the last two physics states and run the cosmetic springs. */

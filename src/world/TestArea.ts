@@ -1,3 +1,4 @@
+import { ShadowFollower } from '../core/ShadowSnap';
 import * as THREE from 'three';
 import { Quality } from '../core/Quality';
 import { ModeController } from '../player/ModeController';
@@ -19,6 +20,7 @@ export class TestArea implements Level {
   readonly spawn = { x: PlayerConfig.spawn.x, y: PlayerConfig.spawn.y, z: PlayerConfig.spawn.z };
 
   private sun!: THREE.DirectionalLight;
+  private follower!: ShadowFollower;
   private readonly sunOffset = new THREE.Vector3(12, 22, 8);
   private player!: Player;
   private modeController!: ModeController;
@@ -44,9 +46,7 @@ export class TestArea implements Level {
 
   /** Keep the shadow-casting sun centered on the player. Call once per frame. */
   update(): void {
-    const focus = this.player.visualPosition;
-    this.sun.position.copy(focus).add(this.sunOffset);
-    this.sun.target.position.copy(focus);
+    this.follower.follow(this.player.visualPosition);
   }
 
   dispose(): void {
@@ -75,6 +75,7 @@ export class TestArea implements Level {
     }
     scene.add(this.sun);
     scene.add(this.sun.target);
+    this.follower = new ShadowFollower(this.sun, this.sunOffset, Quality.shadowArea, Quality.shadowMapSize);
   }
 
   private buildGround(scene: THREE.Object3D, physics: Physics): void {

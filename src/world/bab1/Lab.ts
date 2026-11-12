@@ -410,9 +410,18 @@ export class Lab {
     return new THREE.Vector3(p.x, F + p.h, p.z);
   }
 
-  update(dt: number): void {
+  private barsInit = false;
+
+  /** `near` = the player is in the hall or the lab (the street never sees the animated bars: skip their upload). */
+  update(dt: number, near = true): void {
     this.time += dt;
     const t = this.time;
+    if (near || !this.barsInit) this.updateBars(t);
+    this.updateDetails(t);
+  }
+
+  private updateBars(t: number): void {
+    this.barsInit = true;
     // Bars: idle trickle, lively after boot, frantic in the funny ending.
     const speed = 1.5 + 4 * this.boot + 10 * this.chaos;
     const amp = 0.12 + 0.88 * this.boot;
@@ -427,6 +436,9 @@ export class Lab {
       this.bars.setMatrixAt(i, this.m4);
     }
     this.bars.instanceMatrix.needsUpdate = true;
+  }
+
+  private updateDetails(t: number): void {
     // Head details.
     const pulse = 0.5 + 0.5 * Math.sin(t * 3);
     this.gemMat.color.setRGB(0.1 + 0.2 * pulse, 0.6 + 0.4 * pulse, 0.55 + 0.4 * pulse);

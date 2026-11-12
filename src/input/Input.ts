@@ -72,9 +72,13 @@ export class Input {
 
   /** Poll all sources. Call once per frame before fixed steps. */
   update(): void {
+    // Indexed loops: for..of over arrays/maps allocates an iterator object per call on some engines, and this
+    // runs every frame.
+    const sources = this.sources;
     let mx = 0;
     let my = 0;
-    for (const s of this.sources) {
+    for (let i = 0; i < sources.length; i++) {
+      const s = sources[i];
       s.update();
       mx += s.move.x;
       my += s.move.y;
@@ -88,10 +92,12 @@ export class Input {
     this.move.x = mx;
     this.move.y = my;
 
-    for (const a of ACTIONS) {
+    for (let k = 0; k < ACTIONS.length; k++) {
+      const a = ACTIONS[k];
       let isDown = false;
       let wasPressed = false;
-      for (const s of this.sources) {
+      for (let i = 0; i < sources.length; i++) {
+        const s = sources[i];
         if (s.isDown(a)) isDown = true;
         if (s.drainPressed(a)) wasPressed = true;
       }
@@ -111,7 +117,7 @@ export class Input {
 
   /** Clears press edges. Called by the game loop after every fixed step. */
   endFixedStep(): void {
-    for (const a of ACTIONS) this.pressed.set(a, false);
+    for (let k = 0; k < ACTIONS.length; k++) this.pressed.set(ACTIONS[k], false);
   }
 
   /**

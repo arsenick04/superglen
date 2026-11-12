@@ -32,7 +32,10 @@ const euler = new THREE.Euler();
  * helpers that add the matching collider. All colliders go through Physics, so the level unload frees them.
  */
 export class Kit {
+  /** Lit, casts and receives shadows: the big shapes (walls, roofs, tree crowns). */
   readonly lit: ColorBatch;
+  /** Lit, receives shadows but casts none: small details (flowers, window frames, fence bars). Cheaper shadow pass. */
+  readonly deco: ColorBatch;
   readonly glow: ColorBatch;
 
   constructor(
@@ -41,6 +44,7 @@ export class Kit {
     shadows = true,
   ) {
     this.lit = new ColorBatch(mats.lit, shadows, shadows);
+    this.deco = new ColorBatch(mats.lit, false, shadows);
     this.glow = new ColorBatch(mats.glow, false, false);
   }
 
@@ -73,6 +77,7 @@ export class Kit {
 
   build(parent: THREE.Object3D): void {
     this.lit.build(parent);
+    this.deco.build(parent);
     this.glow.build(parent);
   }
 }
