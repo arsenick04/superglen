@@ -51,6 +51,8 @@ export class DialogBubble {
   private readonly textEl: HTMLDivElement;
   private shown = false;
   private speaker = '';
+  /** Optional remap of the speaker id to a face id (e.g. Glen shows the Superglen face in Superglen mode). */
+  faceFor: ((speaker: string) => string) | null = null;
 
   constructor(root: HTMLElement, onTap: () => void) {
     this.element = el('div', 'dlg');
@@ -75,7 +77,8 @@ export class DialogBubble {
   }
 
   /** Show a line. Re-showing while visible swaps the content without replaying the pop-in. */
-  show(speaker: string, text: string): void {
+  show(speakerId: string, text: string): void {
+    const speaker = this.faceFor ? this.faceFor(speakerId) : speakerId;
     if (speaker !== this.speaker || !this.face.firstChild) {
       this.face.innerHTML = faceSvg(speaker);
       this.face.dataset.speaker = speaker;

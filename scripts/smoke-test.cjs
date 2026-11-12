@@ -1276,6 +1276,76 @@ function makeStoryDriver(page, check) {
   return d;
 }
 
+
+/** Camera views next to the story spots: the practice poles must never cover the screen. */
+async function cameraAngleShots(page, check, d) {
+  const spots = [['costume', -4.6, -69.4], ['button', 0, -66.6], ['nino', 3.0, -69.4]];
+  let worst = 0;
+  const seen = [];
+  for (const [name, x, z] of spots) {
+    await d.walk(x, z, 600);
+    for (const [label, yaw] of [['default', 0], ['left', Math.PI / 2], ['right', -Math.PI / 2]]) {
+      await page.evaluate((y) => window.__superglen.setCameraYaw(y), yaw);
+      await d.adv(40, true);
+      const s = await d.st();
+      worst = Math.max(worst, s.levelInfo.poleCover);
+      seen.push(`${name}/${label}:${s.levelInfo.poleCover}`);
+      await shot(page, `bab1-cam-${name}-${label}`);
+    }
+  }
+  check('practice poles cover under 6% of the screen from every story-spot camera angle', worst < 0.06, `worst ${worst}; ${seen.join(' ')}`);
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await d.adv(10);
+}
+
+/** The chapter-done star: wait for it, freeze its pop-in at the peak, measure and screenshot, then see it go away. */
+async function celebrationChecks(page, check, d, beat, opts) {
+  const tag = opts.skipPoles ? 'touch' : 'desktop';
+  let shown = false;
+  for (let i = 0; i < 400 && !shown; i += 4) {
+    await d.adv(4);
+    shown = await page.evaluate(() => document.querySelector('.bab1-star').classList.contains('show'));
+  }
+  check(`done star (${tag}): appears at the end of the chapter`, shown);
+  // Freeze the CSS animation at the middle of its hold phase (the peak), deterministic whatever the machine speed.
+  await page.evaluate(() => {
+    for (const a of document.querySelector('.bab1-star').getAnimations()) { a.pause(); a.currentTime = 1500; }
+  });
+  await page.evaluate(() => window.__superglen.advance(2, true));
+  const m = await page.evaluate(() => {
+    const e = document.querySelector('.bab1-star');
+    const r = e.getBoundingClientRect();
+    const svg = e.querySelector('svg').getBoundingClientRect();
+    const vh = window.innerHeight, vw = window.innerWidth;
+    const cs = getComputedStyle(e);
+    const z = (el) => Number(getComputedStyle(el).zIndex) || 0;
+    const controls = [...document.querySelectorAll('.tc-button, .tc-stick, .dlg, .hud-controls')];
+    return {
+      exists: true, vh, vw, top: r.top, bottom: r.bottom, left: r.left, right: r.right, h: r.height, svgH: svg.height,
+      opacity: Number(cs.opacity), z: z(e), maxControlZ: Math.max(0, ...controls.map(z)),
+      dialogOpen: !document.querySelector('.dlg').hidden, text: e.textContent,
+    };
+  });
+  const t = `done star (${tag} ${m.vw}x${m.vh})`;
+  check(`${t}: inside the viewport`, m.top >= 0 && m.bottom <= m.vh && m.left >= 0 && m.right <= m.vw, JSON.stringify(m));
+  check(`${t}: height >= 30% of the viewport`, m.h >= 0.3 * m.vh, `${(100 * m.h / m.vh).toFixed(0)}% (gold star alone ${(100 * m.svgH / m.vh).toFixed(0)}%)`);
+  check(`${t}: gold star itself >= 35% of the viewport height`, m.svgH >= 0.35 * m.vh, `${(100 * m.svgH / m.vh).toFixed(0)}%`);
+  check(`${t}: opacity 1 at the peak`, m.opacity === 1, String(m.opacity));
+  check(`${t}: above the controls and the dialog layer`, m.z > m.maxControlZ, `z ${m.z} vs ${m.maxControlZ}`);
+  check(`${t}: no dialog bubble covering it`, !m.dialogOpen);
+  check(`${t}: text says Chapter 1 selesai!`, m.text.includes('Chapter 1 selesai!'), m.text);
+  await shot(page, tag === 'touch' ? 'bab1-done-touch' : 'bab1-done');
+  await beat('done', d);
+  // Let it run out: it is hidden again after about 3 s of game time.
+  await page.evaluate(() => { for (const a of document.querySelector('.bab1-star').getAnimations()) a.play(); });
+  let gone = -1;
+  for (let i = 0; i < 300 && gone < 0; i += 6) {
+    await d.adv(6);
+    if (!(await page.evaluate(() => document.querySelector('.bab1-star').classList.contains('show')))) gone = i;
+  }
+  check(`${t}: removed again afterwards (class gone, not displayed)`, gone >= 0 && (await page.evaluate(() => getComputedStyle(document.querySelector('.bab1-star')).display)) === 'none', `after ~${gone} frames`);
+}
+
 /** The whole chapter. `beat(name, d)` is called at the interesting moments (screenshots / overlap sampling). */
 async function playChapter(page, check, d, beat, opts = {}) {
   let s = await d.st();
@@ -1382,8 +1452,18 @@ async function playChapter(page, check, d, beat, opts = {}) {
   check('controls unlocked after the sequence', !!s);
   s = await d.st();
   check('objective on the costume', Math.abs(s.objective.x + 4.6) < 0.5 && Math.abs(s.objective.z + 71.5) < 0.5, JSON.stringify(s.objective));
+  if (!opts.skipPoles) await cameraAngleShots(page, check, d);
   await d.walk(-4.6, -69.0, 600);
   await d.press('hand', 'costume');
+  // Transformation flash: step frame by frame to the brightest moment.
+  let flashOp = 0;
+  for (let i = 0; i < 120 && flashOp < 0.9; i++) {
+    await d.adv(1);
+    flashOp = await page.evaluate(() => Number(document.querySelector('.bab1-flash').style.opacity || 0));
+  }
+  check('transformation flash reaches full brightness', flashOp >= 0.9, flashOp.toFixed(2));
+  await page.evaluate(() => window.__superglen.advance(1, true));
+  await shot(page, 'bab1-transform' + (opts.skipPoles ? '-touch' : ''));
   s = await d.until((s) => s.mode === 'superglen', 200);
   check('taking the costume sets mode superglen', !!s);
   await d.adv(40, true);
@@ -1403,16 +1483,15 @@ async function playChapter(page, check, d, beat, opts = {}) {
   check('calm down lines: lompat_barongsai then besok', !!s && d.seen.indexOf('bab1_nino_lompat_barongsai') < d.seen.indexOf('bab1_nino_besok'), d.seen.join());
   s = await d.until((s) => s.levelInfo.step === 'done', 900);
   check('chapter done step reached', !!s);
-  await d.adv(30, true);
-  await beat('done', d);
+  await celebrationChecks(page, check, d, beat, opts);
   s = await d.st();
   check('save: chaptersDone contains bab1', s.save.data.chaptersDone.includes('bab1'));
   check('controls enabled in free play', s.controlsEnabled);
   if (opts.skipPoles) return;
   // --- F. practice poles ---
   await d.adv(200);
-  const poles = [[-5.8, -64.2, 0.1], [-5.8, -66.4, 0.9], [-5.8, -68.6, 1.7]];
-  await d.walk(-5.6, -63.0, 600);
+  const poles = [[3.7, -74.8, 0.1], [5.9, -74.8, 0.9], [5.9, -72.6, 1.7]];
+  await d.walk(3.2, -72.4, 600);
   let ok = true;
   const tops = [];
   for (const [x, z, top] of poles) {
@@ -1529,6 +1608,17 @@ async function bab1ReturnScenario(page, check) {
   check('Nino offers a friendly talk line', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
   await d.tap('e');
   check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  // Camera collision: a pole between the camera and the player must pull the camera in (never inside the pole).
+  await d.walk(5.9, -71.0, 600);
+  await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // camera on the -Z side, pole at z -72.6 in between
+  await d.adv(40, true);
+  s = await d.st();
+  const inPole = [[3.7, -74.8, 1.0], [5.9, -74.8, 1.8], [5.9, -72.6, 2.6]].some(([px, pz, h]) => Math.hypot(s.levelInfo.camX - px, s.levelInfo.camZ - pz) < 0.7 && s.levelInfo.camY < FLOOR + h);
+  console.log(`   camera behind pole: cam (${s.levelInfo.camX}, ${s.levelInfo.camY}, ${s.levelInfo.camZ}) player (${s.player.x.toFixed(2)}, ${s.player.z.toFixed(2)})`);
+  await shot(page, 'bab1-cam-pole-between');
+  check('camera collision: a pole between camera and player never contains the camera', !inPole, `cam ${s.levelInfo.camX},${s.levelInfo.camY},${s.levelInfo.camZ}`);
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await d.adv(30);
   // Way out stays open: walk back to the street through the hall.
   await d.adv(200);
   await d.walk(0, -60, 600);

@@ -41,7 +41,7 @@ export class Story {
     this.flash.className = 'bab1-flash';
     this.star = document.createElement('div');
     this.star.className = 'bab1-star';
-    this.star.innerHTML = `${STAR_SVG}<div class="bab1-star-text">Bab 1 selesai!</div>`;
+    this.star.innerHTML = `${STAR_SVG}<div class="bab1-star-text">Chapter 1 selesai!</div>`;
     ui.append(this.flash, this.star);
     parts.ctx.onDispose(() => {
       this.flash.remove();
@@ -351,7 +351,15 @@ export class Story {
     this.star.classList.remove('show');
     void this.star.offsetWidth;
     this.star.classList.add('show');
-    await seq.wait(2.5);
+    // More confetti while the star is up.
+    seq.run(async () => {
+      for (let i = 0; i < 4; i++) {
+        const p = pl.visualPosition;
+        sparkles.burst(p.x + (i % 2 ? 1.6 : -1.6), p.y + 2.2, p.z - 0.5, 36, 5, -1, { gravity: 3, life: 1.6, up: 1 });
+        await seq.wait(0.6);
+      }
+    });
+    await seq.wait(3.2);
     this.star.classList.remove('show');
     this.addNinoTalk();
     lab.showCoins();

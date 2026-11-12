@@ -230,8 +230,10 @@ export class Game {
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
 
+    const bubble = new DialogBubble(uiRoot, () => this.dialog.tap());
+    bubble.faceFor = (sp) => (sp === 'glen' && this.player.mode === 'superglen' ? 'superglen' : sp);
     this.dialog = new Dialog(
-      new DialogBubble(uiRoot, () => this.dialog.tap()),
+      bubble,
       this.input,
       (locked) => {
         this.dialogLocked = locked;

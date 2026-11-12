@@ -264,7 +264,12 @@ export class ThirdPersonCamera {
       undefined,
       this.excludeCollider,
     );
-    if (hit) allowed = Math.max(c.minDistance, hit.timeOfImpact - c.wallPadding);
+    if (hit) {
+      // Normally keep at least minDistance. When the obstacle is closer than that (a pole right behind the player
+      // looking the other way), stop just in front of its surface instead: never put the camera inside it.
+      const toi = hit.timeOfImpact;
+      allowed = Math.max(Math.min(c.minDistance, toi - 0.12), toi - c.wallPadding, 0.4);
+    }
 
     if (allowed < this.currentDistance) {
       this.currentDistance = allowed; // pull in immediately: never show the inside of a wall

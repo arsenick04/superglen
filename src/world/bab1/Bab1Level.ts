@@ -1,7 +1,8 @@
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from './Batch';
 import { Kit } from './Kit';
-import { Z, LAB_FLOOR } from './Layout';
+import * as THREE from 'three';
+import { Z, LAB, LAB_FLOOR } from './Layout';
 import { buildStreet, slabBounds } from './Street';
 import { BuildingExterior } from './Building';
 import { Hall } from './Hall';
@@ -93,7 +94,7 @@ export class Bab1Level implements Level {
     if (p.z < Z.hallBack - 0.6) zone = 2;
     else if (p.z < Z.facade - 0.3) zone = 1;
     this.atmosphere.setZone(zone);
-    this.atmosphere.update(dt, p);
+    this.atmosphere.update(dt, p, this.ctx.cameraRig.yaw);
     this.flashlight.update(dt, this.ctx.player, this.atmosphere.hallAmount);
     this.sparkles.update(dt);
     this.exterior.update(dt);
@@ -111,6 +112,45 @@ export class Bab1Level implements Level {
     info.coinsTaken = this.story.coinsTaken;
     info.zone = zone;
     info.hint = this.jump.hinting;
+    info.poleCover = this.poleCover();
+    const cp = this.ctx.cameraRig.camera.position;
+    info.camX = Math.round(cp.x * 100) / 100;
+    info.camY = Math.round(cp.y * 100) / 100;
+    info.camZ = Math.round(cp.z * 100) / 100;
+  }
+
+  private readonly corner = new THREE.Vector3();
+
+  /**
+   * Debug number for the smoke test: the largest share of the screen (0..1) that the screen-space bounding box of
+   * any practice pole covers right now (an upper bound: ignores that the player may be in front of it).
+   */
+  private poleCover(): number {
+    const cam = this.ctx.cameraRig.camera;
+    cam.updateMatrixWorld();
+    let worst = 0;
+    for (const p of LAB.poles) {
+      let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+      let n = 0;
+      // Points on the pole surface (12 angles x top/middle/bottom); only those in front of the near plane count.
+      for (let k = 0; k < 36; k++) {
+        const a = ((k % 12) / 12) * Math.PI * 2;
+        this.corner.set(p.x + Math.cos(a) * LAB.poleRadius, LAB_FLOOR + p.h * (k < 12 ? 0 : k < 24 ? 0.5 : 1), p.z + Math.sin(a) * LAB.poleRadius);
+        this.corner.applyMatrix4(cam.matrixWorldInverse);
+        if (this.corner.z > -cam.near) continue;
+        this.corner.applyMatrix4(cam.projectionMatrix);
+        n++;
+        x0 = Math.min(x0, this.corner.x);
+        x1 = Math.max(x1, this.corner.x);
+        y0 = Math.min(y0, this.corner.y);
+        y1 = Math.max(y1, this.corner.y);
+      }
+      if (n === 0) continue;
+      const w = Math.max(0, Math.min(1, x1) - Math.max(-1, x0)) / 2;
+      const h = Math.max(0, Math.min(1, y1) - Math.max(-1, y0)) / 2;
+      worst = Math.max(worst, w * h);
+    }
+    return Math.round(worst * 1000) / 1000;
   }
 
   dispose(): void {

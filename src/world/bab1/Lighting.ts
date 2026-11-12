@@ -32,6 +32,9 @@ export type Zone = 0 | 1 | 2;
 export class Atmosphere {
   readonly hemi = new THREE.HemisphereLight(0xcfeeff, 0x6fae4f, 1.4);
   readonly sun = new THREE.DirectionalLight(0xfff3d6, 2.6);
+  /** Soft fill that follows the player on the camera side (no shadow); only used in the hall, high preset. */
+  readonly fill = new THREE.PointLight(0xffdcb0, 0, 5.5, 1.4);
+  private fillYaw = 0;
   private readonly sunOffset = new THREE.Vector3(12, 22, 8);
   private readonly w = [1, 0, 0];
   private zone: Zone = 0;
@@ -48,7 +51,8 @@ export class Atmosphere {
   ) {
     this.presets = [
       mk(0x8fd3ff, 0xcfeeff, 0x6fae4f, 1.4, 2.6, Quality.cameraFar * 0.45, Quality.cameraFar * 0.95),
-      mk(0x232b5c, 0xa8b8ff, 0x6c68a8, 1.6, 0, 8, 40),
+      // Hall: the low preset has no fill light, so its hemisphere is raised more.
+      mk(0x232b5c, 0xa8b8ff, 0x6c68a8, Quality.level === 'low' ? 2.9 : 2.3, 0, 8, 40),
       mk(0x2a4a78, 0xeaf4ff, 0xb9c9ea, 1.9, 0, 30, 90),
     ];
     this.sun.position.copy(this.sunOffset);
@@ -67,6 +71,7 @@ export class Atmosphere {
       s.normalBias = 0.03;
     }
     root.add(this.hemi, this.sun, this.sun.target);
+    if (Quality.level !== 'low') root.add(this.fill);
     this.fog = new THREE.Fog(0x8fd3ff, this.presets[0].fogNear, this.presets[0].fogFar);
     scene.background = this.bg.copy(this.presets[0].bg);
     scene.fog = this.fog;
@@ -87,12 +92,16 @@ export class Atmosphere {
     this.apply();
   }
 
-  update(dt: number, focus: THREE.Vector3): void {
+  /** `camYaw` = camera yaw (camera sits at sin/cos of it around the player): the fill comes from that side. */
+  update(dt: number, focus: THREE.Vector3, camYaw = 0): void {
     const k = 1 - Math.exp(-4 * dt);
     for (let i = 0; i < 3; i++) this.w[i] += ((i === this.zone ? 1 : 0) - this.w[i]) * k;
     this.apply();
     this.sun.position.copy(focus).add(this.sunOffset);
     this.sun.target.position.copy(focus);
+    this.fillYaw = camYaw;
+    this.fill.intensity = this.hallAmount * 5;
+    this.fill.position.set(focus.x + Math.sin(this.fillYaw) * 1.9, focus.y + 1.3, focus.z + Math.cos(this.fillYaw) * 1.9);
   }
 
   private apply(): void {

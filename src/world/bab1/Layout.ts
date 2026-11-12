@@ -31,10 +31,12 @@ export const LAB = {
   button: { x: 0, z: -69 },
   nino: { x: 4.2, z: -70.5 },
   costume: { x: -4.6, z: -71.5 },
+  // Practice nook in the back-right corner, behind Nino's platform: seen from the entrance and from the costume,
+  // button and Nino spots the poles are always beyond the player, never between the camera and the player.
   poles: [
-    { x: -5.8, z: -64.2, h: 1.0 },
-    { x: -5.8, z: -66.4, h: 1.8 },
-    { x: -5.8, z: -68.6, h: 2.6 },
+    { x: 3.7, z: -74.8, h: 1.0 },
+    { x: 5.9, z: -74.8, h: 1.8 },
+    { x: 5.9, z: -72.6, h: 2.6 },
   ],
   poleRadius: 0.7,
 } as const;
