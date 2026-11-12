@@ -3,6 +3,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
 import { Quality } from '../core/Quality';
+import { PlayerConfig } from '../player/PlayerConfig';
 
 const DEG = Math.PI / 180;
 
@@ -87,11 +88,24 @@ export class ThirdPersonCamera {
   readonly camera: THREE.PerspectiveCamera;
   yaw = 0;
   pitch: number = CameraConfig.defaultPitch;
+  /**
+   * Steering yaw: the frame the player uses to turn stick/keyboard input into a world direction.
+   *
+   * Why it exists: auto-follow turns the camera toward the heading. If the stick were read relative
+   * to the live camera yaw, a steady off-axis stick would keep rotating the heading and the player
+   * would walk in circles. So while move input is held, this value is latched and only changes by the
+   * MANUAL look delta (finger drag / mouse), never by auto-follow. With no move input it simply
+   * follows the camera yaw. Result: with a steady stick the player walks a straight line while the
+   * camera swings behind; after releasing and pressing again the frame re-latches to the camera's
+   * current yaw, so "forward on the stick" = forward on screen.
+   */
+  steeringYaw = 0;
 
   private readonly target = new THREE.Vector3();
   private currentDistance: number = CameraConfig.distance;
   private initialized = false;
   private manualThisFrame = false;
+  private moveWasActive = false;
   private idleTime = 0;
   private followBlend = 0;
   private airLift = 0;
@@ -129,7 +143,21 @@ export class ThirdPersonCamera {
     if (Math.abs(look.x) > CameraConfig.followManualEpsilon || Math.abs(look.y) > CameraConfig.followManualEpsilon) {
       this.manualThisFrame = true;
     }
+    // Latch the steering frame (see steeringYaw). Once per rendered frame, before the fixed steps,
+    // so every fixed step in the frame sees the same value.
+    const m = this.input.move;
+    const active = Math.hypot(m.x, m.y) >= PlayerConfig.inputDeadZone;
+    const before = this.yaw;
     this.yaw -= look.x;
+    if (!active) {
+      this.steeringYaw = this.yaw;
+    } else {
+      // On the first active frame, latch to the yaw before this frame's manual delta (includes any
+      // auto-follow that happened while the stick was released), then add only the manual delta.
+      if (!this.moveWasActive) this.steeringYaw = before;
+      this.steeringYaw -= look.x;
+    }
+    this.moveWasActive = active;
     this.pitch = THREE.MathUtils.clamp(this.pitch + look.y, CameraConfig.minPitch, CameraConfig.maxPitch);
   }
 

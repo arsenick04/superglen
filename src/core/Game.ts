@@ -28,6 +28,8 @@ export interface DebugHandle {
   started: boolean;
   touchUi: boolean;
   cameraYaw: number;
+  /** Yaw the player steers by (latched while move input is held). */
+  steeringYaw: number;
   /** 'glen' | 'superglen' */
   mode: PlayerMode;
   pixelRatio: number;
@@ -84,6 +86,7 @@ export class Game {
     started: false,
     touchUi: false,
     cameraYaw: 0,
+    steeringYaw: 0,
     mode: 'glen',
     pixelRatio: 1,
     airborne: false,
@@ -179,7 +182,7 @@ export class Game {
 
   private fixedStep(dt: number): void {
     this.modeController.fixedUpdate();
-    this.player.fixedUpdate(dt, this.cameraRig.yaw);
+    this.player.fixedUpdate(dt, this.cameraRig.steeringYaw);
     this.physics.step();
     this.player.postStep();
     this.input.endFixedStep();
@@ -235,6 +238,7 @@ export class Game {
     this.debug.started = startGate.started;
     this.debug.touchUi = touchMode.active;
     this.debug.cameraYaw = this.cameraRig.yaw;
+    this.debug.steeringYaw = this.cameraRig.steeringYaw;
     const pl = this.player;
     this.debug.mode = pl.mode;
     this.debug.pixelRatio = this.renderer.pixelRatio;
