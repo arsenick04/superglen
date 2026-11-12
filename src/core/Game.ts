@@ -10,6 +10,7 @@ import { BillboardRings } from '../fx/BillboardRings';
 import { DizzyStars } from '../fx/DizzyStars';
 import { RhythmFx } from '../fx/RhythmFx';
 import { DrumSynth } from '../audio/DrumSynth';
+import { MAX_LEVEL } from '../config/parkour';
 import { DrumIcons } from '../ui/DrumIcons';
 import { Sparkles } from '../world/bab1/Fx';
 import { Targets } from '../gameplay/Targets';
@@ -104,6 +105,8 @@ export interface DebugHandle {
   /** Test helpers. */
   loadLevel: (id: string) => Promise<void>;
   setCameraYaw: (yaw: number) => void;
+  /** Test-only: put the camera at (x, y, z) looking at (tx, ty, tz); `null` hands it back to the follow camera. */
+  lookFrom: (pose: [number, number, number, number, number, number] | null) => void;
   /** Camera world position (updated every frame). */
   camera: { x: number; y: number; z: number };
   /** Fixed steps run by the most recent frame. */
@@ -198,6 +201,8 @@ export interface DebugHandle {
     audio: boolean;
     muted: boolean;
     setLevel: (n: number) => void;
+    /** Test-only: highest level the rhythm can reach (default 4). Also clamps the current level. */
+    setCap: (n: number) => void;
     setEasy: (on: boolean) => void;
     /** Force a bounce through the scripted hook. */
     bounce: (launch?: boolean) => void;
@@ -314,6 +319,9 @@ export class Game {
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),
     setCameraYaw: (yaw: number) => this.cameraRig.snapBehind(yaw - Math.PI),
+    lookFrom: (pose) => {
+      this.cameraRig.testPose = pose;
+    },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
@@ -485,6 +493,7 @@ export class Game {
         save: this.save,
         ui: uiRoot,
         game: this.api,
+        synth: this.synth,
       },
       player: this.player,
       cameraRig: this.cameraRig,
@@ -499,6 +508,7 @@ export class Game {
         this.profile.legacyTest = false;
         this.profile.transform = false;
         this.player.flight.resetLevelSettings();
+        this.player.rhythm.cap = MAX_LEVEL;
         this.player.rhythm.reset();
         this.player.skills.shield.up = false;
         this.player.speedScale = 1;
@@ -745,6 +755,10 @@ export class Game {
       audio: false,
       muted: false,
       setLevel: (n) => this.player.rhythm.setLevel(n),
+      setCap: (n) => {
+        this.player.rhythm.cap = Math.max(0, Math.min(MAX_LEVEL, Math.round(n)));
+        this.player.rhythm.setLevel(this.player.rhythm.level);
+      },
       setEasy: (on) => {
         this.player.rhythm.easyMode = on;
       },

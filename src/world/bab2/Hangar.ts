@@ -100,6 +100,8 @@ export class Hangar {
     for (const s of [-1, 1]) {
       for (let z = minZ + 3; z < maxZ - 1; z += 8) {
         kit.lit.box([0.8, ceil - 0.5, 0.9], [s * (maxX - 0.6), (ceil - 0.5) / 2, z], 0x8fb4e6);
+        // The wall pillars (with their wider gold feet) are solid: one collider as wide as the feet.
+        kit.collider([1.0, ceil - 0.35, 1.1], [s * (maxX - 0.6), (ceil - 0.35) / 2, z]);
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), 0.15, z], C.GOLD);
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), ceil - 0.65, z], C.GOLD);
       }

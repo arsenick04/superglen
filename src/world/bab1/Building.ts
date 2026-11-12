@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Kit, C, basic } from './Kit';
 import { Z, BOUNDARY, DOOR_HALF, FENCE_GAP, FENCE_GAP_X, HALL_HALF } from './Layout';
 import type { Sparkles } from './Fx';
+import { addHipRoof, addRoofBox } from '../kits/Roofs';
 
 const WALL = 0xb5432f; // faded red
 const WALL_H = 5;
@@ -29,13 +30,14 @@ export class BuildingExterior {
       for (let i = 0; i < 6; i++) kit.deco.sph(0.1, [s * (DOOR_HALF + 0.5 + i * 0.95), 4.6, FACE_Z + 0.07], C.CREAM);
       // Wing walls out to the boundary.
       kit.solid([BOUNDARY + 0.5 - half, 5.4, 0.6], [s * (half + (BOUNDARY + 0.5 - half) / 2), 2.7, FACE_Z - 0.3], 0x9c3a2a);
-      kit.lit.box([BOUNDARY + 0.5 - half, 0.3, 0.8], [s * (half + (BOUNDARY + 0.5 - half) / 2), 5.5, FACE_Z - 0.3], C.GOLD);
+      addRoofBox(kit, { id: `wingCap${s}`, size: [BOUNDARY + 0.5 - half, 0.3, 0.8], pos: [s * (half + (BOUNDARY + 0.5 - half) / 2), 5.5, FACE_Z - 0.3], color: C.GOLD });
       // Round pillars flanking the door.
       kit.lit.cyl(0.5, 4.6, [s * (DOOR_HALF + 0.55), 2.3, FACE_Z + 0.5], C.RED);
       kit.lit.cyl(0.62, 0.3, [s * (DOOR_HALF + 0.55), 0.15, FACE_Z + 0.5], C.GOLD);
       kit.lit.cyl(0.62, 0.3, [s * (DOOR_HALF + 0.55), 4.55, FACE_Z + 0.5], C.GOLD);
       kit.lit.sph(0.55, [s * (DOOR_HALF + 0.55), 4.9, FACE_Z + 0.5], C.GOLD);
-      kit.collider([1.0, 4.6, 1.0], [s * (DOOR_HALF + 0.55), 2.3, FACE_Z + 0.5]);
+      // The pillar is a round column topped by a gold ball: collider up to the top of the ball (5.4 m).
+      kit.physics.addFixedCylinder(2.7, 0.55, { x: s * (DOOR_HALF + 0.55), y: 2.7, z: FACE_Z + 0.5 });
       // Latticed windows with a flickering warm glow.
       for (const wx of [4.6, 6.6]) {
         const x = s * wx;
@@ -50,6 +52,7 @@ export class BuildingExterior {
     // Lintel over the doorway and a gold nameplate with a round "lion eye" emblem.
     kit.solid([DOOR_HALF * 2, WALL_H - 3.4, 0.6], [0, (WALL_H + 3.4) / 2, FACE_Z - 0.3], WALL);
     kit.lit.box([DOOR_HALF * 2 + 1.2, 0.5, 0.3], [0, 3.55, FACE_Z + 0.2], C.GOLD);
+    kit.collider([DOOR_HALF * 2 + 1.4, 0.5, 0.5], [0, 3.55, FACE_Z + 0.2]); // the nameplate is a ledge above the door
     kit.lit.cyl(0.55, 0.14, [0, 4.35, FACE_Z + 0.12], C.GOLD, [Math.PI / 2, 0, 0]);
     kit.lit.cyl(0.4, 0.16, [0, 4.35, FACE_Z + 0.14], C.RED, [Math.PI / 2, 0, 0]);
     kit.lit.sph(0.16, [-0.2, 4.4, FACE_Z + 0.26], C.WHITE);
@@ -65,10 +68,13 @@ export class BuildingExterior {
     root.add(spillMesh);
 
     // --- Roof: two flared tiers with golden corner horns (Chinese-gate silhouette) ---
-    const roof = (w: number, y: number, depth: number, hip: number, hipH: number): void => {
+    // Every part of the roof is standable and its collider matches what is drawn: the two flat tiers (with the golden
+    // trim), the hip roofs on them (13 and 18 degrees: walkable without sliding), the central block and the finial.
+    const roof = (id: string, w: number, y: number, depth: number, hip: number, hipH: number): void => {
       kit.lit.box([w, 0.4, depth], [0, y, -50], 0x7a1f1a);
       kit.lit.box([w + 0.3, 0.14, depth + 0.3], [0, y + 0.22, -50], C.GOLD);
-      kit.lit.pyr(hip, hipH, hip * (depth / w), [0, y + 0.2 + hipH / 2, -50], 0xb5382b);
+      kit.collider([w + 0.5, 0.49, depth + 0.5], [0, y + 0.045, -50]); // slab + trim top (y + 0.29), 10 cm wider
+      addHipRoof(kit, { id, cx: 0, cz: -50, baseY: y + 0.2, w: hip, d: hip * (depth / w), h: hipH, color: 0xb5382b });
       for (const sx of [-1, 1])
         for (const sz of [-1, 1]) {
           kit.deco.add('cone', [sx * (w / 2 + 0.2), y + 0.55, -50 + sz * (depth / 2 + 0.2)], [0.22, 1.1, 0.22], C.GOLD, [sz * 0.7, 0, -sx * 0.7]);
@@ -77,18 +83,21 @@ export class BuildingExterior {
       // Roof tiles stripe on the front slope.
       for (let i = -3; i <= 3; i++) kit.lit.box([0.12, 0.08, hip * 0.5], [i * hip * 0.14, y + 0.2 + hipH * 0.3, -50 + depth / 2 - hip * 0.3], C.GOLD, [0.7, 0, 0]);
     };
-    roof(19.2, WALL_H + 0.2, 19.2, 18, 2.1);
-    kit.lit.box([9, 2.9, 9], [0, WALL_H + 2.75, -50], 0xa83a2a);
+    roof('barongsaiRoof1', 19.2, WALL_H + 0.2, 19.2, 18, 2.1);
+    kit.solid([9, 2.9, 9], [0, WALL_H + 2.75, -50], 0xa83a2a);
     kit.lit.box([9.2, 0.25, 9.2], [0, WALL_H + 4.1, -50], C.GOLD);
-    roof(12.6, WALL_H + 4.2, 12.6, 12, 2.0);
+    kit.collider([9.4, 0.25, 9.4], [0, WALL_H + 4.1, -50]);
+    roof('barongsaiRoof2', 12.6, WALL_H + 4.2, 12.6, 12, 2.0);
     kit.lit.sph(0.45, [0, WALL_H + 7.45, -50], C.GOLD);
     kit.lit.cyl(0.08, 1.0, [0, WALL_H + 6.9, -50], C.GOLD);
+    kit.physics.addFixedCylinder(0.45, 0.45, { x: 0, y: WALL_H + 7.45, z: -50 }); // the finial ball
 
     // --- Two lion-ish guardians and two red lanterns in front of the door ---
     for (const s of [-1, 1]) {
       const x = s * 4.4;
       const z = FACE_Z + 1.0;
-      kit.solidCyl(0.55, 1.0, [x, 0.5, z], 0xe2cf9d);
+      kit.lit.cyl(0.55, 1.0, [x, 0.5, z], 0xe2cf9d);
+      kit.physics.addFixedCylinder(1.05, 0.62, { x, y: 1.05, z }); // pedestal and lion together (top = the lion's head, 2.1 m)
       kit.lit.cyl(0.62, 0.15, [x, 0.08, z], C.GOLD);
       kit.lit.sph(0.62, [x, 1.5, z], C.RED, [1, 0.9, 0.9]);
       kit.lit.sph(0.62, [x, 1.5, z - 0.1], C.ORANGE, [1.25, 1.2, 0.5]); // mane

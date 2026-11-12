@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Physics, StaticBodyHandle } from '../../core/Physics';
 import { ColorBatch, makeMaterials, type Vec3 } from './Batch';
+import type { RoofList } from '../kits/Roofs';
 
 /** Colour palette of the chapter (bright low-poly, red-gold-orange accents). */
 export const C = {
@@ -38,8 +39,11 @@ export class Kit {
   readonly deco: ColorBatch;
   readonly glow: ColorBatch;
 
+  /** Where walkable roofs and roof-like tops register their sample points (set by the level; read by the smoke test). */
+  roofs: RoofList | null = null;
+
   constructor(
-    private readonly physics: Physics,
+    readonly physics: Physics,
     mats: ReturnType<typeof makeMaterials>,
     shadows = true,
   ) {

@@ -68,6 +68,8 @@ export interface PlayerEventMap {
 export class Rhythm {
   /** Current level 0..4. Read-only for everybody except Player (use setLevel for tests/story). */
   level = 0;
+  /** Test-only: the level can never rise above this (default no cap). Used by the smoke test to prove which jumps need which level. */
+  cap = MAX_LEVEL;
   /** Easy mode (holding the jump button bounces by itself). Saved in settings.easyJump, URL ?easy=0|1 overrides. */
   easyMode: boolean = Parkour.easy.defaultOn;
   readonly events = new Emitter<PlayerEventMap>();
@@ -114,7 +116,7 @@ export class Rhythm {
 
   /** Set the level (clamped); emits `rhythmLevel` when it changed. */
   setLevel(n: number): void {
-    const next = Math.max(0, Math.min(MAX_LEVEL, Math.round(n)));
+    const next = Math.max(0, Math.min(MAX_LEVEL, this.cap, Math.round(n)));
     if (next === this.level) return;
     const e = this.levelEvent;
     e.previous = this.level;

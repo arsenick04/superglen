@@ -109,6 +109,8 @@ export class ThirdPersonCamera {
    * current yaw, so "forward on the stick" = forward on screen.
    */
   steeringYaw = 0;
+  /** Test-only fixed pose [x, y, z, targetX, targetY, targetZ] (smoke-test screenshots from above); null = follow the player. */
+  testPose: [number, number, number, number, number, number] | null = null;
 
   private readonly target = new THREE.Vector3();
   private currentDistance: number = CameraConfig.distance;
@@ -310,6 +312,12 @@ export class ThirdPersonCamera {
 
     this.camera.position.copy(this.target).addScaledVector(this.dir, this.currentDistance);
     this.camera.lookAt(this.target);
+    if (this.testPose) {
+      const t = this.testPose;
+      this.camera.position.set(t[0], t[1], t[2]);
+      this.camera.lookAt(t[3], t[4], t[5]);
+      return;
+    }
     if (this.bumpTime < c.bumpDuration) {
       this.bumpTime += dt;
       const t = Math.min(this.bumpTime / c.bumpDuration, 1);

@@ -90,6 +90,19 @@ export class Physics {
     return { body, collider };
   }
 
+  /**
+   * Fixed convex hull from world-space points (x, y, z triples). Used by walkable roofs. Returns null when Rapier cannot
+   * build a hull from the points (degenerate input).
+   */
+  addFixedConvexHull(points: Float32Array): StaticBodyHandle | null {
+    const cd = RAPIER.ColliderDesc.convexHull(points);
+    if (!cd) return null;
+    const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+    const collider = this.world.createCollider(cd, body);
+    this.levelBodies.add(body);
+    return { body, collider };
+  }
+
   /** Register a level-owned body (e.g. a dynamic ball) so `disposeLevelBodies` removes it. */
   track(body: RAPIER.RigidBody): void {
     this.levelBodies.add(body);

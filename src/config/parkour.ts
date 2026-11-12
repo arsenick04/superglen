@@ -177,6 +177,23 @@ export const Parkour = {
     /** After a mantle (s) no new one starts. */
     cooldown: 0.3,
   },
+
+  // ---- World kit: footholds, roofs, bounce drums (src/world/kits, src/world/arena) ---------------------------------------
+  world: {
+    /** Colliders of usable footholds are wider than what is drawn by this much on every side (m): "almost" still counts. */
+    friendly: 0.1,
+    /** Width of the bright strip along the top edge of a usable foothold (m). */
+    edgeWidth: 0.1,
+    /** Walkable (hip) roofs must not be steeper than this (degrees): the character controller climbs 45 and slides above 50. */
+    roofMaxSlopeDeg: 40,
+    /** Hip roof colliders are cut flat this fraction of the height below the ridge/apex, so the top can be stood on. */
+    roofPlateau: 0.08,
+    /** Bounce drum ("tambur pantul") of the Arena Lompat: radius and height (m), squash animation time (s) and depth (0..1). */
+    drum: { radius: 1.2, height: 1.1, squashTime: 0.4, squashDepth: 0.55 },
+    /** A reward star triggers inside this horizontal radius and vertical window of the player's feet (m). */
+    rewardRadius: 1.5,
+    rewardWindow: 2.4,
+  },
 } as const;
 
 /**

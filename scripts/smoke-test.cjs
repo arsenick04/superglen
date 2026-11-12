@@ -4055,6 +4055,530 @@ async function parkourPerfScenario(page, check) {
   await page.evaluate(() => window.__superglen.pause(false));
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Arena Lompat (test level, north of z = -30): Menara Irama, poles, bounce drums, mini house and ruko, walkable roofs.
+// A deterministic bot: real jump presses (keyboard Space or the on-screen button) timed from the debug handle's
+// time-to-land, steering through the synthetic stick (`walkTo`). The level layout is read from the level's own data
+// (levelInfo.arena / levelInfo.roofs, published under window.__SG_TEST only), nothing is hard-coded here.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Drops the player 1.5 m above every sample point of every roof and checks the standing, the drift and a short walk. */
+const roofProbe = (roofs) => {
+  const g = window.__superglen;
+  const out = [];
+  for (const r of roofs) {
+    for (let i = 0; i < r.samples.length; i++) {
+      const s = r.samples[i];
+      g.cancelWalk();
+      g.teleportFeet(s.x, s.y + 1.5, s.z);
+      g.advance(100, false);
+      const a = { x: g.player.x, y: g.feetY, z: g.player.z, gr: !g.airborne };
+      g.advance(60, false);
+      const b = { x: g.player.x, y: g.feetY, z: g.player.z, gr: !g.airborne };
+      const row = { id: r.id, i, dy: a.y - s.y, grounded: a.gr && b.gr, drift: Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z), walk: null };
+      if (i === 0 && r.samples.length > 1) {
+        const t = r.samples[1];
+        g.walkTo(t.x, t.z);
+        g.advance(1, false);
+        for (let k = 0; k < 240 && g.walking; k++) g.advance(1, false);
+        g.cancelWalk();
+        g.advance(30, false);
+        row.walk = { err: Math.hypot(g.player.x - t.x, g.player.z - t.z), dy: g.feetY - t.y, grounded: !g.airborne };
+      }
+      out.push(row);
+    }
+  }
+  return out;
+};
+
+/** Runs roofProbe and turns the result into checks. */
+async function roofChecks(page, check, roofs, label) {
+  const res = await page.evaluate(roofProbe, roofs);
+  const bad = res.filter((r) => !(r.grounded && Math.abs(r.dy) <= 0.15 && r.drift < 0.05));
+  const badWalk = res.filter((r) => r.walk && !(r.walk.grounded && r.walk.err < 0.6 && Math.abs(r.walk.dy) <= 0.3));
+  const worst = res.reduce((m, r) => Math.max(m, Math.abs(r.dy)), 0);
+  const drift = res.reduce((m, r) => Math.max(m, r.drift), 0);
+  console.log(`   [roofs] ${label}: ${roofs.length} roofs, ${res.length} sample points, worst surface error ${worst.toFixed(3)} m, worst drift ${drift.toFixed(4)} m`);
+  check(`${label}: dropping the player 1.5 m above every roof sample point (${res.length} points on ${roofs.length} roofs) ends grounded within 0.15 m of the drawn surface, drifting < 0.05 m in 1 s`, bad.length === 0 && res.length >= roofs.length, bad.slice(0, 4).map((r) => `${r.id}#${r.i} dy ${r.dy.toFixed(2)} drift ${r.drift.toFixed(3)} gr ${r.grounded}`).join('; '));
+  check(`${label}: the player can walk along each roof (no sliding, no sinking)`, badWalk.length === 0, badWalk.slice(0, 4).map((r) => `${r.id} err ${r.walk.err.toFixed(2)} dy ${r.walk.dy.toFixed(2)}`).join('; '));
+}
+
+/** Parkour driver + bot moves for the arena. `tap` can be replaced (touch button). */
+function makeArenaDriver(page, tapImpl) {
+  const d = makeParkourDriver(page);
+  if (tapImpl) d.tap = tapImpl;
+  d.arena = null;
+  d.load = async () => {
+    d.arena = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.arena));
+    d.fh = Object.fromEntries(d.arena.footholds.map((f) => [f.id, f]));
+    d.arena.roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+    return d.arena;
+  };
+  d.cancelWalk = () => page.evaluate(() => window.__superglen.cancelWalk());
+  /** Superglen standing at feet (x, y, z), rhythm level `level`, cap `cap`; waits until the level has settled. */
+  d.stand = async (x, y, z, level = 0, cap = 4, mode = 'superglen') => {
+    for (const k of ['Space', 'w', 'a', 's', 'd']) await page.keyboard.up(k);
+    await page.evaluate(([m, x, y, z, l, c]) => {
+      const g = window.__superglen;
+      g.game.setPlayerMode(m);
+      g.cancelWalk();
+      g.rhythm.setCap(c);
+      g.teleportFeet(x, y + 0.03, z);
+      g.setCameraYaw(0);
+      g.rhythm.setLevel(l);
+    }, [mode, x, y, z, level, cap]);
+    await d.step(100); // lands, then 1.5 s idle: the next press is a plain first jump
+    return d.last;
+  };
+  /**
+   * Generic helper `rhythmTo(level)`: from level 0 on the ground, one plain jump and then perfectly timed presses (50 ms
+   * before touchdown) until the level is reached. The jump started by the LAST press is already launched with `level`.
+   * Stops early (returns the level it got) when a cap prevents more.
+   */
+  d.rhythmTo = async (target) => {
+    await d.tap();
+    for (let guard = 0; d.last.level < target && guard < 12; guard++) {
+      await d.untilEta(0.05);
+      const j0 = d.last.jumps;
+      const l0 = d.last.level;
+      await d.tap();
+      await d.untilJump(j0);
+      if (d.last.level <= l0) break;
+    }
+    return d.last;
+  };
+  /** Steer toward (tx, tz) (a point inside the target) in the air, press the air jump at the top, until landed. */
+  d.dash = async (tx, tz, { frames = 360, useDouble = true } = {}) => {
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [tx, tz]);
+    let pressed = false;
+    d.maxY = d.last.y;
+    for (let i = 0; i < frames; i++) {
+      await d.step(1);
+      d.maxY = Math.max(d.maxY, d.last.y);
+      if (useDouble && !pressed && !d.last.grounded && d.last.vy <= 1.0 && d.last.vy > -3) {
+        await d.tap();
+        pressed = true;
+      }
+      if (d.last.grounded && i > 8 && !d.last.mantling) break;
+    }
+    await d.cancelWalk();
+    await d.step(25);
+    return d.last;
+  };
+  d.on = (fh, tol = 0.2) => d.last.grounded && Math.abs(d.last.y - fh.top) < tol && Math.abs(d.last.x - fh.x) < fh.w / 2 + 0.4 && Math.abs(d.last.z - fh.z) < fh.d / 2 + 0.4;
+  return d;
+}
+
+/** One tower hop: from the floor below (or the ground) to floor n with the rhythm level capped at `cap`. */
+async function towerHop(d, n, cap, mode = 'superglen') {
+  const t = d.fh[`floor${n}`];
+  const prev = n > 0 ? d.fh[`floor${n - 1}`] : null;
+  const sx = prev ? prev.x : t.x;
+  const sy = prev ? prev.top : 0;
+  const sz = prev ? prev.z - prev.d / 2 + 1.5 : t.z + t.d / 2 + 2.0;
+  await d.stand(sx, sy, sz, 0, cap, mode);
+  await d.rhythmTo(Math.min(n, cap));
+  await d.dash(t.x, t.z, { useDouble: mode === 'superglen' });
+  return { reached: d.on(t), y: d.last.y, level: d.last.level, maxY: d.maxY, from: sy };
+}
+
+async function arenaSuite(page, check, d, { touch = false, floors = 5, shots = false } = {}) {
+  const report = (label, v) => console.log(`   [arena${touch ? '-touch' : ''}] ${label}: ${v}`);
+  const A = await d.load();
+  const dj0 = () => d.last.dj;
+
+  // ---- Tower: layout from the level's data ----
+  const F = [0, 1, 2, 3, 4].map((n) => d.fh[`floor${n}`]);
+  const rises = F.map((f, i) => f.top - (i ? F[i - 1].top : 0));
+  const gaps = F.map((f, i) => (i ? F[i - 1].z - F[i - 1].d / 2 - (f.z + f.d / 2) : 0));
+  report('tower tops', F.map((f) => f.top.toFixed(2)).join(' / '));
+  report('tower rises', rises.map((r) => r.toFixed(2)).join(' / '));
+  report('tower gaps', gaps.map((r) => r.toFixed(2)).join(' / '));
+  if (!touch) {
+    check('tower: 5 floors, each top higher than the one below, gaps widening floor by floor', F.every((f, i) => i === 0 || f.top > F[i - 1].top) && gaps.slice(2).every((g, i) => g > gaps[i + 1]), `rises ${rises.map((r) => r.toFixed(2))} gaps ${gaps.map((r) => r.toFixed(2))}`);
+    check('tower: every floor has at least 3 x 3 m of room to bounce in place', F.every((f) => f.w >= 3 && f.d >= 3), F.map((f) => `${f.w}x${f.d}`).join(' '));
+    check('tower: a level marker of 1 to 5 drum icons is painted on every floor', JSON.stringify(A.markers) === '[1,2,3,4,5]', JSON.stringify(A.markers));
+  }
+
+  // ---- Tower: each floor is reached with level N and NOT with level N-1 ----
+  const results = [];
+  const table = [];
+  for (let n = 0; n < floors; n++) {
+    const ok = await towerHop(d, n, n);
+    results.push(`${n}:${ok.reached ? 'yes' : 'NO'}`);
+    check(`tower: floor ${n} (${F[n].top.toFixed(2)} m) is reached with rhythm level ${n} (rhythm jump, air jump, mantle)`, ok.reached, `y ${ok.y.toFixed(2)} level ${ok.level}`);
+    if (n === 0) {
+      const glen = await towerHop(d, 0, 0, 'glen');
+      check('tower: floor 0 is out of reach for Glen (no rhythm jump, no air jump)', !glen.reached, `y ${glen.y.toFixed(2)}`);
+    } else {
+      const bad = await towerHop(d, n, n - 1);
+      check(`tower: floor ${n} is NOT reached when the level is capped at ${n - 1} (best effort: air jump at the top, mantle)`, !bad.reached, `best foot height ${(bad.maxY - bad.from).toFixed(2)} m above the floor below, floor is ${(F[n].top - bad.from).toFixed(2)} m up`);
+      table.push(`${n}: rise ${(F[n].top - bad.from).toFixed(2)} | with level ${n}: foot peak +${(ok.maxY - ok.from).toFixed(2)} reached | level ${n - 1}: +${(bad.maxY - bad.from).toFixed(2)} not reached`);
+    }
+    if (shots && n === 2) {
+      await towerHop(d, 2, 2);
+      await d.step(40);
+      await d.step(1, true);
+      await shot(page, 'arena-tower');
+    }
+  }
+  report('tower floors reached at their own level', results.join(' '));
+  for (const t of table) report('tower floor', t);
+  if (floors < 5) return;
+
+  // ---- Top reward ----
+  {
+    await d.stand(F[3].x, F[3].top, F[3].z - F[3].d / 2 + 1.5, 0, 4);
+    const r0 = await page.evaluate(() => window.__superglen.levelInfo.reward_tower || 0);
+    await d.rhythmTo(4);
+    await d.dash(F[4].x, F[4].z);
+    // walk to the middle of the top (the star hovers there)
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [F[4].x, F[4].z]);
+    await d.step(90);
+    const r1 = await page.evaluate(() => ({ r: window.__superglen.levelInfo.reward_tower || 0, s: window.__superglen.rhythm.sounds }));
+    check('tower: standing on the top floor takes the gold star (reward fires, fanfare plays)', d.on(F[4]) && r1.r === r0 + 1, `reward ${r0} -> ${r1.r}`);
+  }
+}
+
+async function arenaDrums(page, check, d, { touch = false, shotName = null } = {}) {
+  const report = (label, v) => console.log(`   [arena${touch ? '-touch' : ''}] ${label}: ${v}`);
+  const D = ['drum1', 'drum2', 'drum3'].map((id) => d.fh[id]);
+  const ledge = d.fh.drumLedge;
+  const run = async (cap) => {
+    await d.stand(D[0].x, 0, D[0].z + 3.3, 0, cap);
+    const b0 = d.last.bounces;
+    const seen = [];
+    await d.tap(); // plain first jump (level 0)
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [D[0].x, D[0].z]);
+    let next = 0;
+    let pressed = false;
+    for (let i = 0; i < 500; i++) {
+      await d.step(1);
+      if (d.last.bounces - b0 > next) {
+        next++;
+        seen.push(`${next}:L${d.last.level}`);
+        if (shotName && next === 2) {
+          await d.step(6, true);
+          await shot(page, shotName);
+        }
+        pressed = false;
+        const tgt = next < 3 ? D[next] : ledge;
+        await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [tgt.x, tgt.z]);
+      }
+      if (next === 3 && !pressed && !d.last.grounded && d.last.vy <= 1.0 && d.last.vy > -3) {
+        await d.tap();
+        pressed = true;
+      }
+      if (next === 3 && d.last.grounded && i > 20 && !d.last.mantling && d.last.y > 1.5) break;
+      if (next === 3 && d.last.grounded && d.last.y < 1.3 && i > 60 + next * 60 && !d.last.mantling) { /* landed on a drum again: keep bouncing / trying */ }
+    }
+    await d.cancelWalk();
+    await d.step(30);
+    return { seen, bounces: d.last.bounces - b0, level: d.last.level, onLedge: d.on(ledge) };
+  };
+  const full = await run(4);
+  report('three drums hop', JSON.stringify(full));
+  check('drums: hopping drum -> drum -> drum registers a bounce event on each (3 bounces)', full.bounces >= 3 && full.seen.slice(0, 3).join() === '1:L1,2:L2,3:L3', full.seen.join());
+  check('drums: three hops raise the level 0 -> 3 (one level per drum)', full.seen.length >= 3 && full.seen[2] === '3:L3', full.seen.join());
+  check(`drums: the high ledge after the third drum (${ledge.top.toFixed(2)} m) is reached with the level the drums gave`, full.onLedge, `y ${d.last.y.toFixed(2)}`);
+  const capped = await run(2);
+  check('drums: the ledge is NOT reached when the level is capped at 2 (needs the third bounce at level 3)', !capped.onLedge, `seen ${capped.seen.join()} y ${d.last.y.toFixed(2)}`);
+}
+
+async function arenaBuildings(page, check, d) {
+  const report = (label, v) => console.log(`   [arena] ${label}: ${v}`);
+  const A = d.arena;
+  const bld = A.buildings;
+  const routeRun = async (name, cap, shotName, air = true) => {
+    const steps = A.routes[name];
+    const first = d.fh[steps[0].id];
+    await d.stand(first.x, 0, first.z + 2.2, 0, cap);
+    const log = [];
+    let cur = null;
+    for (let i = 0; i < steps.length; i++) {
+      const st = steps[i];
+      const lv = Math.min(air ? st.needs : st.needs > 0 ? 3 : 0, cap);
+      if (st.id.endsWith('Roof')) {
+        const roof = A.roofs.find((r) => r.id === st.id);
+        const t = roof.samples[0];
+        if (i > 0) await d.step(100);
+        await d.rhythmTo(lv);
+        await d.dash(t.x, t.z, { useDouble: false });
+        const b = bld[name];
+        const ok = d.last.grounded && d.last.y > b.wall - 0.2 && Math.abs(d.last.x - b.x) < b.w / 2 + 0.6 && Math.abs(d.last.z - b.z) < b.d / 2 + 0.6;
+        log.push(`${st.id}:${ok ? 'ok' : 'NO'}`);
+        if (!ok) return { reached: false, log };
+        if (shotName) {
+          await d.step(40);
+          // Superglen on the roof, seen from the street side
+          await page.evaluate(([x, y, z, tx, ty, tz]) => window.__superglen.lookFrom([x, y, z, tx, ty, tz]), [b.x - 5, b.wall + 4, b.z + b.d / 2 + 8, b.x, b.wall + 1.5, b.z + 1]);
+          await d.step(2, true);
+          await shot(page, shotName);
+          await page.evaluate(() => window.__superglen.lookFrom(null));
+        }
+        return { reached: true, log, y: d.last.y };
+      }
+      const f = d.fh[st.id];
+      if (i === 0) {
+        // the first crate is a plain jump from the ground
+        await d.rhythmTo(0);
+        await d.dash(f.x, f.z, { useDouble: false });
+      } else {
+        await d.step(100);
+        await d.rhythmTo(lv);
+        await d.dash(f.x, f.z, { useDouble: air && st.needs > 0 });
+      }
+      const ok = d.on(f);
+      log.push(`${st.id}:${ok ? 'ok' : 'NO'}`);
+      cur = f;
+      if (!ok) return { reached: false, log, y: d.last.y };
+    }
+    return { reached: false, log };
+  };
+  const hres = await routeRun('house', 1, null);
+  report('house route (cap 1)', JSON.stringify(hres));
+  check('house: the route crates -> crates -> awning -> roof reaches the roof with rhythm level <= 1', hres.reached, hres.log.join(' '));
+  const h0 = await routeRun('house', 0, null);
+  check('house: the roof is reachable even with level 0 only (no foothold needs more than level 1)', h0.reached, h0.log.join(' '));
+  const hn = await routeRun('house', 0, null, false);
+  check('house: ...and without the air jump (plain jumps only)', hn.reached, hn.log.join(' '));
+  const rres = await routeRun('ruko', 3, 'arena-ruko');
+  report('ruko route (cap 3)', JSON.stringify(rres));
+  check('ruko: the route crates -> balcony bay -> sign board -> roof reaches the roof with rhythm level <= 3', rres.reached, rres.log.join(' '));
+  const need = Math.max(...A.routes.ruko.map((s) => s.needs));
+  check('ruko: no foothold on the route needs more than level 3 (designed: level 1 with the air jump)', need <= 3 && need >= 1, `highest designed level ${need}`);
+  const r0 = await routeRun('ruko', 0, null);
+  check('ruko: the roof is NOT reached with level 0 only (the balcony hop is 4.65 m, level 0 reaches 4.4 m at best)', !r0.reached, r0.log.join(' '));
+  const r1 = await routeRun('ruko', 1, null);
+  check('ruko: level 1 is enough with the air jump', r1.reached, r1.log.join(' '));
+  const n2 = await routeRun('ruko', 2, null, false);
+  check('ruko: without the air jump level 2 is NOT enough (jump + mantle: 4.3 m)', !n2.reached, n2.log.join(' '));
+  const n3 = await routeRun('ruko', 3, null, false);
+  check('ruko: without the air jump level 3 is enough (jump + mantle: 5.0 m)', n3.reached, n3.log.join(' '));
+}
+
+async function arenaDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeArenaDriver(page);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await d.load();
+  check('arena data is published to the test (levelInfo.arena / roofs)', d.arena.footholds.length >= 20 && Object.keys(d.arena.routes).length === 4);
+  d.arena.roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+
+  // ---- screenshots from above ----
+  await page.evaluate(() => { const g = window.__superglen; g.lookFrom([0, 45, 10, 0, 4, -65]); g.advance(3, true); });
+  await shot(page, 'arena-overview');
+  const calls = {};
+  for (const [name, pose] of [['spawn', null], ['overview', [0, 45, 10, 0, 4, -65]], ['tower side', [-8, 20, -24, -20, 12, -52]], ['drums', [28, 7, -30, 18, 3, -44]], ['north', [0, 12, -60, 0, 4, -95]]]) {
+    await page.evaluate((p) => { const g = window.__superglen; g.lookFrom(p); g.advance(3, true); }, pose);
+    calls[name] = await page.evaluate(() => { const c = window.__superglen.debugCounts(); return `${c.calls} calls ${c.triangles} tris`; });
+  }
+  console.log('   [arena] draw calls / triangles per viewpoint:', JSON.stringify(calls));
+  const worst = Object.values(calls).map((v) => v.split(' ').map(Number)).reduce((m, v) => [Math.max(m[0], v[0]), Math.max(m[1], v[2])], [0, 0]);
+  check('perf: arena viewpoints stay inside the budget (< 150 draw calls, <= 60k triangles)', worst[0] < 150 && worst[1] <= 60000, JSON.stringify(calls));
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+
+  // ---- walkable roofs of the arena houses ----
+  await roofChecks(page, check, d.arena.roofs, 'arena');
+
+  // ---- tower, drums, buildings ----
+  await arenaSuite(page, check, d, { shots: true });
+  await arenaDrums(page, check, d, { shotName: 'arena-drums' });
+  await arenaBuildings(page, check, d);
+
+  // ---- easy mode: hold the jump button on the tower's ground floor ----
+  {
+    const F = [0, 1, 2, 3, 4].map((n) => d.fh[`floor${n}`]);
+    await page.evaluate(() => window.__superglen.rhythm.setCap(4));
+    const climb = async (airJump) => {
+      await d.stand(F[0].x, 0, F[0].z + F[0].d / 2 + 2.0, 0, 4);
+      await d.down();
+      let reached = -1;
+      for (let n = 0; n < 5; n++) {
+        const t = F[n];
+        // holding alone has no air jump: jump + mantle needs level 3 for every floor above the first (plain 5.0 m)
+        const need = airJump ? Math.min(n, 3) : n === 0 ? 0 : 3;
+        if (n > 0) {
+          // walk (still holding) to 1.5 m from the north edge of the floor below, the spot a child would hop from
+          const p = F[n - 1];
+          await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [p.x, p.z - p.d / 2 + 1.5]);
+          for (let i = 0; i < 200; i++) {
+            await d.step(1);
+            if (!(await page.evaluate(() => window.__superglen.walking))) break;
+          }
+          await d.cancelWalk();
+        }
+        // hold in place until the automatic bounce has built the level this floor needs
+        for (let i = 0; i < 1200 && !(d.last.level >= need && d.last.grounded); i++) await d.step(1);
+        await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [t.x, t.z]);
+        let pressed = false;
+        let got = false;
+        for (let i = 0; i < 300 && !got; i++) {
+          await d.step(1);
+          if (airJump && !pressed && !d.last.grounded && d.last.vy <= 1.0 && d.last.vy > -3) {
+            // release for one frame and press again: the air jump; the hold then goes on
+            await d.up();
+            await d.step(1);
+            await d.down();
+            pressed = true;
+          }
+          if (d.on(t, 0.25)) got = true;
+        }
+        await d.cancelWalk();
+        if (!got) break;
+        reached = n;
+      }
+      await d.up();
+      return reached;
+    };
+    const holdOnly = await climb(false);
+    const withAir = await climb(true);
+    report3('easy mode, holding only: highest floor reached', holdOnly);
+    report3('easy mode, holding + air jump: highest floor reached', withAir);
+    check('easy mode: holding the jump button on the ground floor climbs the tower (floors 0 and 1 with the held bounce and the mantle alone)', holdOnly >= 1 && holdOnly <= 3, `floor ${holdOnly}`);
+    check('easy mode: holding + the air jump reaches up to the floor that needs level 3, never the level-4 floor', withAir === 3, `floor ${withAir}`);
+  }
+
+  // ---- no leaks on test <-> bab1 reloads ----
+  await page.evaluate(() => window.__superglen.pause(false));
+  const cyc = async (id) => {
+    await page.evaluate((id) => window.__superglen.loadLevel(id), id);
+    await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, id, { timeout: 15000 });
+    await sleep(300);
+  };
+  await cyc('bab1');
+  await cyc('test');
+  await sleep(800);
+  const c1 = await page.evaluate(countsOf);
+  await cyc('bab1');
+  await cyc('test');
+  await sleep(800);
+  const c2 = await page.evaluate(countsOf);
+  const same = ['geometries', 'textures', 'colliders', 'bodies', 'sceneChildren'].every((k) => c1[k] === c2[k]);
+  check('test -> bab1 -> test reloads do not leak (geometries, textures, colliders, bodies, scene children)', same, `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+const report3 = (label, v) => console.log(`   [arena] ${label}: ${v}`);
+
+async function arenaTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  let d = null;
+  const center = () => page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  const tapBtn = async () => {
+    const jb = await center();
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  d = makeArenaDriver(page, tapBtn);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await d.load();
+  await d.stand(0, 0, 0, 0);
+  check('touch 844x281 (arena): the jump button is a real on-screen button >= 80 x 80', await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect(); return r.width >= 80 && r.height >= 80; }));
+  await arenaSuite(page, check, d, { touch: true, floors: 2 });
+  await arenaDrums(page, check, d, { touch: true });
+  await d.step(1, true);
+  await shot(page, 'arena-touch-281');
+}
+
+async function bab1RoofScenario(page, check) {
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeParkourDriver(page);
+  await d.step(60);
+  const roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+  const ids = roofs.map((r) => r.id);
+  console.log(`   [roofs] bab1 roof list: ${ids.join(', ')}`);
+  check('bab1: the level publishes its roof list (houses, awnings, school, building roofs, lab roof)', roofs.length >= 20 && ids.some((i) => i.startsWith('house')) && ids.some((i) => i.startsWith('awning')) && ids.includes('schoolRoof') && ids.includes('barongsaiRoof1') && ids.includes('barongsaiRoof2') && ids.includes('labRoof'), `${roofs.length} roofs`);
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen'));
+  await roofChecks(page, check, roofs, 'bab1');
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+  await roofChecks(page, check, roofs.filter((r) => r.kind === 'hip'), 'bab1 (Superglen, stomping onto the roofs)');
+
+  // Superglen on a street house roof
+  const house = roofs.find((r) => r.id.startsWith('houseR'));
+  await page.evaluate((s) => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.teleportFeet(s.x, s.y + 0.3, s.z); g.setCameraYaw(Math.PI / 2); g.advance(80, false); g.lookFrom([s.x - 9, s.y + 4.5, s.z + 7, s.x, s.y + 0.8, s.z]); g.advance(3, true); }, house.samples[0]);
+  await shot(page, 'bab1-roof');
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+
+  // Falling off a roof to the outside returns to the last safe spot, never leaves the playable area
+  const br = roofs.find((r) => r.id === 'barongsaiRoof1').samples;
+  const falls = [];
+  for (const [label, from, tx, tz] of [['east', br[0], 40, br[0].z], ['west', br[2], -40, br[0].z], ['north', br[0], 0, -90], ['south', br[0], 0, 30]]) {
+    await page.evaluate((s) => { const g = window.__superglen; g.cancelWalk(); g.teleportFeet(s.x, s.y + 0.5, s.z); g.advance(60, false); }, from);
+    const r = await page.evaluate(([tx, tz]) => {
+      const g = window.__superglen;
+      g.walkTo(tx, tz);
+      let minY = 99;
+      let fellAt = -1;
+      for (let i = 0; i < 900; i++) {
+        g.advance(1, false);
+        minY = Math.min(minY, g.feetY);
+        if (fellAt < 0 && g.feetY < -3) { fellAt = i; g.cancelWalk(); }
+        if (fellAt >= 0 && i > fellAt + 150) break;
+      }
+      g.cancelWalk();
+      g.advance(30, false);
+      return { minY, fellAt, x: g.player.x, y: g.feetY, z: g.player.z, grounded: !g.airborne };
+    }, [tx, tz]);
+    falls.push(`${label}: min ${r.minY.toFixed(1)} -> (${r.x.toFixed(1)}, ${r.y.toFixed(1)}, ${r.z.toFixed(1)})`);
+    if (label === 'south') {
+      check('bab1: walking off the building roof to the south drops onto the plaza and the street (ground, in the playable area)', r.grounded && r.y < 0.5 && r.z > -43 && Math.abs(r.x) < 14, JSON.stringify(r));
+    } else {
+      check(`bab1: walking off the building roof to the ${label} falls into the ravine and returns to a safe, grounded spot on the roofs (not stuck outside or in a pocket)`, r.fellAt >= 0 && r.minY < -10 && r.y > 3 && r.grounded && Math.abs(r.x) < 12 && r.z < -38 && r.z > -78, JSON.stringify(r));
+    }
+  }
+  console.log('   [roofs] ' + falls.join(' | '));
+
+  // Walking off a street house roof to the outside: the tall hedge wall keeps the player in the street
+  const hr = roofs.find((r) => r.id.startsWith('houseR')).samples[0];
+  const out = await page.evaluate((s) => {
+    const g = window.__superglen;
+    g.cancelWalk();
+    g.teleportFeet(s.x, s.y + 0.5, s.z);
+    g.advance(60, false);
+    g.walkTo(40, s.z);
+    for (let i = 0; i < 400; i++) g.advance(1, false);
+    g.cancelWalk();
+    return { x: g.player.x, y: g.feetY };
+  }, hr);
+  check('bab1: walking east over a street house roof ends at the tall boundary hedge (x <= 14.6), still on the roof', out.x <= 14.6 && out.y > 4, JSON.stringify(out));
+  // The lab stays shut from above: standing on the lab roof, the lab floor is not reachable (the roof is solid)
+  const lab = roofs.find((r) => r.id === 'labRoof').samples[0];
+  const labRes = await page.evaluate((s) => {
+    const g = window.__superglen;
+    g.cancelWalk();
+    g.teleportFeet(s.x, s.y + 1.5, s.z);
+    g.advance(120, false);
+    return { y: g.feetY, grounded: !g.airborne };
+  }, lab);
+  check('bab1: the lab has a solid roof (landing there stays on top, not inside)', labRes.grounded && labRes.y > 4.5, JSON.stringify(labRes));
+  await page.evaluate(() => window.__superglen.save.reset());
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -4189,6 +4713,10 @@ async function main() {
     results.push(await runScenario(browser, 'parkour-mute', { viewport: { width: 1280, height: 720 }, initScript: AUDIO_STUB }, parkourMuteScenario, '?level=test&fps=0&mute=1'));
     results.push(await runScenario(browser, 'parkour-noaudio', { viewport: { width: 1280, height: 720 }, initScript: () => { window.AudioContext = undefined; window.webkitAudioContext = undefined; } }, parkourNoAudioScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'parkour-perf', { viewport: { width: 1280, height: 720 } }, parkourPerfScenario, '?level=test&fps=0'));
+
+    results.push(await runScenario(browser, 'arena', { viewport: { width: 1280, height: 720 } }, arenaDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'arena-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, arenaTouchScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'bab1-roofs', { viewport: { width: 1280, height: 720 } }, bab1RoofScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 
