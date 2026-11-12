@@ -54,6 +54,59 @@ const logoInfo = () => {
   return { ok: !!img && img.complete && img.naturalWidth > 0 && r.width > 0 && r.height > 0 && getComputedStyle(img).display !== 'none' };
 };
 
+const startLayoutInfo = () => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const img = document.querySelector('.start-overlay .start-logo');
+  const pill = document.querySelector('.start-overlay .start-hint');
+  const a = img.getBoundingClientRect();
+  const b = pill.getBoundingClientRect();
+  const ins = (r) => r.left >= -0.5 && r.top >= -0.5 && r.right <= vw + 0.5 && r.bottom <= vh + 0.5;
+  const cs = getComputedStyle(img);
+  return {
+    logoInside: ins(a),
+    pillInside: ins(b),
+    overlap: a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom,
+    maskNone: (cs.maskImage || cs.webkitMaskImage || 'none') === 'none' && (cs.webkitMaskImage || 'none') === 'none',
+    pillH: b.height,
+    logoH: a.height,
+    scrolls: document.documentElement.scrollHeight > vh + 1 || document.documentElement.scrollWidth > vw + 1,
+  };
+};
+
+/** Luminance (0..1) of a screenshot pixel, decoded in the page through a canvas. */
+async function cornerLuminance(page, x, y) {
+  const buf = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const [r, gg, bb] = g.getImageData(0, 0, 1, 1).data;
+    return (0.2126 * r + 0.7152 * gg + 0.0722 * bb) / 255;
+  }, buf.toString('base64'));
+}
+
+async function startScreenChecks(page, check, sizes, tag) {
+  const orig = page.viewportSize();
+  for (const [w, h] of sizes) {
+    await page.setViewportSize({ width: w, height: h });
+    await sleep(900);
+    const l = await page.evaluate(startLayoutInfo);
+    const t = `start ${tag} ${w}x${h}`;
+    check(`${t}: logo and pill inside viewport, no overlap, no scroll`, l.logoInside && l.pillInside && !l.overlap && !l.scrolls, JSON.stringify(l));
+    check(`${t}: logo has no mask, pill >= 80 high`, l.maskNone && l.pillH >= 79.5, `pill ${l.pillH}`);
+    const lum = await cornerLuminance(page, 2, Math.min(h - 40, h * 0.5));
+    check(`${t}: background is light (not black)`, lum > 0.55, lum.toFixed(2));
+    if (w === 844 && h === 250) await shot(page, 'start-844x250');
+  }
+  await page.setViewportSize(orig);
+  await sleep(700);
+}
+
 const dist2 = (a, b) => Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z);
 
 async function shot(page, name) {
@@ -113,7 +166,8 @@ const layoutInfo = () => {
   const tr = document.querySelector('.tc-button[data-action=transform]');
   const trr = tr && tr.getBoundingClientRect();
   const transformOk = !!trr && trr.width >= 80 && trr.height >= 80 && trr.top >= 0 && trr.right <= vw && getComputedStyle(tr).display !== 'none';
-  return { vw, vh, n: boxes.length, inside, overlap, minBtn, actions, transformOk };
+  const minLeft = Math.min(...q('.tc-button').map((r) => r.left));
+  return { vw, vh, minLeft, n: boxes.length, inside, overlap, minBtn, actions, transformOk };
 };
 
 /** Deterministic driver: real key events, but the game loop is paused and stepped in 1/60 s frames. */
@@ -126,7 +180,7 @@ function makeBot(page) {
       const g = window.__superglen;
       g.advance(n, r);
       return {
-        x: g.player.x, y: g.feetY, z: g.player.z, yaw: g.cameraYaw, g: !g.airborne, vy: g.verticalVelocity,
+        x: g.player.x, y: g.feetY, z: g.player.z, yaw: g.cameraYaw, syaw: g.steeringYaw, g: !g.airborne, vy: g.verticalVelocity,
         peak: g.peakFeetY, mode: g.mode, h: g.airHeight, jumps: g.jumps, dj: g.doubleJumps, stomps: g.stomps,
         pr: g.pixelRatio,
       };
@@ -140,7 +194,7 @@ function makeBot(page) {
       if (!want.has(k) && held.has(k)) { await page.keyboard.up(k); held.delete(k); }
     }
   };
-  // World-space wish direction -> WASD keys for the current camera yaw (auto-follow may rotate it).
+  // World-space wish direction -> WASD keys for the current steering yaw (the player steers by the latched yaw, not the live camera yaw).
   bot.keysFor = (wx, wz, yaw) => {
     const out = new Set();
     const m = Math.hypot(wx, wz);
@@ -162,7 +216,7 @@ function makeBot(page) {
     const vz = p ? (s.z - p.z) * 60 : 0;
     const ex = tx - (s.x + (vx * Math.abs(vx)) / (2 * accel));
     const ez = tz - (s.z + (vz * Math.abs(vz)) / (2 * accel));
-    await bot.setKeys(bot.keysFor(Math.abs(ex) < tol ? 0 : Math.sign(ex), Math.abs(ez) < tol ? 0 : Math.sign(ez), s.yaw));
+    await bot.setKeys(bot.keysFor(Math.abs(ex) < tol ? 0 : Math.sign(ex), Math.abs(ez) < tol ? 0 : Math.sign(ez), s.syaw));
   };
   bot.goTo = async (tx, tz, maxFrames = 900) => {
     bot.prev = null;
@@ -340,7 +394,7 @@ async function jumpScenario(page, check) {
     const onTop = bot.last.y > 1.1;
     bot.prev = null;
     for (let i = 0; i < 200; i++) {
-      await bot.setKeys(bot.keysFor(1, 0, bot.last.yaw));
+      await bot.setKeys(bot.keysFor(1, 0, bot.last.syaw));
       await bot.step(1);
       if (!bot.last.g) break; // first airborne frame = left the edge
     }
@@ -383,6 +437,8 @@ async function touchScenario(page, check) {
   const s0b = await page.evaluate(state);
   check('player does not move before start', dist2(s0, s0b) < 0.05 && !s0b.started, `${dist2(s0, s0b).toFixed(3)} m`);
   await shot(page, 'start-overlay');
+  await shot(page, 'start-844x281');
+  await startScreenChecks(page, check, [[844, 281], [844, 250], [667, 250]], 'touch');
   await fingers.up(1);
   await sleep(500);
   const s1 = await page.evaluate(state);
@@ -521,19 +577,64 @@ async function touchScenario(page, check) {
   // Layout at other sizes (leave the fullscreen the start tap entered, or Chromium refuses to resize)
   await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
   await sleep(500);
-  for (const [w, h, name] of [
-    [667, 375, 'layout-667x375'],
-    [1024, 768, 'layout-1024x768'],
-  ]) {
+  const MATRIX = [
+    [844, 281], [844, 250], [844, 330], [667, 250], [568, 320], [932, 300], [1024, 768], [1366, 1024],
+  ];
+  for (const [w, h] of MATRIX) {
     await page.setViewportSize({ width: w, height: h });
     await sleep(500);
     for (let pass = 0; pass < 2; pass++) {
       await bot.step(1);
+      const mode = bot.last.mode;
+      const tag = `${w}x${h} ${mode}`;
       const li2 = await page.evaluate(layoutInfo);
-      const expect = bot.last.mode === 'superglen' ? 'jump,laser,shield,transform' : 'jump,interact,transform';
-      check(`${w}x${h} ${bot.last.mode}: controls inside viewport`, li2.inside && li2.actions.join() === expect, li2.actions.join());
-      check(`${w}x${h} ${bot.last.mode}: no overlap, buttons >= 80, transform visible`, !li2.overlap && li2.minBtn >= 80 && li2.transformOk, `min ${li2.minBtn}`);
-      await shot(page, `${name}-${bot.last.mode}`);
+      const expect = mode === 'superglen' ? 'jump,laser,shield,transform' : 'jump,interact,transform';
+      check(`${tag}: controls inside viewport/safe-area`, li2.inside && li2.actions.join() === expect, li2.actions.join());
+      check(`${tag}: no overlap (incl. transform), buttons >= 80, transform visible`, !li2.overlap && li2.minBtn >= 80 && li2.transformOk, `min ${li2.minBtn}`);
+      check(`${tag}: no button in the joystick zone`, li2.minLeft >= li2.vw * 0.45, `left ${li2.minLeft.toFixed(0)} vs ${(li2.vw * 0.45).toFixed(0)}`);
+      if (w === 844 && (h === 281 || h === 250) && mode === 'superglen') await shot(page, `layout-${w}x${h}-superglen`);
+      // Tap each action button in the middle: exactly that button reacts.
+      for (const act of li2.actions.filter((a) => a !== 'transform')) {
+        const p = await centerOf(act);
+        await fingers.down(12, p.x, p.y);
+        await sleep(40);
+        const pressed = await page.evaluate(() => [...document.querySelectorAll('.tc-button.pressed')].map((e) => e.dataset.action).join());
+        if (act === 'jump') {
+          await bot.step(4);
+          const air = await bot.step(1);
+          check(`${tag}: jump tap leaves the ground`, !air.g && pressed === 'jump', `${pressed} y=${air.y.toFixed(2)}`);
+        } else {
+          check(`${tag}: tap ${act} presses only ${act}`, pressed === act, pressed);
+        }
+        await fingers.up(12);
+        for (let i = 0; i < 300 && !bot.last.g; i++) await bot.step(1);
+        await bot.step(10);
+        await sleep(120);
+        if (act === 'interact' && mode === 'glen') {
+          // In Glen mode the interact button also toggles Superglen (test area): go back to Glen.
+          check(`${tag}: interact tap switched mode`, bot.last.mode === 'superglen', bot.last.mode);
+          await tapAction('transform');
+          await bot.step(1);
+        }
+      }
+      // Hit test: when two buttons' 10 px hit margins overlap, the nearest centre wins.
+      if (mode === 'superglen' && w === 568) {
+        const pt = await page.evaluate(() => {
+          const laser = document.querySelector('.tc-button[data-action=laser]');
+          const shield = document.querySelector('.tc-button[data-action=shield]');
+          const vw = window.innerWidth;
+          const sr0 = shield.getBoundingClientRect();
+          const lr0 = laser.getBoundingClientRect();
+          laser.style.right = `${vw - lr0.right + (lr0.left - sr0.right) - 4}px`; // gap of 4 px
+          const sr = shield.getBoundingClientRect();
+          return { x: sr.right + 1.5, y: sr.top + sr.height / 2 };
+        });
+        await fingers.down(13, pt.x, pt.y);
+        await sleep(40);
+        const pressed = await page.evaluate(() => [...document.querySelectorAll('.tc-button.pressed')].map((e) => e.dataset.action).join());
+        check(`${tag}: overlapping hit margins pick the nearest button centre`, pressed === 'shield', pressed);
+        await fingers.up(13);
+      }
       await tapAction('transform');
     }
   }
@@ -554,6 +655,185 @@ async function touchScenario(page, check) {
   check('landscape: rotate overlay hidden again', back === 'none');
 }
 
+// ---- Steering latch: no circling with a steady off-axis stick (camera auto-follow feedback loop) ----
+const angDiff = (a, b) => {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+};
+/** Advance n frames one fixed step at a time and sample [x, z, yaw] after each. */
+const sampleFrames = (page, n) =>
+  page.evaluate((n) => {
+    const g = window.__superglen;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      out.push([g.player.x, g.player.z, g.cameraYaw]);
+    }
+    return out;
+  }, n);
+/** World heading of the displacement between samples i and j (same convention as atan2(dx, dz)). */
+const headingOf = (sm, i, j) => Math.atan2(sm[j][0] - sm[i][0], sm[j][1] - sm[i][1]);
+const pathStats = (sm, from = 0) => {
+  let path = 0;
+  for (let i = from + 1; i < sm.length; i++) path += Math.hypot(sm[i][0] - sm[i - 1][0], sm[i][1] - sm[i - 1][1]);
+  const net = Math.hypot(sm[sm.length - 1][0] - sm[from][0], sm[sm.length - 1][1] - sm[from][1]);
+  return { path, net, straight: path > 0 ? net / path : 0 };
+};
+
+async function startTouchGame(page) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 300);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const bot = makeBot(page);
+  await bot.step(30);
+  return { fingers, bot };
+}
+
+/** Turn the camera by finger drags (right area) until its yaw is within one drag of `targetYaw`. */
+async function alignCamera(fingers, bot, targetYaw) {
+  const drag = async (px) => {
+    const x0 = px > 0 ? 450 : 650;
+    await fingers.down(2, x0, 120);
+    await fingers.move(2, x0 + px, 120, 10);
+    await fingers.up(2);
+    await bot.step(2);
+  };
+  const y = (await bot.step(1)).yaw;
+  await drag(150);
+  const perDrag = bot.last.yaw - y; // yaw change of one 150 px right drag
+  const n = Math.round((targetYaw - bot.last.yaw) / perDrag);
+  for (let i = 0; i < Math.abs(n); i++) await drag(n > 0 ? 150 : -150);
+  await bot.step(5);
+  console.log(`   [steering] yaw after setup drags ${bot.last.yaw.toFixed(3)} (per 150 px drag ${perDrag.toFixed(3)})`);
+}
+
+async function steeringTouchScenario(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  // Turn the camera so the diagonal path avoids the obstacle course:
+  // target yaw about -2.25 rad gives a heading of roughly +X along z = 0 for stick (-30,-30).
+  await alignCamera(fingers, bot, -2.25);
+
+  // 1+2: diagonal stick (-30,-30), 5 s
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 80, 270, 4);
+  const sm = await sampleFrames(page, 300);
+  const eastHeading = headingOf(sm, 60, 299);
+  const hA = headingOf(sm, 60, 120);
+  const hB = headingOf(sm, 240, 299);
+  const st = pathStats(sm);
+  check('diagonal stick (-30,-30) 5 s: straight line, no circling', st.straight >= 0.97,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, path ${st.path.toFixed(1)} m (before fix: circling, radius ~5 m)`);
+  check('diagonal stick: world heading stays constant', Math.abs(angDiff(hA, hB)) < 0.15 && Math.abs(angDiff(headingOf(sm, 60, 180), eastHeading)) < 0.15,
+    `heading t1-2s ${hA.toFixed(3)}, t4-5s ${hB.toFixed(3)}, d ${angDiff(hA, hB).toFixed(3)} rad, t1-5s ${eastHeading.toFixed(3)}`);
+  // Camera convergence: diff = camera yaw vs the "behind the heading" yaw
+  const behind = (i) => Math.atan2(-(sm[i + 6][0] - sm[i - 6][0]), -(sm[i + 6][1] - sm[i - 6][1]));
+  const diffAt = (i) => angDiff(sm[i][2], behind(i));
+  const log = [];
+  for (const t of [1, 1.5, 2, 3, 4, 4.8]) log.push(`${t}s:${diffAt(Math.round(t * 60)).toFixed(3)}`);
+  console.log(`   [steering] |behind-heading minus yaw| over time (rad): ${log.join(' ')}`);
+  const rateLast = Math.abs(angDiff(sm[240][2], sm[299][2])) / (59 / 60);
+  const d15 = Math.abs(diffAt(90));
+  const d5 = Math.abs(diffAt(290));
+  check('camera converges: yaw rate in last second < 0.1 rad/s', rateLast < 0.1, `${rateLast.toFixed(3)} rad/s`);
+  check('camera converges: misalignment smaller at 5 s than at 1.5 s', d5 < d15, `${d15.toFixed(3)} -> ${d5.toFixed(3)} rad`);
+  // No jitter: yaw is monotonic after auto-follow started (allow tiny noise)
+  let reversals = 0;
+  const sgn = Math.sign(angDiff(sm[90][2], sm[299][2]));
+  for (let i = 120; i < 300; i++) if (sgn * angDiff(sm[i - 1][2], sm[i][2]) < -1e-4) reversals++;
+  check('camera yaw has no jitter while converging', reversals === 0, `${reversals} reversals`);
+
+  // 6: release, then press stick straight up -> walks where the camera looks
+  await fingers.up(1);
+  await bot.step(20);
+  const yawRel = bot.last.yaw;
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 110, 240, 4);
+  const sm6 = await sampleFrames(page, 30);
+  const camFwd = Math.atan2(-Math.sin(yawRel), -Math.cos(yawRel));
+  const h6 = headingOf(sm6, 10, 29);
+  check('release and re-press: forward stick walks toward where the camera looks', Math.abs(angDiff(camFwd, h6)) < 0.2,
+    `heading ${h6.toFixed(3)} vs camera forward ${camFwd.toFixed(3)} (d ${angDiff(camFwd, h6).toFixed(3)} rad)`);
+  await fingers.up(1);
+}
+
+async function steeringTouchScenario2(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  // 4: stick straight up, yaw unchanged
+  const y0 = bot.last.yaw;
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 110, 240, 4);
+  const sm = await sampleFrames(page, 90);
+  const st = pathStats(sm);
+  const dy = Math.abs(angDiff(y0, sm[89][2]));
+  check('stick straight up: straight line and yaw unchanged', st.straight >= 0.97 && dy < 0.02,
+    `straightness ${st.straight.toFixed(4)}, yaw change ${dy.toFixed(4)} rad, net ${st.net.toFixed(1)} m`);
+  // 5: drag a second finger 150 px while walking: heading rotates with the camera
+  const before = await sampleFrames(page, 20);
+  const hBefore = headingOf(before, 5, 19);
+  const yBefore = before[19][2];
+  await fingers.down(2, 450, 120);
+  await fingers.move(2, 600, 120, 10);
+  await fingers.up(2);
+  const after = await sampleFrames(page, 60);
+  const hAfter = headingOf(after, 40, 59);
+  const dYaw = angDiff(yBefore, after[59][2]);
+  const dHead = angDiff(hBefore, hAfter);
+  const moved = Math.hypot(after[59][0] - after[40][0], after[59][1] - after[40][1]);
+  check('manual drag while walking: heading rotates with the camera and keeps walking',
+    Math.abs(dHead - dYaw) < 0.2 && Math.abs(dYaw) > 0.3 && moved > 0.5,
+    `yaw change ${dYaw.toFixed(3)} rad, heading change ${dHead.toFixed(3)} rad, last 0.33 s moved ${moved.toFixed(2)} m`);
+  await fingers.up(1);
+}
+
+/**
+ * Back-right diagonal (+30,+30) in its own page so it always starts from the spawn point with a clear
+ * path (camera yaw ~ +0.75 gives a heading of roughly +X along z = 0, 4 s ~ 19 m stays inside the world).
+ */
+async function steeringTouchScenario3(page, check) {
+  const { fingers, bot } = await startTouchGame(page);
+  await alignCamera(fingers, bot, 0.785);
+  await fingers.down(1, 110, 300);
+  await fingers.move(1, 140, 330, 4);
+  const sm = await sampleFrames(page, 240);
+  const st = pathStats(sm);
+  const h1 = headingOf(sm, 60, 120);
+  const h2 = headingOf(sm, 180, 239);
+  check('diagonal stick (+30,+30) 4 s: straight line', st.straight >= 0.97,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, path ${st.path.toFixed(1)} m`);
+  check('diagonal stick (+30,+30): heading constant', Math.abs(angDiff(h1, h2)) < 0.15,
+    `heading t1-2s ${h1.toFixed(3)}, t3-4s ${h2.toFixed(3)}`);
+  await fingers.up(1);
+}
+
+async function steeringDesktopScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => window.__superglen.advance(30, false));
+  await page.keyboard.down('d');
+  const sm = await sampleFrames(page, 300);
+  await page.keyboard.up('d');
+  const st = pathStats(sm);
+  const hA = headingOf(sm, 60, 120);
+  const hB = headingOf(sm, 240, 299);
+  check('keyboard D held 5 s: straight line', st.straight >= 0.97 && Math.abs(angDiff(hA, hB)) < 0.15,
+    `straightness ${st.straight.toFixed(4)}, net ${st.net.toFixed(1)} m, heading ${hA.toFixed(3)} -> ${hB.toFixed(3)}`);
+  const rate = Math.abs(angDiff(sm[240][2], sm[299][2])) / (59 / 60);
+  const rateEarly = Math.abs(angDiff(sm[120][2], sm[179][2])) / (59 / 60);
+  const behind = (i) => Math.atan2(-(sm[i + 6][0] - sm[i - 6][0]), -(sm[i + 6][1] - sm[i - 6][1]));
+  const d15 = Math.abs(angDiff(sm[90][2], behind(90)));
+  const d5 = Math.abs(angDiff(sm[290][2], behind(290)));
+  console.log(`   [steering] desktop D: yaw ${sm[0][2].toFixed(3)} -> ${sm[299][2].toFixed(3)}, yaw rate 2-3 s ${rateEarly.toFixed(3)}, last second ${rate.toFixed(3)} rad/s, misalignment ${d15.toFixed(3)} -> ${d5.toFixed(3)}`);
+  check('keyboard D: camera converges (rate falling, misalignment shrinking)', rate < rateEarly && d5 < d15, `rate ${rateEarly.toFixed(3)} -> ${rate.toFixed(3)}, misalignment ${d15.toFixed(3)} -> ${d5.toFixed(3)}`);
+}
+
 async function runScenario(browser, name, ctxOpts, body) {
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
@@ -569,7 +849,7 @@ async function runScenario(browser, name, ctxOpts, body) {
     await body(page, check);
     result.fps = await sampleFps(page);
   } catch (e) {
-    check('scenario ran without exception', false, e.message);
+    check('scenario ran without exception', false, (e.stack || e.message).split('\n').slice(0,4).join(' | '));
   }
   fs.mkdirSync(OUT, { recursive: true });
   try {
@@ -617,6 +897,12 @@ async function main() {
           return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai';
         }));
         await shot(page, 'start-desktop');
+        {
+          const l = await page.evaluate(startLayoutInfo);
+          check('start desktop 1280x720: logo/pill inside, no overlap, no mask', l.logoInside && l.pillInside && !l.overlap && l.maskNone, JSON.stringify(l));
+          const lum = await cornerLuminance(page, 2, 2);
+          check('start desktop: background is light (not black)', lum > 0.55, lum.toFixed(2));
+        }
         await page.mouse.click(640, 360);
         await sleep(600);
         check('desktop start overlay gone', await page.evaluate(() => !document.querySelector('.start-overlay')));
@@ -644,6 +930,12 @@ async function main() {
         check('hold D 1 s changes x/z', d2 > 0.5, `${d2.toFixed(2)} m`);
       }),
     );
+
+    results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
+    const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
+    results.push(await runScenario(browser, 'steering-touch', iphone, steeringTouchScenario));
+    results.push(await runScenario(browser, 'steering-touch-2', iphone, steeringTouchScenario2));
+    results.push(await runScenario(browser, 'steering-touch-3', iphone, steeringTouchScenario3));
 
     results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
 

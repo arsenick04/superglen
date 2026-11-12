@@ -93,6 +93,7 @@ Pemilik proyek biasanya memberi instruksi malam hari lalu tidur. Setiap sesi mal
 - B2: Bab 2 bagian skill: terbang dan cincin, laser dan sasaran, perisai dan bola karet.
 - B3: Tantangan Pintar: quiz engine + bank soal awal 5 kategori (gambar placeholder).
 - B4: Pipeline audio ElevenLabs + audio Bab 1 dan 2 + 1 contoh per kategori soal (tunggu persetujuan untuk sisanya).
+  - **PENGINGAT UNTUK PEMILIK PROYEK (soundtrack Superglen):** pemilik proyek punya soundtrack sendiri dan minta diingatkan saat B4. Di laporan akhir paket B3 dan di pesan pertama sesi B4, ingatkan: unggah file ke `public/audio/music/` di repo (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, bisa diulang mulus), lalu sebutkan lagu mana untuk adegan mana (layar awal, menjelajah, berubah jadi Superglen, pertarungan). Di B4 buat jalur musik di `AudioManager`: berulang, otomatis mengecil saat Nino berbicara, dimulai dari ketukan pertama (`StartGate.onStart`). Kalau file belum ada, jangan menunggu: bangun jalurnya, kerjakan sisa B4, dan catat di `PROGRESS.md` bahwa musik menunggu file. Cantumkan di `CREDITS.md`.
 
 Fase berikutnya dipecah dengan cara yang sama saat fase itu dimulai: satu paket kira-kira 2 sampai 4 jam kerja agen.
 

@@ -132,13 +132,20 @@ export class TouchSource implements InputSource {
   }
 
   private hitButton(x: number, y: number, margin: number): Action | null {
+    // Nearest button centre wins when the hit margins of two neighbours overlap.
+    let best: Action | null = null;
+    let bestD = Infinity;
     for (const [action, el] of this.controls.buttons) {
       const r = el.getBoundingClientRect();
       if (x >= r.left - margin && x <= r.right + margin && y >= r.top - margin && y <= r.bottom + margin) {
-        return action;
+        const d = Math.hypot(x - (r.left + r.right) / 2, y - (r.top + r.bottom) / 2);
+        if (d < bestD) {
+          bestD = d;
+          best = action;
+        }
       }
     }
-    return null;
+    return best;
   }
 
   private syncButton(action: Action): void {

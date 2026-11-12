@@ -102,7 +102,14 @@ export class Hud {
     hint.appendChild(icon);
     hint.appendChild(el('span', 'start-text start-text-touch', 'Ketuk untuk mulai'));
     hint.appendChild(el('span', 'start-text start-text-pc', 'Klik untuk mulai'));
-    o.append(img, fallback, hint);
+    const bg = el('div', 'start-bg');
+    bg.append(el('div', 'start-rays'));
+    for (const c of ['c1', 'c2', 'c3', 'c4']) bg.append(el('div', `start-cloud ${c}`));
+    for (const c of ['s1', 's2', 's3', 's4', 's5', 's6']) bg.append(el('div', `start-spark ${c}`));
+    bg.append(el('div', 'start-hill'), el('div', 'start-hill h2'));
+    const stage = el('div', 'start-stage');
+    stage.append(img, fallback);
+    o.append(bg, stage, hint);
     // pointerup (a real user gesture on iOS) rather than pointerdown: audio/fullscreen need it.
     o.addEventListener('pointerup', () => {
       if (touchMode.active) this.onStartTap();
