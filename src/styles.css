@@ -998,8 +998,12 @@ html.b2-hold .tc-button[data-action='jump']::after {
   transition: opacity 0.15s;
 }
 html.touch-ui .drum {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+}
+html.touch-ui .drums {
+  gap: 1px;
+  padding: 2px 3px;
 }
 .drum svg {
   width: 100%;

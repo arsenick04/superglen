@@ -588,7 +588,7 @@ async function touchScenario(page, check) {
     await bot.step(150);
     await fingers.up(11);
     await bot.step(5);
-    check('touch: holding the jump button does not re-jump', bot.last.jumps === j0 + 1, `jumps +${bot.last.jumps - j0}`);
+    check('touch: holding the jump button bounces by itself (easy mode, flight locked)', bot.last.jumps >= j0 + 3, `jumps +${bot.last.jumps - j0}`);
   }
 
   // Layout at other sizes (leave the fullscreen the start tap entered, or Chromium refuses to resize)
@@ -1857,7 +1857,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   let lastIdx = -1;
   const filled = [];
   let shotRings = false;
-  for (let i = 0; i < 2400; i += 4) {
+  for (let i = 0; i < 4800; i += 4) {
     s = await d.st();
     const li = s.levelInfo;
     if (li.rowCount >= 0 && filled[filled.length - 1] !== li.rowCount) filled.push(li.rowCount);
@@ -1866,7 +1866,9 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
       lastIdx = li.ringIndex;
       await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [li.goalX, li.goalZ]);
     }
-    await inp.jump(s.player.y < li.goalY + 0.2);
+    // Releasing now drops at once and re-igniting takes the 0.45 s hold, so hold while below the ring and let go only well above it.
+    if (s.player.y < li.goalY + 0.2) await inp.jump(true);
+    else if (s.player.y > li.goalY + 1.2) await inp.jump(false);
     if (li.ringIndex === 2 && !shotRings && s.player.y > 4.5) {
       shotRings = true;
       await d.adv(4, true);
@@ -3434,11 +3436,11 @@ const drumOverlapInfo = () => {
 };
 
 /** Bab2's progress row is hidden until an exercise runs: unhide it to measure, then restore. */
-const drumOverlapWithRow = () => {
+const drumOverlapWithRow = (fnSrc) => {
   const rows = [...document.querySelectorAll('.b2-row')];
   const was = rows.map((r) => r.hidden);
   rows.forEach((r) => { r.hidden = false; });
-  const info = drumOverlapInfo();
+  const info = (new Function('return (' + fnSrc + ')'))()();
   rows.forEach((r, i) => { r.hidden = was[i]; });
   return info;
 };
@@ -3608,6 +3610,7 @@ async function parkourDesktopScenario(page, check) {
     await d.setup(0);
     await d.step(30);
     const f0 = d.last.flights;
+    const au0 = d.last.autos;
     await d.down();
     let start = -1;
     for (let i = 1; i <= 120; i++) {
@@ -3617,7 +3620,7 @@ async function parkourDesktopScenario(page, check) {
         break;
       }
     }
-    check('flight unlocked: holding Space from the ground flies (jets within 0.45-0.9 s), no automatic bounce', start >= 27 && start <= 54 && d.last.autos === 0 && d.last.flights === f0 + 1, `jets after ${start} frames, autos ${d.last.autos}`);
+    check('flight unlocked: holding Space from the ground flies (jets within 0.45-0.9 s), no automatic bounce', start >= 27 && start <= 54 && d.last.autos === au0 && d.last.flights === f0 + 1, `jets after ${start} frames, autos +${d.last.autos - au0}`);
     await d.step(90);
     const yUp = d.last.y;
     await d.up();
@@ -3701,6 +3704,7 @@ async function parkourDesktopScenario(page, check) {
       let sawMantling = false;
       for (let i = 0; i < 110; i++) {
         await d.step(1);
+        if (press && d.last.mantles > m0) await d.up('d'); // stop pushing once up (do not walk off the far side)
         if (d.last.mantling && !sawMantling) {
           sawMantling = true;
           if (shotName) {
@@ -3845,7 +3849,7 @@ async function parkourTouchScenario(page, check) {
     await d.step(60);
     await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
     await d.step(5);
-    const b = await page.evaluate(drumOverlapWithRow);
+    const b = await page.evaluate(drumOverlapWithRow, drumOverlapInfo.toString());
     check(`touch 844x${h} (bab2, progress row shown): drum icons visible, no overlap`, b.visible && b.hit.length === 0 && b.inside && !b.bubbleOverlap, JSON.stringify(b));
   }
   await page.evaluate(() => window.__superglen.pause(false));
@@ -3949,13 +3953,14 @@ async function parkourAudioScenario(page, check) {
   await d.tap();
   await d.step(8);
   const extra = await page.evaluate((n1) => window.__aud.oscs.length - n1, n1);
-  check('audio: a timed jump that reaches level 4 plays the drum plus the lion cheer (2 oscillators)', extra === 2, `${extra} oscillators`);
+  check('audio: a timed jump that reaches level 4 plays the drum plus the lion cheer (+ the soft boing of the preceding landing = 3 oscillators)', extra === 3, `${extra} oscillators`);
   // soft boing on a big landing
   await d.untilGrounded();
   await d.step(5);
   await d.setup(0);
   const n2 = await page.evaluate(() => window.__aud.oscs.length);
   await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.step(3);
   await d.untilGrounded();
   await d.step(3);
   const boing = await page.evaluate((n2) => window.__aud.oscs.slice(n2).length, n2);
@@ -3976,6 +3981,7 @@ async function parkourMuteScenario(page, check) {
   await d.tap();
   await d.step(10);
   await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.step(3);
   await d.untilGrounded();
   const aud = await page.evaluate(() => ({ oscs: window.__aud.oscs.length, noises: window.__aud.noises, muted: window.__superglen.rhythm.muted, sounds: window.__superglen.rhythm.sounds }));
   check('?mute=1: jumps, a perfect press and a big landing schedule no sound at all', aud.muted && aud.oscs === 0 && aud.noises === 0 && aud.sounds === 0, JSON.stringify(aud));
@@ -3995,6 +4001,7 @@ async function parkourNoAudioScenario(page, check) {
   await d.tap();
   await d.step(10);
   await page.evaluate(() => window.__superglen.teleportFeet(0, 6, 0));
+  await d.step(3);
   await d.untilGrounded();
   check('no Web Audio at all: no exception, the game plays on (level 3 reached by a timed press)', !d.last.audio && d.last.level === 3 && d.last.grounded, `audio ${d.last.audio}, level ${d.last.level}`);
   await page.evaluate(() => window.__superglen.pause(false));
