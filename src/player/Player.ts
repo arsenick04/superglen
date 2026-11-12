@@ -264,7 +264,7 @@ export class Player {
       this.targetVel.set(0, 0, 0);
     }
 
-    let rate = hasInput ? C.acceleration : C.deceleration;
+    let rate: number = hasInput ? C.acceleration : C.deceleration;
     if (flyingNow) {
       rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
       this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);

@@ -30,10 +30,10 @@ function buildDomeGeometry(): THREE.BufferGeometry {
     const rim = Math.pow(1 - Math.abs(z), 1.6);
     const y = pos.getY(i);
     const sheen = Math.max(0, y) * 0.12;
-    const a = 0.2 + 0.55 * rim + sheen;
+    const a = 0.3 + 0.55 * rim + sheen;
     col[i * 4] = 1.0;
-    col[i * 4 + 1] = 0.78 + 0.2 * rim;
-    col[i * 4 + 2] = 0.22 + 0.5 * rim;
+    col[i * 4 + 1] = 0.62 + 0.25 * rim;
+    col[i * 4 + 2] = 0.05 + 0.3 * rim;
     col[i * 4 + 3] = Math.min(0.92, a);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 4));

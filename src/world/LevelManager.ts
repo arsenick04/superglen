@@ -31,6 +31,8 @@ export interface LevelManagerDeps {
   onLoadingChange(loading: boolean): void;
   /** After the level is built and the player placed (before the fade-in). */
   onAfterBuild(): void;
+  /** Right before the old level is torn down: clear targets, projectiles and skill subscribers. */
+  onBeforeUnload(): void;
 }
 
 function disposeMaterial(m: THREE.Material): void {
@@ -181,6 +183,7 @@ export class LevelManager {
 
   private unload(): void {
     const d = this.deps;
+    d.onBeforeUnload();
     if (this.level) {
       try {
         this.level.dispose();

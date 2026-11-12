@@ -17,6 +17,8 @@ export class Hud {
   private readonly canLock: boolean;
   private readonly list: HTMLUListElement | HTMLDivElement;
   private lastFpsShown = -1;
+  private story = false;
+  private skillLines: string[] = [];
   private dismissed = false;
 
   constructor(
@@ -68,9 +70,26 @@ export class Hud {
 
   /** Key help on the PC card: the test area shows the temporary transform key, story levels the real ones. */
   setStoryHelp(story: boolean): void {
-    const lines = story
-      ? ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Spasi: lompat', 'E: bicara / ambil', 'Esc: lepas kursor']
-      : ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera', 'Esc: lepas kursor'];
+    this.story = story;
+    this.renderHelp();
+  }
+
+  /** Extra key lines for the skills the story has unlocked so far. */
+  setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }): void {
+    const lines: string[] = [];
+    if (sk.fly) lines.push('Tahan Spasi: terbang');
+    if (sk.laser) lines.push('J atau klik kiri: laser');
+    if (sk.shield) lines.push('K atau klik kanan: perisai');
+    if (lines.join() === this.skillLines.join()) return;
+    this.skillLines = lines;
+    this.renderHelp();
+  }
+
+  private renderHelp(): void {
+    const lines = this.story
+      ? ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Spasi: lompat', 'E: bicara / ambil']
+      : ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera'];
+    lines.push(...this.skillLines, 'Esc: lepas kursor');
     this.list.replaceChildren(...lines.map((t) => el('li', '', t)));
   }
 

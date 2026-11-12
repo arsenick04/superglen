@@ -201,6 +201,7 @@ export class TouchControls {
   private readonly knob: HTMLDivElement;
   private readonly hint: HTMLDivElement;
   private stickShown = false;
+  private jets = false;
   private lastBx = NaN;
   private lastBy = NaN;
   private lastKx = NaN;
@@ -301,6 +302,7 @@ export class TouchControls {
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
       if (this.pulsing.has(d.action)) b.classList.add('pulse');
+      if (d.action === 'jump' && this.jets) b.classList.add('jets');
     }
     this.applyPlacement();
   }
@@ -310,6 +312,12 @@ export class TouchControls {
     if (on) this.pulsing.add(action);
     else this.pulsing.delete(action);
     this.buttons.get(action)?.classList.toggle('pulse', on);
+  }
+
+  /** Jet-booster state on the jump button (a glowing, flickering look while flying). Event driven: no per-frame DOM work. */
+  setJets(on: boolean): void {
+    this.jets = on;
+    this.buttons.get('jump')?.classList.toggle('jets', on);
   }
 
   setPressed(action: Action, pressed: boolean): void {

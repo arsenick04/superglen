@@ -6,6 +6,13 @@ import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { GroundRings } from '../fx/GroundRings';
+import { BillboardRings } from '../fx/BillboardRings';
+import { DizzyStars } from '../fx/DizzyStars';
+import { Sparkles } from '../world/bab1/Fx';
+import { Targets } from '../gameplay/Targets';
+import { Projectiles } from '../gameplay/Projectiles';
+import { Laser } from '../player/skills/Laser';
+import { Shield } from '../player/skills/Shield';
 import type { PlayerMode } from '../player/PlayerConfig';
 import { getLayout, type ControlProfile, type TouchButtonDef } from '../ui/TouchControls';
 import { Hud } from '../ui/Hud';
@@ -119,6 +126,41 @@ export interface DebugHandle {
   adaptReset: () => void;
   /** Adaptive resolution state: step index and number of ratio changes so far. */
   adaptive: () => { step: number; changes: number; ratio: number };
+  /** Skill state and test helpers (flight, laser, shield, projectiles). */
+  skills: {
+    flying: boolean;
+    jets: boolean;
+    /** Feet height above the ground below (m). */
+    flyHeight: number;
+    maxFlyHeight: number;
+    shieldUp: boolean;
+    laserShots: number;
+    laserHits: number;
+    laserMisses: number;
+    shieldBlocks: number;
+    ballHits: number;
+    ringsPassed: number;
+    flights: number;
+    /** Id of the target the next laser press would hit ('' = none). */
+    aimTarget: string;
+    /** Live projectiles and the total spawned. */
+    projectiles: number;
+    projectilesSpawned: number;
+    speedScale: number;
+    unlocked: { laser: boolean; shield: boolean; fly: boolean };
+    /** Hits per test target id. */
+    testHits: Record<string, number>;
+    /** Register a laser target at a point; returns its id. Removed on level unload. */
+    addTestTarget: (x: number, y: number, z: number, radius?: number, id?: string) => string;
+    removeTestTargets: () => void;
+    /** Throw a ball from a point at the player's chest. */
+    throwBall: (x: number, y: number, z: number, speed?: number) => void;
+    fireLaser: () => boolean;
+    /** Body yaw (0 = +Z). */
+    facing: number;
+    setMaxFlyHeight: (h: number) => void;
+    autoLaunch: (h: number) => void;
+  };
   /** Resource counts: geometries/textures from three, colliders/bodies from Rapier. */
   debugCounts: () => {
     geometries: number;
@@ -160,6 +202,15 @@ export class Game {
   private readonly hud: Hud | null = null;
   private readonly walker: WalkSource;
   private paused = false;
+  readonly sparkles: Sparkles;
+  readonly flashes: BillboardRings;
+  readonly stars: DizzyStars;
+  readonly targets = new Targets();
+  readonly projectiles: Projectiles;
+  readonly laser: Laser;
+  readonly shield: Shield;
+  private jetsShown = false;
+  private readonly testTargets: { remove(): void }[] = [];
 
   // ---- Controls gating and the touch button profile (see the level context API) ----
   private levelControls = true;
@@ -205,6 +256,7 @@ export class Game {
     prompt: { visible: false, icon: '', inRange: false },
     objective: { active: false, offscreen: false, arrow: false, x: 0, z: 0 },
     levelInfo: {},
+    skills: undefined as unknown as DebugHandle['skills'],
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
@@ -278,6 +330,23 @@ export class Game {
     this.cameraRig = new ThirdPersonCamera(this.physics, this.input, this.player.collider);
     this.renderer.attachCamera(this.cameraRig.camera);
 
+    // ---- Skills: shared effects and systems (they live for the whole session; levels register targets) ----
+    this.sparkles = new Sparkles(this.scene, 256);
+    this.flashes = new BillboardRings(this.scene, this.cameraRig.camera, 8);
+    this.stars = new DizzyStars(this.scene, this.cameraRig.camera, 3);
+    this.player.flight.sparkles = this.sparkles;
+    this.projectiles = new Projectiles(this.scene, this.physics.world, this.player, {
+      sparkles: this.sparkles,
+      flashes: this.flashes,
+      stars: this.stars,
+    });
+    this.shield = new Shield(this.scene, this.player, this.input, () => this.projectiles);
+    this.laser = new Laser(this.scene, this.player, this.input, this.physics, this.cameraRig, this.targets, {
+      sparkles: this.sparkles,
+      flashes: this.flashes,
+    });
+    this.debug.skills = this.makeSkillsDebug();
+
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
     if (new URLSearchParams(window.location.search).get('perf') === '1') {
@@ -324,11 +393,8 @@ export class Game {
         this.profile.transform = on;
         this.applyLayout();
       },
-      setSkillButtons: (sk) => {
-        this.profile.laser = sk.laser;
-        this.profile.shield = sk.shield;
-        this.applyLayout();
-      },
+      setSkills: (sk, persist) => this.setSkills(sk, persist),
+      setSkillButtons: (sk) => this.setSkills({ laser: sk.laser, shield: sk.shield }),
       setLegacyTestControls: (on) => {
         this.profile.legacyTest = on;
         this.applyLayout();
@@ -345,7 +411,9 @@ export class Game {
         interactions: this.interactions,
         dialog: this.dialog,
         objectives: this.objectives,
-        fx: { rings: this.rings },
+        fx: { rings: this.rings, sparkles: this.sparkles, flashes: this.flashes, stars: this.stars },
+        targets: this.targets,
+        projectiles: this.projectiles,
         save: this.save,
         ui: uiRoot,
         game: this.api,
@@ -362,8 +430,10 @@ export class Game {
         this.levelControls = true;
         this.profile.legacyTest = false;
         this.profile.transform = false;
-        this.profile.laser = false;
-        this.profile.shield = false;
+        this.player.flight.resetLevelSettings();
+        this.player.skills.shield.up = false;
+        this.player.speedScale = 1;
+        this.setSkills({ ...this.save.data.skills });
         for (const a of ['jump', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];
         this.player.setMode('glen');
@@ -374,11 +444,25 @@ export class Game {
         this.fading = loading;
         this.updateControls();
       },
+      onBeforeUnload: () => {
+        // Targets, balls, rings and subscribers belong to the level that is going away.
+        this.targets.clear();
+        this.projectiles.clear();
+        this.laser.clear();
+        this.flashes.clear();
+        this.stars.clear();
+        this.player.skills.clearListeners();
+        for (const t of this.testTargets) t.remove();
+        this.testTargets.length = 0;
+      },
       onAfterBuild: () => {
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
         this.applyLayout();
         this.syncDebug();
+        // Show every skill effect once so its shader program is compiled now, not in the middle of play.
+        this.warmSkillFx(true);
         this.renderer.prewarm(this.scene, this.cameraRig.camera);
+        this.warmSkillFx(false);
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
@@ -493,6 +577,7 @@ export class Game {
   /** Per rendered frame, after the camera moved: level visuals, prompt icon and objective marker. */
   private frameUpdate(dt: number): void {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
+    this.skillFrame(dt);
     this.levels.update(dt);
     this.interactions.update();
     this.objectives.update(dt);
@@ -503,10 +588,111 @@ export class Game {
     this.dialog.fixedUpdate(dt);
     this.interactions.fixedUpdate();
     this.objectives.fixedUpdate();
+    this.shield.fixedUpdate(dt); // before the player: it sets the speed scale
+    this.laser.fixedUpdate(dt);
     this.player.fixedUpdate(dt, this.cameraRig.steeringYaw);
     this.physics.step();
     this.player.postStep();
+    this.projectiles.fixedUpdate(dt);
     this.input.endFixedStep();
+  }
+
+  /** Per rendered frame: skill visuals (particles, rings, balls, beams, dome) and the touch "jets" button state. */
+  private skillFrame(dt: number): void {
+    this.sparkles.update(dt);
+    this.flashes.update(dt);
+    this.stars.update(dt);
+    this.projectiles.update(dt);
+    this.laser.update(dt);
+    this.shield.update(dt);
+    const jets = this.player.flight.jetsOn;
+    if (jets !== this.jetsShown) {
+      this.jetsShown = jets;
+      this.touch?.controls.setJets(jets);
+    }
+  }
+
+  private warmSkillFx(on: boolean): void {
+    this.player.flight.warm(on);
+    this.flashes.warm(on);
+    this.stars.warm(on);
+    this.projectiles.warm(on);
+    this.laser.warm(on);
+    this.shield.warm(on);
+  }
+
+  /** Unlock / lock skills (omitted keys unchanged): touch buttons, PC help card and the skill systems follow. */
+  private setSkills(sk: { laser?: boolean; shield?: boolean; fly?: boolean }, persist = false): void {
+    const u = this.player.skills.unlocked;
+    if (sk.laser !== undefined) u.laser = sk.laser;
+    if (sk.shield !== undefined) u.shield = sk.shield;
+    if (sk.fly !== undefined) u.fly = sk.fly;
+    if (persist) {
+      if (u.laser) this.save.unlockSkill('laser');
+      if (u.shield) this.save.unlockSkill('shield');
+      if (u.fly) this.save.unlockSkill('fly');
+    }
+    this.profile.laser = u.laser;
+    this.profile.shield = u.shield;
+    this.hud?.setSkillHelp(u);
+    this.applyLayout();
+  }
+
+  private makeSkillsDebug(): DebugHandle['skills'] {
+    const hits: Record<string, number> = {};
+    const v = new THREE.Vector3();
+    const aim = new THREE.Vector3();
+    let counter = 0;
+    return {
+      flying: false,
+      jets: false,
+      flyHeight: 0,
+      maxFlyHeight: 0,
+      shieldUp: false,
+      laserShots: 0,
+      laserHits: 0,
+      laserMisses: 0,
+      shieldBlocks: 0,
+      ballHits: 0,
+      ringsPassed: 0,
+      flights: 0,
+      aimTarget: '',
+      projectiles: 0,
+      projectilesSpawned: 0,
+      speedScale: 1,
+      unlocked: { laser: false, shield: false, fly: false },
+      testHits: hits,
+      addTestTarget: (x, y, z, radius = 0.6, id = `test${++counter}`) => {
+        const pos = new THREE.Vector3(x, y, z);
+        hits[id] = 0;
+        this.testTargets.push(
+          this.targets.add({
+            id,
+            position: () => pos,
+            radius,
+            onHit: () => {
+              hits[id]++;
+            },
+          }),
+        );
+        return id;
+      },
+      removeTestTargets: () => {
+        for (const t of this.testTargets) t.remove();
+        this.testTargets.length = 0;
+      },
+      throwBall: (x, y, z, speed = 7) => {
+        v.set(x, y, z);
+        aim.copy(this.player.position);
+        this.projectiles.spawn({ from: v, to: aim, speed, gravity: 0, color: 0xff5a4f, radius: 0.26 });
+      },
+      fireLaser: () => this.laser.fire(),
+      facing: 0,
+      setMaxFlyHeight: (h) => {
+        this.player.flight.maxFlyHeight = h;
+      },
+      autoLaunch: (h) => this.player.flight.autoLaunch(h),
+    };
   }
 
   /** Glen <-> Superglen: player look/tuning, touch buttons and a quick golden flash ring. */
@@ -612,6 +798,28 @@ export class Game {
     this.debug.doubleJumps = pl.doubleJumps;
     this.debug.stomps = pl.stomps;
     this.debug.landings = pl.landings;
+    const sk = this.debug.skills;
+    const st = pl.skills.stats;
+    sk.flying = pl.flight.isFlying;
+    sk.jets = pl.flight.jetsOn;
+    sk.flyHeight = pl.airHeight;
+    sk.maxFlyHeight = pl.flight.maxFlyHeight;
+    sk.shieldUp = pl.skills.shield.up;
+    sk.laserShots = st.laserShots;
+    sk.laserHits = st.laserHits;
+    sk.laserMisses = st.laserMisses;
+    sk.shieldBlocks = st.shieldBlocks;
+    sk.ballHits = st.ballHits;
+    sk.ringsPassed = st.ringsPassed;
+    sk.flights = st.flights;
+    sk.aimTarget = this.laser.aimTarget ? this.laser.aimTarget.id : '';
+    sk.projectiles = this.projectiles.liveCount;
+    sk.projectilesSpawned = this.projectiles.spawned;
+    sk.speedScale = pl.speedScale;
+    sk.facing = pl.facing;
+    sk.unlocked.laser = pl.skills.unlocked.laser;
+    sk.unlocked.shield = pl.skills.unlocked.shield;
+    sk.unlocked.fly = pl.skills.unlocked.fly;
 
     const d = this.debug;
     const line = this.dialog.currentLine;

@@ -109,7 +109,7 @@ export class Laser {
     cyl.rotateX(Math.PI / 2);
     cyl.translate(0, 0, 0.5); // axis along +Z, starts at the origin
     for (let i = 0; i < LaserConfig.beamPool; i++) {
-      const glowMat = new THREE.MeshBasicMaterial({ color: 0xff3d2e, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xff3d2e, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
       const coreMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
       const glow = new THREE.Mesh(cyl, glowMat);
       const core = new THREE.Mesh(cyl, coreMat);
@@ -279,9 +279,9 @@ export class Laser {
     const len = Math.max(0.05, this.dir.length());
     b.group.lookAt(x1, y1, z1);
     b.group.scale.set(1, 1, len);
-    b.glow.scale.set(0.1, 0.1, 1);
-    b.core.scale.set(0.038, 0.038, 1);
-    b.glowMat.opacity = 0.6;
+    b.glow.scale.set(0.2, 0.2, 1);
+    b.core.scale.set(0.07, 0.07, 1);
+    b.glowMat.opacity = 0.85;
     b.coreMat.opacity = 1;
   }
 
@@ -297,9 +297,9 @@ export class Laser {
         continue;
       }
       const w = 1 - t * 0.6;
-      b.glow.scale.set(0.1 * w, 0.1 * w, 1);
-      b.core.scale.set(0.038 * w, 0.038 * w, 1);
-      b.glowMat.opacity = 0.6 * (1 - t);
+      b.glow.scale.set(0.2 * w, 0.2 * w, 1);
+      b.core.scale.set(0.07 * w, 0.07 * w, 1);
+      b.glowMat.opacity = 0.85 * (1 - t);
       b.coreMat.opacity = 1 - t * t;
     }
 

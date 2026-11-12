@@ -246,6 +246,9 @@ async function jumpScenario(page, check) {
   await sleep(600);
   const bot = makeBot(page);
   await bot.pause(true);
+  // The test level unlocks flying; this scenario holds Space for 2.5 s to prove "hold never re-jumps", which would
+  // now start the jets. Flight has its own scenario group (skills-*).
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   let s = await bot.step(30);
 
   /** Press jump, then run until landing; optional second press at frame `second`. Returns peak above takeoff. */
@@ -564,7 +567,8 @@ async function touchScenario(page, check) {
     await tapAction('shield', 10);
     return bot.last.g && bot.last.mode === 'superglen';
   })());
-  // Peak with the touch jump button (hold: no repeat, one jump).
+  // Peak with the touch jump button (hold: no repeat, one jump). Flying has its own scenario (skills-touch).
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   {
     const j0 = bot.last.jumps;
     await fingers.down(11, jp.x, jp.y);
@@ -2034,6 +2038,705 @@ async function perfScenario(page, check) {
   await shot(page, 'perf-panel');
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Skills (flight, laser, shield): deterministic stepping (1/60 s per frame) with real key events / CDP fingers.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** One-shot reader of everything a skills check needs. */
+const skillsSnapshot = () => {
+  const g = window.__superglen;
+  const k = g.skills;
+  return {
+    flying: k.flying, jets: k.jets, h: k.flyHeight, maxH: k.maxFlyHeight, shieldUp: k.shieldUp,
+    shots: k.laserShots, hits: k.laserHits, misses: k.laserMisses, blocks: k.shieldBlocks, ballHits: k.ballHits,
+    rings: k.ringsPassed, flights: k.flights, aim: k.aimTarget, proj: k.projectiles, spawned: k.projectilesSpawned,
+    speedScale: k.speedScale, facing: k.facing, testHits: { ...k.testHits }, unlocked: { ...k.unlocked },
+    x: g.player.x, z: g.player.z, y: g.feetY, vy: g.verticalVelocity, grounded: !g.airborne, stomps: g.stomps,
+    jumps: g.jumps, dj: g.doubleJumps, mode: g.mode, info: { ...g.levelInfo }, level: g.level,
+  };
+};
+
+function makeSkillsDriver(page) {
+  const d = { last: null };
+  d.snap = async () => (d.last = await page.evaluate(skillsSnapshot));
+  d.step = async (n = 1, render = false) => {
+    await page.evaluate(([n, r]) => window.__superglen.advance(n, r), [n, render]);
+    return d.snap();
+  };
+  d.down = (k) => page.keyboard.down(k);
+  d.up = (k) => page.keyboard.up(k);
+  d.tap = async (k, after = 1) => {
+    await page.keyboard.down(k);
+    await d.step(1);
+    await page.keyboard.up(k);
+    return d.step(after);
+  };
+  d.place = async (x, z) => {
+    await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [x, z]);
+    return d.step(3);
+  };
+  d.camera0 = () => page.evaluate(() => window.__superglen.setCameraYaw(0));
+  /** Walk with a key for a moment so the body turns that way (camera yaw 0: w = -Z, s = +Z, a = -X, d = +X). */
+  d.face = async (key) => {
+    await d.camera0();
+    await page.keyboard.down(key);
+    await d.step(16);
+    await page.keyboard.up(key);
+    return d.step(18);
+  };
+  d.mode = (m) => page.evaluate((m) => window.__superglen.game.setPlayerMode(m), m);
+  d.skills = (sk) => page.evaluate((sk) => window.__superglen.game.setSkills(sk), sk);
+  d.sk = (fn, arg) => page.evaluate(fn, arg);
+  d.clearTargets = () => page.evaluate(() => window.__superglen.skills.removeTestTargets());
+  d.addTarget = (x, y, z, id) => page.evaluate(([x, y, z, id]) => window.__superglen.skills.addTestTarget(x, y, z, 0.6, id), [x, y, z, id]);
+  d.ball = (x, y, z, speed) => page.evaluate(([x, y, z, sp]) => window.__superglen.skills.throwBall(x, y, z, sp), [x, y, z, speed]);
+  d.maxFly = (h) => page.evaluate((h) => window.__superglen.skills.setMaxFlyHeight(h), h);
+  /** Land from anywhere: release everything and step until grounded. */
+  d.land = async () => {
+    for (const k of ['Space', 'w', 'a', 's', 'd', 'j', 'k']) await page.keyboard.up(k);
+    for (let i = 0; i < 700; i++) {
+      await d.step(5);
+      if (d.last.grounded) break;
+    }
+    return d.step(20);
+  };
+  return d;
+}
+
+async function skillsDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  let s = await d.step(30);
+  const report = (label, v) => console.log(`   [skills] ${label}: ${v}`);
+
+  check('test level: all three skills unlocked and listed on the PC card', await page.evaluate(() => {
+    const u = window.__superglen.skills.unlocked;
+    const t = [...document.querySelectorAll('.hud-controls li')].map((e) => e.textContent);
+    return u.laser && u.shield && u.fly && t.includes('Tahan Spasi: terbang') && t.includes('J atau klik kiri: laser') && t.includes('K atau klik kanan: perisai');
+  }));
+  check('no skill input works in Glen mode', await (async () => {
+    const f0 = s.flights;
+    await d.down('Space');
+    await d.step(100);
+    await d.up('Space');
+    const a = await d.step(1);
+    await d.tap('j');
+    await d.down('k');
+    await d.step(5);
+    await d.up('k');
+    const b = await d.step(30);
+    return !a.flying && a.flights === f0 && b.shots === s.shots && !b.shieldUp;
+  })());
+  await d.land();
+
+  await d.tap('e', 20);
+  s = await d.snap();
+  check('E switches to Superglen', s.mode === 'superglen');
+
+  // ---- Flight: taps are unchanged -----------------------------------------------------------------------
+  {
+    const y0 = (await d.step(1)).y;
+    const f0 = d.last.flights;
+    await d.tap('Space');
+    let peak = 0;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 4) break;
+    }
+    check('tap jump: normal Superglen jump (peak 2.0-2.9 m), no flight', peak > 2.0 && peak < 2.9 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
+    await d.step(10);
+    const st = d.last.stomps;
+    await d.tap('Space');
+    peak = 0;
+    for (let i = 0; i < 200; i++) {
+      if (i === 26) await d.tap('Space');
+      else await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 30) break;
+    }
+    await d.step(10);
+    check('tap-tap: double jump unchanged (peak 3.6-4.8 m), stomp on landing, no flight', peak > 3.6 && peak < 4.8 && d.last.dj >= 1 && d.last.stomps === st + 1 && d.last.flights === f0, `${peak.toFixed(2)} m`);
+  }
+
+  // ---- Flight: hold from the ground ----------------------------------------------------------------------
+  let ground = d.last;
+  await d.down('Space');
+  let startFrame = -1;
+  let maxH = 0;
+  let lastH = 0;
+  for (let i = 1; i <= 700; i++) {
+    await d.step(1);
+    if (startFrame < 0 && d.last.flying) startFrame = i;
+    maxH = Math.max(maxH, d.last.h);
+    if (i > 120 && Math.abs(d.last.h - lastH) < 1e-4 && d.last.h > 10) break;
+    lastH = d.last.h;
+  }
+  report('jets started after', `${startFrame} frames (${(startFrame / 60).toFixed(2)} s)`);
+  check('hold Space from the ground: jets start within 0.45-0.9 s', startFrame >= 27 && startFrame <= 54, `${(startFrame / 60).toFixed(2)} s`);
+  check('flying: counted as one flight, jets on', d.last.flying && d.last.jets && d.last.flights === ground.flights + 1);
+  await d.step(1, true);
+  await shot(page, 'skills-fly');
+  check('rises to the ceiling (11.5-12.2 m above the ground) and never beyond', maxH >= 11.5 && maxH <= 12.2, `${maxH.toFixed(3)} m`);
+  await d.step(180);
+  {
+    let vmax = 0;
+    let hmin = 1e9;
+    let hmax = -1e9;
+    for (let i = 0; i < 60; i++) {
+      await d.step(1);
+      vmax = Math.max(vmax, Math.abs(d.last.vy));
+      hmin = Math.min(hmin, d.last.y);
+      hmax = Math.max(hmax, d.last.y);
+    }
+    check('hover at the ceiling is stable (|vy| < 0.05, height steady)', vmax < 0.05 && hmax - hmin < 0.02, `|vy| ${vmax.toFixed(4)}, drift ${(hmax - hmin).toFixed(4)} m`);
+  }
+
+  // ---- horizontal flight: speed and a straight path ------------------------------------------------------
+  {
+    await d.camera0();
+    await d.down('w');
+    await d.step(30);
+    const pts = [];
+    for (let i = 0; i < 90; i++) {
+      await d.step(1);
+      pts.push([d.last.x, d.last.z]);
+    }
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    const speed = Math.hypot(b[0] - pts[pts.length - 31][0], b[1] - pts[pts.length - 31][1]) / 0.5;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let dev = 0;
+    for (const p of pts) dev = Math.max(dev, Math.abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) / len);
+    report('flying speed', `${speed.toFixed(2)} m/s, path deviation ${dev.toFixed(3)} m over ${len.toFixed(1)} m`);
+    check('stick held while flying: horizontal speed 6-8 m/s', speed > 6 && speed < 8, `${speed.toFixed(2)}`);
+    check('...along a straight path', dev < 0.3 && len > 8, `dev ${dev.toFixed(3)} m, len ${len.toFixed(1)}`);
+    await d.up('w');
+    await d.step(60);
+    const p0 = [d.last.x, d.last.z];
+    await d.step(30);
+    check('no input: hovers in place', Math.hypot(d.last.x - p0[0], d.last.z - p0[1]) < 0.02, `${Math.hypot(d.last.x - p0[0], d.last.z - p0[1]).toFixed(3)} m`);
+  }
+
+  // ---- release: slow descent and a soft landing -----------------------------------------------------------
+  {
+    const st = d.last.stomps;
+    await d.up('Space');
+    await d.step(50);
+    const vy1 = d.last.vy;
+    const y1 = d.last.y;
+    await d.step(30);
+    check('release: slow glide at about -2.2 m/s (1.5-3 m/s down), still airborne', vy1 < -1.5 && vy1 > -3 && d.last.y < y1 && !d.last.grounded, `vy ${vy1.toFixed(2)}`);
+    // steer while gliding
+    await d.down('d');
+    await d.step(30);
+    const x0 = d.last.x;
+    await d.step(6);
+    const vx = (d.last.x - x0) / 0.1;
+    check('full horizontal control while gliding (reaches 6-8 m/s sideways)', vx > 6 && vx < 8, `${vx.toFixed(2)} m/s`);
+    await d.up('d');
+    let worst = 0;
+    for (let i = 0; i < 700 && !d.last.grounded; i++) {
+      await d.step(1);
+      worst = Math.min(worst, d.last.vy);
+    }
+    await d.step(20);
+    check('lands from flight without a stomp, at <= 3 m/s', d.last.grounded && d.last.stomps === st && worst > -3.2 && !d.last.flying, `fastest ${worst.toFixed(2)} m/s, stomps ${st}->${d.last.stomps}`);
+  }
+
+  // ---- re-ignite during the descent -----------------------------------------------------------------------
+  {
+    await d.maxFly(6);
+    await d.down('Space');
+    await d.step(120);
+    check('ceiling 6 m (per level): rises to 5.6-6.2 m', d.last.flying && d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)} m`);
+    await d.up('Space');
+    await d.step(60);
+    const hDown = d.last.h;
+    check('released: descending', d.last.vy < -1.5 && hDown < 5.5, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    await d.down('Space');
+    await d.step(30);
+    check('hold Space again during the descent: rises again', d.last.vy > 0.3 && d.last.h > hDown, `vy ${d.last.vy.toFixed(2)}`);
+    await d.step(120);
+    check('...up to the ceiling again, no limit on re-ignitions', d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)}`);
+    await d.land();
+    await d.maxFly(12);
+  }
+
+  // ---- ring pass --------------------------------------------------------------------------------------------
+  {
+    await d.maxFly(5);
+    await d.place(18, 14);
+    const r0 = d.last.rings;
+    await d.camera0();
+    await d.down('Space');
+    await d.step(150);
+    await d.down('w');
+    await d.step(70);
+    await d.up('w');
+    await d.step(5, true);
+    await shot(page, 'skills-ring');
+    check('flying through a hover ring registers it (ringsPassed + 1)', d.last.rings === r0 + 1, `${r0} -> ${d.last.rings}`);
+    await d.land();
+    await d.maxFly(12);
+  }
+
+  // ---- a real ceiling indoors (pergola slab at 4 m) ----------------------------------------------------------
+  {
+    await d.place(-25, 18);
+    await d.down('Space');
+    let top = -1e9;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.y);
+    }
+    let ymin = 1e9;
+    let ymax = -1e9;
+    for (let i = 0; i < 90; i++) {
+      await d.step(1);
+      ymin = Math.min(ymin, d.last.y);
+      ymax = Math.max(ymax, d.last.y);
+    }
+    report('under the pergola', `top feet ${top.toFixed(3)} (head ${(top + 1.1).toFixed(3)} vs slab 4.0), jitter ${(ymax - ymin).toFixed(4)}`);
+    check('a real ceiling stops the rise (head never inside the slab) without jitter', top + 1.1 <= 4.0 && ymax - ymin < 0.01 && d.last.flying, `head ${(top + 1.1).toFixed(3)} jitter ${(ymax - ymin).toFixed(4)}`);
+    await d.land();
+  }
+
+  // ---- scripted launch + level bounds ---------------------------------------------------------------------------
+  {
+    await d.place(0, -3);
+    await d.sk(() => window.__superglen.skills.autoLaunch(30));
+    let top = 0;
+    for (let i = 0; i < 400; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.h);
+    }
+    check('autoLaunch(30) with a 12 m ceiling: bumps the ceiling, hovers briefly, then glides down', top >= 11.5 && top <= 12.2 && !d.last.jets, `top ${top.toFixed(2)}, jets ${d.last.jets}`);
+    await d.land();
+    await d.place(26, 0);
+    await d.camera0();
+    await d.down('Space');
+    await d.step(100);
+    await page.keyboard.down('d');
+    await d.step(240);
+    await page.keyboard.up('d');
+    check('level bounds: flying toward the edge eases back, never beyond x = 28.5', d.last.x <= 28.6 && d.last.x > 25, `x ${d.last.x.toFixed(2)}`);
+    await d.land();
+  }
+
+  // ---- locked / Glen -------------------------------------------------------------------------------------------------
+  {
+    await d.skills({ fly: false });
+    const f0 = d.last.flights;
+    await d.down('Space');
+    await d.step(100);
+    const a = d.last.flying;
+    await d.up('Space');
+    await d.land();
+    check('fly locked: holding Space does not fly', !a && d.last.flights === f0);
+    await d.skills({ fly: true });
+    await d.mode('glen');
+    await d.down('Space');
+    await d.step(100);
+    const b = d.last.flying;
+    await d.up('Space');
+    await d.land();
+    check('Glen mode: holding Space does not fly', !b && d.last.flights === f0);
+    await d.mode('superglen');
+    await d.step(5);
+  }
+
+  // ---- Laser ----------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  {
+    const t1 = await d.addTarget(0, 1.2, -8, 'front');
+    await d.step(10);
+    check('aim marker: the target in front is the pending aim', d.last.aim === t1, d.last.aim);
+    await d.step(1, true);
+    await shot(page, 'skills-aim');
+    const s0 = d.last;
+    await d.tap('j', 4);
+    check('laser press hits the target in front (onHit, laserHits + 1)', d.last.hits === s0.hits + 1 && d.last.testHits.front === 1 && d.last.shots === s0.shots + 1, JSON.stringify(d.last.testHits));
+    await d.step(1, true);
+    await shot(page, 'skills-laser');
+    await d.clearTargets();
+  }
+  {
+    // Wall: the 3 m wall at x = -22 hides a target behind it.
+    await d.place(-16, 0);
+    await d.face('a');
+    await d.addTarget(-25, 1.2, 0, 'hidden');
+    await d.step(10);
+    const aim = d.last.aim;
+    const s0 = d.last;
+    await d.tap('j', 3);
+    check('target behind a wall: not aimed, not hit, counts as a miss', aim === '' && d.last.testHits.hidden === 0 && d.last.misses === s0.misses + 1, `aim "${aim}", hits ${d.last.testHits.hidden}`);
+    await d.clearTargets();
+  }
+  {
+    await d.place(0, 0);
+    await d.face('w');
+    const s0 = d.last;
+    await d.step(15);
+    await d.tap('j', 3);
+    check('nothing to aim at: straight beam and a miss event', d.last.misses === s0.misses + 1 && d.last.hits === s0.hits && d.last.aim === '', `misses +${d.last.misses - s0.misses}`);
+  }
+  {
+    await d.place(0, 0);
+    await d.face('w');
+    await d.addTarget(0.4, 1.2, -5, 'near');
+    await d.addTarget(-0.4, 1.2, -12, 'far');
+    await d.step(10);
+    await d.tap('j', 3);
+    check('auto-aim picks the nearest of two', d.last.testHits.near === 1 && d.last.testHits.far === 0, JSON.stringify(d.last.testHits));
+    await d.clearTargets();
+  }
+  {
+    // Facing away from where the camera looks: the camera forward counts too, and the body turns to the target.
+    await d.place(0, 2);
+    await d.face('s');
+    const away = d.last.facing;
+    await d.addTarget(0, 1.2, -8, 'cam');
+    await d.step(10);
+    await d.tap('j', 20);
+    let diff = Math.abs(((d.last.facing - Math.PI) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);
+    check('facing away: the camera forward finds the target; the body turns to face it', away < 0.4 && d.last.testHits.cam === 1 && diff < 0.15, `facing ${away.toFixed(2)} -> ${d.last.facing.toFixed(2)}, hits ${d.last.testHits.cam}`);
+    await d.clearTargets();
+  }
+  {
+    // Hold: repeats every 0.45 s.
+    await d.place(0, 0);
+    await d.face('w');
+    await d.addTarget(0, 1.2, -8, 'rep');
+    await d.step(5);
+    const s0 = d.last.shots;
+    await d.down('j');
+    await d.step(120);
+    await d.up('j');
+    await d.step(5);
+    const n = d.last.shots - s0;
+    report('laser shots while holding for 2 s', n);
+    check('holding the laser button repeats every ~0.45 s (4-5 shots in 2 s)', n >= 4 && n <= 5, `${n}`);
+    await d.step(40);
+    await d.clearTargets();
+  }
+  {
+    await d.addTarget(0, 1.2, -8, 'blocked');
+    await d.step(5);
+    let s0 = d.last.shots;
+    await d.skills({ laser: false });
+    await d.tap('j', 40);
+    const locked = d.last.shots === s0;
+    await d.skills({ laser: true });
+    await d.mode('glen');
+    await d.tap('j', 40);
+    const glen = d.last.shots === s0;
+    await d.mode('superglen');
+    await d.step(5);
+    await d.down('k');
+    await d.step(5);
+    const up = d.last.shieldUp;
+    await d.tap('j', 3);
+    const shielded = d.last.shots === s0;
+    await d.up('k');
+    await d.step(60);
+    await d.tap('j', 3);
+    check('no laser when locked, in Glen mode, or while the shield is up (and it works again after)', locked && glen && up && shielded && d.last.shots === s0 + 1, `locked ${locked} glen ${glen} up ${up} shielded ${shielded} then +${d.last.shots - s0}`);
+    await d.clearTargets();
+  }
+  {
+    // Practice target prop in the skills corner: hit, reaction, reset.
+    await d.place(17, 4);
+    await d.face('d');
+    const h0 = d.last.info.practiceHits;
+    await d.step(10);
+    await d.tap('j', 30);
+    await d.step(1, true);
+    check('practice target: a laser hit spins it, lights it green and tips it down', d.last.info.practiceHits === h0 + 1 && d.last.info.practiceDown >= 1, JSON.stringify({ hits: d.last.info.practiceHits, down: d.last.info.practiceDown }));
+    await shot(page, 'skills-target');
+    await d.step(420);
+    check('...and it stands up again by itself so the game can be repeated', d.last.info.practiceDown === 0, `down ${d.last.info.practiceDown}`);
+    await d.tap('j', 5);
+    check('...ready for the next shot', d.last.info.practiceHits === h0 + 2, `hits ${d.last.info.practiceHits}`);
+  }
+
+  // ---- Shield ---------------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  {
+    const s0 = d.last;
+    await d.down('k');
+    await d.step(10);
+    await d.ball(0, 1.0, -7.5, 7);
+    let blockedAt = -1;
+    for (let i = 0; i < 100; i++) {
+      await d.step(1);
+      if (blockedAt < 0 && d.last.blocks > s0.blocks) {
+        blockedAt = i;
+        await d.step(2, true);
+        await shot(page, 'skills-shield');
+      }
+    }
+    await d.up('k');
+    await d.step(70);
+    check('thrown ball + shield up: blocked, reflected back, never hits the player', d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits && d.last.proj === 0, `blocks +${d.last.blocks - s0.blocks}, hits +${d.last.ballHits - s0.ballHits}, live ${d.last.proj}`);
+  }
+  {
+    const s0 = await d.step(30);
+    await d.ball(0, 1.0, -7.5, 7);
+    await d.step(110);
+    const moved = Math.hypot(d.last.x - s0.x, d.last.z - s0.z);
+    check('same ball without the shield: harmless hit (stars, tiny hop), player not displaced > 0.1 m', d.last.ballHits === s0.ballHits + 1 && d.last.blocks === s0.blocks && moved < 0.1, `hits +${d.last.ballHits - s0.ballHits}, moved ${moved.toFixed(3)} m`);
+  }
+  {
+    // A quick tap (1 frame) must still block a ball that arrives within 0.5 s.
+    const s0 = await d.step(30);
+    await d.ball(0, 1.0, -5, 8);
+    await d.down('k');
+    await d.step(1);
+    await d.up('k');
+    await d.step(2);
+    const upAfterTap = d.last.shieldUp;
+    await d.step(60);
+    check('quick tap keeps the dome up (>= 0.6 s) and blocks a ball arriving within 0.5 s', upAfterTap && d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits, `up ${upAfterTap}, blocks +${d.last.blocks - s0.blocks}`);
+    check('...and drops again after the minimum time', !d.last.shieldUp);
+  }
+  {
+    // Speed while raised.
+    const run = async (shield) => {
+      await d.place(0, 10);
+      await d.camera0();
+      if (shield) await d.down('k');
+      await d.down('w');
+      await d.step(40);
+      const a = [d.last.x, d.last.z];
+      await d.step(30);
+      const v = Math.hypot(d.last.x - a[0], d.last.z - a[1]) / 0.5;
+      await d.up('w');
+      if (shield) await d.up('k');
+      await d.step(70);
+      return v;
+    };
+    const vFree = await run(false);
+    const vShield = await run(true);
+    report('walking speed free / with shield', `${vFree.toFixed(2)} / ${vShield.toFixed(2)} m/s`);
+    check('walking speed with the shield up is about 60%', vShield / vFree > 0.5 && vShield / vFree < 0.7, `${(vShield / vFree).toFixed(2)}`);
+  }
+  {
+    // Assist: a ball from behind while standing still with the dome up: the body turns and the dome catches it.
+    await d.place(0, 0);
+    await d.face('w');
+    const s0 = d.last;
+    await d.down('k');
+    await d.step(5);
+    await d.ball(0, 1.0, 8, 7);
+    await d.step(110);
+    await d.up('k');
+    await d.step(70);
+    check('shield assist: a ball from behind is caught too (the body turns toward it)', d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits, `blocks +${d.last.blocks - s0.blocks}, hits +${d.last.ballHits - s0.ballHits}`);
+  }
+  {
+    // The ball machine in the skills corner: telegraph, throw, bonk; then shield: reflect and dizzy machine.
+    await d.place(26, 11.5);
+    await d.face('s');
+    await d.face('w');
+    const s0 = d.last;
+    await d.step(300);
+    check('ball machine throws while the player is within 12 m and bonks harmlessly', d.last.info.throwerThrown >= 1 && d.last.ballHits > s0.ballHits, `thrown ${d.last.info.throwerThrown}, hits +${d.last.ballHits - s0.ballHits}`);
+    await d.down('k');
+    const b0 = d.last.blocks;
+    const r0 = d.last.info.throwerReturned;
+    await d.step(480);
+    await d.up('k');
+    check('...with the shield raised the ball goes back to the machine, which gets dizzy', d.last.blocks > b0 && d.last.info.throwerReturned > r0, `blocks +${d.last.blocks - b0}, returned +${d.last.info.throwerReturned - r0}`);
+    await d.place(0, 0);
+    const t0 = d.last.info.throwerThrown;
+    await d.step(400);
+    check('...and it stays quiet when the player is far away', d.last.info.throwerThrown === t0);
+  }
+}
+
+async function skillsPerfScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.step(30);
+  await d.tap('e', 10);
+  await d.addTarget(0, 1.2, -9, 'perf');
+  await d.camera0();
+  await d.step(5, true);
+  const programs = () => page.evaluate(() => window.__superglen.debugCounts().programs);
+  const p0 = await programs();
+  // 10 s of flying (jets, trail, bob), laser held, ball throws and a shield raise, rendering every 30th frame.
+  await d.down('Space');
+  await d.down('j');
+  await d.down('w');
+  for (let i = 0; i < 20; i++) {
+    if (i === 6) await d.ball(0, 1.0, -9, 7);
+    if (i === 8) await d.down('k');
+    if (i === 12) await d.up('k');
+    await d.step(30, true);
+  }
+  await d.up('w');
+  await d.up('j');
+  const p1 = await programs();
+  check('flying + firing + shield for 10 s: no new shader programs', p1 === p0 && p0 > 0, `${p0} -> ${p1}`);
+  await d.land();
+
+  const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+  if (!heapOk) {
+    console.log('   [skills] heap: performance.memory/gc unavailable: skipped');
+    return;
+  }
+  const bpf = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.advance(5, true);
+    window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = heap();
+    let acc = 0;
+    const n = 600;
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      const h = heap();
+      if (h >= prev) acc += h - prev;
+      prev = h;
+    }
+    return acc / n;
+  });
+  // (the keys must be held for this window: set below)
+  void bpf;
+  await d.down('Space');
+  await d.down('j');
+  await d.down('w');
+  await d.step(70);
+  const bpf2 = await page.evaluate(() => {
+    const g = window.__superglen;
+    window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = heap();
+    let acc = 0;
+    const n = 600;
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      const h = heap();
+      if (h >= prev) acc += h - prev;
+      prev = h;
+    }
+    return acc / n;
+  });
+  await d.up('w');
+  await d.up('j');
+  console.log(`   [skills] heap flying+laser: ${Math.round(bpf2)} bytes per frame (idle ${Math.round(bpf)})`);
+  check('allocation budget while flying and firing: < 16000 bytes per frame (same as walking)', bpf2 < 16000, `${Math.round(bpf2)} B/frame`);
+  await d.land();
+}
+
+async function skillsTouchScenario(page, check) {
+  // (startTouchGame taps at y = 300, outside an 844x281 viewport: start the same way a little higher.)
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  const center = (action) => page.evaluate((a) => {
+    const r = document.querySelector(`.tc-button[data-action=${a}]`).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, action);
+  const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join());
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  await d.mode('superglen');
+  await d.step(20);
+
+  // ---- story layout: buttons for unlocked skills only (demo level), at both heights ---------------------------
+  await page.evaluate(() => window.__superglen.loadLevel('demo'));
+  await page.waitForFunction(() => window.__superglen.level === 'demo' && !window.__superglen.loading, null, { timeout: 8000 });
+  await d.mode('superglen');
+  for (const h of [281, 390]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    for (const [laser, shield, fly] of [[false, false, true], [true, false, true], [false, true, false], [true, true, true]]) {
+      await page.evaluate(([laser, shield, fly]) => window.__superglen.game.setSkills({ laser, shield, fly }), [laser, shield, fly]);
+      await sleep(80);
+      const want = ['jump', 'interact'].concat(laser ? ['laser'] : [], shield ? ['shield'] : []);
+      const l = await page.evaluate(layoutInfo);
+      const got = l.actions;
+      check(`844x${h} laser=${+laser} shield=${+shield} fly=${+fly}: buttons only for unlocked skills (flying adds none)`, got.length === want.length && want.every((a) => got.includes(a)), got.join());
+      check(`844x${h} laser=${+laser} shield=${+shield}: inside, no overlap, >= 80 px, clear of the joystick zone`, l.inside && !l.overlap && l.minBtn >= 79.5 && l.minLeft >= l.vw * 0.45 - 1, JSON.stringify({ i: l.inside, o: l.overlap, m: l.minBtn, left: Math.round(l.minLeft) }));
+    }
+  }
+  await page.setViewportSize({ width: 844, height: 281 });
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 8000 });
+  await d.mode('superglen');
+  await d.step(30);
+  const lt = await page.evaluate(layoutInfo);
+  check('844x281 test level: jump, laser, shield, star inside, no overlap, >= 80', lt.actions.join() === 'jump,laser,shield,transform' && lt.inside && !lt.overlap && lt.minBtn >= 79.5, JSON.stringify({ a: lt.actions.join(), o: lt.overlap, m: lt.minBtn }));
+
+  // ---- joystick (finger 1) + hold jump (finger 2) + tap laser (3) + hold shield (4) ----------------------------------
+  const jp = await center('jump');
+  const lp = await center('laser');
+  const sp = await center('shield');
+  await d.camera0();
+  await d.place(0, 0);
+  await fingers.down(1, 120, 200);
+  await fingers.move(1, 120, 130, 6); // full forward
+  await fingers.down(2, jp.x, jp.y);
+  let startFrame = -1;
+  for (let i = 1; i <= 120; i++) {
+    await d.step(1);
+    if (startFrame < 0 && d.last.flying) startFrame = i;
+  }
+  const jets = await page.evaluate(() => document.querySelector('.tc-button[data-action=jump]').classList.contains('jets'));
+  check('touch: holding the jump button flies while the joystick is held by another finger', startFrame > 0 && startFrame <= 54 && d.last.jets, `started after ${startFrame} frames`);
+  check('touch: the jump button shows the jets state while flying', jets);
+  const a = [d.last.x, d.last.z];
+  await d.step(30);
+  const speed = Math.hypot(d.last.x - a[0], d.last.z - a[1]) / 0.5;
+  check('touch: stick forward while flying: 6-8 m/s', speed > 6 && speed < 8, `${speed.toFixed(2)}`);
+  const s0 = d.last.shots;
+  await fingers.down(3, lp.x, lp.y);
+  await d.step(3);
+  await fingers.up(3);
+  await d.step(3);
+  check('touch: laser tap works while flying with the stick and jump held', d.last.shots === s0 + 1 && d.last.flying, `shots +${d.last.shots - s0}`);
+  await fingers.down(4, sp.x, sp.y);
+  await d.step(10);
+  const upWhile = d.last.shieldUp;
+  await d.step(1, true);
+  await shot(page, 'skills-touch-281');
+  await fingers.up(4);
+  await d.step(50);
+  check('touch: shield is hold-to-raise (up while held, down after release)', upWhile && !d.last.shieldUp);
+  await fingers.up(2);
+  await d.step(3);
+  const jets2 = await page.evaluate(() => document.querySelector('.tc-button[data-action=jump]').classList.contains('jets'));
+  check('touch: releasing the jump button cuts the jets (button back to normal)', !jets2 && !d.last.jets);
+  await fingers.up(1);
+  await d.land();
+
+  // ---- laser held on touch auto-repeats --------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.step(5);
+  const n0 = d.last.shots;
+  await fingers.down(5, lp.x, lp.y);
+  await d.step(100);
+  await fingers.up(5);
+  await d.step(3);
+  check('touch: holding the laser button repeats (3-4 shots in 1.7 s)', d.last.shots - n0 >= 3 && d.last.shots - n0 <= 4, `${d.last.shots - n0}`);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !name.startsWith(process.env.ONLY)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -2150,6 +2853,10 @@ async function main() {
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'skills-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, skillsTouchScenario, '?level=test&fps=0'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 

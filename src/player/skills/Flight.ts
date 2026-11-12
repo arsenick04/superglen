@@ -290,9 +290,9 @@ export class Flight {
 
   /** Build the two flames below the body. `parent` is the player's spin group (they tilt with the body). */
   attach(parent: THREE.Object3D): void {
-    const geo = new THREE.ConeGeometry(0.1, 0.5, 10, 1);
+    const geo = new THREE.ConeGeometry(0.13, 0.7, 10, 1);
     geo.rotateX(Math.PI);
-    geo.translate(0, -0.25, 0);
+    geo.translate(0, -0.35, 0);
     const outer = new THREE.MeshBasicMaterial({ color: 0xff8a1f, fog: false });
     const inner = new THREE.MeshBasicMaterial({ color: 0xfff3b0, fog: false });
     for (const sx of [-1, 1]) {
