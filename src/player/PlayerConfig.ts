@@ -99,8 +99,12 @@ export const PlayerConfig = {
   // (gravity lives in ModeTunings: the player applies its own, the world's gravity is for props)
   /** Terminal fall speed (m/s). */
   maxFallSpeed: 30,
-  /** Small downward speed kept while grounded so the controller keeps ground contact. */
-  groundStickSpeed: 1.0,
+  /**
+   * Downward speed kept while grounded. MUST stay 0: any value > 0 makes Rapier's character controller return a
+   * zero horizontal move now and then (a one-step stall every second or so) and, with snapping, bounce the capsule
+   * by mm. Contact is kept by the controller's own ground detection and the conditional snap in Player.
+   */
+  groundStickSpeed: 0,
 
   // --- Jump forgiveness ---------------------------------------------------
   /** Can still jump this long after walking off an edge (counts as the first jump). */

@@ -1,3 +1,4 @@
+import { ShadowFollower } from '../core/ShadowSnap';
 import * as THREE from 'three';
 import { Quality } from '../core/Quality';
 import { ModeController } from '../player/ModeController';
@@ -6,6 +7,9 @@ import type { Level, LevelContext } from './Level';
 import type { Player } from '../player/Player';
 import type { StaticProps } from './StaticProps';
 import type { Physics } from '../core/Physics';
+import { PracticeTarget } from '../gameplay/props/PracticeTarget';
+import { FlyRing } from '../gameplay/props/FlyRing';
+import { BallThrower } from '../gameplay/props/BallThrower';
 
 const SKY_COLOR = 0x8fd3ff; // cheerful morning sky
 const GROUND_SIZE = 60;
@@ -19,9 +23,14 @@ export class TestArea implements Level {
   readonly spawn = { x: PlayerConfig.spawn.x, y: PlayerConfig.spawn.y, z: PlayerConfig.spawn.z };
 
   private sun!: THREE.DirectionalLight;
+  private follower!: ShadowFollower;
   private readonly sunOffset = new THREE.Vector3(12, 22, 8);
   private player!: Player;
   private modeController!: ModeController;
+  private readonly practice: PracticeTarget[] = [];
+  private readonly rings: FlyRing[] = [];
+  private thrower: BallThrower | null = null;
+  private info: Record<string, number | string | boolean> | null = null;
 
   build(ctx: LevelContext): void {
     const { scene, root, physics } = ctx;
@@ -32,21 +41,42 @@ export class TestArea implements Level {
     this.buildLights(root);
     this.buildGround(root, physics);
     this.buildProps(ctx.props);
+    this.buildSkillsCorner(ctx);
+    this.info = ctx.game.debugInfo;
 
     // The test area owns the TEMPORARY Glen <-> Superglen toggle (E / star) and the full button sets.
     ctx.game.setLegacyTestControls(true);
     this.modeController = new ModeController(ctx.player, ctx.input, (m) => ctx.game.setPlayerMode(m));
+
+    // Superglen's skills are all unlocked here (not saved), and flights stay inside the 60 x 60 m field.
+    ctx.game.setSkills({ laser: true, shield: true, fly: true });
+    ctx.player.flight.maxFlyHeight = 12;
+    ctx.player.flight.bounds = { minX: -28.5, maxX: 28.5, minZ: -28.5, maxZ: 28.5 };
   }
 
-  fixedUpdate(): void {
+  fixedUpdate(dt: number): void {
     this.modeController.fixedUpdate();
+    let hits = 0;
+    let down = 0;
+    for (const t of this.practice) {
+      t.tick(dt);
+      hits += t.hits;
+      if (t.isDown) down++;
+    }
+    for (const r of this.rings) r.tick(dt);
+    this.thrower?.tick(dt);
+    const info = this.info;
+    if (info) {
+      info.practiceHits = hits;
+      info.practiceDown = down;
+      info.throwerThrown = this.thrower ? this.thrower.thrown : 0;
+      info.throwerReturned = this.thrower ? this.thrower.returned : 0;
+    }
   }
 
   /** Keep the shadow-casting sun centered on the player. Call once per frame. */
   update(): void {
-    const focus = this.player.visualPosition;
-    this.sun.position.copy(focus).add(this.sunOffset);
-    this.sun.target.position.copy(focus);
+    this.follower.follow(this.player.visualPosition);
   }
 
   dispose(): void {
@@ -75,6 +105,7 @@ export class TestArea implements Level {
     }
     scene.add(this.sun);
     scene.add(this.sun.target);
+    this.follower = new ShadowFollower(this.sun, this.sunOffset, Quality.shadowArea, Quality.shadowMapSize);
   }
 
   private buildGround(scene: THREE.Object3D, physics: Physics): void {
@@ -89,6 +120,56 @@ export class TestArea implements Level {
 
     // Collider: thick slab whose top face is y = 0.
     physics.addFixedCuboid({ x: GROUND_SIZE / 2, y: 0.5, z: GROUND_SIZE / 2 }, { x: 0, y: -0.5, z: 0 });
+  }
+
+  /**
+   * Skills corner (east side, x 14..28, z 2..27: free of the obstacle course): five practice targets (one slowly moving,
+   * one behind a wall for the line-of-sight test), a ball machine that throws every 3 s while the player is within 12 m,
+   * and five hover rings in the air. Walk here from the spawn with D, then turn to W.
+   */
+  private buildSkillsCorner(ctx: LevelContext): void {
+    const face = (x: number, z: number): number => Math.atan2(16 - x, 6 - z); // disc faces the entrance (16, 6)
+    const add = (x: number, z: number, o: { height?: number; path?: [number, number][]; id: string }): void => {
+      this.practice.push(
+        new PracticeTarget(ctx, { x, z, yaw: face(x, z), height: o.height, path: o.path, speed: 1.2, resetAfter: 5, id: o.id }),
+      );
+    };
+    add(20, 4, { id: 'near' });
+    add(24.5, 9, { id: 'high', height: 2.6 });
+    add(21, 13, { id: 'moving', path: [[17, 13], [26, 13]] });
+    add(22, 20, { id: 'behindwall' });
+    add(27, 5, { id: 'far' });
+    // The wall hides the fourth target from the south (walk around it to shoot).
+    ctx.props.box({ size: [6, 2.6, 0.4], position: [22, 1.3, 16.5], color: 0xff8fb1 });
+
+    this.thrower = new BallThrower(ctx, { x: 26.5, z: 22, range: 12, interval: 3 });
+
+    // A pergola on the west side: a real ceiling 4 m up to try the flight ceiling indoors (x -28..-22, z 15..21).
+    for (const [px, pz] of [[-28, 15], [-22, 15], [-28, 21], [-22, 21]] as const) {
+      ctx.props.box({ size: [0.3, 4, 0.3], position: [px, 2, pz], color: 0xffc94d });
+    }
+    ctx.props.box({ size: [6.6, 0.4, 6.6], position: [-25, 4.2, 18], color: 0xff8fb1 });
+
+    const ringSpots: [number, number, number, number][] = [
+      [18, 5, 9, 0],
+      [22, 7, 13, Math.PI / 2],
+      [26, 6.5, 9, 0],
+      [21, 9, 22, Math.PI / 2],
+      [16, 4.5, 21, 0],
+    ];
+    for (const [x, y, z, yaw] of ringSpots) {
+      this.rings.push(
+        new FlyRing(ctx, {
+          x,
+          y,
+          z,
+          yaw,
+          onPass: () => {
+            ctx.player.skills.stats.ringsPassed++;
+          },
+        }),
+      );
+    }
   }
 
   /**

@@ -3,6 +3,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
 import { PlayerConfig as C, ModeTunings, type ModeTuning, type PlayerMode } from './PlayerConfig';
+import { Flight, FlightConfig } from './skills/Flight';
+import { SkillHub } from './skills/Skills';
 
 const CAPSULE_HALF_HEIGHT = (C.height - 2 * C.radius) / 2; // half length of the cylinder part
 const CENTER_TO_FEET = C.height / 2;
@@ -68,6 +70,13 @@ export class Player {
   /** Interpolated capsule-center position for rendering and the camera. */
   readonly visualPosition = new THREE.Vector3();
 
+  /** Unlock flags, events and counters of the three skills (see player/skills/Skills.ts). */
+  readonly skills = new SkillHub();
+  /** Jet-booster flight (see player/skills/Flight.ts). */
+  readonly flight: Flight;
+  /** Multiplier on walking and flying speed (the raised shield sets 0.6 each fixed step). */
+  speedScale = 1;
+
   private readonly world: RAPIER.World;
   private readonly controller: RAPIER.KinematicCharacterController;
   private readonly groundRay = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
@@ -76,6 +85,13 @@ export class Player {
   private prevFacing = Math.PI;
   private readonly safePos = new THREE.Vector3();
   private groundedTime = 0;
+  private readonly ceilRay = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
+  /** Turn-to-face override (laser auto-aim, shield assist). */
+  private aimYaw = 0;
+  private aimTime = 0;
+  /** Pending cosmetic hop speed (a projectile touched the player). */
+  private hopPending = 0;
+  private spinAngle = 0;
 
   // ---- Mode and jump state (see PlayerConfig for the numbers) -------------
   private _mode: PlayerMode = 'glen';
@@ -84,11 +100,12 @@ export class Player {
   private airTime = 0;
   private jumpBufferTimer = 0;
   private doubleUsed = false;
-  private snapEnabled = true;
   /** Height of the feet above the ground below (m), 0 when grounded. Used by the camera. */
   airHeight = 0;
   private groundY = 0;
   private hasGround = false;
+  private probeSkip = 0;
+  private safeSkip = 0;
 
   /** Counters and peak for the debug handle / tests. */
   jumps = 0;
@@ -108,6 +125,8 @@ export class Player {
   private shadowMat!: THREE.MeshBasicMaterial;
   private squash = 0;
   private squashVel = 0;
+  /** 0..1 sitting/crouching look (the story lowers the body for the lunch scene). Visual only. */
+  crouch = 0;
   private pop = 0;
   private popVel = 0;
   private spinning = false;
@@ -142,16 +161,20 @@ export class Player {
     this.controller.setMaxSlopeClimbAngle(C.maxSlopeClimb);
     this.controller.setMinSlopeSlideAngle(C.minSlopeSlide);
     this.controller.enableAutostep(C.stepHeight, C.stepMinWidth, false);
-    this.controller.enableSnapToGround(C.snapToGround);
+    // Snap-to-ground stays OFF in the controller; fixedUpdate asks for it only on steps where the plain move lost
+    // the ground (see there). Always-on snapping made the capsule hop up and down by several mm on flat ground.
+    this.controller.disableSnapToGround();
     this.controller.setSlideEnabled(true);
     this.controller.setApplyImpulsesToDynamicBodies(true);
 
+    this.flight = new Flight(this.skills);
     this.currPos.set(s.x, cy, s.z);
     this.prevPos.copy(this.currPos);
     this.visualPosition.copy(this.currPos);
     this.safePos.copy(this.currPos);
 
     this.buildPlaceholderMesh();
+    this.flight.attach(this.spinGroup);
     this.object.position.copy(this.currPos);
     this.object.rotation.y = this.facing;
     scene.add(this.object);
@@ -164,6 +187,33 @@ export class Player {
     return this._mode;
   }
 
+  /** Capsule centre of the latest physics step (not interpolated). Do not modify. */
+  get position(): THREE.Vector3 {
+    return this.currPos;
+  }
+
+  /** In flight mode (jets or glide): the camera pulls back while this is true. */
+  get flying(): boolean {
+    return this.flight.isFlying;
+  }
+
+  /** Turn the body to face `yaw` quickly for a moment (auto-aim, shield assist). Overrides walking turns. */
+  turnTo(yaw: number): void {
+    this.aimYaw = yaw;
+    this.aimTime = 0.3;
+  }
+
+  /** Comic squash (negative, e.g. -0.35) or stretch (positive) that springs back by itself. Visual only. */
+  squashBounce(amount: number): void {
+    this.squash = amount;
+    this.squashVel = 0;
+  }
+
+  /** A tiny cosmetic hop (about 0.25 m) when standing on the ground; ignored in the air. Not a jump. */
+  smallHop(speed = 3.4): void {
+    this.hopPending = speed;
+  }
+
   /** Subscribe to Superglen landing stomps. */
   onStomp(cb: StompListener): void {
     this.stompListeners.push(cb);
@@ -174,6 +224,7 @@ export class Player {
     const changed = mode !== this._mode;
     this._mode = mode;
     this.tuning = ModeTunings[mode];
+    if (mode === 'glen') this.flight.reset();
     this.bodyMat.color.setHex(this.tuning.color);
     this.faceMat.color.setHex(this.tuning.faceColor);
     this.belt.visible = mode === 'superglen';
@@ -182,7 +233,7 @@ export class Player {
       // A spin that belongs to Superglen's air jump must not linger after switching away.
       if (mode === 'glen') {
         this.spinning = false;
-        this.spinGroup.rotation.x = 0;
+        this.spinAngle = 0;
       }
     }
   }
@@ -203,6 +254,7 @@ export class Player {
       my = 0;
     }
     const hasInput = mx !== 0 || my !== 0;
+    const flyingNow = this.flight.isFlying;
     // Camera forward on the ground plane is (-sin yaw, 0, -cos yaw); right is (cos yaw, 0, -sin yaw).
     const sinY = Math.sin(cameraYaw);
     const cosY = Math.cos(cameraYaw);
@@ -212,7 +264,7 @@ export class Player {
       const dx = mx / len;
       const dy = my / len;
       const t = Math.min(1, len / C.analogFullAt);
-      const speed = T.runSpeed * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
+      const speed = (flyingNow ? FlightConfig.flySpeed : T.runSpeed) * this.speedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
       this.wishDir.set(dx * cosY - dy * sinY, 0, -dx * sinY - dy * cosY);
       this.targetVel.copy(this.wishDir).multiplyScalar(speed);
     } else {
@@ -220,8 +272,11 @@ export class Player {
       this.targetVel.set(0, 0, 0);
     }
 
-    let rate = hasInput ? C.acceleration : C.deceleration;
-    if (!this.grounded) rate *= C.airControl;
+    let rate: number = hasInput ? C.acceleration : C.deceleration;
+    if (flyingNow) {
+      rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
+      this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);
+    } else if (!this.grounded) rate *= C.airControl;
     // Move velocity toward target by at most rate*dt (frame-rate independent at fixed dt).
     this.tmp.subVectors(this.targetVel, this.velocity);
     const diff = this.tmp.length();
@@ -231,7 +286,12 @@ export class Player {
 
     // ---- Facing: turn smoothly toward the movement direction -----------------
     this.prevFacing = this.facing;
-    if (hasInput) {
+    if (this.aimTime > 0) {
+      this.aimTime -= dt;
+      const d = angleDelta(this.facing, this.aimYaw);
+      const step = C.turnSpeed * 2.5 * dt;
+      this.facing += Math.abs(d) <= step ? d : Math.sign(d) * step;
+    } else if (hasInput) {
       const targetYaw = Math.atan2(this.wishDir.x, this.wishDir.z);
       const d = angleDelta(this.facing, targetYaw);
       const step = C.turnSpeed * dt;
@@ -250,8 +310,27 @@ export class Player {
       this.airTime += dt;
     }
 
+    // ---- Flight (Superglen + unlocked): hold jump in the air; see skills/Flight.ts ----
+    const F = this.flight;
+    const fi = F.inp;
+    fi.can = this._mode === 'superglen' && (F.enabled || F.forced);
+    fi.jumpDown = this.inputEnabled && this.input.isDown('jump');
+    fi.jumpPressed = this.inputEnabled && this.input.wasPressed('jump');
+    fi.grounded = wasGrounded;
+    fi.feetY = this.currPos.y - CENTER_TO_FEET;
+    fi.groundY = this.hasGround ? this.groundY : Number.NaN;
+    fi.ceilGap = F.isFlying ? this.probeCeiling() : Infinity;
+    fi.vy = this.verticalVelocity;
+    F.step(dt);
+    const flying = F.isFlying;
+    if (flying) {
+      this.spinning = false;
+      this.spinAngle = 0;
+    }
+
     // Edge-triggered only: holding the button never repeats (wasPressed fires once per press).
     if (this.inputEnabled && this.input.wasPressed('jump')) this.jumpBufferTimer = C.jumpBuffer;
+    if (flying) this.jumpBufferTimer = 0; // no jumps while the jets are in charge
     let jumped = false;
     if (this.jumpBufferTimer > 0) {
       if (wasGrounded || this.timeSinceGrounded <= C.coyoteTime) {
@@ -272,7 +351,14 @@ export class Player {
     // ---- Vertical ------------------------------------------------------------
     // The jump step moves with exactly the launch speed (no gravity yet): see launchSpeed().
     if (!jumped) {
-      if (wasGrounded && this.verticalVelocity <= 0) {
+      if (flying) {
+        this.verticalVelocity = F.vy;
+      } else if (this.hopPending > 0 && wasGrounded && this.verticalVelocity <= 0) {
+        this.verticalVelocity = this.hopPending; // cosmetic hop: no jump counters, same step skips gravity
+        jumped = true;
+        this.squash = 0.12;
+        this.squashVel = 0;
+      } else if (wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = -C.groundStickSpeed;
       } else {
         const g = this.verticalVelocity > 0 ? T.gravityUp : T.gravityUp * T.fallMultiplier;
@@ -280,26 +366,43 @@ export class Player {
       }
     }
 
-    // Snap-to-ground would glue us back down on the first frames of a jump: off while rising.
-    const wantSnap = this.verticalVelocity <= 0;
-    if (wantSnap !== this.snapEnabled) {
-      if (wantSnap) this.controller.enableSnapToGround(C.snapToGround);
-      else this.controller.disableSnapToGround();
-      this.snapEnabled = wantSnap;
-    }
-
     // ---- Move through the character controller -------------------------------
     const vyAtMove = this.verticalVelocity;
     this.desired.x = this.velocity.x * dt;
     this.desired.y = this.verticalVelocity * dt;
     this.desired.z = this.velocity.z * dt;
-    this.controller.computeColliderMovement(this.collider, this.desired);
-    const moved = this.controller.computedMovement();
+    const ctl = this.controller;
+    ctl.computeColliderMovement(this.collider, this.desired);
+    let groundedNow = ctl.computedGrounded();
+    // Lost the ground while not rising (walked down a step or slope): ask again with snap-to-ground so the
+    // player stays glued to the floor. On flat ground the plain move already is grounded and snapping is skipped.
+    if (!groundedNow && vyAtMove <= 0) {
+      ctl.enableSnapToGround(C.snapToGround);
+      ctl.computeColliderMovement(this.collider, this.desired);
+      groundedNow = ctl.computedGrounded();
+      ctl.disableSnapToGround();
+    }
+    let moved = ctl.computedMovement();
+    // Rapier occasionally returns a zero horizontal move for a single step while resting on flat ground (the
+    // contact normal comes out exactly vertical and the slide degenerates). A real wall blocks the retry as
+    // well; this only recovers the numerical stall, which felt like a hiccup in the walk every second or so.
+    if (groundedNow && vyAtMove <= 0) {
+      const wantH = this.desired.x * this.desired.x + this.desired.z * this.desired.z;
+      if (wantH > 4e-4 && moved.x * moved.x + moved.z * moved.z < wantH * 0.01) {
+        const dy = this.desired.y;
+        this.desired.y = 0;
+        ctl.computeColliderMovement(this.collider, this.desired);
+        this.desired.y = dy;
+        moved = ctl.computedMovement();
+      }
+    }
     // Rising is never "grounded": the controller can report contact while sliding up a wall or pole.
-    this.grounded = this.controller.computedGrounded() && !jumped && vyAtMove <= 0;
+    this.grounded = groundedNow && !jumped && vyAtMove <= 0;
 
     // Bumped a ceiling while going up: stop rising.
     if (this.desired.y > 0 && moved.y < this.desired.y * 0.5) this.verticalVelocity = 0;
+    if (flying) F.vy = this.verticalVelocity;
+    this.hopPending = 0;
     // Blocked horizontally (wall): drop the velocity we could not use so we do not "push" forever.
     if (dt > 0) {
       const vx = moved.x / dt;
@@ -308,7 +411,9 @@ export class Player {
       if (Math.abs(vz) < Math.abs(this.velocity.z)) this.velocity.z = vz;
     }
 
-    const p = this.body.translation();
+    // The kinematic body sits exactly where we last put it (currPos), so no need to ask Rapier (each translation()
+    // call allocates a wrapper object).
+    const p = this.currPos;
     this.next.x = p.x + moved.x;
     this.next.y = p.y + moved.y;
     this.next.z = p.z + moved.z;
@@ -321,8 +426,9 @@ export class Player {
     // ---- Safety: remember safe ground, respawn after a fall ------------------
     if (this.grounded) {
       this.groundedTime += dt;
-      if (this.groundedTime >= C.safeGroundTime && this.hasGroundBelowCenter(this.next)) {
-        this.safePos.set(this.next.x, this.next.y, this.next.z);
+      if (this.groundedTime >= C.safeGroundTime && ++this.safeSkip >= 6) {
+        this.safeSkip = 0; // the safe spot is refreshed 10 times a second, not 60
+        if (this.hasGroundBelowCenter(this.next)) this.safePos.set(this.next.x, this.next.y, this.next.z);
       }
     } else {
       this.groundedTime = 0;
@@ -362,7 +468,7 @@ export class Player {
   private onLand(impact: number): void {
     this.landings++;
     this.spinning = false;
-    this.spinGroup.rotation.x = 0;
+    this.spinAngle = 0;
     if (impact > C.squashMinImpact) {
       this.squash = -Math.min(0.32, 0.08 + impact * 0.018);
       this.squashVel = 0;
@@ -382,19 +488,38 @@ export class Player {
 
   /** Ray straight down from the capsule center: ground height under the player for shadow, camera, jump rules. */
   private probeGround(): void {
+    // Grounded and settled: the ground height only matters for the blob shadow, so look every 4th step.
+    // Airborne (or just landed/left the ground): every step, the jump rules need the exact height.
+    if (this.grounded && this.hasGround && this.probeSkip < 3) {
+      this.probeSkip++;
+      this.airHeight = 0;
+      return;
+    }
+    this.probeSkip = 0;
     this.groundRay.origin.x = this.currPos.x;
     this.groundRay.origin.y = this.currPos.y;
     this.groundRay.origin.z = this.currPos.z;
-    const hit = this.world.castRay(this.groundRay, SHADOW_PROBE_RANGE, true, undefined, undefined, this.collider);
+    const range = this.flight.isFlying ? this.flight.probeRange : SHADOW_PROBE_RANGE;
+    const hit = this.world.castRay(this.groundRay, range, true, undefined, undefined, this.collider);
     if (hit) {
       this.hasGround = true;
       this.groundY = this.currPos.y - hit.timeOfImpact;
       this.airHeight = Math.max(0, hit.timeOfImpact - CENTER_TO_FEET);
     } else {
       this.hasGround = false;
-      this.airHeight = SHADOW_PROBE_RANGE;
+      this.airHeight = range;
     }
     if (this.grounded) this.airHeight = 0;
+  }
+
+  /** Free distance the capsule can rise before a real ceiling (m), Infinity when nothing is within 8 m. */
+  private probeCeiling(): number {
+    const r = this.ceilRay;
+    r.origin.x = this.currPos.x;
+    r.origin.y = this.currPos.y;
+    r.origin.z = this.currPos.z;
+    const hit = this.world.castRay(r, 8, true, undefined, undefined, this.collider);
+    return hit ? hit.timeOfImpact - CENTER_TO_FEET : Infinity;
   }
 
   /**
@@ -412,8 +537,7 @@ export class Player {
   /** Call right after physics.step(). */
   postStep(): void {
     this.prevPos.copy(this.currPos);
-    const p = this.body.translation();
-    this.currPos.set(p.x, p.y, p.z);
+    this.currPos.set(this.next.x, this.next.y, this.next.z);
   }
 
   /** Interpolate the visual between the last two physics states and run the cosmetic springs. */
@@ -433,25 +557,33 @@ export class Player {
         const t = this.spinT / C.spinTime;
         if (t >= 1) {
           this.spinning = false;
-          this.spinGroup.rotation.x = 0;
+          this.spinAngle = 0;
         } else {
           // Forward flip (head over heels), fast start and soft end; positive X rotation tips +Z (face) down.
-          this.spinGroup.rotation.x = Math.PI * 2 * (1 - (1 - t) * (1 - t));
+          this.spinAngle = Math.PI * 2 * (1 - (1 - t) * (1 - t));
         }
       }
     }
-    const sy = 1 + this.squash;
-    const sxz = 1 - this.squash * 0.5;
+    const sy = (1 + this.squash) * (1 - 0.32 * this.crouch);
+    const sxz = (1 - this.squash * 0.5) * (1 + 0.1 * this.crouch);
     this.squashGroup.scale.set(sxz, sy, sxz);
     this.object.scale.setScalar(1 + this.pop);
+
+    // Flight visuals: flames, trail, lean and hover bob (the spin flip shares the same group).
+    const F = this.flight;
+    F.updateVisual(dt, this.visualPosition, this.velocity.x, this.velocity.z, this.object.rotation.y, this.verticalVelocity);
+    this.spinGroup.rotation.set(this.spinAngle + F.tiltX, 0, F.tiltZ);
+    this.spinGroup.position.y = CENTER_TO_FEET + F.bob;
 
     // Blob shadow on the ground below: shrinks and fades with height.
     if (this.hasGround) {
       const k = Math.min(this.airHeight / 4, 1);
       this.shadow.visible = true;
       this.shadow.position.set(this.visualPosition.x, this.groundY + 0.03, this.visualPosition.z);
-      this.shadow.scale.setScalar(SHADOW_BASE_RADIUS * (1 - 0.35 * k));
-      this.shadowMat.opacity = 0.42 - 0.2 * k;
+      // While flying the blob is the child's depth cue: it stays larger and darker than a jump shadow.
+      const fly = F.isFlying ? 1 : 0;
+      this.shadow.scale.setScalar(SHADOW_BASE_RADIUS * (1 - (0.35 - 0.12 * fly) * k));
+      this.shadowMat.opacity = 0.42 - (0.2 - 0.07 * fly) * k;
     } else {
       this.shadow.visible = false;
     }
@@ -476,9 +608,13 @@ export class Player {
     this.timeSinceGrounded = 0;
     this.airTime = 0;
     this.spinning = false;
-    this.spinGroup.rotation.x = 0;
+    this.spinAngle = 0;
+    this.flight.reset();
+    this.aimTime = 0;
+    this.hopPending = 0;
     this.squash = 0;
     this.squashVel = 0;
+    this.crouch = 0;
     this.peakFeetY = y - CENTER_TO_FEET;
   }
 

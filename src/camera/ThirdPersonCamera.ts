@@ -57,6 +57,10 @@ export const CameraConfig = {
   airExtraDistance: 1.0,
   /** How fast the lift follows (1/s): subtle, smooth. */
   airSharpness: 3,
+  /** Flying: the camera pulls further back and up so the ground below stays in view. */
+  flyExtraPitch: 10 * DEG,
+  flyExtraDistance: 2.8,
+  flySharpness: 2.5,
 
   // --- Landing bump (stomp) ---
   bumpDuration: 0.1,
@@ -69,6 +73,8 @@ export interface CameraSubject {
   readonly velocity: THREE.Vector3;
   /** Feet height above the ground below (m). */
   readonly airHeight: number;
+  /** In flight mode (jets or glide). */
+  readonly flying?: boolean;
 }
 
 function angleDelta(from: number, to: number): number {
@@ -109,6 +115,7 @@ export class ThirdPersonCamera {
   private idleTime = 0;
   private followBlend = 0;
   private airLift = 0;
+  private flyLift = 0;
   private bumpTime = 1e9;
   private readonly reducedMotion: boolean;
 
@@ -118,6 +125,8 @@ export class ThirdPersonCamera {
   private frameWeight = 0.5;
   private frameYaw: number | null = null;
   private frameExtra = 0;
+  private framePitch: number | null = null;
+  private pitchRestore: number | null = null;
   private readonly framePoint = new THREE.Vector3();
 
   private readonly ray: RAPIER.Ray;
@@ -153,6 +162,7 @@ export class ThirdPersonCamera {
     this.initialized = false;
     this.currentDistance = CameraConfig.distance;
     this.airLift = 0;
+    this.flyLift = 0;
     this.followBlend = 0;
     this.idleTime = 0;
     this.moveWasActive = false;
@@ -167,11 +177,15 @@ export class ThirdPersonCamera {
    * the camera eases toward `yaw` (camera-on-the-+Z-side convention of `yaw`) and backs off by `distance` m.
    * `null` returns to the normal follow view. Input look is still honoured (it simply fights the ease).
    */
-  setFraming(point: THREE.Vector3 | null, opts: { weight?: number; yaw?: number; distance?: number } = {}): void {
+  setFraming(point: THREE.Vector3 | null, opts: { weight?: number; yaw?: number; distance?: number; pitch?: number } = {}): void {
     if (!point) {
       this.frameOn = false;
+      if (this.framePitch !== null) this.pitchRestore ??= CameraConfig.defaultPitch;
+      this.framePitch = null;
       return;
     }
+    if (opts.pitch !== undefined && this.framePitch === null) this.pitchRestore = this.pitch;
+    this.framePitch = opts.pitch ?? null;
     this.frameOn = true;
     this.framePoint.copy(point);
     this.frameWeight = opts.weight ?? 0.5;
@@ -219,8 +233,10 @@ export class ThirdPersonCamera {
         1,
       );
       this.airLift += (want - this.airLift) * (1 - Math.exp(-c.airSharpness * dt));
+      this.flyLift += ((subject.flying ? 1 : 0) - this.flyLift) * (1 - Math.exp(-c.flySharpness * dt));
     }
     const lift = this.airLift;
+    const fly = this.flyLift;
     this.desiredTarget.set(focus.x, focus.y + c.targetHeight, focus.z);
     const fk = 1 - Math.exp(-2.2 * dt);
     this.frameBlend += ((this.frameOn ? 1 : 0) - this.frameBlend) * fk;
@@ -229,6 +245,12 @@ export class ThirdPersonCamera {
       if (this.frameOn && this.frameYaw !== null) {
         this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
       }
+    }
+    if (this.frameOn && this.framePitch !== null) {
+      this.pitch += (this.framePitch - this.pitch) * (1 - Math.exp(-2 * dt));
+    } else if (this.pitchRestore !== null) {
+      this.pitch += (this.pitchRestore - this.pitch) * (1 - Math.exp(-2 * dt));
+      if (Math.abs(this.pitchRestore - this.pitch) < 0.01) this.pitchRestore = null;
     }
 
     if (!this.initialized) {
@@ -243,10 +265,10 @@ export class ThirdPersonCamera {
     }
 
     // Direction from target to camera.
-    const pitch = Math.min(this.pitch + lift * c.airExtraPitch, 75 * DEG);
+    const pitch = Math.min(this.pitch + lift * c.airExtraPitch + fly * c.flyExtraPitch, 75 * DEG);
     const cp = Math.cos(pitch);
     this.dir.set(Math.sin(this.yaw) * cp, Math.sin(pitch), Math.cos(this.yaw) * cp);
-    const maxDist = c.distance + lift * c.airExtraDistance + this.frameExtra * this.frameBlend;
+    const maxDist = c.distance + lift * c.airExtraDistance + fly * c.flyExtraDistance + this.frameExtra * this.frameBlend;
 
     // Wall avoidance: cast from the target toward the desired camera spot.
     let allowed: number = maxDist;

@@ -23,29 +23,29 @@ function house(kit: Kit, side: -1 | 1, zc: number, wall: number, roof: number, h
   const face = side * STREET_HALF;
   kit.solid([6, h, 7.2], [x, h / 2, zc], wall);
   kit.lit.pyr(7.4, 2.0, 8.4, [x, h + 1.0, zc], roof);
-  kit.lit.box([0.5, 0.2, 7.6], [face - side * 0.1, h + 0.05, zc], C.CREAM); // eave trim
+  kit.deco.box([0.5, 0.2, 7.6], [face - side * 0.1, h + 0.05, zc], C.CREAM); // eave trim
   // Door and two windows on the street face.
   const fx = face - side * 0.04;
-  kit.lit.box([0.1, 2.1, 1.2], [fx, 1.05, zc], shop ? C.RED : C.BROWN);
+  kit.deco.box([0.1, 2.1, 1.2], [fx, 1.05, zc], shop ? C.RED : C.BROWN);
   kit.glow.box([0.06, 0.5, 0.5], [fx - side * 0.02, 1.5, zc + 0.0], 0xfff1b0);
   for (const dz of [-2.2, 2.2]) {
-    kit.lit.box([0.1, 1.3, 1.3], [fx, 2.1, zc + dz], C.WHITE);
+    kit.deco.box([0.1, 1.3, 1.3], [fx, 2.1, zc + dz], C.WHITE);
     kit.glow.box([0.05, 1.05, 1.05], [fx - side * 0.04, 2.1, zc + dz], 0x9fdcff);
     // flower box
-    kit.lit.box([0.45, 0.28, 1.2], [fx - side * 0.2, 1.35, zc + dz], C.BROWN);
-    for (let i = -1; i <= 1; i++) kit.lit.sph(0.17, [fx - side * 0.2, 1.6, zc + dz + i * 0.38], i === 0 ? C.PINK : C.ORANGE);
+    kit.deco.box([0.45, 0.28, 1.2], [fx - side * 0.2, 1.35, zc + dz], C.BROWN);
+    for (let i = -1; i <= 1; i++) kit.deco.sph(0.17, [fx - side * 0.2, 1.6, zc + dz + i * 0.38], i === 0 ? C.PINK : C.ORANGE);
   }
   // Upper windows.
   for (const dz of [-2.0, 0, 2.0]) {
-    kit.lit.box([0.1, 1.1, 1.0], [fx, 3.6, zc + dz], C.WHITE);
+    kit.deco.box([0.1, 1.1, 1.0], [fx, 3.6, zc + dz], C.WHITE);
     kit.glow.box([0.05, 0.85, 0.8], [fx - side * 0.04, 3.6, zc + dz], 0x9fdcff);
   }
   if (shop) {
     // Striped awning over the door.
     for (let i = 0; i < 6; i++) {
-      kit.lit.box([1.1, 0.14, 0.62], [face - side * 0.55, 2.55 - 0.0, zc - 1.55 + i * 0.62], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
+      kit.deco.box([1.1, 0.14, 0.62], [face - side * 0.55, 2.55 - 0.0, zc - 1.55 + i * 0.62], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
     }
-    kit.lit.box([0.1, 0.7, 2.6], [fx, 2.95, zc], C.GOLD); // sign
+    kit.deco.box([0.1, 0.7, 2.6], [fx, 2.95, zc], C.GOLD); // sign
   }
 }
 
@@ -58,7 +58,7 @@ function tree(kit: Kit, x: number, z: number, s = 1): void {
 
 function lamp(kit: Kit, x: number, z: number): void {
   kit.solidCyl(0.07, 3.2, [x, 1.6, z], C.GREY);
-  kit.lit.sph(0.28, [x, 3.35, z], 0xfff1c1);
+  kit.deco.sph(0.28, [x, 3.35, z], 0xfff1c1);
   kit.glow.sph(0.2, [x, 3.35, z], 0xffe9a0);
 }
 
@@ -69,10 +69,10 @@ function hedge(kit: Kit, size: V3, pos: V3): void {
 
 function bike(kit: Kit, x: number, z: number, color: number): void {
   for (const dz of [-0.45, 0.45]) {
-    kit.lit.add('sph', [x, 0.33, z + dz], [0.06, 0.33, 0.33], 0x333a47); // wheel (flattened sphere)
+    kit.deco.add('sph', [x, 0.33, z + dz], [0.06, 0.33, 0.33], 0x333a47); // wheel (flattened sphere)
   }
-  kit.lit.box([0.06, 0.06, 0.95], [x, 0.55, z], color, [0.25, 0, 0]);
-  kit.lit.box([0.4, 0.05, 0.05], [x, 0.9, z - 0.4], 0x333a47);
+  kit.deco.box([0.06, 0.06, 0.95], [x, 0.55, z], color, [0.25, 0, 0]);
+  kit.deco.box([0.4, 0.05, 0.05], [x, 0.9, z - 0.4], 0x333a47);
 }
 
 /**
@@ -81,23 +81,23 @@ function bike(kit: Kit, x: number, z: number, color: number): void {
  */
 export function buildStreet(kit: Kit): void {
   // --- Ground, road, sidewalks, markings (visual only; the one big slab is added by the level) ---
-  kit.lit.box([70, 0.2, 98.6], [0, -0.1, -9.3], 0x86d16a);
-  kit.lit.box([6.4, 0.04, 42], [0, 0.02, -15], 0x69707d);
+  kit.deco.box([70, 0.2, 98.6], [0, -0.1, -9.3], 0x86d16a);
+  kit.deco.box([6.4, 0.04, 42], [0, 0.02, -15], 0x69707d);
   for (const s of [-1, 1]) {
-    kit.lit.box([3.5, 0.06, 42], [s * 4.95, 0.03, -15], 0xeadcb9);
-    kit.lit.box([0.2, 0.08, 42], [s * 3.2, 0.04, -15], 0xffffff);
+    kit.deco.box([3.5, 0.06, 42], [s * 4.95, 0.03, -15], 0xeadcb9);
+    kit.deco.box([0.2, 0.08, 42], [s * 3.2, 0.04, -15], 0xffffff);
   }
-  for (let z = 3; z > -34; z -= 3) kit.lit.box([0.18, 0.05, 1.3], [0, 0.045, z], 0xfff3b0);
-  for (let i = -4; i <= 4; i++) kit.lit.box([0.5, 0.05, 2.2], [i * 0.72, 0.045, -2.6], 0xffffff); // zebra crossing
+  for (let z = 3; z > -34; z -= 3) kit.deco.box([0.18, 0.05, 1.3], [0, 0.045, z], 0xfff3b0);
+  for (let i = -4; i <= 4; i++) kit.deco.box([0.5, 0.05, 2.2], [i * 0.72, 0.045, -2.6], 0xffffff); // zebra crossing
   // Plaza in front of the Barongsai building.
-  kit.lit.box([BOUNDARY * 2, 0.06, 6.5], [0, 0.03, -39.0], 0xe3c9a0);
-  for (let i = -5; i <= 5; i++) kit.lit.box([0.1, 0.07, 6.5], [i * 2.4, 0.032, -39.0], 0xd2b182);
+  kit.deco.box([BOUNDARY * 2, 0.06, 6.5], [0, 0.03, -39.0], 0xe3c9a0);
+  for (let i = -5; i <= 5; i++) kit.deco.box([0.1, 0.07, 6.5], [i * 2.4, 0.032, -39.0], 0xd2b182);
 
   // --- Boundary: tall walls/hedges all around (nothing can be left or fallen from) ---
   for (const s of [-1, 1]) {
     const x = s * (BOUNDARY + 0.5);
     kit.solid([1.0, 6.5, 50], [x, 3.25, -17], C.DARK_GREEN);
-    for (let z = 6; z > -42; z -= 3) kit.lit.sph(1.5, [x - s * 0.6, 6.0 + ((z * 7) % 3) * 0.1, z], C.GREEN);
+    for (let z = 6; z > -42; z -= 3) kit.deco.sph(1.5, [x - s * 0.6, 6.0 + ((z * 7) % 3) * 0.1, z], C.GREEN, [1, 1, 1], 1);
   }
 
   // --- School wall with the closed gate behind the spawn ---
@@ -106,17 +106,17 @@ export function buildStreet(kit: Kit): void {
   kit.lit.box([BOUNDARY * 2, 0.5, 0.8], [0, 4.9, sz + 0.3], C.RED);
   kit.lit.box([BOUNDARY * 2, 0.3, 0.7], [0, 0.15, sz - 0.02], C.CREAM);
   kit.solid([5.2, 2.6, 0.5], [0, 1.3, sz - 0.05], C.TEAL); // gate leaves
-  for (let i = -8; i <= 8; i++) kit.lit.cyl(0.05, 2.5, [i * 0.3, 1.3, sz - 0.4], C.YELLOW);
-  kit.lit.box([5.4, 0.12, 0.2], [0, 2.1, sz - 0.4], C.GOLD);
-  kit.lit.box([5.4, 0.12, 0.2], [0, 0.5, sz - 0.4], C.GOLD);
-  kit.lit.box([7, 0.8, 0.5], [0, 3.55, sz - 0.1], C.RED); // arch sign
+  for (let i = -8; i <= 8; i++) kit.deco.cyl(0.05, 2.5, [i * 0.3, 1.3, sz - 0.4], C.YELLOW);
+  kit.deco.box([5.4, 0.12, 0.2], [0, 2.1, sz - 0.4], C.GOLD);
+  kit.deco.box([5.4, 0.12, 0.2], [0, 0.5, sz - 0.4], C.GOLD);
+  kit.deco.box([7, 0.8, 0.5], [0, 3.55, sz - 0.1], C.RED); // arch sign
   kit.glow.add('pyr', [0, 3.55, sz - 0.4], [0.7, 0.55, 0.12], 0xffd23f, [Math.PI / 2, 0, 0]); // star-ish marker
-  kit.lit.cyl(0.07, 4.4, [3.9, 2.2, sz - 0.5], C.GREY); // flag pole
-  kit.lit.box([1.4, 0.8, 0.05], [4.65, 4.0, sz - 0.5], C.RED);
-  kit.lit.box([0.45, 0.8, 0.06], [4.0, 4.0, sz - 0.5], C.GOLD);
-  kit.lit.sph(0.15, [3.9, 4.5, sz - 0.5], C.GOLD);
+  kit.deco.cyl(0.07, 4.4, [3.9, 2.2, sz - 0.5], C.GREY); // flag pole
+  kit.deco.box([1.4, 0.8, 0.05], [4.65, 4.0, sz - 0.5], C.RED);
+  kit.deco.box([0.45, 0.8, 0.06], [4.0, 4.0, sz - 0.5], C.GOLD);
+  kit.deco.sph(0.15, [3.9, 4.5, sz - 0.5], C.GOLD);
   kit.lit.box([20, 7, 12], [0, 3.5, sz + 6.8], 0xfff0c4); // the school itself, behind the wall
-  for (let i = -3; i <= 3; i++) kit.lit.box([1.4, 1.2, 0.1], [i * 2.6, 3.2, sz + 0.78], C.SKY);
+  for (let i = -3; i <= 3; i++) kit.deco.box([1.4, 1.2, 0.1], [i * 2.6, 3.2, sz + 0.78], C.SKY);
 
   // --- Houses ---
   for (const [z, w, r, h, shop] of LEFT) house(kit, -1, z, w, r, h, shop);
@@ -131,12 +131,12 @@ export function buildStreet(kit: Kit): void {
   bike(kit, -6.3, -17.6, C.RED);
   bike(kit, -6.3, -18.9, C.BLUE);
   bike(kit, -6.3, -20.2, C.GOLD);
-  kit.lit.box([0.1, 0.5, 3.4], [-6.6, 0.25, -18.9], C.GREY); // rack
+  kit.deco.box([0.1, 0.5, 3.4], [-6.6, 0.25, -18.9], C.GREY); // rack
   // Right mouth z -17.3 .. -25.7
   kit.solid([1.0, 1.6, 8.4], [STREET_HALF + 0.5, 0.8, -21.5], C.BROWN); // big planter row
   for (let z = -18; z > -25.5; z -= 0.9) {
-    kit.lit.sph(0.38, [STREET_HALF + 0.5, 1.7, z], (z * 3) % 2 > 1 ? C.PINK : C.ORANGE);
-    kit.lit.sph(0.3, [STREET_HALF + 0.3, 1.9, z - 0.4], C.YELLOW);
+    kit.deco.sph(0.38, [STREET_HALF + 0.5, 1.7, z], (z * 3) % 2 > 1 ? C.PINK : C.ORANGE);
+    kit.deco.sph(0.3, [STREET_HALF + 0.3, 1.9, z - 0.4], C.YELLOW);
   }
   kit.solid([6, 5, 0.6], [10, 2.5, -25.9], 0xc9e4ff);
   kit.solid([0.6, 5, 8.8], [13.2, 2.5, -21.5], 0xc9e4ff);
@@ -147,8 +147,8 @@ export function buildStreet(kit: Kit): void {
   for (const [x, z] of [[-3.6, -4], [3.6, -6], [-3.6, -14], [3.6, -17], [-3.6, -26], [3.6, -23], [-3.6, -33], [3.6, -33]] as const) lamp(kit, x, z);
   // Bunting-free benches near the plaza.
   for (const s of [-1, 1]) {
-    kit.lit.box([1.8, 0.1, 0.5], [s * 9, 0.45, -37.3], C.BROWN);
-    kit.lit.box([1.8, 0.5, 0.08], [s * 9, 0.75, -37.5], C.BROWN);
+    kit.deco.box([1.8, 0.1, 0.5], [s * 9, 0.45, -37.3], C.BROWN);
+    kit.deco.box([1.8, 0.5, 0.08], [s * 9, 0.75, -37.5], C.BROWN);
   }
   tree(kit, -10.5, -39.5, 1.2);
   tree(kit, 11, -40, 1.2);

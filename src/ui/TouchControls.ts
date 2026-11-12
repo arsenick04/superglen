@@ -142,14 +142,14 @@ export const SUPERGLEN_BUTTONS: readonly TouchButtonDef[] = [
 
 function storyInteractPlacement(m: ViewMetrics): Placement {
   if (!isShort(m)) return interactPlacement(m);
-  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + shortGap(m, 3), bottom: SHORT_BOTTOM + 16 };
+  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + shortGap(m, 3), bottom: SHORT_BOTTOM + 8 };
 }
 
 /** Laser in the story set: tall = above Bicara; short = stacked on top of Bicara. */
 function storyLaserPlacement(m: ViewMetrics): Placement {
   if (!isShort(m)) return { size: 88, right: 150, bottom: 166 };
   const i = storyInteractPlacement(m);
-  return { size: MIN_BUTTON, right: i.right, bottom: i.bottom + MIN_BUTTON + 10 };
+  return { size: MIN_BUTTON, right: i.right, bottom: i.bottom + MIN_BUTTON + 4 };
 }
 
 const STORY_INTERACT: TouchButtonDef = { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: storyInteractPlacement };
@@ -200,6 +200,12 @@ export class TouchControls {
   private readonly base: HTMLDivElement;
   private readonly knob: HTMLDivElement;
   private readonly hint: HTMLDivElement;
+  private stickShown = false;
+  private jets = false;
+  private lastBx = NaN;
+  private lastBy = NaN;
+  private lastKx = NaN;
+  private lastKy = NaN;
 
   constructor(
     root: HTMLElement,
@@ -232,7 +238,23 @@ export class TouchControls {
   private defs: readonly TouchButtonDef[] = [];
   private readonly pulsing = new Set<Action>();
   private readonly probe: HTMLDivElement;
-  private readonly relayout = (): void => this.applyPlacement();
+  private relayoutTimer = 0;
+  private lastW = 0;
+  private lastH = 0;
+  /**
+   * Resize, orientation and visualViewport events (Safari fires them while its bars move) are coalesced into one
+   * layout ~100 ms later, and skipped when the visible size did not change.
+   */
+  private readonly relayout = (): void => {
+    if (this.relayoutTimer) return;
+    this.relayoutTimer = window.setTimeout(() => {
+      this.relayoutTimer = 0;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w === this.lastW && h === this.lastH) return;
+      this.applyPlacement();
+    }, 100);
+  };
 
   private metrics(): ViewMetrics {
     const cs = getComputedStyle(this.probe);
@@ -248,6 +270,8 @@ export class TouchControls {
 
   /** Position and size every button for the current visible viewport. */
   private applyPlacement(): void {
+    this.lastW = window.innerWidth;
+    this.lastH = window.innerHeight;
     const m = this.metrics();
     for (const d of this.defs) {
       const b = this.buttons.get(d.action);
@@ -278,6 +302,7 @@ export class TouchControls {
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
       if (this.pulsing.has(d.action)) b.classList.add('pulse');
+      if (d.action === 'jump' && this.jets) b.classList.add('jets');
     }
     this.applyPlacement();
   }
@@ -289,6 +314,12 @@ export class TouchControls {
     this.buttons.get(action)?.classList.toggle('pulse', on);
   }
 
+  /** Jet-booster state on the jump button (a glowing, flickering look while flying). Event driven: no per-frame DOM work. */
+  setJets(on: boolean): void {
+    this.jets = on;
+    this.buttons.get('jump')?.classList.toggle('jets', on);
+  }
+
   setPressed(action: Action, pressed: boolean): void {
     this.buttons.get(action)?.classList.toggle('pressed', pressed);
   }
@@ -296,13 +327,32 @@ export class TouchControls {
   /** Show the stick with its base centered at (cx, cy) and the knob offset (kx, ky) in px. */
   showStick(cx: number, cy: number, kx: number, ky: number): void {
     const r = this.radius;
-    this.base.style.display = 'block';
-    this.base.style.transform = `translate(${cx - r}px, ${cy - r}px)`;
-    this.knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
-    this.hint.style.visibility = 'hidden';
+    if (!this.stickShown) {
+      this.stickShown = true;
+      this.base.style.display = 'block';
+      this.hint.style.visibility = 'hidden';
+    }
+    // Whole pixels are enough and keep the strings (and the style writes) to the moves that matter.
+    const bx = Math.round(cx - r);
+    const by = Math.round(cy - r);
+    if (bx !== this.lastBx || by !== this.lastBy) {
+      this.lastBx = bx;
+      this.lastBy = by;
+      this.base.style.transform = `translate3d(${bx}px, ${by}px, 0)`;
+    }
+    const nx = Math.round(kx * 2) / 2;
+    const ny = Math.round(ky * 2) / 2;
+    if (nx !== this.lastKx || ny !== this.lastKy) {
+      this.lastKx = nx;
+      this.lastKy = ny;
+      this.knob.style.transform = `translate3d(calc(-50% + ${nx}px), calc(-50% + ${ny}px), 0)`;
+    }
   }
 
   hideStick(): void {
+    if (!this.stickShown) return;
+    this.stickShown = false;
+    this.lastBx = this.lastBy = this.lastKx = this.lastKy = NaN;
     this.base.style.display = 'none';
     this.hint.style.visibility = 'visible';
   }
@@ -311,6 +361,7 @@ export class TouchControls {
     window.removeEventListener('resize', this.relayout);
     window.removeEventListener('orientationchange', this.relayout);
     window.visualViewport?.removeEventListener('resize', this.relayout);
+    if (this.relayoutTimer) window.clearTimeout(this.relayoutTimer);
     this.probe.remove();
     this.layer.remove();
   }

@@ -246,6 +246,9 @@ async function jumpScenario(page, check) {
   await sleep(600);
   const bot = makeBot(page);
   await bot.pause(true);
+  // The test level unlocks flying; this scenario holds Space for 2.5 s to prove "hold never re-jumps", which would
+  // now start the jets. Flight has its own scenario group (skills-*).
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   let s = await bot.step(30);
 
   /** Press jump, then run until landing; optional second press at frame `second`. Returns peak above takeoff. */
@@ -564,7 +567,8 @@ async function touchScenario(page, check) {
     await tapAction('shield', 10);
     return bot.last.g && bot.last.mode === 'superglen';
   })());
-  // Peak with the touch jump button (hold: no repeat, one jump).
+  // Peak with the touch jump button (hold: no repeat, one jump). Flying has its own scenario (skills-touch).
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   {
     const j0 = bot.last.jumps;
     await fingers.down(11, jp.x, jp.y);
@@ -1300,7 +1304,8 @@ async function cameraAngleShots(page, check, d) {
 
 /** The chapter-done star: wait for it, freeze its pop-in at the peak, measure and screenshot, then see it go away. */
 async function celebrationChecks(page, check, d, beat, opts) {
-  const tag = opts.skipPoles ? 'touch' : 'desktop';
+  const tag = opts.tag || (opts.skipPoles ? 'touch' : 'desktop');
+  const chapter = opts.chapter || 1;
   let shown = false;
   for (let i = 0; i < 400 && !shown; i += 4) {
     await d.adv(4);
@@ -1333,8 +1338,8 @@ async function celebrationChecks(page, check, d, beat, opts) {
   check(`${t}: opacity 1 at the peak`, m.opacity === 1, String(m.opacity));
   check(`${t}: above the controls and the dialog layer`, m.z > m.maxControlZ, `z ${m.z} vs ${m.maxControlZ}`);
   check(`${t}: no dialog bubble covering it`, !m.dialogOpen);
-  check(`${t}: text says Chapter 1 selesai!`, m.text.includes('Chapter 1 selesai!'), m.text);
-  await shot(page, tag === 'touch' ? 'bab1-done-touch' : 'bab1-done');
+  check(`${t}: text says Chapter ${chapter} selesai!`, m.text.includes(`Chapter ${chapter} selesai!`), m.text);
+  await shot(page, opts.shotName || (tag === 'touch' ? 'bab1-done-touch' : 'bab1-done'));
   await beat('done', d);
   // Let it run out: it is hidden again after about 3 s of game time.
   await page.evaluate(() => { for (const a of document.querySelector('.bab1-star').getAnimations()) a.play(); });
@@ -1600,14 +1605,10 @@ async function bab1ReturnScenario(page, check) {
   let s = await d.st();
   check('returning player starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `mode ${s.mode} z ${s.player.z.toFixed(1)}`);
   await expectStanding(page, check, 'returning start in the lab', FLOOR);
-  check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false && !s.objective.active);
+  check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false);
   await shot(page, 'bab1-return');
-  await d.walk(2.2, -69.5, 600);
-  await d.adv(10);
-  s = await d.st();
-  check('Nino offers a friendly talk line', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
-  await d.tap('e');
-  check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  check('returning (Chapter 2 not played): the objective beam points at Nino', s.objective.active && Math.abs(s.objective.x - 4.2) < 0.5 && Math.abs(s.objective.z + 70.5) < 0.5, JSON.stringify(s.objective));
+  check('returning: all skills still locked, flying ceiling set for the small lab', !s.skills.unlocked.fly && s.skills.maxFlyHeight < 6, `maxFly ${s.skills.maxFlyHeight}`);
   // Camera collision: a pole between the camera and the player must pull the camera in (never inside the pole).
   await d.walk(5.9, -71.0, 600);
   await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // camera on the -Z side, pole at z -72.6 in between
@@ -1625,7 +1626,18 @@ async function bab1ReturnScenario(page, check) {
   await d.walk(0, -50, 600);
   s = await d.st();
   check('way back out through the wall stays open', s.player.z > -52, `z=${s.player.z.toFixed(1)}`);
+  // Nino offers a friendly talk line and sends the child on to Chapter 2.
+  await d.walk(0, -62.6, 600);
+  await d.walk(2.2, -69.5, 600);
+  await d.adv(10);
+  s = await d.st();
+  check('Nino offers a talk prompt', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
+  await d.tap('e');
+  check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  await d.adv(200); // the line ends (game time), then the fade to Chapter 2 starts
   await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 30000 });
+  check('after the line the game fades into Chapter 2 (bab2)', true);
   await page.goto(URL + '?reset=1&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
@@ -1701,11 +1713,1618 @@ async function bab1TouchScenario(page, check) {
   void fingers;
 }
 
+
+// ============================ Bab 2 ============================
+
+/** Pressing the skill inputs the way the platform does it: keys on the desktop, fingers on the buttons on touch. */
+function makeBab2Inputs(page, mode, fingers) {
+  if (mode === 'kbd') {
+    const key = (k) => (on) => (on ? page.keyboard.down(k) : page.keyboard.up(k));
+    return { jump: key('Space'), laser: key('j'), shield: key('k'), interact: key('e') };
+  }
+  const ids = { jump: 12, laser: 13, shield: 14, interact: 15 };
+  const held = new Set();
+  const set = (a) => async (on) => {
+    if (on && !held.has(a)) {
+      const c = await page.evaluate((a) => {
+        const b = document.querySelector(`.tc-button[data-action=${a}]`);
+        if (!b) return null;
+        const r = b.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }, a);
+      if (!c) return; // button not unlocked yet: nothing to press
+      await fingers.down(ids[a], c.x, c.y);
+      held.add(a);
+    } else if (!on && held.has(a)) {
+      await fingers.up(ids[a]);
+      held.delete(a);
+    }
+  };
+  return { jump: set('jump'), laser: set('laser'), shield: set('shield'), interact: set('interact') };
+}
+
+const hallTris = (c) => `${c.calls} calls, ${c.triangles} tris, ${c.programs} programs`;
+
+/** The whole of Chapter 2 through the normal input path. `beat(name, d)` is called at the interesting moments. */
+async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
+  const hits = {};
+  let lastId = '';
+  d.adv = async (n, render = false) => {
+    let left = n;
+    while (left > 0) {
+      const c = Math.min(left, 10);
+      await page.evaluate(([c, r]) => window.__superglen.advanceAsync(c, r), [c, left - c <= 0 && render]);
+      left -= c;
+      const id = await page.evaluate(() => window.__superglen.dialog.id);
+      if (id && id !== lastId) hits[id] = (hits[id] || 0) + 1;
+      lastId = id;
+      if (id && d.seen[d.seen.length - 1] !== id) d.seen.push(id);
+    }
+  };
+  const programs0 = (await page.evaluate(countsOf)).programs;
+  const areas = [];
+  const area = async (name) => {
+    await page.evaluate(() => window.__superglen.advance(2, true));
+    const c = await page.evaluate(countsOf);
+    areas.push(`${name}: ${hallTris(c)}`);
+    check(`${tag}: draw calls and triangles at ${name} within budget (< 150 calls, <= 60k tris)`, c.calls < 150 && c.triangles <= 60000, hallTris(c));
+    check(`${tag}: no new shader programs at ${name}`, c.programs === programs0, `${c.programs} vs ${programs0}`);
+  };
+  const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
+  let s = await d.st();
+
+  // ---- start ----
+  await d.adv(20);
+  s = await d.st();
+  check(`${tag}: ?level=bab2 starts as Superglen`, s.level === 'bab2' && s.mode === 'superglen', `${s.level} ${s.mode}`);
+  check(`${tag}: only Lompat Barongsai at the start (no skill unlocked)`, !s.skills.unlocked.fly && !s.skills.unlocked.laser && !s.skills.unlocked.shield, JSON.stringify(s.skills.unlocked));
+  if (tag === 'touch') check('touch: buttons at the start are jump + interact', (await actions()) === 'jump,interact', await actions());
+  else check('desktop: help card does not list skills yet', await page.evaluate(() => !document.querySelector('.hud-controls').textContent.includes('Tahan Spasi')));
+  await expectStanding(page, check, `bab2 at start (${tag})`);
+  check(`${tag}: first line bab2_nino_pagi`, d.seen.includes('bab2_nino_pagi'), d.seen.join());
+  check(`${tag}: objective beam on the flying pad`, s.objective.active && Math.abs(s.objective.x) < 0.5 && Math.abs(s.objective.z + 9) < 0.5, JSON.stringify(s.objective));
+  await d.adv(2, true);
+  await beat('hall', d);
+  await area('hall start');
+  // Skills do nothing before their unlock step.
+  const f0 = s.skills.flights;
+  await inp.jump(true);
+  await d.adv(70);
+  await inp.jump(false);
+  await inp.laser(true);
+  await d.adv(3);
+  await inp.laser(false);
+  s = await d.st();
+  check(`${tag}: holding jump before the unlock does not fly, J does not shoot`, s.skills.flights === f0 && !s.skills.flying && s.skills.laserShots === 0, `flights ${s.skills.flights} shots ${s.skills.laserShots}`);
+  await d.adv(300);
+
+  // ---- 1. flying ----
+  s = await d.walk(0, -9, 900);
+  check(`${tag}: walked to the flying pad`, Math.hypot(s.player.x, s.player.z + 9) < 3.3, `(${s.player.x.toFixed(1)}, ${s.player.z.toFixed(1)})`);
+  s = await d.until(() => d.seen.includes('bab2_nino_terbang'), 400, 10);
+  check(`${tag}: terbang line at the pad`, !!s);
+  s = await d.until((s) => s.skills.unlocked.fly, 400, 10);
+  check(`${tag}: flying unlocks after the line`, !!s);
+  s = await d.st();
+  check(`${tag}: the unlock is saved`, s.save.data.skills.fly === true);
+  s = await d.until((s) => s.levelInfo.step === 'bonk', 60, 2);
+  check(`${tag}: comic first try locks the controls and launches`, !!s && s.controlsEnabled === false, s ? `step ${s.levelInfo.step}` : 'no bonk step');
+  let peak = 0;
+  s = await d.until((s) => { peak = Math.max(peak, s.feetY); return s.levelInfo.step === 'bonked'; }, 900, 6);
+  check(`${tag}: the first try bumps the ceiling (rose above 10 m)`, !!s && peak > 10, `peak ${peak.toFixed(1)}`);
+  await d.adv(3, true);
+  await beat('bonk', d);
+  s = await d.st();
+  check(`${tag}: after the bonk: aduh line, controls still locked`, s.dialog.id === 'bab2_glen_aduh' && s.controlsEnabled === false, JSON.stringify(s.dialog));
+  s = await d.until((s) => s.levelInfo.step === 'rings' && s.controlsEnabled, 1200, 10);
+  check(`${tag}: control comes back after aduh + pelan lines`, !!s && d.seen.indexOf('bab2_glen_aduh') < d.seen.indexOf('bab2_nino_pelan'), d.seen.join());
+  s = await d.st();
+  check(`${tag}: ring step: row shows rings, 0 filled; hold hint on`, s.levelInfo.rowKind === 'ring' && s.levelInfo.rowCount === 0 && s.levelInfo.holdHint === true, JSON.stringify({ k: s.levelInfo.rowKind, c: s.levelInfo.rowCount, h: s.levelInfo.holdHint }));
+  const hold = await page.evaluate(() => ({
+    html: document.documentElement.classList.contains('b2-hold'),
+    key: (() => { const k = document.querySelector('.b2-key'); return !!k && !k.hidden && getComputedStyle(k).display !== 'none'; })(),
+    ring: getComputedStyle(document.querySelector('.tc-button[data-action=jump]'), '::after').content,
+  }));
+  if (tag === 'touch') check('touch: the jump button carries the animated hold ring', hold.html && hold.ring !== 'none' && hold.ring !== 'normal', JSON.stringify(hold));
+  else check('desktop: Space key cap with the hold bar is visible', hold.key, JSON.stringify(hold));
+  check(`${tag}: first ring waits at a low height over the pad (reachable by holding jump)`, s.levelInfo.goalKind === 'ring' && s.levelInfo.goalY <= 4 && Math.abs(s.levelInfo.goalZ + 9) < 0.6, `${s.levelInfo.goalX},${s.levelInfo.goalY},${s.levelInfo.goalZ}`);
+  check(`${tag}: objective beam is at the current ring`, s.objective.active && Math.abs(s.objective.x - s.levelInfo.goalX) < 0.6 && Math.abs(s.objective.z - s.levelInfo.goalZ) < 0.6);
+  if (!opts.skipFallback) {
+    // Fallback: no ring for 25 s -> hint again and the ring lowers toward the player.
+    const y0 = s.levelInfo.goalY;
+    const c0 = hits.bab2_nino_cincin || 0;
+    await d.walk(7, -9, 600); // off to the side: the lowered ring must not pass by itself
+    await d.adv(1560);
+    s = await d.st();
+    check(`${tag}: ring fallback after 25 s: Nino repeats the hint`, (hits.bab2_nino_cincin || 0) > c0, `${c0} -> ${hits.bab2_nino_cincin}`);
+    check(`${tag}: ring fallback after 25 s: the ring lowered itself toward the player`, s.levelInfo.ringFallbacks >= 1 && s.levelInfo.goalY < y0 - 0.5, `y ${y0} -> ${s.levelInfo.goalY}, fallbacks ${s.levelInfo.ringFallbacks}`);
+    check(`${tag}: nothing reset: still ring 0 of 5, 0 filled, still playable`, s.levelInfo.ringIndex === 0 && s.levelInfo.rowCount === 0 && s.controlsEnabled);
+  }
+  // Fly through the rings: hold jump while below the ring, steer with the synthetic stick.
+  let lastIdx = -1;
+  const filled = [];
+  let shotRings = false;
+  for (let i = 0; i < 2400; i += 4) {
+    s = await d.st();
+    const li = s.levelInfo;
+    if (li.rowCount >= 0 && filled[filled.length - 1] !== li.rowCount) filled.push(li.rowCount);
+    if (li.step !== 'rings') break;
+    if (li.ringIndex !== lastIdx) {
+      lastIdx = li.ringIndex;
+      await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [li.goalX, li.goalZ]);
+    }
+    await inp.jump(s.player.y < li.goalY + 0.2);
+    if (li.ringIndex === 2 && !shotRings && s.player.y > 4.5) {
+      shotRings = true;
+      await d.adv(4, true);
+      await beat('rings', d);
+    }
+    await d.adv(4);
+  }
+  await inp.jump(false);
+  await page.evaluate(() => window.__superglen.cancelWalk());
+  s = await d.st();
+  if (!filled.includes(5) && s.levelInfo.rowCount === 5) filled.push(5);
+  check(`${tag}: 5 rings passed (counter, stat) and the row filled one by one`, s.levelInfo.rings === 5 && s.skills.ringsPassed >= 5 && [1, 2, 3, 4, 5].every((n) => filled.includes(n)), `rings ${s.levelInfo.rings}, filled ${filled.join(',')}`);
+  check(`${tag}: cincin_bagus after some rings`, d.seen.includes('bab2_nino_cincin_bagus'), d.seen.join());
+  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 1, 600, 10);
+  check(`${tag}: hebat after the rings`, !!s);
+  await area('flying');
+
+  // ---- 2. laser ----
+  s = await d.until((s) => s.levelInfo.step === 'laser', 800, 10);
+  check(`${tag}: laser step starts; objective on the laser spot`, !!s && s.objective.active && Math.abs(s.objective.x + 9) < 0.6 && Math.abs(s.objective.z + 30) < 0.6, s ? JSON.stringify(s.objective) : '');
+  s = await d.st();
+  check(`${tag}: laser still locked before its station`, !s.skills.unlocked.laser);
+  if (tag === 'touch') check('touch: no laser button yet', (await actions()) === 'jump,interact', await actions());
+  s = await d.walk(-9, -30, 1500);
+  s = await d.until(() => d.seen.includes('bab2_nino_laser'), 300, 10);
+  check(`${tag}: laser line at the spot`, !!s);
+  await inp.laser(true);
+  await d.adv(3);
+  await inp.laser(false);
+  check(`${tag}: pressing laser before the unlock shoots nothing`, (await d.st()).skills.laserShots === 0);
+  s = await d.until((s) => s.skills.unlocked.laser, 400, 10);
+  check(`${tag}: laser unlocks after the line (saved)`, !!s && s.save.data.skills.laser === true);
+  if (tag === 'touch') {
+    await d.adv(8);
+    const a = await actions();
+    const pulse = await page.evaluate(() => document.querySelector('.tc-button[data-action=laser]').classList.contains('pulse'));
+    check('touch: laser button appears and pulses', a.includes('laser') && pulse, `${a} pulse ${pulse}`);
+  } else check('desktop: help card lists the laser key', await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('laser')));
+  s = await d.st();
+  check(`${tag}: target row shown; the objective goal is a target`, s.levelInfo.rowKind === 'target' && s.levelInfo.goalKind === 'target', JSON.stringify({ k: s.levelInfo.rowKind, g: s.levelInfo.goalKind }));
+  const filledT = [];
+  let shotLaser = false;
+  for (let i = 0; i < 3600; i += 30) {
+    s = await d.st();
+    const li = s.levelInfo;
+    if (li.rowKind === 'target' && li.rowCount >= 0 && filledT[filledT.length - 1] !== li.rowCount) filledT.push(li.rowCount);
+    if (li.targets >= 5) break;
+    await inp.laser(true);
+    await d.adv(2);
+    await inp.laser(false);
+    if (li.targets === 2 && !shotLaser) { shotLaser = true; await d.adv(6, true); await beat('laser', d); }
+    await d.adv(26);
+  }
+  s = await d.st();
+  if (!filledT.includes(5) && s.levelInfo.rowCount === 5) filledT.push(5);
+  check(`${tag}: 5 targets hit; row filled one by one`, s.levelInfo.targets === 5 && [1, 2, 3, 4, 5].every((n) => filledT.includes(n)), `targets ${s.levelInfo.targets}, filled ${filledT.join(',')}`);
+  check(`${tag}: a deliberate miss (laser at nothing) made Nino say tenang`, s.levelInfo.laserMisses >= 1 && (hits.bab2_nino_tenang || 0) >= 1, `misses ${s.levelInfo.laserMisses}, tenang x${hits.bab2_nino_tenang || 0}`);
+  check(`${tag}: tenang is rate limited (at most once per 6 s)`, (hits.bab2_nino_tenang || 0) <= 3, `x${hits.bab2_nino_tenang}`);
+  check(`${tag}: laser_bagus is not said after every hit`, (hits.bab2_nino_laser_bagus || 0) >= 1 && (hits.bab2_nino_laser_bagus || 0) <= 3, `x${hits.bab2_nino_laser_bagus}`);
+  await d.adv(60);
+  await area('laser');
+  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 2, 600, 10);
+  check(`${tag}: hebat after the targets`, !!s);
+
+  // ---- 3. shield ----
+  s = await d.until((s) => s.levelInfo.step === 'shield', 900, 10);
+  check(`${tag}: shield step; shield still locked`, !!s && !s.skills.unlocked.shield, s ? s.levelInfo.step : '');
+  s = await d.walk(6, -27, 1800);
+  s = await d.until(() => d.seen.includes('bab2_nino_perisai'), 300, 10);
+  check(`${tag}: perisai line at the station`, !!s);
+  s = await d.until((s) => s.skills.unlocked.shield, 400, 10);
+  check(`${tag}: shield unlocks after the line (saved)`, !!s && s.save.data.skills.shield === true);
+  if (tag === 'touch') {
+    await d.adv(8);
+    const a = await actions();
+    const pulse = await page.evaluate(() => document.querySelector('.tc-button[data-action=shield]').classList.contains('pulse'));
+    check('touch: shield button appears and pulses; all three skills present', a === 'jump,interact,laser,shield' && pulse, `${a} pulse ${pulse}`);
+  } else check('desktop: help card lists the shield key', await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('perisai')));
+  s = await d.st();
+  check(`${tag}: shield row shown`, s.levelInfo.rowKind === 'shield');
+  // First an unblocked ball: a bonk costs nothing and pushes nobody.
+  s = await d.until((s) => s.levelInfo.thrown >= 1 && s.skills.ballHits >= 1, 1200, 6);
+  check(`${tag}: an unblocked ball bonks the player`, !!s, s ? '' : 'no ball hit');
+  if (s) {
+    const x0 = s.player.x;
+    const z0 = s.player.z;
+    await d.adv(30);
+    const s2 = await d.st();
+    const moved = Math.hypot(s2.player.x - x0, s2.player.z - z0);
+    check(`${tag}: the bonk does not push the player more than 0.1 m`, moved <= 0.1, `${moved.toFixed(3)} m`);
+    s = await d.until(() => (hits.bab2_nino_coba_lagi || 0) >= 1, 400, 10);
+    check(`${tag}: a bonk makes Nino say coba_lagi, no penalty (blocks still 0)`, !!s && (await d.st()).levelInfo.blocks === 0, s ? '' : `coba_lagi x${hits.bab2_nino_coba_lagi || 0}`);
+  }
+  const filledS = [];
+  let shotShield = false;
+  await inp.shield(true);
+  for (let i = 0; i < 4200; i += 20) {
+    s = await d.st();
+    const li = s.levelInfo;
+    if (li.rowKind === 'shield' && li.rowCount >= 0 && filledS[filledS.length - 1] !== li.rowCount) filledS.push(li.rowCount);
+    if (li.blocks >= 5) break;
+    if (li.blocks === 2 && !shotShield && li.thrown >= 3) { shotShield = true; await d.adv(8, true); await beat('shield', d); }
+    await d.adv(20);
+  }
+  await inp.shield(false);
+  s = await d.st();
+  if (!filledS.includes(5) && s.levelInfo.rowCount === 5) filledS.push(5);
+  check(`${tag}: 5 blocks counted and the row filled`, s.levelInfo.blocks === 5 && [1, 2, 3, 4, 5].every((n) => filledS.includes(n)), `blocks ${s.levelInfo.blocks}, filled ${filledS.join(',')}`);
+  check(`${tag}: tangkis line said on some blocks`, (hits.bab2_nino_tangkis || 0) >= 1);
+  const t0 = s.levelInfo.thrown;
+  await d.adv(400);
+  s = await d.st();
+  check(`${tag}: after 5 blocks the balls stop`, s.levelInfo.thrown <= t0 + 1, `${t0} -> ${s.levelInfo.thrown}`);
+  await area('shield');
+  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 3, 600, 10);
+  check(`${tag}: hebat after the shield`, !!s);
+
+  // ---- 4. lunch ----
+  s = await d.until((s) => s.levelInfo.step === 'lunch', 900, 10);
+  check(`${tag}: lunch step; beam on the picnic mat`, !!s && s.objective.active && Math.abs(s.objective.x + 12) < 0.6 && Math.abs(s.objective.z + 7) < 0.6, s ? JSON.stringify(s.objective) : '');
+  check(`${tag}: bekal line`, d.seen.includes('bab2_nino_bekal'));
+  await d.walk(-12, -4.8, 1800);
+  await d.press('hand', 'lunch mat');
+  await d.adv(3);
+  s = await d.st();
+  check(`${tag}: lunch scene locks the controls`, s.controlsEnabled === false && s.levelInfo.lunch === true);
+  let f = 0;
+  let maxCrouch = 0;
+  let shotLunch = false;
+  if (opts.skipLunch) {
+    await d.adv(90);
+    await inp.interact(true);
+    await d.adv(3);
+    await inp.interact(false);
+    s = await d.st();
+    f = 93;
+    for (; f < 400 && s.levelInfo.lunch; f += 6) { await d.adv(6); s = await d.st(); }
+    check('touch: a press after 1.5 s skips the rest of the lunch scene', !s.levelInfo.lunch && f < 190, `scene ended after ${f} frames`);
+  } else {
+    for (f = 0; f < 600; f += 10) {
+      await d.adv(10);
+      s = await d.st();
+      maxCrouch = Math.max(maxCrouch, s.levelInfo.crouch);
+      if (!shotLunch && f >= 190) { shotLunch = true; await d.adv(2, true); await beat('lunch', d); }
+      if (!s.levelInfo.lunch) break;
+    }
+    check(`${tag}: lunch scene takes about 5 s and both sit down`, f >= 250 && f <= 420 && maxCrouch >= 0.9, `${f} frames, crouch ${maxCrouch}`);
+  }
+  check(`${tag}: glen_enak line`, d.seen.includes('bab2_glen_enak'));
+  await d.adv(20);
+  s = await d.st();
+  check(`${tag}: lunch over: standing up again`, s.levelInfo.crouch < 0.05, `crouch ${s.levelInfo.crouch}`);
+
+  // ---- 5. alarm ----
+  s = await d.until((s) => s.levelInfo.step === 'alarm', 600, 10);
+  check(`${tag}: alarm step: controls locked`, !!s && s.controlsEnabled === false);
+  s = await d.until((s) => s.levelInfo.market === true, 400, 6);
+  check(`${tag}: the wall screen switches to the city market`, !!s);
+  await d.adv(40, true);
+  s = await d.st();
+  check(`${tag}: alarm light on (soft pulse <= 1 Hz)`, s.levelInfo.alarm > 0.5 && s.levelInfo.alarmHz <= 1, `alarm ${s.levelInfo.alarm}, ${s.levelInfo.alarmHz} Hz`);
+  await beat('alarm', d);
+  check(`${tag}: no Nyam bubble left once the alarm starts`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
+  s = await d.until(() => d.seen.includes('bab2_glen_siap'), 600, 10);
+  check(`${tag}: alarm then siap lines in order`, !!s && d.seen.indexOf('bab2_nino_alarm') < d.seen.indexOf('bab2_glen_siap'), d.seen.join());
+  s = await d.until((s) => s.levelInfo.step === 'done', 600, 10);
+  check(`${tag}: chapter done step`, !!s);
+  await celebrationChecks(page, check, d, async (name) => { await beat(name, d); }, { chapter: 2, tag, shotName: tag === 'touch' ? 'bab2-done-touch' : 'bab2-done', skipPoles: tag === 'touch' });
+  s = await d.st();
+  check(`${tag}: save has bab2 done and all three skills`, s.save.data.chaptersDone.includes('bab2') && s.save.data.skills.laser && s.save.data.skills.shield && s.save.data.skills.fly, JSON.stringify(s.save.data));
+  check(`${tag}: no Nyam bubble after the chapter is done`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
+  s = await d.until((s) => s.levelInfo.step === 'free', 400, 10);
+  check(`${tag}: free play follows (controls on, all skills)`, !!s && s.controlsEnabled && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield);
+  console.log(`   bab2 ${tag} budgets: ${areas.join(' | ')}`);
+  return { hits, areas };
+}
+
+/** Share of near-white pixels (R, G, B all > 245) in the top 580 px of a 1280x720 screenshot (the bottom holds the white dialog bubble). */
+async function nearWhiteShare(page, name) {
+  const b64 = fs.readFileSync(path.join(OUT, `${name}.png`)).toString('base64');
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = 580;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) n++;
+    return n / (d.length / 4);
+  }, b64);
+}
+
+async function bab2DesktopScenario(page, check) {
+  await sleep(2000);
+  await page.mouse.click(640, 360);
+  await sleep(800);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  const inp = makeBab2Inputs(page, 'kbd');
+  const map = { hall: 'bab2-hall', bonk: 'bab2-bonk', rings: 'bab2-rings', laser: 'bab2-laser', shield: 'bab2-shield', lunch: 'bab2-lunch', alarm: 'bab2-alarm' };
+  await playBab2(page, check, d, inp, 'desktop', async (name) => {
+    if (name === 'laser') { await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); await page.evaluate(() => window.__superglen.advance(40, false)); }
+    if (name === 'shield') { await page.evaluate(() => window.__superglen.setCameraYaw(-Math.PI / 2)); await page.evaluate(() => window.__superglen.advance(40, false)); }
+    if (map[name]) {
+      await page.evaluate(() => window.__superglen.advance(2, true));
+      await shot(page, map[name]);
+      if (['hall', 'rings', 'laser', 'shield', 'alarm'].includes(name)) {
+        const w = await nearWhiteShare(page, map[name]);
+        console.log(`   near-white share ${map[name]}: ${(w * 100).toFixed(1)}%`);
+        check(`desktop: ${map[name]} is not overexposed (< 8% near-white pixels)`, w < 0.08, `${(w * 100).toFixed(1)}%`);
+      }
+    }
+  });
+  // Leak: bab2 -> test -> bab2 twice must not grow.
+  await page.evaluate(() => window.__superglen.pause(false));
+  const cyc = async (id) => {
+    await page.evaluate((id) => window.__superglen.loadLevel(id), id);
+    await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, id, { timeout: 8000 });
+    await sleep(200);
+  };
+  await cyc('test');
+  await cyc('bab2');
+  await sleep(1200);
+  const c1 = await page.evaluate(countsOf);
+  await cyc('test');
+  await cyc('bab2');
+  await sleep(1200);
+  const c2 = await page.evaluate(countsOf);
+  const keys = ['geometries', 'textures', 'colliders', 'bodies', 'sceneChildren'];
+  check('bab2 -> test -> bab2 does not leak', keys.every((k) => c1[k] === c2[k]), `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
+  await cyc('bab1');
+  await cyc('bab2');
+  await sleep(800);
+  const c3 = await page.evaluate(countsOf);
+  check('bab2 -> bab1 -> bab2 does not leak', keys.every((k) => c1[k] === c3[k]), `${JSON.stringify(c1)} vs ${JSON.stringify(c3)}`);
+  const free = await page.evaluate(() => { const g = window.__superglen; return g.level === 'bab2' && g.levelInfo.free === true; });
+  check('bab2 reloaded after it was done starts in free play', free);
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+
+async function bab2TouchScenario(page, check) {
+  const H = page.viewportSize().height;
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, H - 60);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  const inp = makeBab2Inputs(page, 'touch', fingers);
+  let overlaps = 0;
+  let samples = 0;
+  let rowWithDialog = 0;
+  const sample = async (name) => {
+    const r = await page.evaluate(() => {
+      const rect = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom }; };
+      const vis = (e) => e && !e.hidden && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
+      const items = [];
+      const dlg = document.querySelector('.dlg-card');
+      if (vis(document.querySelector('.dlg')) && dlg) items.push(['dialog', rect(dlg)]);
+      const row = document.querySelector('.b2-row');
+      if (vis(row)) items.push(['row', rect(row)]);
+      const pr = document.querySelector('.prompt');
+      if (pr && !pr.hidden) items.push(['prompt', rect(pr.querySelector('.prompt-icon'))]);
+      // (a button in its 0.6 s pop-in animation is momentarily bigger: measured once it has settled)
+      for (const b of document.querySelectorAll('.tc-button:not(.tc-pop)')) items.push(['button:' + b.dataset.action, rect(b)]);
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const bad = [];
+      for (const [n, a] of items) if (a.l < -1 || a.t < -1 || a.r > vw + 1 || a.b > vh + 1) bad.push(n + '-outside');
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const a = items[i][1], c = items[j][1];
+        if (items[i][0].startsWith('button') && items[j][0].startsWith('button')) continue;
+        if (items[i][0] === 'prompt' && items[j][0] === 'row') continue;
+        if (a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b) bad.push(items[i][0] + '/' + items[j][0]);
+      }
+      return { n: items.length, bad, both: !!(vis(row) && vis(document.querySelector('.dlg'))) };
+    });
+    samples++;
+    if (r.both) rowWithDialog++;
+    if (r.bad.length) { overlaps++; console.log(`   touch overlap at ${name}: ${r.bad.join(',')}`); }
+    return r;
+  };
+  // Sample inside every wait loop of the story driver.
+  d.until = async (cond, maxFrames = 1200, chunk = 6) => {
+    for (let i = 0; i < maxFrames; i += chunk) {
+      const s = await d.st();
+      if (cond(s)) return s;
+      await d.adv(chunk);
+      if (i % 30 === 0) await sample(s.levelInfo.step || '');
+    }
+    return null;
+  };
+  await playBab2(page, check, d, inp, 'touch', async (name) => {
+    await sample(name);
+    if (name === 'hall') { await page.evaluate(() => window.__superglen.advance(2, true)); await shot(page, 'bab2-touch-281'); }
+    if (name === 'rings') { await page.evaluate(() => window.__superglen.advance(2, true)); await shot(page, 'bab2-touch-281-rings'); }
+  }, { skipFallback: true, skipLunch: true });
+  check('touch: dialog bubble, progress row, prompt and buttons never overlap or leave the screen at any sampled beat', overlaps === 0, `${overlaps} overlaps in ${samples} samples (${rowWithDialog} with row and bubble together)`);
+}
+
+/** Flow rules, free play and the fallbacks, on fresh pages (the save is the only state). */
+async function bab2FlowScenario(page, check) {
+  const load = async (query, startClick = true) => {
+    await page.goto(URL + query);
+    await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+    await sleep(1400);
+    if (startClick) await page.mouse.click(640, 360);
+    await sleep(500);
+  };
+  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.persist(); }, [chapters, skills]);
+  const ALL = { laser: true, shield: true, fly: true };
+  const NONE = { laser: false, shield: false, fly: false };
+  const d = makeStoryDriver(page, check);
+  let s;
+
+  // a) fresh save -> Chapter 1
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.reset());
+  await load('?fps=0&reset=1');
+  s = await page.evaluate(state);
+  check('flow: fresh save starts Chapter 1 (bab1) as Glen', s.level === 'bab1' && s.mode === 'glen', `${s.level} ${s.mode}`);
+
+  // b) bab1 done, bab2 not -> the lab; the glowing door leads to the hall
+  await setSave(['bab1'], NONE);
+  await load('?fps=0');
+  await page.evaluate(() => window.__superglen.pause(true));
+  s = await d.st();
+  check('flow: bab1 done -> starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `${s.level} ${s.mode} z ${s.player.z.toFixed(1)}`);
+  await d.adv(30);
+  await d.walk(-5.2, -69.25, 900);
+  await d.adv(10);
+  s = await d.st();
+  check('flow: the lab door shows a hand prompt', s.prompt.visible && s.prompt.icon === 'hand', JSON.stringify(s.prompt));
+  await d.tap('e');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 60000 });
+  s = await page.evaluate(state);
+  check('flow: the lab door loads Chapter 2 (story from the start, only jump)', s.level === 'bab2' && !s.skills.unlocked.fly && s.levelInfo.free === false, `${s.level} free ${s.levelInfo.free}`);
+  check('flow: the door starts the story at the spawn', Math.abs(s.player.x) < 0.5 && Math.abs(s.player.z) < 0.5);
+
+  // c) bab2 done -> free play in the hall, all skills; restart exercises on their icons
+  await setSave(['bab1', 'bab2'], ALL);
+  await load('?fps=0');
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(30);
+  s = await d.st();
+  check('flow: bab2 done -> starts in the hall in free play as Superglen with all skills', s.level === 'bab2' && s.mode === 'superglen' && s.levelInfo.free === true && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield && !s.objective.active, JSON.stringify({ l: s.level, f: s.levelInfo.free, u: s.skills.unlocked }));
+  await expectStanding(page, check, 'bab2 free play start');
+  check('flow: free play: the help card lists all three skills', await page.evaluate(() => { const t = document.querySelector('.hud-controls').textContent; return t.includes('Tahan Spasi') && t.includes('laser') && t.includes('perisai'); }));
+  // Laser pad -> targets pop up; fallback after 25 s
+  await d.walk(-9, -30, 1500);
+  await d.adv(10);
+  s = await d.st();
+  check('flow: stepping on the laser icon restarts the targets (row + goal)', s.levelInfo.rowKind === 'target' && s.levelInfo.goalKind === 'target', JSON.stringify({ k: s.levelInfo.rowKind, g: s.levelInfo.goalKind }));
+  const dist0 = Math.hypot(s.levelInfo.goalX - s.player.x, s.levelInfo.goalZ - s.player.z);
+  await d.adv(1560);
+  s = await d.st();
+  const dist1 = Math.hypot(s.levelInfo.goalX - s.player.x, s.levelInfo.goalZ - s.player.z);
+  check('flow: target fallback after 25 s: the target came closer (<= 6.5 m)', s.levelInfo.targetFallbacks >= 1 && dist1 <= 6.5 && dist1 <= dist0 + 0.01, `${dist0.toFixed(1)} m -> ${dist1.toFixed(1)} m, fallbacks ${s.levelInfo.targetFallbacks}`);
+  await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // face the targets (the beam and arrow show the way)
+  for (let i = 0; i < 2400; i += 30) {
+    s = await d.st();
+    if (s.levelInfo.targets >= 5) break;
+    await d.tap('j');
+    await d.adv(28);
+  }
+  s = await d.st();
+  check('flow: free play laser round completes', s.levelInfo.targets === 5, `targets ${s.levelInfo.targets}`);
+  await d.adv(120);
+  // Shield pad: thrower runs while inside; slows down after 30 s without a block
+  await d.walk(6, -27, 1800);
+  await d.adv(10);
+  s = await d.st();
+  check('flow: stepping into the shield circle restarts the thrower round', s.levelInfo.rowKind === 'shield', s.levelInfo.rowKind);
+  const i0 = s.levelInfo.thrownInterval;
+  await d.adv(1900);
+  s = await d.st();
+  check('flow: thrower fallback after 30 s: it slows down', s.levelInfo.shieldFallbacks >= 1 && s.levelInfo.thrownInterval > i0, `${i0} -> ${s.levelInfo.thrownInterval}`);
+  check('flow: balls were thrown while inside the circle', s.levelInfo.thrown >= 3, `thrown ${s.levelInfo.thrown}`);
+  await d.walk(-4, -8, 1800);
+  const th0 = (await d.st()).levelInfo.thrown;
+  await d.adv(500);
+  s = await d.st();
+  check('flow: no balls while the player is outside the circle', s.levelInfo.thrown <= th0 + 1, `${th0} -> ${s.levelInfo.thrown}`);
+  // Flying pad: rings again
+  await d.walk(0, -9, 900);
+  await d.adv(10);
+  s = await d.st();
+  check('flow: stepping on the flying icon restarts the rings (no hold hint in free play)', s.levelInfo.rowKind === 'ring' && s.levelInfo.goalKind === 'ring' && s.levelInfo.holdHint === false, JSON.stringify({ k: s.levelInfo.rowKind, h: s.levelInfo.holdHint }));
+  check('flow: alarm pulse rate is at most 1 Hz', s.levelInfo.alarmHz <= 1, `${s.levelInfo.alarmHz}`);
+  // Exit door back to the lab: through the corridor.
+  await d.walk(0, 1.5, 900);
+  await d.walk(0, 10.2, 900);
+  await d.adv(10);
+  s = await d.st();
+  check('flow: the corridor door shows a hand prompt', s.prompt.visible && s.prompt.icon === 'hand', JSON.stringify(s.prompt));
+  await d.tap('e');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 60000 });
+  s = await page.evaluate(state);
+  check('flow: the exit door leads to the lab; all skills stay unlocked there', s.level === 'bab1' && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield && s.mode === 'superglen', JSON.stringify(s.skills.unlocked));
+  check('flow: lab flying ceiling is low (harmless)', s.skills.maxFlyHeight <= 5, `${s.skills.maxFlyHeight}`);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(30);
+  await d.walk(2.2, -69.5, 900);
+  await d.adv(10);
+  await d.tap('e');
+  check('flow: with both chapters done, Nino in the lab only cheers (no new chapter)', (await d.st()).dialog.id === 'bab2_nino_hebat');
+  await d.adv(400);
+  check('flow: ... and the lab stays loaded', (await d.st()).level === 'bab1');
+  await page.evaluate(() => window.__superglen.pause(false));
+
+  // d) reduced motion: calm beacons
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setSave(['bab1', 'bab2'], ALL);
+  await load('?fps=0');
+  await sleep(300);
+  s = await page.evaluate(state);
+  check('flow: prefers-reduced-motion: the alarm does not pulse (0 Hz)', s.level === 'bab2' && s.levelInfo.alarmHz === 0, `${s.levelInfo.alarmHz}`);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  // e) ?reset=1 clears everything -> Chapter 1 story
+  await load('?fps=0&reset=1', false);
+  s = await page.evaluate(state);
+  check('flow: ?reset=1 starts the Chapter 1 story again', s.level === 'bab1' && s.mode === 'glen' && s.player.z > -2 && s.save.data.chaptersDone.length === 0, `${s.level} z ${s.player.z.toFixed(1)}`);
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Perf scenario: frame pacing, adaptive resolution, DOM/layout work, GC pressure, shader programs, triangles,
+// the ?perf=1 panel. Deterministic: the loop is fed synthetic rAF timestamps (window.__superglen.simFrame).
+// ---------------------------------------------------------------------------------------------------------------
+const PACING_SCENARIOS = {
+  exact60: { R: 1000 / 60 },
+  hz5994: { R: 1000 / 59.94 },
+  jitter: { R: 1000 / 60, jitter: 2 },
+  hz120: { R: 1000 / 120 },
+  hitch: { R: 1000 / 60, hitch: { every: 3000, ms: 40 } },
+};
+const PACING_LEVELS = {
+  test: { query: '?level=test&fps=0', route: { x: -17, z0: 24, z1: -24 }, passSec: 8.4, passes: 2, warmMs: 3000 },
+  bab1: { query: '?fps=0&reset=1', route: { x: 1.3, z0: -9.6, z1: -36 }, passSec: 4.6, passes: 4, warmMs: 1800 },
+};
+
+/** Walk straight passes with synthetic rAF timestamps; return per-frame camera and player positions. */
+async function recordPacing(page, L, S, smooth) {
+  return page.evaluate(({ L, S, smooth }) => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.smoothing(smooth);
+    g.resetTiming();
+    let seed = 12345;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const R = S.R;
+    const passFrames = Math.round((L.passSec * 1000) / R);
+    const out = { cam: [], pl: [], f: [], hitchAt: [] };
+    let T = 1000;
+    let nextHitch = S.hitch ? S.hitch.every : 1e12;
+    let elapsed = 0;
+    g.simFrame(T, false);
+    for (let k = 0; k < passFrames * L.passes; k++) {
+      const pf = k % passFrames;
+      if (pf === 0) {
+        g.placePlayer(L.route.x, L.route.z0);
+        g.setCameraYaw(0);
+        g.walkTo(L.route.x, L.route.z1);
+      }
+      if (S.hitch && elapsed >= nextHitch) {
+        T += S.hitch.ms;
+        nextHitch += S.hitch.every;
+        out.hitchAt.push(k);
+      } else T += R;
+      elapsed += R;
+      const j = S.jitter ? (rnd() * 2 - 1) * S.jitter : 0;
+      g.simFrame(T + j, false);
+      out.cam.push([g.camera.x, g.camera.y, g.camera.z]);
+      out.pl.push([g.player.x, g.player.y, g.player.z]);
+      out.f.push(pf);
+    }
+    g.cancelWalk();
+    g.smoothing(true);
+    g.resetTiming();
+    return out;
+  }, { L, S, smooth });
+}
+
+function pacingStats(rec, S, warmMs) {
+  const warm = Math.round(warmMs / S.R);
+  const skip = new Set();
+  for (const h of rec.hitchAt) for (let d = -1; d <= 4; d++) skip.add(h + d);
+  const camD = [];
+  const relD = [];
+  for (let k = 1; k < rec.cam.length; k++) {
+    if (rec.f[k] < warm || rec.f[k - 1] < warm || skip.has(k)) continue;
+    const c = rec.cam[k], c0 = rec.cam[k - 1], p = rec.pl[k], p0 = rec.pl[k - 1];
+    camD.push(Math.hypot(c[0] - c0[0], c[1] - c0[1], c[2] - c0[2]));
+    relD.push(Math.hypot(p[0] - c[0] - (p0[0] - c0[0]), p[1] - c[1] - (p0[1] - c0[1]), p[2] - c[2] - (p0[2] - c0[2])));
+  }
+  const n = camD.length;
+  const mean = camD.reduce((a, v) => a + v, 0) / n;
+  const sd = Math.sqrt(camD.reduce((a, v) => a + (v - mean) ** 2, 0) / n);
+  return {
+    n,
+    meanMm: mean * 1000,
+    cv: sd / mean,
+    maxDev: Math.max(...camD.map((v) => Math.abs(v - mean))) / mean,
+    relRmsMm: Math.sqrt(relD.reduce((a, v) => a + v * v, 0) / n) * 1000,
+    relMaxMm: Math.max(...relD) * 1000,
+  };
+}
+
+async function loadFresh(page, query) {
+  await page.goto(URL + query);
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1200);
+}
+
+async function perfScenario(page, check) {
+  const report = (label, v) => console.log(`   [perf] ${label}: ${v}`);
+
+  // ---- 1. Frame pacing (walk speed must be constant frame to frame) ----
+  const PACING_LIMITS = {
+    exact60: { cv: 0.005, rel: 1.0 },
+    hz5994: { cv: 0.005, rel: 1.0 },
+    jitter: { cv: 0.04, rel: 1.0 },
+    hz120: { cv: 0.005, rel: 1.0 },
+    hitch: { cv: 0.01, rel: 1.5 },
+  };
+  for (const [lname, L] of Object.entries(PACING_LEVELS)) {
+    await loadFresh(page, L.query);
+    for (const [sname, S] of Object.entries(PACING_SCENARIOS)) {
+      const st = pacingStats(await recordPacing(page, L, S, true), S, L.warmMs);
+      const lim = PACING_LIMITS[sname];
+      report(`pacing ${lname}/${sname}`, `camera step CV ${(st.cv * 100).toFixed(2)}% maxDev ${(st.maxDev * 100).toFixed(1)}% player-vs-camera rms ${st.relRmsMm.toFixed(2)}mm max ${st.relMaxMm.toFixed(2)}mm (n=${st.n})`);
+      check(`pacing ${lname}/${sname}: walking is smooth (camera step CV < ${lim.cv * 100}%, player stays put on screen)`, st.n > 300 && st.cv < lim.cv && st.relRmsMm < lim.rel, `CV ${(st.cv * 100).toFixed(2)}% rel rms ${st.relRmsMm.toFixed(2)}mm`);
+    }
+    if (lname === 'test') {
+      // The dt filter must beat raw timestamps when they jitter.
+      const S = PACING_SCENARIOS.jitter;
+      const raw = pacingStats(await recordPacing(page, L, S, false), S, L.warmMs);
+      const sm = pacingStats(await recordPacing(page, L, S, true), S, L.warmMs);
+      report('pacing jitter without/with dt filter', `CV ${(raw.cv * 100).toFixed(2)}% -> ${(sm.cv * 100).toFixed(2)}%`);
+      check('pacing: the dt filter at least halves the camera step CV under +-2 ms timestamp jitter', sm.cv < raw.cv * 0.5, `${(raw.cv * 100).toFixed(2)}% -> ${(sm.cv * 100).toFixed(2)}%`);
+    }
+  }
+
+  // ---- 2. Shadow map follows the player in whole texels (no swimming shadows) ----
+  await loadFresh(page, '?fps=0&reset=1');
+  const phase = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    const run = (snap) => {
+      g.shadowSnap(snap);
+      g.placePlayer(0, -4);
+      g.advance(5, false);
+      const a = [];
+      for (let i = 0; i < 40; i++) {
+        g.placePlayer(0.0137 * i, -4 - 0.0071 * i);
+        g.advance(1, false);
+        a.push(g.shadowPhase());
+      }
+      const spread = (k) => Math.max(...a.map((p) => p[k])) - Math.min(...a.map((p) => p[k]));
+      return Math.max(spread(0), spread(1));
+    };
+    const off = run(false);
+    const on = run(true);
+    g.shadowSnap(true);
+    return { off, on };
+  });
+  report('shadow texel phase spread over 0.5 m of walking (texels)', `unsnapped ${phase.off.toFixed(3)} -> snapped ${phase.on.toFixed(3)}`);
+  check('shadow camera is snapped to whole shadow-map texels while walking', phase.on < 0.05 && phase.off > 0.3, `snapped ${phase.on.toFixed(3)}, unsnapped ${phase.off.toFixed(3)}`);
+
+  // ---- 3. Adaptive resolution: no flapping, hard cap ----
+  const adapt = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.adaptReset();
+    const res = {};
+    const run = (name, frames, moving, startT) => {
+      let T = startT;
+      const times = [];
+      let last = g.adaptive().changes;
+      for (const dtMs of frames) {
+        T += dtMs;
+        g.adaptFrame(T, typeof moving === 'function' ? moving(T) : moving);
+        const c = g.adaptive().changes;
+        if (c !== last) { times.push(T); last = c; }
+      }
+      return { T, times };
+    };
+    // a) steady 60 fps for 60 s while walking
+    const steady = Array.from({ length: 3600 }, () => 1000 / 60);
+    const a = run('steady', steady, true, 1e6);
+    res.steadyChanges = a.times.length;
+    res.steadyStep = g.adaptive().step;
+    // b) a phone hovering around the 27 fps threshold for 5 minutes (noise included)
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const hover = [];
+    for (let i = 0; i < 9000; i++) {
+      const phase = Math.floor(i / 180) % 2; // 3 s slow-ish, 3 s ok-ish
+      hover.push((phase ? 1000 / 31 : 1000 / 24) + (rnd() - 0.5) * 8);
+    }
+    const b = run('hover', hover, true, a.T);
+    res.hoverChanges = b.times.length;
+    let worst = 0;
+    for (let i = 0; i < b.times.length; i++) {
+      let n = 0;
+      for (let j = i; j < b.times.length && b.times[j] - b.times[i] < 60000; j++) n++;
+      worst = Math.max(worst, n);
+    }
+    res.hoverWorstPerMinute = worst;
+    // c) after a real slow patch (fresh state), a fast walk must not step back up within 25 s
+    g.adaptReset();
+    const slow = Array.from({ length: 5 * 15 }, () => 1000 / 15);
+    const c1 = run('slow', slow, true, b.T + 1e6);
+    res.droppedOnSlow = g.adaptive().step > 0;
+    const fast = Array.from({ length: 60 * 25 }, () => 1000 / 60);
+    const c2 = run('recover', fast, true, c1.T);
+    res.upWhileWalking25s = c2.times.length;
+    return res;
+  });
+  report('adaptive resolution', JSON.stringify(adapt));
+  check('adaptive: zero pixel-ratio changes during 60 s of steady 60 fps walking on the phone preset', adapt.steadyChanges === 0 && adapt.steadyStep === 0, `${adapt.steadyChanges} changes`);
+  check('adaptive: a phone hovering at the threshold for 5 min changes the ratio at most 3 times per minute', adapt.hoverWorstPerMinute <= 3, `worst ${adapt.hoverWorstPerMinute}/min, total ${adapt.hoverChanges}`);
+  check('adaptive: a slow patch steps down, and it does not step back up while walking within 25 s', adapt.droppedOnSlow && adapt.upWhileWalking25s === 0, JSON.stringify({ d: adapt.droppedOnSlow, up: adapt.upWhileWalking25s }));
+
+  // ---- 4. Resize storms: Safari bars / visualViewport events must not reallocate the drawing buffer ----
+  await loadFresh(page, '?level=test&fps=0');
+  const resizes = await page.evaluate(async () => {
+    const canvas = document.querySelector('canvas');
+    let sets = 0;
+    const d = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'width');
+    Object.defineProperty(canvas, 'width', { configurable: true, get() { return d.get.call(this); }, set(v) { sets++; d.set.call(this, v); } });
+    for (let i = 0; i < 40; i++) {
+      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event('orientationchange'));
+      window.visualViewport && window.visualViewport.dispatchEvent(new Event('resize'));
+    }
+    await new Promise((r) => setTimeout(r, 400));
+    return sets;
+  });
+  check('resize events with an unchanged size never touch the canvas size (120 events)', resizes === 0, `${resizes} canvas width writes`);
+
+  // ---- 5. DOM writes and layout reads per frame while walking, GC pressure ----
+  for (const [lname, q, dest] of [['test', '?level=test', [0, -20]], ['bab1', '?reset=1', [0, -7.5]]]) {
+    await loadFresh(page, q);
+    const dom = await page.evaluate(({ dest }) => {
+      const g = window.__superglen;
+      g.pause(true);
+      g.resetTiming();
+      const counts = { layout: 0 };
+      const rect = Element.prototype.getBoundingClientRect;
+      Element.prototype.getBoundingClientRect = function () { counts.layout++; return rect.apply(this, arguments); };
+      const ow = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get() { counts.layout++; return ow.get.call(this); } });
+      const gcs = window.getComputedStyle;
+      window.getComputedStyle = function () { counts.layout++; return gcs.apply(window, arguments); };
+      const mo = new MutationObserver(() => {});
+      mo.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+      let T = 5000;
+      g.simFrame(T, false);
+      g.walkTo(dest[0], dest[1]);
+      let frames = 0;
+      for (let i = 0; i < 240; i++) { T += 1000 / 60; g.simFrame(T, false); frames++; }
+      const records = mo.takeRecords().length;
+      mo.disconnect();
+      Element.prototype.getBoundingClientRect = rect;
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', ow);
+      window.getComputedStyle = gcs;
+      g.cancelWalk();
+      return { records, layout: counts.layout, frames };
+    }, { dest });
+    report(`DOM ${lname}`, `${dom.records} mutations, ${dom.layout} layout reads in ${dom.frames} walking frames`);
+    check(`DOM (${lname}): <= 10 DOM mutations and 0 layout reads in 240 walking frames`, dom.records <= 10 && dom.layout === 0, `${dom.records} mutations, ${dom.layout} layout reads`);
+  }
+
+  // GC pressure: heap growth per frame (needs --enable-precise-memory-info; skipped when unavailable).
+  const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+  if (!heapOk) {
+    report('heap', 'performance.memory/gc unavailable: skipped');
+  } else {
+    const HEAP_LIMIT = { test: 16000, bab1: 16000 }; // bytes per frame; before the fixes: ~22000 and ~38000, after ~6000-12000
+    for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?fps=0&reset=1', [0, -7.5]]]) {
+      await loadFresh(page, q);
+      const bpf = await page.evaluate(({ dest }) => {
+        const g = window.__superglen;
+        g.pause(true);
+        g.advance(5, true);
+        g.walkTo(dest[0], dest[1]);
+        g.advance(30, false);
+        window.gc();
+        const heap = () => performance.memory.usedJSHeapSize;
+        let prev = heap();
+        let acc = 0;
+        const n = 400;
+        for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+        g.cancelWalk();
+        return acc / n;
+      }, { dest });
+      report(`heap ${lname}`, `${Math.round(bpf)} bytes per frame`);
+      check(`heap (${lname}): < ${HEAP_LIMIT[lname]} bytes allocated per walking frame`, bpf < HEAP_LIMIT[lname], `${Math.round(bpf)} B/frame`);
+    }
+  }
+
+  // ---- 6. Shader programs stay constant, triangle budget (story level) ----
+  await loadFresh(page, '?fps=0&reset=1');
+  const prog = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.advance(3, true);
+    const p0 = g.debugCounts().programs;
+    let maxTris = 0;
+    const tris = {};
+    for (const [name, x, z] of [['street start', 0, 0], ['street mid', 0, -20], ['plaza', 0, -36], ['hall door', 0, -45], ['hall', 0, -55], ['lab', 0, -70]]) {
+      g.placePlayer(x, z);
+      g.setCameraYaw(0);
+      g.advance(40, false);
+      g.advance(1, true);
+      const c = g.debugCounts();
+      tris[name] = c.triangles;
+      maxTris = Math.max(maxTris, c.triangles);
+    }
+    // Exercise things that appear mid-play: Superglen flash ring, objective beam, mode back.
+    g.game.setPlayerMode('superglen');
+    g.advance(20, true);
+    g.game.setPlayerMode('glen');
+    g.advance(20, true);
+    return { p0, p1: g.debugCounts().programs, maxTris, tris };
+  });
+  report('programs / triangles', JSON.stringify(prog));
+  check('shader programs: none compiled after warm-up while walking all areas and switching mode', prog.p1 === prog.p0 && prog.p0 > 0, `${prog.p0} -> ${prog.p1}`);
+  check('bab1 triangles per frame (incl. shadow pass) <= 60000 at every sampled spot', prog.maxTris <= 60000, `max ${prog.maxTris}: ${JSON.stringify(prog.tris)}`);
+
+  // ---- 7. ?perf=1 panel ----
+  await loadFresh(page, '?level=test&fps=0');
+  check('perf panel is absent without ?perf=1', await page.evaluate(() => !document.querySelector('.perf-panel')));
+  await loadFresh(page, '?level=test&fps=0&perf=1');
+  await sleep(1800);
+  const pn = await page.evaluate(() => {
+    const el = document.querySelector('.perf-panel');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const c = el.querySelector('canvas');
+    return { text: el.innerText, w: r.width, h: r.height, cx: r.left + r.width / 2, vw: window.innerWidth, top: r.top, cw: c && c.width, ch: c && c.height };
+  });
+  check('perf panel appears with ?perf=1, top-centre, small, with a 240x48 graph', !!pn && pn.cw === 240 && pn.ch === 48 && Math.abs(pn.cx - pn.vw / 2) < 2 && pn.top < 12 && pn.w < 280 && pn.h < 110, JSON.stringify(pn));
+  check('perf panel shows median/p99, hitches, steps, ratio, calls/tri and the worst hitch', !!pn && /med [\d.]+ p99 [\d.]+/.test(pn.text) && /hitch\/10s/.test(pn.text) && /steps 0:/.test(pn.text) && /ratio [\d.]+ chg \d+/.test(pn.text) && /calls \d+ tri \d+/.test(pn.text) && /worst/.test(pn.text), pn && pn.text.replace(/\n/g, ' | '));
+  await page.click('.perf-panel');
+  const t1 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  await sleep(1200);
+  const t2 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  check('tapping the perf panel freezes it', t1 === t2, '');
+  await page.click('.perf-panel');
+  await sleep(900);
+  const t3 = await page.evaluate(() => document.querySelector('.perf-panel').innerText);
+  check('tapping again resumes it', t3 !== t2, '');
+  await shot(page, 'perf-panel');
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Skills (flight, laser, shield): deterministic stepping (1/60 s per frame) with real key events / CDP fingers.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** One-shot reader of everything a skills check needs. */
+const skillsSnapshot = () => {
+  const g = window.__superglen;
+  const k = g.skills;
+  return {
+    flying: k.flying, jets: k.jets, h: k.flyHeight, maxH: k.maxFlyHeight, shieldUp: k.shieldUp,
+    shots: k.laserShots, hits: k.laserHits, misses: k.laserMisses, blocks: k.shieldBlocks, ballHits: k.ballHits,
+    rings: k.ringsPassed, flights: k.flights, aim: k.aimTarget, proj: k.projectiles, spawned: k.projectilesSpawned,
+    speedScale: k.speedScale, facing: k.facing, testHits: { ...k.testHits }, unlocked: { ...k.unlocked },
+    x: g.player.x, z: g.player.z, y: g.feetY, vy: g.verticalVelocity, grounded: !g.airborne, stomps: g.stomps,
+    jumps: g.jumps, dj: g.doubleJumps, mode: g.mode, info: { ...g.levelInfo }, level: g.level,
+  };
+};
+
+function makeSkillsDriver(page) {
+  const d = { last: null };
+  d.snap = async () => (d.last = await page.evaluate(skillsSnapshot));
+  d.step = async (n = 1, render = false) => {
+    await page.evaluate(([n, r]) => window.__superglen.advance(n, r), [n, render]);
+    return d.snap();
+  };
+  d.down = (k) => page.keyboard.down(k);
+  d.up = (k) => page.keyboard.up(k);
+  d.tap = async (k, after = 1) => {
+    await page.keyboard.down(k);
+    await d.step(1);
+    await page.keyboard.up(k);
+    return d.step(after);
+  };
+  d.place = async (x, z) => {
+    await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [x, z]);
+    return d.step(3);
+  };
+  d.camera0 = () => page.evaluate(() => window.__superglen.setCameraYaw(0));
+  /** Walk with a key for a moment so the body turns that way (camera yaw 0: w = -Z, s = +Z, a = -X, d = +X). */
+  d.face = async (key) => {
+    await d.camera0();
+    await page.keyboard.down(key);
+    await d.step(16);
+    await page.keyboard.up(key);
+    return d.step(18);
+  };
+  d.mode = (m) => page.evaluate((m) => window.__superglen.game.setPlayerMode(m), m);
+  d.skills = (sk) => page.evaluate((sk) => window.__superglen.game.setSkills(sk), sk);
+  d.sk = (fn, arg) => page.evaluate(fn, arg);
+  d.clearTargets = () => page.evaluate(() => window.__superglen.skills.removeTestTargets());
+  d.addTarget = (x, y, z, id) => page.evaluate(([x, y, z, id]) => window.__superglen.skills.addTestTarget(x, y, z, 0.6, id), [x, y, z, id]);
+  d.ball = (x, y, z, speed) => page.evaluate(([x, y, z, sp]) => window.__superglen.skills.throwBall(x, y, z, sp), [x, y, z, speed]);
+  d.maxFly = (h) => page.evaluate((h) => window.__superglen.skills.setMaxFlyHeight(h), h);
+  /** Land from anywhere: release everything and step until grounded. */
+  d.land = async () => {
+    for (const k of ['Space', 'w', 'a', 's', 'd', 'j', 'k']) await page.keyboard.up(k);
+    for (let i = 0; i < 700; i++) {
+      await d.step(5);
+      if (d.last.grounded) break;
+    }
+    return d.step(20);
+  };
+  return d;
+}
+
+async function skillsDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  let s = await d.step(30);
+  const report = (label, v) => console.log(`   [skills] ${label}: ${v}`);
+
+  check('test level: all three skills unlocked and listed on the PC card', await page.evaluate(() => {
+    const u = window.__superglen.skills.unlocked;
+    const t = [...document.querySelectorAll('.hud-controls li')].map((e) => e.textContent);
+    return u.laser && u.shield && u.fly && t.includes('Tahan Spasi: terbang') && t.includes('J atau klik kiri: laser') && t.includes('K atau klik kanan: perisai');
+  }));
+  check('no skill input works in Glen mode', await (async () => {
+    const f0 = s.flights;
+    await d.down('Space');
+    await d.step(100);
+    await d.up('Space');
+    const a = await d.step(1);
+    await d.tap('j');
+    await d.down('k');
+    await d.step(5);
+    await d.up('k');
+    const b = await d.step(30);
+    return !a.flying && a.flights === f0 && b.shots === s.shots && !b.shieldUp;
+  })());
+  await d.land();
+
+  await d.tap('e', 20);
+  s = await d.snap();
+  check('E switches to Superglen', s.mode === 'superglen');
+
+  // ---- Flight: taps are unchanged -----------------------------------------------------------------------
+  {
+    const y0 = (await d.step(1)).y;
+    const f0 = d.last.flights;
+    await d.tap('Space');
+    let peak = 0;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 4) break;
+    }
+    check('tap jump: normal Superglen jump (peak 2.0-2.9 m), no flight', peak > 2.0 && peak < 2.9 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
+    await d.step(10);
+    const st = d.last.stomps;
+    await d.tap('Space');
+    peak = 0;
+    for (let i = 0; i < 200; i++) {
+      if (i === 26) await d.tap('Space');
+      else await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 30) break;
+    }
+    await d.step(10);
+    check('tap-tap: double jump unchanged (peak 3.6-4.8 m), stomp on landing, no flight', peak > 3.6 && peak < 4.8 && d.last.dj >= 1 && d.last.stomps === st + 1 && d.last.flights === f0, `${peak.toFixed(2)} m`);
+  }
+
+  // ---- Flight: hold from the ground ----------------------------------------------------------------------
+  let ground = d.last;
+  await d.down('Space');
+  let startFrame = -1;
+  let maxH = 0;
+  let lastH = 0;
+  for (let i = 1; i <= 700; i++) {
+    await d.step(1);
+    if (startFrame < 0 && d.last.flying) startFrame = i;
+    maxH = Math.max(maxH, d.last.h);
+    if (i > 120 && Math.abs(d.last.h - lastH) < 1e-4 && d.last.h > 10) break;
+    lastH = d.last.h;
+  }
+  report('jets started after', `${startFrame} frames (${(startFrame / 60).toFixed(2)} s)`);
+  check('hold Space from the ground: jets start within 0.45-0.9 s', startFrame >= 27 && startFrame <= 54, `${(startFrame / 60).toFixed(2)} s`);
+  check('flying: counted as one flight, jets on', d.last.flying && d.last.jets && d.last.flights === ground.flights + 1);
+  await d.step(1, true);
+  await shot(page, 'skills-fly');
+  check('rises to the ceiling (11.5-12.2 m above the ground) and never beyond', maxH >= 11.5 && maxH <= 12.2, `${maxH.toFixed(3)} m`);
+  await d.step(180);
+  {
+    let vmax = 0;
+    let hmin = 1e9;
+    let hmax = -1e9;
+    for (let i = 0; i < 60; i++) {
+      await d.step(1);
+      vmax = Math.max(vmax, Math.abs(d.last.vy));
+      hmin = Math.min(hmin, d.last.y);
+      hmax = Math.max(hmax, d.last.y);
+    }
+    check('hover at the ceiling is stable (|vy| < 0.05, height steady)', vmax < 0.05 && hmax - hmin < 0.02, `|vy| ${vmax.toFixed(4)}, drift ${(hmax - hmin).toFixed(4)} m`);
+  }
+
+  // ---- horizontal flight: speed and a straight path ------------------------------------------------------
+  {
+    await d.camera0();
+    await d.down('w');
+    await d.step(30);
+    const pts = [];
+    for (let i = 0; i < 90; i++) {
+      await d.step(1);
+      pts.push([d.last.x, d.last.z]);
+    }
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    const speed = Math.hypot(b[0] - pts[pts.length - 31][0], b[1] - pts[pts.length - 31][1]) / 0.5;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    let dev = 0;
+    for (const p of pts) dev = Math.max(dev, Math.abs((p[0] - a[0]) * (b[1] - a[1]) - (p[1] - a[1]) * (b[0] - a[0])) / len);
+    report('flying speed', `${speed.toFixed(2)} m/s, path deviation ${dev.toFixed(3)} m over ${len.toFixed(1)} m`);
+    check('stick held while flying: horizontal speed 6-8 m/s', speed > 6 && speed < 8, `${speed.toFixed(2)}`);
+    check('...along a straight path', dev < 0.3 && len > 8, `dev ${dev.toFixed(3)} m, len ${len.toFixed(1)}`);
+    await d.up('w');
+    await d.step(60);
+    const p0 = [d.last.x, d.last.z];
+    await d.step(30);
+    check('no input: hovers in place', Math.hypot(d.last.x - p0[0], d.last.z - p0[1]) < 0.02, `${Math.hypot(d.last.x - p0[0], d.last.z - p0[1]).toFixed(3)} m`);
+  }
+
+  // ---- release: slow descent and a soft landing -----------------------------------------------------------
+  {
+    const st = d.last.stomps;
+    await d.up('Space');
+    await d.step(50);
+    const vy1 = d.last.vy;
+    const y1 = d.last.y;
+    await d.step(30);
+    check('release: slow glide at about -2.2 m/s (1.5-3 m/s down), still airborne', vy1 < -1.5 && vy1 > -3 && d.last.y < y1 && !d.last.grounded, `vy ${vy1.toFixed(2)}`);
+    // steer while gliding
+    await d.down('d');
+    await d.step(30);
+    const x0 = d.last.x;
+    await d.step(6);
+    const vx = (d.last.x - x0) / 0.1;
+    check('full horizontal control while gliding (reaches 6-8 m/s sideways)', vx > 6 && vx < 8, `${vx.toFixed(2)} m/s`);
+    await d.up('d');
+    let worst = 0;
+    for (let i = 0; i < 700 && !d.last.grounded; i++) {
+      await d.step(1);
+      worst = Math.min(worst, d.last.vy);
+    }
+    await d.step(20);
+    check('lands from flight without a stomp, at <= 3 m/s', d.last.grounded && d.last.stomps === st && worst > -3.2 && !d.last.flying, `fastest ${worst.toFixed(2)} m/s, stomps ${st}->${d.last.stomps}`);
+  }
+
+  // ---- re-ignite during the descent -----------------------------------------------------------------------
+  {
+    await d.maxFly(6);
+    await d.down('Space');
+    await d.step(120);
+    check('ceiling 6 m (per level): rises to 5.6-6.2 m', d.last.flying && d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)} m`);
+    await d.up('Space');
+    await d.step(60);
+    const hDown = d.last.h;
+    check('released: descending', d.last.vy < -1.5 && hDown < 5.5, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    await d.down('Space');
+    await d.step(30);
+    check('hold Space again during the descent: rises again', d.last.vy > 0.3 && d.last.h > hDown, `vy ${d.last.vy.toFixed(2)}`);
+    await d.step(120);
+    check('...up to the ceiling again, no limit on re-ignitions', d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)}`);
+    await d.land();
+    await d.maxFly(12);
+  }
+
+  // ---- ring pass --------------------------------------------------------------------------------------------
+  {
+    await d.maxFly(5);
+    await d.place(18, 14);
+    const r0 = d.last.rings;
+    await d.camera0();
+    await d.down('Space');
+    await d.step(150);
+    await d.down('w');
+    await d.step(70);
+    await d.up('w');
+    await d.step(5, true);
+    await shot(page, 'skills-ring');
+    check('flying through a hover ring registers it (ringsPassed + 1)', d.last.rings === r0 + 1, `${r0} -> ${d.last.rings}`);
+    await d.land();
+    await d.maxFly(12);
+  }
+
+  // ---- a real ceiling indoors (pergola slab at 4 m) ----------------------------------------------------------
+  {
+    await d.place(-25, 18);
+    await d.down('Space');
+    let top = -1e9;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.y);
+    }
+    let ymin = 1e9;
+    let ymax = -1e9;
+    for (let i = 0; i < 90; i++) {
+      await d.step(1);
+      ymin = Math.min(ymin, d.last.y);
+      ymax = Math.max(ymax, d.last.y);
+    }
+    report('under the pergola', `top feet ${top.toFixed(3)} (head ${(top + 1.1).toFixed(3)} vs slab 4.0), jitter ${(ymax - ymin).toFixed(4)}`);
+    check('a real ceiling stops the rise (head never inside the slab) without jitter', top + 1.1 <= 4.0 && ymax - ymin < 0.01 && d.last.flying, `head ${(top + 1.1).toFixed(3)} jitter ${(ymax - ymin).toFixed(4)}`);
+    await d.land();
+  }
+
+  // ---- scripted launch + level bounds ---------------------------------------------------------------------------
+  {
+    await d.place(0, -3);
+    await d.sk(() => window.__superglen.skills.autoLaunch(30));
+    let top = 0;
+    for (let i = 0; i < 400; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.h);
+    }
+    check('autoLaunch(30) with a 12 m ceiling: bumps the ceiling, hovers briefly, then glides down', top >= 11.5 && top <= 12.2 && !d.last.jets, `top ${top.toFixed(2)}, jets ${d.last.jets}`);
+    await d.land();
+    await d.place(26, 0);
+    await d.camera0();
+    await d.down('Space');
+    await d.step(100);
+    await page.keyboard.down('d');
+    await d.step(240);
+    await page.keyboard.up('d');
+    check('level bounds: flying toward the edge eases back, never beyond x = 28.5', d.last.x <= 28.6 && d.last.x > 25, `x ${d.last.x.toFixed(2)}`);
+    await d.land();
+  }
+
+  // ---- locked / Glen -------------------------------------------------------------------------------------------------
+  {
+    await d.skills({ fly: false });
+    const f0 = d.last.flights;
+    await d.down('Space');
+    await d.step(100);
+    const a = d.last.flying;
+    await d.up('Space');
+    await d.land();
+    check('fly locked: holding Space does not fly', !a && d.last.flights === f0);
+    await d.skills({ fly: true });
+    await d.mode('glen');
+    await d.down('Space');
+    await d.step(100);
+    const b = d.last.flying;
+    await d.up('Space');
+    await d.land();
+    check('Glen mode: holding Space does not fly', !b && d.last.flights === f0);
+    await d.mode('superglen');
+    await d.step(5);
+  }
+
+  // ---- Laser ----------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  {
+    const t1 = await d.addTarget(0, 1.2, -8, 'front');
+    await d.step(10);
+    check('aim marker: the target in front is the pending aim', d.last.aim === t1, d.last.aim);
+    await d.step(1, true);
+    await shot(page, 'skills-aim');
+    const s0 = d.last;
+    await d.tap('j', 4);
+    check('laser press hits the target in front (onHit, laserHits + 1)', d.last.hits === s0.hits + 1 && d.last.testHits.front === 1 && d.last.shots === s0.shots + 1, JSON.stringify(d.last.testHits));
+    await d.step(1, true);
+    await shot(page, 'skills-laser');
+    await d.clearTargets();
+  }
+  {
+    // Wall: the 3 m wall at x = -22 hides a target behind it.
+    await d.place(-16, 0);
+    await d.face('a');
+    await d.addTarget(-25, 1.2, 0, 'hidden');
+    await d.step(10);
+    const aim = d.last.aim;
+    const s0 = d.last;
+    await d.tap('j', 3);
+    check('target behind a wall: not aimed, not hit, counts as a miss', aim === '' && d.last.testHits.hidden === 0 && d.last.misses === s0.misses + 1, `aim "${aim}", hits ${d.last.testHits.hidden}`);
+    await d.clearTargets();
+  }
+  {
+    await d.place(0, 0);
+    await d.face('w');
+    const s0 = d.last;
+    await d.step(15);
+    await d.tap('j', 3);
+    check('nothing to aim at: straight beam and a miss event', d.last.misses === s0.misses + 1 && d.last.hits === s0.hits && d.last.aim === '', `misses +${d.last.misses - s0.misses}`);
+  }
+  {
+    await d.place(0, 0);
+    await d.face('w');
+    await d.addTarget(0.4, 1.2, -5, 'near');
+    await d.addTarget(-0.4, 1.2, -12, 'far');
+    await d.step(10);
+    await d.tap('j', 3);
+    check('auto-aim picks the nearest of two', d.last.testHits.near === 1 && d.last.testHits.far === 0, JSON.stringify(d.last.testHits));
+    await d.clearTargets();
+  }
+  {
+    // Facing away from where the camera looks: the camera forward counts too, and the body turns to the target.
+    await d.place(0, 2);
+    await d.face('s');
+    const away = d.last.facing;
+    await d.addTarget(0, 1.2, -8, 'cam');
+    await d.step(10);
+    await d.tap('j', 20);
+    let diff = Math.abs(((d.last.facing - Math.PI) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);
+    check('facing away: the camera forward finds the target; the body turns to face it', away < 0.4 && d.last.testHits.cam === 1 && diff < 0.15, `facing ${away.toFixed(2)} -> ${d.last.facing.toFixed(2)}, hits ${d.last.testHits.cam}`);
+    await d.clearTargets();
+  }
+  {
+    // Hold: repeats every 0.45 s.
+    await d.place(0, 0);
+    await d.face('w');
+    await d.addTarget(0, 1.2, -8, 'rep');
+    await d.step(5);
+    const s0 = d.last.shots;
+    await d.down('j');
+    await d.step(120);
+    await d.up('j');
+    await d.step(5);
+    const n = d.last.shots - s0;
+    report('laser shots while holding for 2 s', n);
+    check('holding the laser button repeats every ~0.45 s (4-5 shots in 2 s)', n >= 4 && n <= 5, `${n}`);
+    await d.step(40);
+    await d.clearTargets();
+  }
+  {
+    await d.addTarget(0, 1.2, -8, 'blocked');
+    await d.step(5);
+    let s0 = d.last.shots;
+    await d.skills({ laser: false });
+    await d.tap('j', 40);
+    const locked = d.last.shots === s0;
+    await d.skills({ laser: true });
+    await d.mode('glen');
+    await d.tap('j', 40);
+    const glen = d.last.shots === s0;
+    await d.mode('superglen');
+    await d.step(5);
+    await d.down('k');
+    await d.step(5);
+    const up = d.last.shieldUp;
+    await d.tap('j', 3);
+    const shielded = d.last.shots === s0;
+    await d.up('k');
+    await d.step(60);
+    await d.tap('j', 3);
+    check('no laser when locked, in Glen mode, or while the shield is up (and it works again after)', locked && glen && up && shielded && d.last.shots === s0 + 1, `locked ${locked} glen ${glen} up ${up} shielded ${shielded} then +${d.last.shots - s0}`);
+    await d.clearTargets();
+  }
+  {
+    // Practice target prop in the skills corner: hit, reaction, reset.
+    await d.place(17, 4);
+    await d.face('d');
+    const h0 = d.last.info.practiceHits;
+    await d.step(10);
+    await d.tap('j', 30);
+    await d.step(1, true);
+    check('practice target: a laser hit spins it, lights it green and tips it down', d.last.info.practiceHits === h0 + 1 && d.last.info.practiceDown >= 1, JSON.stringify({ hits: d.last.info.practiceHits, down: d.last.info.practiceDown }));
+    await shot(page, 'skills-target');
+    await d.step(420);
+    check('...and it stands up again by itself so the game can be repeated', d.last.info.practiceDown === 0, `down ${d.last.info.practiceDown}`);
+    await d.tap('j', 5);
+    check('...ready for the next shot', d.last.info.practiceHits === h0 + 2, `hits ${d.last.info.practiceHits}`);
+  }
+
+  // ---- Shield ---------------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  {
+    const s0 = d.last;
+    await d.down('k');
+    await d.step(10);
+    await d.ball(0, 1.0, -7.5, 7);
+    let blockedAt = -1;
+    for (let i = 0; i < 100; i++) {
+      await d.step(1);
+      if (blockedAt < 0 && d.last.blocks > s0.blocks) {
+        blockedAt = i;
+        await d.step(2, true);
+        await shot(page, 'skills-shield');
+      }
+    }
+    await d.up('k');
+    await d.step(70);
+    check('thrown ball + shield up: blocked, reflected back, never hits the player', d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits && d.last.proj === 0, `blocks +${d.last.blocks - s0.blocks}, hits +${d.last.ballHits - s0.ballHits}, live ${d.last.proj}`);
+  }
+  {
+    const s0 = await d.step(30);
+    await d.ball(0, 1.0, -7.5, 7);
+    await d.step(110);
+    const moved = Math.hypot(d.last.x - s0.x, d.last.z - s0.z);
+    check('same ball without the shield: harmless hit (stars, tiny hop), player not displaced > 0.1 m', d.last.ballHits === s0.ballHits + 1 && d.last.blocks === s0.blocks && moved < 0.1, `hits +${d.last.ballHits - s0.ballHits}, moved ${moved.toFixed(3)} m`);
+  }
+  {
+    // A quick tap (1 frame) must still block a ball that arrives within 0.5 s.
+    const s0 = await d.step(30);
+    await d.ball(0, 1.0, -5, 8);
+    await d.down('k');
+    await d.step(1);
+    await d.up('k');
+    await d.step(2);
+    const upAfterTap = d.last.shieldUp;
+    await d.step(60);
+    check('quick tap keeps the dome up (>= 0.6 s) and blocks a ball arriving within 0.5 s', upAfterTap && d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits, `up ${upAfterTap}, blocks +${d.last.blocks - s0.blocks}`);
+    check('...and drops again after the minimum time', !d.last.shieldUp);
+  }
+  {
+    // Speed while raised.
+    const run = async (shield) => {
+      await d.place(0, 10);
+      await d.camera0();
+      if (shield) await d.down('k');
+      await d.down('w');
+      await d.step(40);
+      const a = [d.last.x, d.last.z];
+      await d.step(30);
+      const v = Math.hypot(d.last.x - a[0], d.last.z - a[1]) / 0.5;
+      await d.up('w');
+      if (shield) await d.up('k');
+      await d.step(70);
+      return v;
+    };
+    const vFree = await run(false);
+    const vShield = await run(true);
+    report('walking speed free / with shield', `${vFree.toFixed(2)} / ${vShield.toFixed(2)} m/s`);
+    check('walking speed with the shield up is about 60%', vShield / vFree > 0.5 && vShield / vFree < 0.7, `${(vShield / vFree).toFixed(2)}`);
+  }
+  {
+    // Assist: a ball from behind while standing still with the dome up: the body turns and the dome catches it.
+    await d.place(0, 0);
+    await d.face('w');
+    const s0 = d.last;
+    await d.down('k');
+    await d.step(5);
+    await d.ball(0, 1.0, 8, 7);
+    await d.step(110);
+    await d.up('k');
+    await d.step(70);
+    check('shield assist: a ball from behind is caught too (the body turns toward it)', d.last.blocks === s0.blocks + 1 && d.last.ballHits === s0.ballHits, `blocks +${d.last.blocks - s0.blocks}, hits +${d.last.ballHits - s0.ballHits}`);
+  }
+  {
+    // The ball machine in the skills corner: telegraph, throw, bonk; then shield: reflect and dizzy machine.
+    await d.place(26, 11.5);
+    await d.face('s');
+    await d.face('w');
+    const s0 = d.last;
+    await d.step(300);
+    check('ball machine throws while the player is within 12 m and bonks harmlessly', d.last.info.throwerThrown >= 1 && d.last.ballHits > s0.ballHits, `thrown ${d.last.info.throwerThrown}, hits +${d.last.ballHits - s0.ballHits}`);
+    await d.down('k');
+    const b0 = d.last.blocks;
+    const r0 = d.last.info.throwerReturned;
+    await d.step(480);
+    await d.up('k');
+    check('...with the shield raised the ball goes back to the machine, which gets dizzy', d.last.blocks > b0 && d.last.info.throwerReturned > r0, `blocks +${d.last.blocks - b0}, returned +${d.last.info.throwerReturned - r0}`);
+    await d.place(0, 0);
+    const t0 = d.last.info.throwerThrown;
+    await d.step(400);
+    check('...and it stays quiet when the player is far away', d.last.info.throwerThrown === t0);
+  }
+}
+
+async function skillsPerfScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.step(30);
+  await d.tap('e', 10);
+  await d.addTarget(0, 1.2, -9, 'perf');
+  await d.camera0();
+  await d.step(5, true);
+  const programs = () => page.evaluate(() => window.__superglen.debugCounts().programs);
+  const p0 = await programs();
+  // 10 s of flying (jets, trail, bob), laser held, ball throws and a shield raise, rendering every 30th frame.
+  await d.down('Space');
+  await d.down('j');
+  await d.down('w');
+  for (let i = 0; i < 20; i++) {
+    if (i === 6) await d.ball(0, 1.0, -9, 7);
+    if (i === 8) await d.down('k');
+    if (i === 12) await d.up('k');
+    await d.step(30, true);
+  }
+  await d.up('w');
+  await d.up('j');
+  const p1 = await programs();
+  check('flying + firing + shield for 10 s: no new shader programs', p1 === p0 && p0 > 0, `${p0} -> ${p1}`);
+  await d.land();
+
+  const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+  if (!heapOk) {
+    console.log('   [skills] heap: performance.memory/gc unavailable: skipped');
+    return;
+  }
+  const bpf = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.advance(5, true);
+    window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = heap();
+    let acc = 0;
+    const n = 600;
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      const h = heap();
+      if (h >= prev) acc += h - prev;
+      prev = h;
+    }
+    return acc / n;
+  });
+  // (the keys must be held for this window: set below)
+  void bpf;
+  await d.down('Space');
+  await d.down('j');
+  await d.down('w');
+  await d.step(70);
+  const bpf2 = await page.evaluate(() => {
+    const g = window.__superglen;
+    window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = heap();
+    let acc = 0;
+    const n = 600;
+    for (let i = 0; i < n; i++) {
+      g.advance(1, false);
+      const h = heap();
+      if (h >= prev) acc += h - prev;
+      prev = h;
+    }
+    return acc / n;
+  });
+  await d.up('w');
+  await d.up('j');
+  console.log(`   [skills] heap flying+laser: ${Math.round(bpf2)} bytes per frame (idle ${Math.round(bpf)})`);
+  check('allocation budget while flying and firing: < 16000 bytes per frame (same as walking)', bpf2 < 16000, `${Math.round(bpf2)} B/frame`);
+  await d.land();
+}
+
+async function skillsTouchScenario(page, check) {
+  // (startTouchGame taps at y = 300, outside an 844x281 viewport: start the same way a little higher.)
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  const center = (action) => page.evaluate((a) => {
+    const r = document.querySelector(`.tc-button[data-action=${a}]`).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, action);
+  const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join());
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  await d.mode('superglen');
+  await d.step(20);
+
+  // ---- story layout: buttons for unlocked skills only (demo level), at both heights ---------------------------
+  await page.evaluate(() => window.__superglen.loadLevel('demo'));
+  await page.waitForFunction(() => window.__superglen.level === 'demo' && !window.__superglen.loading, null, { timeout: 8000 });
+  await d.mode('superglen');
+  for (const h of [281, 390]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    for (const [laser, shield, fly] of [[false, false, true], [true, false, true], [false, true, false], [true, true, true]]) {
+      await page.evaluate(([laser, shield, fly]) => window.__superglen.game.setSkills({ laser, shield, fly }), [laser, shield, fly]);
+      await sleep(80);
+      const want = ['jump', 'interact'].concat(laser ? ['laser'] : [], shield ? ['shield'] : []);
+      const l = await page.evaluate(layoutInfo);
+      const got = l.actions;
+      check(`844x${h} laser=${+laser} shield=${+shield} fly=${+fly}: buttons only for unlocked skills (flying adds none)`, got.length === want.length && want.every((a) => got.includes(a)), got.join());
+      check(`844x${h} laser=${+laser} shield=${+shield}: inside, no overlap, >= 80 px, clear of the joystick zone`, l.inside && !l.overlap && l.minBtn >= 79.5 && l.minLeft >= l.vw * 0.45 - 1, JSON.stringify({ i: l.inside, o: l.overlap, m: l.minBtn, left: Math.round(l.minLeft) }));
+    }
+  }
+  await page.setViewportSize({ width: 844, height: 281 });
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 8000 });
+  await d.mode('superglen');
+  await d.step(30);
+  const lt = await page.evaluate(layoutInfo);
+  check('844x281 test level: jump, laser, shield, star inside, no overlap, >= 80', lt.actions.join() === 'jump,laser,shield,transform' && lt.inside && !lt.overlap && lt.minBtn >= 79.5, JSON.stringify({ a: lt.actions.join(), o: lt.overlap, m: lt.minBtn }));
+
+  // ---- joystick (finger 1) + hold jump (finger 2) + tap laser (3) + hold shield (4) ----------------------------------
+  const jp = await center('jump');
+  const lp = await center('laser');
+  const sp = await center('shield');
+  await d.camera0();
+  await d.place(0, 0);
+  await fingers.down(1, 120, 200);
+  await fingers.move(1, 120, 130, 6); // full forward
+  await fingers.down(2, jp.x, jp.y);
+  let startFrame = -1;
+  for (let i = 1; i <= 120; i++) {
+    await d.step(1);
+    if (startFrame < 0 && d.last.flying) startFrame = i;
+  }
+  const jets = await page.evaluate(() => document.querySelector('.tc-button[data-action=jump]').classList.contains('jets'));
+  check('touch: holding the jump button flies while the joystick is held by another finger', startFrame > 0 && startFrame <= 54 && d.last.jets, `started after ${startFrame} frames`);
+  check('touch: the jump button shows the jets state while flying', jets);
+  const a = [d.last.x, d.last.z];
+  await d.step(30);
+  const speed = Math.hypot(d.last.x - a[0], d.last.z - a[1]) / 0.5;
+  check('touch: stick forward while flying: 6-8 m/s', speed > 6 && speed < 8, `${speed.toFixed(2)}`);
+  const s0 = d.last.shots;
+  await fingers.down(3, lp.x, lp.y);
+  await d.step(3);
+  await fingers.up(3);
+  await d.step(3);
+  check('touch: laser tap works while flying with the stick and jump held', d.last.shots === s0 + 1 && d.last.flying, `shots +${d.last.shots - s0}`);
+  await fingers.down(4, sp.x, sp.y);
+  await d.step(10);
+  const upWhile = d.last.shieldUp;
+  await d.step(1, true);
+  await shot(page, 'skills-touch-281');
+  await fingers.up(4);
+  await d.step(50);
+  check('touch: shield is hold-to-raise (up while held, down after release)', upWhile && !d.last.shieldUp);
+  await fingers.up(2);
+  await d.step(3);
+  const jets2 = await page.evaluate(() => document.querySelector('.tc-button[data-action=jump]').classList.contains('jets'));
+  check('touch: releasing the jump button cuts the jets (button back to normal)', !jets2 && !d.last.jets);
+  await fingers.up(1);
+  await d.land();
+
+  // ---- laser held on touch auto-repeats --------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.step(5);
+  const n0 = d.last.shots;
+  await fingers.down(5, lp.x, lp.y);
+  await d.step(100);
+  await fingers.up(5);
+  await d.step(3);
+  check('touch: holding the laser button repeats (3-4 shots in 1.7 s)', d.last.shots - n0 >= 3 && d.last.shots - n0 <= 4, `${d.last.shots - n0}`);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
-  if (process.env.ONLY && !name.startsWith(process.env.ONLY)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
+  if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const check = (label, ok, detail) => result.checks.push({ label, ok: !!ok, detail });
   const ctx = await browser.newContext(ctxOpts);
+  // Switches on the test-only debug numbers of the story level (pole cover, camera position).
+  await ctx.addInitScript(() => { window.__SG_TEST = true; });
   const page = await ctx.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error') result.errors.push(`console: ${m.text()}`);
@@ -1753,7 +3372,7 @@ async function main() {
   try {
     await waitForServer(30000);
     browser = await chromium.launch({
-      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'],
     });
 
     results.push(
@@ -1815,6 +3434,16 @@ async function main() {
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab2-flow', { viewport: { width: 1280, height: 720 } }, bab2FlowScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'skills-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, skillsTouchScenario, '?level=test&fps=0'));
+
+    results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 
     results.push(
       await runScenario(

@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { Easings } from '../../gameplay/Sequence';
 import { startGate } from '../../core/StartGate';
+import { Celebration } from '../Celebration';
+import { labNinoTalk } from '../progress';
+import type { LabDoor } from './LabDoor';
 import type { Atmosphere, Flashlight } from './Lighting';
 import type { Sparkles } from './Fx';
 import type { Hall } from './Hall';
@@ -19,17 +22,15 @@ export interface StoryParts {
   atmosphere: Atmosphere;
   flashlight: Flashlight;
   funny: FunnyFx;
+  door: LabDoor;
 }
-
-const STAR_SVG =
-  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 23 L60 24.5 L45 38 L49.5 58 L32 47.5 L14.5 58 L19 38 L4 24.5 L24 23 Z" fill="#ffd23f" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><path d="M32 14 L36 25 L32 33 L28 25 Z" fill="#fff6b8" opacity="0.8"/></svg>';
 
 /** The whole of Bab 1 as one linear script of awaits (beats A-F). Every wait is game-time, cancelled on unload. */
 export class Story {
   private readonly p: StoryParts;
   private target: THREE.Vector3 | null = null;
   private readonly flash: HTMLDivElement;
-  private readonly star: HTMLDivElement;
+  private readonly party: Celebration;
   private readonly tmp = new THREE.Vector3();
   coinsTaken = 0;
   step = 'init';
@@ -39,14 +40,9 @@ export class Story {
     const ui = parts.ctx.ui;
     this.flash = document.createElement('div');
     this.flash.className = 'bab1-flash';
-    this.star = document.createElement('div');
-    this.star.className = 'bab1-star';
-    this.star.innerHTML = `${STAR_SVG}<div class="bab1-star-text">Chapter 1 selesai!</div>`;
-    ui.append(this.flash, this.star);
-    parts.ctx.onDispose(() => {
-      this.flash.remove();
-      this.star.remove();
-    });
+    ui.append(this.flash);
+    this.party = new Celebration(parts.ctx, 'Chapter 1 selesai!', parts.sparkles);
+    parts.ctx.onDispose(() => this.flash.remove());
   }
 
   private get player() {
@@ -86,7 +82,10 @@ export class Story {
     lab.showCoins();
     ctx.game.setPlayerMode('superglen');
     this.addNinoTalk();
+    this.p.door.enable();
     ctx.game.debugInfo.chapterDone = true;
+    // Next chapter not played yet: the beam leads to Nino.
+    if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
   }
 
   private addNinoTalk(): void {
@@ -96,7 +95,12 @@ export class Story {
       radius: 3.0,
       icon: 'talk',
       promptHeight: 1.5,
-      onInteract: () => void ctx.dialog.say('bab1_nino_besok'),
+      onInteract: () => {
+        const talk = labNinoTalk(ctx.save);
+        void ctx.dialog.say(talk.line).then(() => {
+          if (talk.next) void ctx.game.loadLevel(talk.next);
+        });
+      },
     });
   }
 
@@ -335,7 +339,7 @@ export class Story {
   }
 
   private async finish(): Promise<void> {
-    const { ctx, lab, sparkles } = this.p;
+    const { ctx, lab } = this.p;
     const { seq, game, save } = ctx;
     const pl = this.player;
     this.step = 'done';
@@ -343,29 +347,15 @@ export class Story {
     game.debugInfo.chapterDone = true;
     game.setControlsEnabled(true);
     this.safe(pl.visualPosition.x, LAB_FLOOR, pl.visualPosition.z);
-    for (let i = 0; i < 4; i++) {
-      const p = pl.visualPosition;
-      sparkles.burst(p.x + (i - 1.5) * 1.2, p.y + 2.5, p.z - 1, 40, 5, -1, { gravity: 3, life: 1.6, up: 1 });
-      await seq.wait(0.25);
-    }
-    this.star.classList.remove('show');
-    void this.star.offsetWidth;
-    this.star.classList.add('show');
-    // More confetti while the star is up.
-    seq.run(async () => {
-      for (let i = 0; i < 4; i++) {
-        const p = pl.visualPosition;
-        sparkles.burst(p.x + (i % 2 ? 1.6 : -1.6), p.y + 2.2, p.z - 0.5, 36, 5, -1, { gravity: 3, life: 1.6, up: 1 });
-        await seq.wait(0.6);
-      }
-    });
-    await seq.wait(3.2);
-    this.star.classList.remove('show');
+    await this.party.play();
     this.addNinoTalk();
+    this.p.door.enable();
     lab.showCoins();
     this.setTarget(LAB.poles[0].x, LAB.poles[0].z);
     await seq.waitUntil(() => this.coinsTaken > 0 || this.near(LAB.poles[0].x, LAB.poles[0].z, 2)());
     this.setTarget(null);
+    // Then the beam leads to Nino, who takes the player on to Chapter 2.
+    if (!ctx.save.isChapterDone('bab2')) this.setTarget(lab.ninoPos.x, lab.ninoPos.z);
   }
 
   onCoins(n: number): void {

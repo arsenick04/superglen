@@ -273,11 +273,77 @@ Draw call per area: jalan 44, gedung 29 sampai 43, lorong 41, lab 31 (batas 150)
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Polesan Chapter 1, perbaikan sendatan, dan paket malam B2 (12 November 2026): selesai
+
+### Polesan Chapter 1 (sudah tayang lewat PR #5)
+- Tiang latihan dipindah ke sudut belakang kanan lab dan tidak lagi menghalangi kamera.
+- Lorong diberi cahaya pengisi tipis; kapsul Glen sekitar 2,5 kali lebih terang.
+- Bintang "Chapter 1 selesai!" diperbesar (40% tinggi layar) dan tampil 3,2 detik.
+- Tulisan "Bab" di layar diganti "Chapter", dan "laboratorium" diganti "Lab". Nama internal di kode (`bab1`, `bab2`) tetap.
+
+### Perbaikan gerak tersendat tiap beberapa detik
+- **Penyebab utama yang ditemukan**: bug di fisika karakter, bukan irama frame. Pengontrol fisika sesekali menghentikan Glen satu langkah, lalu ia butuh sekitar 8 langkah untuk kembali ke kecepatan penuh. Kapsul juga bergetar naik-turun sampai sekitar 22 mm.
+- **Sesudah diperbaiki**: getaran di bawah 0,4 mm (diukur ulang oleh orkestrator). Variasi langkah kamera saat jalan lurus turun dari 18 sampai 26% menjadi di bawah 1,3% menurut pengukuran agen.
+- **Perbaikan pendukung**: alokasi memori per frame dikurangi (Chapter 1 dari sekitar 38 KB menjadi 9 KB per frame), bayangan dikunci ke grid supaya tidak bergetar, resolusi adaptif dibuat lebih hati-hati, waktu frame diratakan, dan poligon Chapter 1 turun dari sekitar 100 sampai 130 ribu menjadi di bawah 50 ribu per frame.
+- Agen menilai keyakinan sekitar 75% bahwa bug fisika itu penyebab utamanya. **Belum bisa dipastikan tanpa iPhone.**
+- **Panel diagnosis `?perf=1`** untuk iPhone asli: buka game dengan tambahan `?perf=1`, jalan sekitar 20 detik, ketuk panel di tengah atas supaya grafiknya berhenti, ambil tangkapan layar, kirim.
+
+### Paket B2: tiga skill dan Chapter 2
+- **Terbang**: tahan tombol lompat 0,45 detik, naik sampai batas tinggi level, lepas untuk turun pelan, tahan lagi untuk naik lagi. Tanpa bahan bakar.
+- **Laser**: bidikan otomatis ke sasaran terdekat dalam 22 m, terhalang dinding, ada penanda bidik di sasaran.
+- **Perisai**: kubah emas di depan Superglen, memantulkan bola. Ketukan singkat tetap menangkis.
+- **Chapter 2: Latihan Pagi Bersama Nino** di aula latihan:
+  1. Percobaan terbang pertama yang lucu (kepala kena atap), lalu terbang melewati 5 cincin cahaya.
+  2. Kena 5 sasaran dengan laser. Kalau meleset, Nino bilang "Tenang dulu, baru bidik."
+  3. Menangkis 5 bola karet dengan perisai.
+  4. Makan bekal bersama Nino.
+  5. Alarm berbunyi dan layar menampilkan pasar kota. Bintang "Chapter 2 selesai!".
+- **Skill terbuka satu per satu** di stasiunnya dan tersimpan. Tempat untuk menyisipkan Tantangan Pintar (paket B3) sudah ditandai di kode.
+- **Tidak ada kegagalan**: meleset atau kena bola tidak mengurangi apa pun. Kalau anak lama tidak maju, cincin turun mendekat, sasaran mendekat dan membesar, dan pelempar bola melambat.
+- **Baris kemajuan tanpa teks**: 5 ikon di atas layar yang terisi satu per satu.
+- **Alur antar chapter**: setelah Chapter 1, permainan mulai di lab; bicara dengan Nino atau masuk pintu bercahaya untuk mulai Chapter 2. Setelah Chapter 2, permainan mulai di aula dengan semua skill. `?reset=1` mengulang dari awal, `?level=bab2` langsung ke Chapter 2.
+- 17 kalimat dialog Chapter 2 di `audio/dialog.json` (total 35).
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` dan `npm run typecheck` | Lulus |
+| Smoke test penuh oleh `qa-tester` | 657 dari 658; satu skenario (`bab2-flow`) kehabisan waktu tunggu, lulus saat diulang |
+| Run penuh ulang setelah batas tunggu tes dinaikkan | Lulus: 21 skenario, 758 pemeriksaan, 0 kegagalan |
+| Chapter 2 dimainkan otomatis sampai selesai (desktop) | Lulus 90 dari 90 |
+| Chapter 2 di layar sentuh 844x281 | Lulus 81 dari 81 |
+| Tiga skill di level uji | Lulus 71 dari 71 |
+| Error console | 0 di semua skenario |
+
+Kegagalan `bab2-flow` adalah kelemahan tes: ia menunggu 15 detik waktu nyata sementara renderer headless kadang macet. Batasnya sekarang 60 detik. **Fps di perangkat asli belum diukur.**
+
+### Masalah yang diketahui
+- Di layar sentuh pendek (281 pt), baris kemajuan turun ke tengah layar saat dialog tampil, dekat karakter.
+- Di tangkapan layar stasiun laser hanya satu sasaran yang terlihat dalam bingkai. Tesnya mengenai kelima sasaran, tetapi tampilannya belum dinilai dari sudut pandang pemain.
+- Unduhan sekarang 5,1 MB (1,89 MB terkompresi).
+- Smoke test penuh sekarang butuh sekitar 10 menit.
+- Perubahan pada langkah fisika memakai jalur internal mesin fisika untuk mengurangi alokasi. `?faststep=0` mengembalikan ke cara lama kalau ada masalah.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Apakah gerak sudah mulus.
+- Kenyamanan menahan tombol lompat untuk terbang.
+- Apakah lengkung bola dan aba-aba lemparan terbaca oleh anak 5 tahun.
+- Fps di aula dan di Chapter 1.
+
+### Keputusan yang diambil sendiri
+- Waktu tahan untuk terbang 0,45 detik, bukan "lebih dari 1 detik" seperti di design doc, karena satu lompatan Superglen hanya sekitar 0,8 detik. Angkanya ada di konfigurasi.
+- Skill dibuka oleh cerita, belum oleh Tantangan Pintar. Kuisnya menyusul di B3.
+- Berkas cahaya di aula dihapus karena menutupi pandangan.
+- Agen sempat terhenti dua kali karena batas pemakaian dan dilanjutkan setelah reset. Tidak ada pekerjaan yang hilang.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
 
 ## Untuk dicoba besok pagi
-1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
-2. **Biarkan anak memainkan Bab 1 sendiri**: ikuti sinar emas, lompati palang, masuk gedung lewat celah pagar, tekan panel yang menyala, tekan tombol besar di lab, ambil kostum. Perhatikan di mana ia bingung atau berhenti lebih dari 30 detik.
-3. **Catat**: angka FPS di jalan, di lorong redup, dan di lab; apakah lorong terlalu gelap; apakah teks dialog terbaca. Untuk mengulang cerita, buka alamat yang sama dengan tambahan `?reset=1`.
+1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Tutup tab lama dulu. Jalan beberapa saat dan rasakan apakah gerak sudah mulus. Kalau masih tersendat, buka dengan `?perf=1`, jalan 20 detik, ketuk panel di tengah atas, dan kirim tangkapan layarnya.
+2. **Mainkan Chapter 2 bersama anak**: di lab, dekati Nino dan tekan tombol bicara. Tahan tombol lompat untuk terbang melewati cincin, tekan tombol petir untuk laser, tahan tombol perisai saat bola datang. Perhatikan di mana ia bingung.
+3. **Catat**: angka FPS di aula, apakah menahan tombol untuk terbang terasa nyaman, dan apakah bola mudah ditangkis. Untuk mengulang dari awal, tambahkan `?reset=1`.

@@ -6,6 +6,13 @@ import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { GroundRings } from '../fx/GroundRings';
+import { BillboardRings } from '../fx/BillboardRings';
+import { DizzyStars } from '../fx/DizzyStars';
+import { Sparkles } from '../world/bab1/Fx';
+import { Targets } from '../gameplay/Targets';
+import { Projectiles } from '../gameplay/Projectiles';
+import { Laser } from '../player/skills/Laser';
+import { Shield } from '../player/skills/Shield';
 import type { PlayerMode } from '../player/PlayerConfig';
 import { getLayout, type ControlProfile, type TouchButtonDef } from '../ui/TouchControls';
 import { Hud } from '../ui/Hud';
@@ -16,15 +23,19 @@ import { Interactions } from '../gameplay/Interactions';
 import { Objectives } from '../gameplay/Objectives';
 import { LevelManager } from '../world/LevelManager';
 import type { LevelGame } from '../world/Level';
-import { DEFAULT_LEVEL, LEVELS } from '../world/levels';
+import { LEVELS } from '../world/levels';
+import { startLevelFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
 import { startGate } from './StartGate';
 import { touchMode } from './TouchMode';
+import { FrameClock } from './FrameClock';
+import { ShadowFollower } from './ShadowSnap';
+import { PerfOverlay, type PerfStats } from '../ui/PerfOverlay';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
-/** Max physics steps per rendered frame. Leftover time is dropped. */
+/** Max physics steps per rendered frame. Leftover whole steps are dropped (the sub-step phase is kept). */
 const MAX_SUBSTEPS = 5;
 
 /** Read-only debug data for automated smoke tests and the browser console. */
@@ -90,6 +101,67 @@ export interface DebugHandle {
   /** Test helpers. */
   loadLevel: (id: string) => Promise<void>;
   setCameraYaw: (yaw: number) => void;
+  /** Camera world position (updated every frame). */
+  camera: { x: number; y: number; z: number };
+  /** Fixed steps run by the most recent frame. */
+  lastSteps: number;
+  /**
+   * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
+   * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
+   * `resetTiming` forgets the clock, `adaptFrame` feeds the adaptive-resolution logic without drawing.
+   */
+  simFrame: (nowMs: number, render: boolean) => number;
+  smoothing: (on: boolean) => void;
+  resetTiming: () => void;
+  adaptFrame: (nowMs: number, moving: boolean) => void;
+  /** Test helper: put the player on the floor at (x, z). */
+  placePlayer: (x: number, z: number) => void;
+  /**
+   * Fractional shadow-map texel position (0..1, x and y) of a fixed world point, or null without a shadow light.
+   * While the player walks this must stay constant (snapped shadow camera); a drifting value = swimming shadows.
+   */
+  shadowPhase: () => number[] | null;
+  /** Switch the shadow-camera texel snapping on/off (test comparison). */
+  shadowSnap: (on: boolean) => void;
+  /** Test helper: reset the adaptive-resolution logic to full resolution. */
+  adaptReset: () => void;
+  /** Adaptive resolution state: step index and number of ratio changes so far. */
+  adaptive: () => { step: number; changes: number; ratio: number };
+  /** Skill state and test helpers (flight, laser, shield, projectiles). */
+  skills: {
+    flying: boolean;
+    jets: boolean;
+    /** Feet height above the ground below (m). */
+    flyHeight: number;
+    maxFlyHeight: number;
+    shieldUp: boolean;
+    laserShots: number;
+    laserHits: number;
+    laserMisses: number;
+    shieldBlocks: number;
+    ballHits: number;
+    ringsPassed: number;
+    flights: number;
+    /** Id of the target the next laser press would hit ('' = none). */
+    aimTarget: string;
+    /** Live projectiles and the total spawned. */
+    projectiles: number;
+    projectilesSpawned: number;
+    speedScale: number;
+    unlocked: { laser: boolean; shield: boolean; fly: boolean };
+    /** Hits per test target id. */
+    testHits: Record<string, number>;
+    /** Register a laser target at a point; returns its id. Removed on level unload. */
+    addTestTarget: (x: number, y: number, z: number, radius?: number, id?: string) => string;
+    removeTestTargets: () => void;
+    /** Throw a ball from a point at the player's chest. */
+    throwBall: (x: number, y: number, z: number, speed?: number) => void;
+    fireLaser: () => boolean;
+    /** Body yaw (0 = +Z). */
+    facing: number;
+    setMaxFlyHeight: (h: number) => void;
+    autoLaunch: (h: number) => void;
+  };
   /** Resource counts: geometries/textures from three, colliders/bodies from Rapier. */
   debugCounts: () => {
     geometries: number;
@@ -99,6 +171,7 @@ export interface DebugHandle {
     sceneChildren: number;
     calls: number;
     triangles: number;
+    programs: number;
   };
 }
 
@@ -130,6 +203,15 @@ export class Game {
   private readonly hud: Hud | null = null;
   private readonly walker: WalkSource;
   private paused = false;
+  readonly sparkles: Sparkles;
+  readonly flashes: BillboardRings;
+  readonly stars: DizzyStars;
+  readonly targets = new Targets();
+  readonly projectiles: Projectiles;
+  readonly laser: Laser;
+  readonly shield: Shield;
+  private jetsShown = false;
+  private readonly testTargets: { remove(): void }[] = [];
 
   // ---- Controls gating and the touch button profile (see the level context API) ----
   private levelControls = true;
@@ -141,9 +223,11 @@ export class Game {
   private readonly api: LevelGame;
 
   private accumulator = 0;
-  private lastTime = 0;
   private rafId = 0;
   private running = false;
+  private readonly clock = new FrameClock();
+  private readonly perfPanel: PerfOverlay | null = null;
+  private lastSteps = 0;
 
   private fpsFrames = 0;
   private fpsTime = 0;
@@ -173,6 +257,7 @@ export class Game {
     prompt: { visible: false, icon: '', inRange: false },
     objective: { active: false, offscreen: false, arrow: false, x: 0, z: 0 },
     levelInfo: {},
+    skills: undefined as unknown as DebugHandle['skills'],
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
@@ -184,6 +269,24 @@ export class Game {
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),
     setCameraYaw: (yaw: number) => this.cameraRig.snapBehind(yaw - Math.PI),
+    camera: { x: 0, y: 0, z: 0 },
+    lastSteps: 0,
+    simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
+    smoothing: (on: boolean) => {
+      this.clock.enabled = on;
+    },
+    resetTiming: () => {
+      this.clock.reset();
+      this.accumulator = 0;
+    },
+    adaptFrame: (nowMs: number, moving: boolean) => this.renderer.observeFrame(nowMs, moving),
+    placePlayer: (x: number, z: number) => this.player.placeAt(x, 0, z),
+    shadowPhase: () => this.shadowPhase(),
+    shadowSnap: (on: boolean) => {
+      ShadowFollower.snapEnabled = on;
+    },
+    adaptReset: () => this.renderer.resetAdaptive(),
+    adaptive: () => ({ step: this.renderer.step, changes: this.renderer.ratioChanges, ratio: this.renderer.pixelRatio }),
     debugCounts: () => {
       const m = this.renderer.renderer.info.memory;
       return {
@@ -194,6 +297,7 @@ export class Game {
         sceneChildren: this.scene.children.length,
         calls: this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
+        programs: this.renderer.renderer.info.programs?.length ?? 0,
       };
     },
   };
@@ -227,8 +331,28 @@ export class Game {
     this.cameraRig = new ThirdPersonCamera(this.physics, this.input, this.player.collider);
     this.renderer.attachCamera(this.cameraRig.camera);
 
+    // ---- Skills: shared effects and systems (they live for the whole session; levels register targets) ----
+    this.sparkles = new Sparkles(this.scene, 256);
+    this.flashes = new BillboardRings(this.scene, this.cameraRig.camera, 8);
+    this.stars = new DizzyStars(this.scene, this.cameraRig.camera, 3);
+    this.player.flight.sparkles = this.sparkles;
+    this.projectiles = new Projectiles(this.scene, this.physics.world, this.player, {
+      sparkles: this.sparkles,
+      flashes: this.flashes,
+      stars: this.stars,
+    });
+    this.shield = new Shield(this.scene, this.player, this.input, () => this.projectiles);
+    this.laser = new Laser(this.scene, this.player, this.input, this.physics, this.cameraRig, this.targets, {
+      sparkles: this.sparkles,
+      flashes: this.flashes,
+    });
+    this.debug.skills = this.makeSkillsDebug();
+
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
+    if (new URLSearchParams(window.location.search).get('perf') === '1') {
+      this.perfPanel = new PerfOverlay(uiRoot, (out) => this.collectPerfStats(out));
+    }
 
     const bubble = new DialogBubble(uiRoot, () => this.dialog.tap());
     bubble.faceFor = (sp) => (sp === 'glen' && this.player.mode === 'superglen' ? 'superglen' : sp);
@@ -270,11 +394,8 @@ export class Game {
         this.profile.transform = on;
         this.applyLayout();
       },
-      setSkillButtons: (sk) => {
-        this.profile.laser = sk.laser;
-        this.profile.shield = sk.shield;
-        this.applyLayout();
-      },
+      setSkills: (sk, persist) => this.setSkills(sk, persist),
+      setSkillButtons: (sk) => this.setSkills({ laser: sk.laser, shield: sk.shield }),
       setLegacyTestControls: (on) => {
         this.profile.legacyTest = on;
         this.applyLayout();
@@ -291,7 +412,9 @@ export class Game {
         interactions: this.interactions,
         dialog: this.dialog,
         objectives: this.objectives,
-        fx: { rings: this.rings },
+        fx: { rings: this.rings, sparkles: this.sparkles, flashes: this.flashes, stars: this.stars },
+        targets: this.targets,
+        projectiles: this.projectiles,
         save: this.save,
         ui: uiRoot,
         game: this.api,
@@ -308,8 +431,10 @@ export class Game {
         this.levelControls = true;
         this.profile.legacyTest = false;
         this.profile.transform = false;
-        this.profile.laser = false;
-        this.profile.shield = false;
+        this.player.flight.resetLevelSettings();
+        this.player.skills.shield.up = false;
+        this.player.speedScale = 1;
+        this.setSkills({ ...this.save.data.skills });
         for (const a of ['jump', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];
         this.player.setMode('glen');
@@ -320,15 +445,30 @@ export class Game {
         this.fading = loading;
         this.updateControls();
       },
+      onBeforeUnload: () => {
+        // Targets, balls, rings and subscribers belong to the level that is going away.
+        this.targets.clear();
+        this.projectiles.clear();
+        this.laser.clear();
+        this.flashes.clear();
+        this.stars.clear();
+        this.player.skills.clearListeners();
+        for (const t of this.testTargets) t.remove();
+        this.testTargets.length = 0;
+      },
       onAfterBuild: () => {
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
         this.applyLayout();
         this.syncDebug();
+        // Show every skill effect once so its shader program is compiled now, not in the middle of play.
+        this.warmSkillFx(true);
+        this.renderer.prewarm(this.scene, this.cameraRig.camera);
+        this.warmSkillFx(false);
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
     const wanted = new URLSearchParams(window.location.search).get('level');
-    this.levels.loadInstant(wanted && this.levels.has(wanted) ? wanted : DEFAULT_LEVEL);
+    this.levels.loadInstant(wanted && this.levels.has(wanted) ? wanted : startLevelFor(this.save));
 
     // Live getters (a load finishes in real time even while the loop is paused for tests).
     Object.defineProperties(this.debug, {
@@ -343,7 +483,7 @@ export class Game {
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.lastTime = performance.now();
+    this.clock.reset();
     this.accumulator = 0;
     this.rafId = requestAnimationFrame(this.frame);
   }
@@ -356,10 +496,26 @@ export class Game {
   private readonly frame = (now: number): void => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.frame);
-
-    const dt = Math.min(Math.max((now - this.lastTime) / 1000, 0), MAX_FRAME_DT);
-    this.lastTime = now;
     if (this.paused) return;
+    const panel = this.perfPanel;
+    const t0 = panel ? performance.now() : 0;
+    const steps = this.runFrame(now, true);
+    if (panel) panel.frame(now, performance.now() - t0, steps);
+  };
+
+  /** Tests: one whole frame at a made-up timestamp, even while the real loop is paused. */
+  private simFrame(nowMs: number, render: boolean): number {
+    const steps = this.runFrame(nowMs, render);
+    this.syncDebug();
+    return steps;
+  }
+
+  /**
+   * One rendered frame: input -> camera look -> fixed 60 Hz steps (exact accumulator) -> interpolate -> camera ->
+   * level -> render. `now` = rAF timestamp in ms. Returns the number of fixed steps that ran.
+   */
+  private runFrame(now: number, render: boolean): number {
+    const dt = Math.min(this.clock.tick(now), MAX_FRAME_DT);
 
     this.input.update();
     this.cameraRig.handleInput();
@@ -371,7 +527,9 @@ export class Game {
       this.accumulator -= FIXED_DT;
       steps++;
     }
-    if (steps === MAX_SUBSTEPS && this.accumulator >= FIXED_DT) this.accumulator = 0;
+    // Too far behind (a long hitch): drop the whole steps we cannot catch up, keep the sub-step phase so the
+    // interpolation does not jump.
+    if (this.accumulator >= FIXED_DT) this.accumulator %= FIXED_DT;
 
     const alpha = this.accumulator / FIXED_DT;
     this.player.updateVisual(alpha, dt);
@@ -379,13 +537,48 @@ export class Game {
     this.rings.update(dt);
     this.frameUpdate(dt);
 
-    this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.render(this.scene, this.cameraRig.camera, now, this.playerMoving());
+    this.lastSteps = steps;
     this.updateDebug(dt);
-  };
+    return steps;
+  }
+
+  private shadowPhase(): number[] | null {
+    let light: THREE.DirectionalLight | null = null;
+    this.scene.traverse((o) => {
+      const d = o as THREE.DirectionalLight;
+      if (d.isDirectionalLight && d.castShadow) light = d;
+    });
+    if (!light) return null;
+    const l = light as THREE.DirectionalLight;
+    l.updateMatrixWorld();
+    l.target.updateMatrixWorld();
+    l.shadow.updateMatrices(l);
+    const cam = l.shadow.camera;
+    const v = new THREE.Vector3(3.3, 0.2, -7.7).applyMatrix4(cam.matrixWorldInverse).applyMatrix4(cam.projectionMatrix);
+    const size = l.shadow.mapSize.x;
+    const f = (n: number): number => n - Math.floor(n);
+    return [f((v.x * 0.5 + 0.5) * size), f((v.y * 0.5 + 0.5) * size)];
+  }
+
+  private playerMoving(): boolean {
+    const v = this.player.velocity;
+    return v.x * v.x + v.z * v.z > 0.25;
+  }
+
+  private collectPerfStats(out: PerfStats): void {
+    const info = this.renderer.renderer.info;
+    out.pixelRatio = this.renderer.pixelRatio;
+    out.ratioChanges = this.renderer.ratioChanges;
+    out.calls = info.render.calls;
+    out.triangles = info.render.triangles;
+    out.programs = info.programs ? info.programs.length : 0;
+  }
 
   /** Per rendered frame, after the camera moved: level visuals, prompt icon and objective marker. */
   private frameUpdate(dt: number): void {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
+    this.skillFrame(dt);
     this.levels.update(dt);
     this.interactions.update();
     this.objectives.update(dt);
@@ -396,10 +589,111 @@ export class Game {
     this.dialog.fixedUpdate(dt);
     this.interactions.fixedUpdate();
     this.objectives.fixedUpdate();
+    this.shield.fixedUpdate(dt); // before the player: it sets the speed scale
+    this.laser.fixedUpdate(dt);
     this.player.fixedUpdate(dt, this.cameraRig.steeringYaw);
     this.physics.step();
     this.player.postStep();
+    this.projectiles.fixedUpdate(dt);
     this.input.endFixedStep();
+  }
+
+  /** Per rendered frame: skill visuals (particles, rings, balls, beams, dome) and the touch "jets" button state. */
+  private skillFrame(dt: number): void {
+    this.sparkles.update(dt);
+    this.flashes.update(dt);
+    this.stars.update(dt);
+    this.projectiles.update(dt);
+    this.laser.update(dt);
+    this.shield.update(dt);
+    const jets = this.player.flight.jetsOn;
+    if (jets !== this.jetsShown) {
+      this.jetsShown = jets;
+      this.touch?.controls.setJets(jets);
+    }
+  }
+
+  private warmSkillFx(on: boolean): void {
+    this.player.flight.warm(on);
+    this.flashes.warm(on);
+    this.stars.warm(on);
+    this.projectiles.warm(on);
+    this.laser.warm(on);
+    this.shield.warm(on);
+  }
+
+  /** Unlock / lock skills (omitted keys unchanged): touch buttons, PC help card and the skill systems follow. */
+  private setSkills(sk: { laser?: boolean; shield?: boolean; fly?: boolean }, persist = false): void {
+    const u = this.player.skills.unlocked;
+    if (sk.laser !== undefined) u.laser = sk.laser;
+    if (sk.shield !== undefined) u.shield = sk.shield;
+    if (sk.fly !== undefined) u.fly = sk.fly;
+    if (persist) {
+      if (u.laser) this.save.unlockSkill('laser');
+      if (u.shield) this.save.unlockSkill('shield');
+      if (u.fly) this.save.unlockSkill('fly');
+    }
+    this.profile.laser = u.laser;
+    this.profile.shield = u.shield;
+    this.hud?.setSkillHelp(u);
+    this.applyLayout();
+  }
+
+  private makeSkillsDebug(): DebugHandle['skills'] {
+    const hits: Record<string, number> = {};
+    const v = new THREE.Vector3();
+    const aim = new THREE.Vector3();
+    let counter = 0;
+    return {
+      flying: false,
+      jets: false,
+      flyHeight: 0,
+      maxFlyHeight: 0,
+      shieldUp: false,
+      laserShots: 0,
+      laserHits: 0,
+      laserMisses: 0,
+      shieldBlocks: 0,
+      ballHits: 0,
+      ringsPassed: 0,
+      flights: 0,
+      aimTarget: '',
+      projectiles: 0,
+      projectilesSpawned: 0,
+      speedScale: 1,
+      unlocked: { laser: false, shield: false, fly: false },
+      testHits: hits,
+      addTestTarget: (x, y, z, radius = 0.6, id = `test${++counter}`) => {
+        const pos = new THREE.Vector3(x, y, z);
+        hits[id] = 0;
+        this.testTargets.push(
+          this.targets.add({
+            id,
+            position: () => pos,
+            radius,
+            onHit: () => {
+              hits[id]++;
+            },
+          }),
+        );
+        return id;
+      },
+      removeTestTargets: () => {
+        for (const t of this.testTargets) t.remove();
+        this.testTargets.length = 0;
+      },
+      throwBall: (x, y, z, speed = 7) => {
+        v.set(x, y, z);
+        aim.copy(this.player.position);
+        this.projectiles.spawn({ from: v, to: aim, speed, gravity: 0, color: 0xff5a4f, radius: 0.26 });
+      },
+      fireLaser: () => this.laser.fire(),
+      facing: 0,
+      setMaxFlyHeight: (h) => {
+        this.player.flight.maxFlyHeight = h;
+      },
+      autoLaunch: (h) => this.player.flight.autoLaunch(h),
+    };
   }
 
   /** Glen <-> Superglen: player look/tuning, touch buttons and a quick golden flash ring. */
@@ -435,7 +729,10 @@ export class Game {
 
   private setPaused(on: boolean): void {
     this.paused = on;
-    if (!on) this.accumulator = 0;
+    if (!on) {
+      this.accumulator = 0;
+      this.clock.reset();
+    }
   }
 
   /** Test helper: run `frames` virtual frames of exactly one fixed step each, then render once (unless `render` is false). */
@@ -449,7 +746,7 @@ export class Game {
       this.rings.update(FIXED_DT);
     }
     this.frameUpdate(frames * FIXED_DT);
-    if (render) this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -459,7 +756,7 @@ export class Game {
       this.advance(1, false);
       for (let k = 0; k < 8; k++) await Promise.resolve();
     }
-    if (render) this.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -483,6 +780,11 @@ export class Game {
     this.debug.grounded = this.player.grounded;
     this.debug.started = startGate.started;
     this.debug.touchUi = touchMode.active;
+    const cp = this.cameraRig.camera.position;
+    this.debug.camera.x = cp.x;
+    this.debug.camera.y = cp.y;
+    this.debug.camera.z = cp.z;
+    this.debug.lastSteps = this.lastSteps;
     this.debug.cameraYaw = this.cameraRig.yaw;
     this.debug.steeringYaw = this.cameraRig.steeringYaw;
     const pl = this.player;
@@ -497,6 +799,28 @@ export class Game {
     this.debug.doubleJumps = pl.doubleJumps;
     this.debug.stomps = pl.stomps;
     this.debug.landings = pl.landings;
+    const sk = this.debug.skills;
+    const st = pl.skills.stats;
+    sk.flying = pl.flight.isFlying;
+    sk.jets = pl.flight.jetsOn;
+    sk.flyHeight = pl.airHeight;
+    sk.maxFlyHeight = pl.flight.maxFlyHeight;
+    sk.shieldUp = pl.skills.shield.up;
+    sk.laserShots = st.laserShots;
+    sk.laserHits = st.laserHits;
+    sk.laserMisses = st.laserMisses;
+    sk.shieldBlocks = st.shieldBlocks;
+    sk.ballHits = st.ballHits;
+    sk.ringsPassed = st.ringsPassed;
+    sk.flights = st.flights;
+    sk.aimTarget = this.laser.aimTarget ? this.laser.aimTarget.id : '';
+    sk.projectiles = this.projectiles.liveCount;
+    sk.projectilesSpawned = this.projectiles.spawned;
+    sk.speedScale = pl.speedScale;
+    sk.facing = pl.facing;
+    sk.unlocked.laser = pl.skills.unlocked.laser;
+    sk.unlocked.shield = pl.skills.unlocked.shield;
+    sk.unlocked.fly = pl.skills.unlocked.fly;
 
     const d = this.debug;
     const line = this.dialog.currentLine;

@@ -106,5 +106,107 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Besok pagi kita latihan, ya!"
+  },
+  {
+    "id": "bab2_nino_pagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Superglen! Ayo latihan."
+  },
+  {
+    "id": "bab2_nino_terbang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tahan tombol lompat untuk terbang."
+  },
+  {
+    "id": "bab2_glen_aduh",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aduh! Kepala kena atap!"
+  },
+  {
+    "id": "bab2_nino_pelan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hehe, pelan-pelan saja."
+  },
+  {
+    "id": "bab2_nino_cincin",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Terbang lewat lima cincin cahaya."
+  },
+  {
+    "id": "bab2_nino_cincin_bagus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bagus! Terus!"
+  },
+  {
+    "id": "bab2_nino_laser",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang laser. Kena lima sasaran, ya."
+  },
+  {
+    "id": "bab2_nino_tenang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tenang dulu, baru bidik."
+  },
+  {
+    "id": "bab2_nino_laser_bagus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kena! Bagus!"
+  },
+  {
+    "id": "bab2_nino_perisai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku lempar bola karet. Pakai perisai!"
+  },
+  {
+    "id": "bab2_nino_tangkis",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, kena perisai!"
+  },
+  {
+    "id": "bab2_nino_coba_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hampir! Coba lagi."
+  },
+  {
+    "id": "bab2_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!"
+  },
+  {
+    "id": "bab2_nino_bekal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Istirahat dulu. Ayo makan bekal."
+  },
+  {
+    "id": "bab2_glen_enak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nyam, enak!"
+  },
+  {
+    "id": "bab2_nino_alarm",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm! Ada masalah di pasar!"
+  },
+  {
+    "id": "bab2_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Superglen siap!"
   }
 ]

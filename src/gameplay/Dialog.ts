@@ -1,3 +1,4 @@
+import { perfMark, PerfMark } from '../core/PerfMarks';
 import type { Input } from '../input/Input';
 import type { DialogBubble } from '../ui/DialogBubble';
 // Lines written by the content pipeline: [{ id, speaker, lang, text }]. Audio for line `id` will be
@@ -197,6 +198,7 @@ export class Dialog {
   }
 
   private start(item: Item): void {
+    perfMark(PerfMark.DIALOG);
     this.current = item;
     this.elapsed = 0;
     this.idle = 0;

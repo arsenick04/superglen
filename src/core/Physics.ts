@@ -24,6 +24,22 @@ export interface StaticBodyHandle {
   collider: RAPIER.Collider;
 }
 
+/** The Rapier world's internals that `Physics.step` hands to the pipeline directly. */
+interface FastWorld {
+  physicsPipeline: { step: (...args: unknown[]) => void };
+  gravity: unknown;
+  integrationParameters: unknown;
+  islands: unknown;
+  broadPhase: unknown;
+  narrowPhase: unknown;
+  bodies: unknown;
+  colliders: unknown;
+  softBodies: unknown;
+  impulseJoints: unknown;
+  multibodyJoints: unknown;
+  ccdSolver: unknown;
+}
+
 /** Thin wrapper around the Rapier world. RAPIER.init() must have resolved before construction. */
 export class Physics {
   readonly world: RAPIER.World;
@@ -35,9 +51,24 @@ export class Physics {
     this.world.timestep = FIXED_DT;
   }
 
+  /**
+   * One fixed step. `World.step()` also re-scans every body and collider in JavaScript after each step (to wrap
+   * objects the engine created by itself, which only happens with soft bodies): about 25 bytes of garbage per body
+   * and per collider per step, i.e. ~35 KB per frame in the story level and a steady stream of small garbage
+   * collections. We create and remove everything through the world, so the wrappers are always up to date; call
+   * the pipeline directly. Falls back to `world.step()` if this Rapier build looks different.
+   */
   step(): void {
-    this.world.step();
+    const w = this.world as unknown as FastWorld;
+    const p = w.physicsPipeline;
+    if (this.fastStep && p && typeof p.step === 'function') {
+      p.step(w.gravity, w.integrationParameters, w.islands, w.broadPhase, w.narrowPhase, w.bodies, w.colliders, w.softBodies, w.impulseJoints, w.multibodyJoints, w.ccdSolver);
+    } else {
+      this.world.step();
+    }
   }
+
+  private readonly fastStep = new URLSearchParams(window.location.search).get('faststep') !== '0';
 
   /** Fixed box. `half` = half extents, `center` = world center, `rotation` optional quaternion. */
   addFixedCuboid(half: Vec3Like, center: Vec3Like, rotation?: QuatLike): StaticBodyHandle {

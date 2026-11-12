@@ -11,6 +11,7 @@ import { JumpTutorial } from './JumpTutorial';
 import { Sparkles } from './Fx';
 import { Atmosphere, Flashlight, type Zone } from './Lighting';
 import { FunnyFx } from './FunnyFx';
+import { LabDoor } from './LabDoor';
 import { Story } from './Story';
 
 /**
@@ -30,6 +31,7 @@ export class Bab1Level implements Level {
   private lab!: Lab;
   private jump!: JumpTutorial;
   private funny!: FunnyFx;
+  private door!: LabDoor;
   private story!: Story;
   private done = false;
 
@@ -37,8 +39,12 @@ export class Bab1Level implements Level {
     this.ctx = ctx;
     const { root, physics, scene } = ctx;
     this.done = ctx.save.isChapterDone('bab1');
-    ctx.game.setSkillButtons({ laser: false, shield: false });
+    // First visit: no powers yet. Afterwards the unlocked ones (from the save) stay on.
+    if (!this.done) ctx.game.setSkills({ laser: false, shield: false, fly: false });
     ctx.game.setTransformAllowed(false);
+    // The lab is small: flying is harmless (low ceiling, a flight box around the whole walkable area).
+    ctx.player.flight.maxFlyHeight = 4.5;
+    ctx.player.flight.bounds = { minX: -13, maxX: 13, minZ: Z.labBack + 0.8, maxZ: 8 };
 
     this.atmosphere = new Atmosphere(scene, root);
     this.sparkles = new Sparkles(root);
@@ -61,6 +67,7 @@ export class Bab1Level implements Level {
     this.exterior = new BuildingExterior(building, root, this.sparkles);
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
+    this.door = new LabDoor(ctx, labKit, this.sparkles);
     street.build(root);
     building.build(root);
     hallKit.build(root);
@@ -76,6 +83,7 @@ export class Bab1Level implements Level {
       atmosphere: this.atmosphere,
       flashlight: this.flashlight,
       funny: this.funny,
+      door: this.door,
     });
 
     if (this.done) {
@@ -99,7 +107,8 @@ export class Bab1Level implements Level {
     this.sparkles.update(dt);
     this.exterior.update(dt);
     this.hall.update(dt);
-    this.lab.update(dt);
+    this.lab.update(dt, zone >= 1);
+    this.door.update(dt);
     this.jump.update(dt);
     this.funny.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
@@ -112,12 +121,18 @@ export class Bab1Level implements Level {
     info.coinsTaken = this.story.coinsTaken;
     info.zone = zone;
     info.hint = this.jump.hinting;
-    info.poleCover = this.poleCover();
-    const cp = this.ctx.cameraRig.camera.position;
-    info.camX = Math.round(cp.x * 100) / 100;
-    info.camY = Math.round(cp.y * 100) / 100;
-    info.camZ = Math.round(cp.z * 100) / 100;
+    if (this.testInfo) {
+      // Camera/pole numbers for the automated tests only (the pole projection costs ~100 matrix maths a frame).
+      info.poleCover = this.poleCover();
+      const cp = this.ctx.cameraRig.camera.position;
+      info.camX = Math.round(cp.x * 100) / 100;
+      info.camY = Math.round(cp.y * 100) / 100;
+      info.camZ = Math.round(cp.z * 100) / 100;
+    }
   }
+
+  /** True when the page was opened by the smoke test (it sets window.__SG_TEST before the game loads). */
+  private readonly testInfo = (window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true;
 
   private readonly corner = new THREE.Vector3();
 

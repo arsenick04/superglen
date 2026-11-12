@@ -10,6 +10,7 @@ import { Sequence } from '../gameplay/Sequence';
 import type { Fade } from '../ui/Fade';
 import type { Level, LevelContext, LevelFactory } from './Level';
 import { StaticProps } from './StaticProps';
+import { perfMark, PerfMark } from '../core/PerfMarks';
 
 /** Everything a level context shares with the game (the per-level parts are created here). */
 export type SharedContext = Omit<LevelContext, 'root' | 'props' | 'seq' | 'onDispose'>;
@@ -30,6 +31,8 @@ export interface LevelManagerDeps {
   onLoadingChange(loading: boolean): void;
   /** After the level is built and the player placed (before the fade-in). */
   onAfterBuild(): void;
+  /** Right before the old level is torn down: clear targets, projectiles and skill subscribers. */
+  onBeforeUnload(): void;
 }
 
 function disposeMaterial(m: THREE.Material): void {
@@ -141,6 +144,7 @@ export class LevelManager {
       console.warn(`LevelManager: unknown level "${id}"`);
       return;
     }
+    perfMark(PerfMark.LOAD);
     this.unload();
     const d = this.deps;
     d.onBeforeBuild();
@@ -179,6 +183,7 @@ export class LevelManager {
 
   private unload(): void {
     const d = this.deps;
+    d.onBeforeUnload();
     if (this.level) {
       try {
         this.level.dispose();
