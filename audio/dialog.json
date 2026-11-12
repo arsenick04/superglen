@@ -1,0 +1,110 @@
+[
+  {
+    "id": "bab1_glen_pulang",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hore, pulang sekolah!"
+  },
+  {
+    "id": "bab1_glen_lompat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo, kita lompat!"
+  },
+  {
+    "id": "bab1_glen_gedung",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!"
+  },
+  {
+    "id": "bab1_glen_pagar",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada celah di pagar. Aku bisa masuk!"
+  },
+  {
+    "id": "bab1_glen_gelap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Gelap, ya. Nyalakan senter dulu."
+  },
+  {
+    "id": "bab1_glen_panel",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Apa ini? Ada panel yang menyala."
+  },
+  {
+    "id": "bab1_glen_dinding",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wow, dindingnya terbuka!"
+  },
+  {
+    "id": "bab1_glen_lab",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, ruang rahasia!"
+  },
+  {
+    "id": "bab1_glen_tombol",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada tombol besar. Tekan, ah!"
+  },
+  {
+    "id": "bab1_nino_halo",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sistem aktif. Halo."
+  },
+  {
+    "id": "bab1_glen_siapa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kamu siapa?"
+  },
+  {
+    "id": "bab1_nino_terpilih",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku Nino. Kamu terpilih karena hatimu, Glen."
+  },
+  {
+    "id": "bab1_nino_kostum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini kostum Barongsai Super. Silakan pakai."
+  },
+  {
+    "id": "bab1_glen_superglen",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku jadi Superglen!"
+  },
+  {
+    "id": "bab1_nino_semua_nyala",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ups, semua tombolnya menyala!"
+  },
+  {
+    "id": "bab1_glen_tertawa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hahaha, geli!"
+  },
+  {
+    "id": "bab1_nino_lompat_barongsai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu bisa Lompat Barongsai. Tekan lompat dua kali!"
+  },
+  {
+    "id": "bab1_nino_besok",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Besok pagi kita latihan, ya!"
+  }
+]

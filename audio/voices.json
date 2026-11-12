@@ -1,0 +1,8 @@
+{
+  "glen":   { "voice_id": "ISI_VOICE_ID", "stability": 0.4, "similarity_boost": 0.8, "style": 0.5 },
+  "nino":   { "voice_id": "ISI_VOICE_ID", "stability": 0.6, "similarity_boost": 0.8, "style": 0.3 },
+  "aara":   { "voice_id": "ISI_VOICE_ID", "stability": 0.4, "similarity_boost": 0.8, "style": 0.5 },
+  "tikus":  { "voice_id": "ISI_VOICE_ID", "stability": 0.3, "similarity_boost": 0.7, "style": 0.8 },
+  "warga":  { "voice_id": "ISI_VOICE_ID", "stability": 0.5, "similarity_boost": 0.7, "style": 0.3 },
+  "mandarin": { "voice_id": "ISI_VOICE_ID", "stability": 0.7, "similarity_boost": 0.8, "style": 0.0 }
+}
