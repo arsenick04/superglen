@@ -22,7 +22,8 @@ export class Lunch {
   private fast = false;
   private resolve: (() => void) | null = null;
   private readonly foods: THREE.Group[] = [];
-  private readonly bubbles: HTMLDivElement[] = [];
+  private readonly bubbles = new Set<HTMLDivElement>();
+  private readonly proj = new THREE.Vector3();
   private shown = new Array<boolean>(FOODS).fill(false);
   private opened = false;
   private spoke = false;
@@ -56,18 +57,7 @@ export class Lunch {
     mk([[new THREE.SphereGeometry(0.12, 10, 8), red, 0, 0, 0], [new THREE.ConeGeometry(0.06, 0.08, 5), green, 0, 0.12, 0]]); // strawberry
     mk([[new THREE.SphereGeometry(0.14, 12, 8), orange, 0, 0, 0]]); // orange
     mk([[new THREE.CylinderGeometry(0.08, 0.08, 0.26, 10), yellow, 0, 0, 0]]); // egg roll
-    const spots: [string, string][] = [['36%', '38%'], ['56%', '34%'], ['46%', '48%']];
-    for (const [l, tp] of spots) {
-      const b = document.createElement('div');
-      b.className = 'b2-nyam';
-      b.textContent = 'Nyam!';
-      b.addEventListener('animationend', () => b.classList.remove('show'));
-      b.style.left = l;
-      b.style.top = tp;
-      ctx.ui.appendChild(b);
-      this.bubbles.push(b);
-    }
-    ctx.onDispose(() => this.bubbles.forEach((b) => b.remove()));
+    ctx.onDispose(() => this.clearBubbles());
   }
 
   /** Play the scene; resolves when everyone is standing again. */
@@ -150,20 +140,37 @@ export class Lunch {
     if (t >= DURATION) this.finish();
   }
 
+  /** A "Nyam!" bubble above the head of whoever just ate; it lives 1.1 s of game time and only during the scene. */
   private nyam(i: number): void {
-    if (this.shown[i]) return;
+    if (this.shown[i] || !this.running) return;
     this.shown[i] = true;
-    const b = this.bubbles[i % this.bubbles.length];
-    b.classList.remove('show');
-    void b.offsetWidth;
-    b.classList.add('show');
-    const a = i % 2 === 0 ? this.env.ctx.player.visualPosition : this.env.nino.group.position;
-    this.env.ctx.fx.sparkles.burst(a.x, a.y + 0.3, a.z, 8, 2, 0xffe14d, { gravity: 0.5, life: 0.6 });
+    const { ctx, nino } = this.env;
+    const a = i % 2 === 0 ? ctx.player.visualPosition : nino.group.position;
+    this.proj.set(a.x, a.y + (i % 2 === 0 ? 0.9 : 1.1), a.z).project(ctx.cameraRig.camera);
+    const b = document.createElement('div');
+    b.className = 'b2-nyam show';
+    b.textContent = 'Nyam!';
+    b.style.left = `${Math.max(8, Math.min(window.innerWidth - 110, (this.proj.x * 0.5 + 0.5) * window.innerWidth - 50))}px`;
+    b.style.top = `${Math.max(8, (-this.proj.y * 0.5 + 0.5) * window.innerHeight - 30)}px`;
+    ctx.ui.appendChild(b);
+    this.bubbles.add(b);
+    ctx.seq.run(async () => {
+      await ctx.seq.wait(1.1);
+      b.remove();
+      this.bubbles.delete(b);
+    });
+    ctx.fx.sparkles.burst(a.x, a.y + 0.3, a.z, 8, 2, 0xffe14d, { gravity: 0.5, life: 0.6 });
+  }
+
+  private clearBubbles(): void {
+    for (const b of this.bubbles) b.remove();
+    this.bubbles.clear();
   }
 
   private finish(): void {
     const { ctx, nino, hangar } = this.env;
     this.running = false;
+    this.clearBubbles();
     ctx.player.crouch = 0;
     nino.sit = 0;
     nino.faceTowards(null);

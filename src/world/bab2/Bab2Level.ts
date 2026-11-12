@@ -48,8 +48,8 @@ export class Bab2Level implements Level {
     // Morning light: bright hemisphere + one warm sun from the window side. No shadow casters (cheap), constant light count.
     scene.background = new THREE.Color(0xcfe3ff);
     scene.fog = new THREE.Fog(0xdfeaff, 70, 160);
-    const hemi = new THREE.HemisphereLight(0xf4f9ff, 0xe3d9c4, 2.7);
-    const sun = new THREE.DirectionalLight(0xfff0d0, 2.4);
+    const hemi = new THREE.HemisphereLight(0xf4f9ff, 0xd9d2c4, 1.7);
+    const sun = new THREE.DirectionalLight(0xfff0d0, 1.5);
     sun.position.set(18, 22, 8);
     root.add(hemi, sun);
 

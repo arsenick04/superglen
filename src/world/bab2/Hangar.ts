@@ -5,9 +5,9 @@ import { Kit, C } from '../bab1/Kit';
 import { HALL, PADS, SCREEN } from './Layout';
 import { ICON, cellUV, makeIconAtlas, makeIdleScreen, makeMarketPicture } from './Paint';
 
-const WALL = 0xe3f0fc;
-const FLOOR = 0xf1e8d6;
-const SKY = 0xcdeaff;
+const WALL = 0xd4e6f8;
+const FLOOR = 0x9cc8ec;
+const SKY = 0x6fc0f5;
 /** Soft pulse of the alarm light (well below 1 Hz: no strobing). */
 const ALARM_HZ = 0.7;
 
@@ -81,56 +81,38 @@ export class Hangar {
 
     // ---- Gold trims, ribs, light panels, pillars ----
     for (const s of [-1, 1]) {
-      kit.lit.box([0.1, 0.35, L], [s * (maxX - 0.02), 1.0, cz], C.GOLD);
+      kit.lit.box([0.1, 3.4, L], [s * (maxX - 0.1), 1.7, cz], 0x3f7fd0); // blue band
+      kit.lit.box([0.1, 0.5, L], [s * (maxX - 0.1), 4.4, cz], C.RED); // red-gold accent stripe
+      kit.lit.box([0.1, 0.18, L], [s * (maxX - 0.18), 4.75, cz], C.GOLD);
+      kit.lit.box([0.1, 0.35, L], [s * (maxX - 0.18), 3.4, cz], C.GOLD);
       kit.lit.box([0.1, 0.18, L], [s * (maxX - 0.02), 7.2, cz], C.GOLD);
       kit.glow.box([0.08, 0.12, L], [s * (maxX - 0.04), 12.4, cz], 0x6ff4ff);
     }
-    kit.lit.box([W, 0.35, 0.1], [0, 1.0, minZ + 0.02], C.GOLD);
+    kit.lit.box([W, 3.4, 0.1], [0, 1.7, minZ + 0.1], 0x3f7fd0);
+    kit.lit.box([W, 0.5, 0.1], [0, 4.4, minZ + 0.1], C.RED);
+    kit.lit.box([W, 0.35, 0.1], [0, 3.4, minZ + 0.18], C.GOLD);
+    kit.lit.box([SCREEN.w + 7, SCREEN.h + 4.5, 0.1], [SCREEN.x, SCREEN.y + 1.2, minZ + 0.1], 0x16264f); // dark backdrop: the screen stands out
     for (let z = minZ + 4; z < maxZ; z += 8) kit.lit.box([W, 0.4, 0.6], [0, ceil - 0.2, z], C.GOLD);
     for (const x of [-9, 0, 9]) {
-      kit.lit.box([0.6, 0.4, L], [x, ceil - 0.2, cz], 0xcfdcf0);
-      kit.glow.box([5.2, 0.05, L - 2], [x + (x === 0 ? 0 : 4.5 * Math.sign(x)), ceil - 0.03, cz], 0xfff8e6);
+      kit.lit.box([0.6, 0.4, L], [x, ceil - 0.2, cz], 0x8fb4e6);
+      kit.glow.box([5.2, 0.05, L - 2], [x + (x === 0 ? 0 : 4.5 * Math.sign(x)), ceil - 0.03, cz], 0xfff0c0);
     }
     for (const s of [-1, 1]) {
       for (let z = minZ + 3; z < maxZ - 1; z += 8) {
-        kit.lit.box([0.8, ceil - 0.5, 0.9], [s * (maxX - 0.6), (ceil - 0.5) / 2, z], 0xcfdcf0);
+        kit.lit.box([0.8, ceil - 0.5, 0.9], [s * (maxX - 0.6), (ceil - 0.5) / 2, z], 0x8fb4e6);
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), 0.15, z], C.GOLD);
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), ceil - 0.65, z], C.GOLD);
       }
     }
 
-    // ---- High windows + soft morning light ----
-    const shafts: THREE.BufferGeometry[] = [];
+    // ---- High windows (sky-blue glass) ----
     for (const s of [-1, 1]) {
       for (let z = minZ + 6; z < maxZ - 2; z += 8) {
         kit.glow.box([0.14, 3.4, 4.6], [s * (maxX - 0.05), 9.9, z], SKY);
         for (const dy of [-1.8, 1.8]) kit.lit.box([0.2, 0.2, 4.9], [s * (maxX - 0.08), 9.9 + dy, z], C.GOLD);
         for (const dz of [-2.4, 0, 2.4]) kit.lit.box([0.2, 3.6, 0.18], [s * (maxX - 0.08), 9.9, z + dz], C.GOLD);
-        // One slanted quad of light from the window down to the floor.
-        const g = new THREE.BufferGeometry();
-        const x0 = s * (maxX - 0.3);
-        const x1 = s * (maxX - 10);
-        const v = new Float32Array([x0, 11.5, z - 2.2, x0, 8.4, z + 2.2, x1, 0.04, z + 2.2, x0, 11.5, z - 2.2, x1, 0.04, z + 2.2, x1, 0.04, z - 2.2]);
-        const k = s > 0 ? 1 : 0.6;
-        const colArr = new Float32Array(18);
-        for (let i = 0; i < 6; i++) {
-          const top = i < 3 && i !== 2 ? 1 : 0;
-          const f = (top ? 0.14 : 0.01) * k;
-          colArr.set([f, f * 0.95, f * 0.7], i * 3);
-        }
-        g.setAttribute('position', new THREE.BufferAttribute(v, 3));
-        g.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
-        shafts.push(g);
       }
     }
-    const shaftGeo = mergeGeometries(shafts, false);
-    for (const g of shafts) g.dispose();
-    const shaftMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false });
-    const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
-    shaftMesh.renderOrder = 2;
-    shaftMesh.frustumCulled = false;
-    root.add(shaftMesh);
-
     // ---- Floor: tile lines, station ring ----
     for (let x = minX + 6; x < maxX; x += 6) kit.glow.box([0.06, 0.012, L], [x, 0.008, cz], 0xc3d3ea);
     for (let z = minZ + 6; z < maxZ; z += 6) kit.glow.box([W, 0.012, 0.06], [0, 0.008, z], 0xc3d3ea);

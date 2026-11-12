@@ -2016,6 +2016,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   s = await d.st();
   check(`${tag}: alarm light on (soft pulse <= 1 Hz)`, s.levelInfo.alarm > 0.5 && s.levelInfo.alarmHz <= 1, `alarm ${s.levelInfo.alarm}, ${s.levelInfo.alarmHz} Hz`);
   await beat('alarm', d);
+  check(`${tag}: no Nyam bubble left once the alarm starts`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
   s = await d.until(() => d.seen.includes('bab2_glen_siap'), 600, 10);
   check(`${tag}: alarm then siap lines in order`, !!s && d.seen.indexOf('bab2_nino_alarm') < d.seen.indexOf('bab2_glen_siap'), d.seen.join());
   s = await d.until((s) => s.levelInfo.step === 'done', 600, 10);
@@ -2023,10 +2024,30 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   await celebrationChecks(page, check, d, async (name) => { await beat(name, d); }, { chapter: 2, tag, shotName: tag === 'touch' ? 'bab2-done-touch' : 'bab2-done', skipPoles: tag === 'touch' });
   s = await d.st();
   check(`${tag}: save has bab2 done and all three skills`, s.save.data.chaptersDone.includes('bab2') && s.save.data.skills.laser && s.save.data.skills.shield && s.save.data.skills.fly, JSON.stringify(s.save.data));
+  check(`${tag}: no Nyam bubble after the chapter is done`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
   s = await d.until((s) => s.levelInfo.step === 'free', 400, 10);
   check(`${tag}: free play follows (controls on, all skills)`, !!s && s.controlsEnabled && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield);
   console.log(`   bab2 ${tag} budgets: ${areas.join(' | ')}`);
   return { hits, areas };
+}
+
+/** Share of near-white pixels (R, G, B all > 245) in the top 580 px of a 1280x720 screenshot (the bottom holds the white dialog bubble). */
+async function nearWhiteShare(page, name) {
+  const b64 = fs.readFileSync(path.join(OUT, `${name}.png`)).toString('base64');
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = 'data:image/png;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = 580;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) n++;
+    return n / (d.length / 4);
+  }, b64);
 }
 
 async function bab2DesktopScenario(page, check) {
@@ -2040,7 +2061,15 @@ async function bab2DesktopScenario(page, check) {
   await playBab2(page, check, d, inp, 'desktop', async (name) => {
     if (name === 'laser') { await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); await page.evaluate(() => window.__superglen.advance(40, false)); }
     if (name === 'shield') { await page.evaluate(() => window.__superglen.setCameraYaw(-Math.PI / 2)); await page.evaluate(() => window.__superglen.advance(40, false)); }
-    if (map[name]) { await page.evaluate(() => window.__superglen.advance(2, true)); await shot(page, map[name]); }
+    if (map[name]) {
+      await page.evaluate(() => window.__superglen.advance(2, true));
+      await shot(page, map[name]);
+      if (['hall', 'rings', 'laser', 'shield', 'alarm'].includes(name)) {
+        const w = await nearWhiteShare(page, map[name]);
+        console.log(`   near-white share ${map[name]}: ${(w * 100).toFixed(1)}%`);
+        check(`desktop: ${map[name]} is not overexposed (< 8% near-white pixels)`, w < 0.08, `${(w * 100).toFixed(1)}%`);
+      }
+    }
   });
   // Leak: bab2 -> test -> bab2 twice must not grow.
   await page.evaluate(() => window.__superglen.pause(false));
