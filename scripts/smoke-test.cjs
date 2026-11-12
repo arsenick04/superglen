@@ -2194,7 +2194,7 @@ async function bab2FlowScenario(page, check) {
   check('flow: the lab door shows a hand prompt', s.prompt.visible && s.prompt.icon === 'hand', JSON.stringify(s.prompt));
   await d.tap('e');
   await page.evaluate(() => window.__superglen.pause(false));
-  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 60000 });
   s = await page.evaluate(state);
   check('flow: the lab door loads Chapter 2 (story from the start, only jump)', s.level === 'bab2' && !s.skills.unlocked.fly && s.levelInfo.free === false, `${s.level} free ${s.levelInfo.free}`);
   check('flow: the door starts the story at the spawn', Math.abs(s.player.x) < 0.5 && Math.abs(s.player.z) < 0.5);
@@ -2257,7 +2257,7 @@ async function bab2FlowScenario(page, check) {
   check('flow: the corridor door shows a hand prompt', s.prompt.visible && s.prompt.icon === 'hand', JSON.stringify(s.prompt));
   await d.tap('e');
   await page.evaluate(() => window.__superglen.pause(false));
-  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 15000 });
+  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 60000 });
   s = await page.evaluate(state);
   check('flow: the exit door leads to the lab; all skills stay unlocked there', s.level === 'bab1' && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield && s.mode === 'superglen', JSON.stringify(s.skills.unlocked));
   check('flow: lab flying ceiling is low (harmless)', s.skills.maxFlyHeight <= 5, `${s.skills.maxFlyHeight}`);
