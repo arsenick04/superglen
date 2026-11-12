@@ -213,13 +213,71 @@ Smoke test: 76 pemeriksaan lulus, diulang 5 kali berturut-turut, 0 error console
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Paket malam B1 (12 November 2026): selesai
+
+### Yang selesai
+- **Bab 1: Komputer Kuno Barongsai** bisa dimainkan dari gerbang sekolah sampai bintang "Bab 1 selesai":
+  1. Jalan kota sepulang sekolah, dengan tutorial lompat melewati palang rendah. Kalau anak belum berhasil dalam 20 detik, muncul papan miring di samping supaya bisa lewat.
+  2. Gedung Barongsai tua merah-emas di ujung jalan, masuk lewat celah pagar.
+  3. Lorong redup dengan senter, lampion, dan panel sirkuit yang membuka dinding.
+  4. Lab dengan komputer berbentuk kepala Barongsai dan tombol besar.
+  5. Nino muncul, kostum keluar, Glen berubah jadi Superglen, lalu penutup lucu saat semua fitur kostum menyala.
+- **Penunjuk tanpa teks**: sinar emas menandai tujuan berikutnya, panah di tepi layar kalau tujuan di luar pandangan, ikon melayang di atas benda yang bisa ditekan.
+- **Balon dialog** dengan ikon wajah, maju otomatis atau dengan ketukan. 18 kalimat di `audio/dialog.json`, siap diberi suara di paket B4.
+- **Progres tersimpan**: pemain yang kembali langsung mulai di lab sebagai Superglen. `?reset=1` mengulang cerita.
+- **Tiga tiang latihan** di lab untuk mencoba Lompat Barongsai setelah bab selesai.
+- **Kerangka untuk bab berikutnya**: sistem level, interaksi, dialog, penanda tujuan, urutan adegan, dan penyimpanan.
+- Level awal sekarang Bab 1. Area uji lama ada di `?level=test`.
+
+### Yang belum (sesuai rencana)
+- Suara: semua dialog masih teks. Suara Nino dan Glen di paket B4.
+- Laser, Perisai, dan Terbang: terbuka di Bab 2 (paket B2). Setelah Bab 1 hanya Lompat Barongsai yang aktif.
+- Model 3D asli: semua masih bentuk sederhana (kapsul dan kotak). Fase C.
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` dan `npm run typecheck` | Lulus |
+| Smoke test penuh oleh `qa-tester`, 2 kali | Lulus, 0 kegagalan, 0 error console |
+| Bab 1 dimainkan otomatis sampai selesai di desktop | Lulus 59 dari 59 |
+| Bab 1 di layar sentuh 844x281 | Lulus 53 dari 53, tombol dan balon dialog tidak tumpang tindih |
+| Papan bantuan setelah 20 detik | Lulus |
+| Kembali ke game dan `?reset=1` | Lulus |
+| Pindah level bolak-balik tanpa kebocoran memori | Lulus |
+
+Draw call per area: jalan 44, gedung 29 sampai 43, lorong 41, lab 31 (batas 150). **Fps di perangkat asli belum diukur**; angka headless (10 sampai 60 fps, renderer software) hanya perkiraan.
+
+### Bug yang ditemukan saat review dan sudah diperbaiki
+- Setelah level dimuat, Glen berdiri terbenam 0,8 m di bawah tanah sampai ia melompat. Penyebabnya mesin fisika belum mengenal lantai level baru saat pemain ditempatkan. Sekarang pemain selalu diletakkan tepat di permukaan, dan ada tes pencegahnya.
+
+### Masalah yang diketahui
+- Tiang latihan di sisi kiri lab kadang menutupi pandangan kamera saat berdiri di dekat kostum.
+- Di lorong redup, kapsul Glen terlihat gelap.
+- Ikon wajah Glen di balon dialog tetap oranye setelah jadi Superglen.
+- Bintang "Bab 1 selesai" dan kilatan transformasi dites secara tidak langsung, belum dilihat di tangkapan layar.
+- Jumlah segitiga per frame sekitar 100 sampai 130 ribu. Kalau iPhone terasa berat, ini yang pertama dikurangi.
+- Ukuran unduhan sekarang 5,0 MB (1,85 MB terkompresi).
+- Smoke test penuh sekarang butuh sekitar 6 menit.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Apakah lorong redup cukup terang di layar HP pada siang hari.
+- Beban senter dan bayangan matahari terhadap fps.
+- Sudut kamera saat adegan Nino muncul.
+
+### Keputusan yang diambil sendiri
+- Kata "laboratorium" diganti "ruang rahasia" di dialog Glen karena sulit untuk anak 5 tahun.
+- Tiga tiang latihan, bukan empat, dan dipindah ke dinding kiri supaya tidak menghalangi kamera.
+- Tutorial lompat diberi papan bantuan supaya anak tidak pernah tersangkut.
+- Agen Bab 1 sempat terhenti karena batas pemakaian dan dilanjutkan setelah reset. Tidak ada pekerjaan yang hilang.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
 
 ## Untuk dicoba besok pagi
-1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Layar awal sekarang bercahaya dengan logo utuh. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
-2. **Coba bersama anak**: jalan dengan jempol miring 10 detik atau lebih (jalur harus lurus), ketuk bintang jadi Superglen, lalu cek apakah tombol Lompat, Laser, dan Perisai tidak saling menumpuk dan mudah dijangkau.
-3. **Catat angka FPS** di kiri atas dan apakah layar awal terasa mulus. Laser dan Perisai belum berfungsi sampai paket B2.
-
-**Fase A selesai.** Mohon dimainkan bersama anak sebelum lanjut ke Fase B (paket B1: Bab 1).
+1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
+2. **Biarkan anak memainkan Bab 1 sendiri**: ikuti sinar emas, lompati palang, masuk gedung lewat celah pagar, tekan panel yang menyala, tekan tombol besar di lab, ambil kostum. Perhatikan di mana ia bingung atau berhenti lebih dari 30 detik.
+3. **Catat**: angka FPS di jalan, di lorong redup, dan di lab; apakah lorong terlalu gelap; apakah teks dialog terbaca. Untuk mengulang cerita, buka alamat yang sama dengan tambahan `?reset=1`.
