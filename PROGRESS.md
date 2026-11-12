@@ -180,13 +180,46 @@ Smoke test: 76 pemeriksaan lulus, diulang 5 kali berturut-turut, 0 error console
 - Kamera butuh sekitar 4 sampai 5 detik untuk berhenti di belakang pemain. Kalau terasa lambat, angka `followGain` di `CameraConfig` bisa dinaikkan.
 - Pagar tepi dunia (30 m dari titik awal) menahan gerak, dan kecepatan turun saat menyusuri pagar. Belum diubah.
 
+## Perbaikan tampilan dari uji iPhone (12 November 2026): selesai
+
+### Masalah yang dilaporkan
+1. Logo di layar awal terlihat terpotong kiri dan kanan, dan latarnya hitam.
+2. Setelah berubah jadi Superglen, tombol bintang menumpuk dengan tombol perisai di iPhone.
+
+### Penyebab
+1. Pudar tepi dipasang pada elemen selebar layar, bukan pada gambarnya. Gambar logo aslinya juga berlatar hitam.
+2. Bilah Safari di atas membuat area game hanya sekitar 281 pt tinggi. Tata letak hanya dites di tinggi 390 pt ke atas.
+
+### Perbaikan
+- **Logo transparan**: latar hitam dibuang, aura emas di sekelilingnya dipertahankan sebagai halo lembut. Master di `art/logo/superglen_logo_alpha.png`, versi web 203 KB di `public/img/logo.webp`. Asli berlatar hitam tetap ada di `art/logo/superglen_logo.png`.
+- **Layar awal ceria**: gradien langit, sinar matahari berputar pelan, awan melayang, bintang berkilau, bukit hijau. Semuanya CSS, tanpa gambar tambahan, dan animasi mati saat pengaturan "kurangi gerakan" aktif.
+- **Tata letak tombol mengikuti tinggi layar**: di bawah 360 pt, tombol Lompat, Laser, dan Perisai berderet melengkung di kanan bawah, dan tombol bintang sendirian di kanan atas. Tombol selalu minimal 80 px dan tidak masuk ke area joystick. Hit test memilih tombol dengan pusat terdekat.
+
+### Hasil tes
+- Smoke test 175 pemeriksaan per run, lulus 3 kali berturut-turut oleh `qa-tester`, 0 error console.
+- Tata letak dites di 8 ukuran: 844x281, 844x250, 844x330, 667x250, 568x320, 932x300, 1024x768, 1366x1024, masing-masing mode Glen dan Superglen. Tidak ada yang tumpang tindih atau terpotong.
+- Layar awal dites di 844x281, 844x250, 667x250, dan 1280x720: logo dan tombol mulai tidak saling menutupi, latar terang.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Animasi layar awal: ada satu lapisan sinar besar yang berputar. Kalau terasa tersendat saat game dimuat, hapus animasi sinar lebih dulu.
+- Area aman di sisi poni layar. Di tes headless nilainya 0.
+- Kenyamanan jari pada susunan tombol melengkung di layar pendek.
+- Di layar setinggi 250 pt logo menjadi kecil karena tombol mulai memakai sepertiga tinggi layar.
+
+### Catatan
+- Tes gerak melingkar dari PR sebelumnya (PR #4) sudah digabung di branch ini.
+- Tombol Laser dan Perisai belum berfungsi. Itu paket B2.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
 
 ## Untuk dicoba besok pagi
-1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Layar logo muncul, ketuk untuk mulai. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
-2. **Biarkan anak mencoba melompat**: tombol kuning untuk lompat. Ketuk tombol bintang di kanan atas untuk jadi Superglen, lalu lompat dua kali untuk berputar di udara. Jalan lurus ke depan untuk menemukan deretan tiang, lalu coba naik ke atasnya.
-3. **Perhatikan dan catat**: angka FPS di kiri atas (iPhone dan PC), apakah lompat terasa enak, dan apakah mendarat di atas tiang terlalu sulit.
+1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Layar awal sekarang bercahaya dengan logo utuh. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
+2. **Coba bersama anak**: jalan dengan jempol miring 10 detik atau lebih (jalur harus lurus), ketuk bintang jadi Superglen, lalu cek apakah tombol Lompat, Laser, dan Perisai tidak saling menumpuk dan mudah dijangkau.
+3. **Catat angka FPS** di kiri atas dan apakah layar awal terasa mulus. Laser dan Perisai belum berfungsi sampai paket B2.
 
-**Fase A selesai.** Ini checkpoint: mohon dimainkan bersama anak sebelum lanjut ke Fase B (paket B1: Bab 1).
+**Fase A selesai.** Mohon dimainkan bersama anak sebelum lanjut ke Fase B (paket B1: Bab 1).
