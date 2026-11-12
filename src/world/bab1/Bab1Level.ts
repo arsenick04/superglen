@@ -2,8 +2,9 @@ import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from './Batch';
 import { Kit } from './Kit';
 import * as THREE from 'three';
-import { Z, LAB, LAB_FLOOR } from './Layout';
-import { buildStreet, slabBounds } from './Street';
+import { Z, LAB, LAB_FLOOR, HALL_HALF } from './Layout';
+import { buildStreet } from './Street';
+import { RoofList } from '../kits/Roofs';
 import { BuildingExterior } from './Building';
 import { Hall } from './Hall';
 import { Lab } from './Lab';
@@ -34,6 +35,8 @@ export class Bab1Level implements Level {
   private door!: LabDoor;
   private story!: Story;
   private done = false;
+  /** Sample points of every walkable roof / top (published to the smoke test only). */
+  private readonly roofs = new RoofList();
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -50,17 +53,22 @@ export class Bab1Level implements Level {
     this.sparkles = new Sparkles(root);
     this.flashlight = new Flashlight(root);
 
-    // Ground: one slab for street + hall, a lower one for the lab.
-    const a = slabBounds(Z.hallBack - 0.6);
-    physics.addFixedCuboid({ x: a.size[0] / 2, y: a.size[1] / 2, z: a.size[2] / 2 }, { x: a.pos[0], y: a.pos[1], z: a.pos[2] });
-    const labLen = 24;
-    physics.addFixedCuboid({ x: 20, y: 0.5, z: labLen / 2 }, { x: 0, y: LAB_FLOOR - 0.5, z: Z.hallBack - 0.6 - labLen / 2 });
+    // Ground: one slab for the street and plaza, one exactly under the hall, a lower one exactly under the lab. There is
+    // NO floor beside the buildings: someone who reaches the roofs and jumps off outside falls into the ravine and is
+    // returned to the last safe spot (an outside yard would be a place to get stuck).
+    const zFacade = Z.facade - 0.6;
+    const zHall = Z.hallBack - 0.6;
+    const zLab = Z.labBack - 1;
+    physics.addFixedCuboid({ x: 20, y: 0.5, z: (9 - zFacade) / 2 }, { x: 0, y: -0.5, z: (9 + zFacade) / 2 });
+    physics.addFixedCuboid({ x: HALL_HALF + 0.6, y: 0.5, z: (zFacade - zHall) / 2 }, { x: 0, y: -0.5, z: (zFacade + zHall) / 2 });
+    physics.addFixedCuboid({ x: 7.6, y: 0.5, z: (zHall - zLab) / 2 }, { x: 0, y: LAB_FLOOR - 0.5, z: (zHall + zLab) / 2 });
 
     const mats = makeMaterials();
     const street = new Kit(physics, mats, true);
     const building = new Kit(physics, mats, true);
     const hallKit = new Kit(physics, mats, false);
     const labKit = new Kit(physics, mats, false);
+    for (const k of [street, building, hallKit, labKit]) k.roofs = this.roofs;
 
     buildStreet(street);
     this.jump = new JumpTutorial(ctx, street, this.sparkles);
@@ -68,6 +76,7 @@ export class Bab1Level implements Level {
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
     this.door = new LabDoor(ctx, labKit, this.sparkles);
+    if (this.testInfo) ctx.game.debugInfo.roofs = this.roofs.json();
     street.build(root);
     building.build(root);
     hallKit.build(root);

@@ -8,6 +8,10 @@ import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { GroundRings } from '../fx/GroundRings';
 import { BillboardRings } from '../fx/BillboardRings';
 import { DizzyStars } from '../fx/DizzyStars';
+import { RhythmFx } from '../fx/RhythmFx';
+import { DrumSynth } from '../audio/DrumSynth';
+import { MAX_LEVEL } from '../config/parkour';
+import { DrumIcons } from '../ui/DrumIcons';
 import { Sparkles } from '../world/bab1/Fx';
 import { Targets } from '../gameplay/Targets';
 import { Projectiles } from '../gameplay/Projectiles';
@@ -101,6 +105,8 @@ export interface DebugHandle {
   /** Test helpers. */
   loadLevel: (id: string) => Promise<void>;
   setCameraYaw: (yaw: number) => void;
+  /** Test-only: put the camera at (x, y, z) looking at (tx, ty, tz); `null` hands it back to the follow camera. */
+  lookFrom: (pose: [number, number, number, number, number, number] | null) => void;
   /** Camera world position (updated every frame). */
   camera: { x: number; y: number; z: number };
   /** Fixed steps run by the most recent frame. */
@@ -116,6 +122,13 @@ export interface DebugHandle {
   adaptFrame: (nowMs: number, moving: boolean) => void;
   /** Test helper: put the player on the floor at (x, z). */
   placePlayer: (x: number, z: number) => void;
+  /** Test helper: put the player's FEET at (x, y, z) in mid-air (it falls from there). */
+  teleportFeet: (x: number, y: number, z: number) => void;
+  /**
+   * Test helper: add a fixed box (centre, half extents) to the level (removed on unload). `bounce` registers it as
+   * a bounce drum (Rhythm.registerBounce).
+   */
+  testBox: (cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, bounce?: boolean) => void;
   /**
    * Fractional shadow-map texel position (0..1, x and y) of a fixed world point, or null without a shadow light.
    * While the player walks this must stay constant (snapped shadow camera); a drifting value = swimming shadows.
@@ -161,6 +174,38 @@ export interface DebugHandle {
     facing: number;
     setMaxFlyHeight: (h: number) => void;
     autoLaunch: (h: number) => void;
+  };
+  /** Lompat Irama Barongsai state and test helpers (see player/Rhythm.ts, config/parkour.ts). */
+  rhythm: {
+    level: number;
+    easy: boolean;
+    lastQuality: string;
+    perfect: number;
+    good: number;
+    misses: number;
+    autos: number;
+    bounces: number;
+    normals: number;
+    /** Predicted seconds until touchdown (Infinity when not falling toward ground). */
+    landEta: number;
+    mantles: number;
+    mantling: boolean;
+    /** A held jump button keeps bouncing (no jets) because of a timed bounce chain. */
+    chain: boolean;
+    /** Lit drum icons / icon strip shown / DOM updates so far. */
+    lit: number;
+    drumsVisible: boolean;
+    drumWrites: number;
+    /** Sounds the synth started, and whether it has an AudioContext. */
+    sounds: number;
+    audio: boolean;
+    muted: boolean;
+    setLevel: (n: number) => void;
+    /** Test-only: highest level the rhythm can reach (default 4). Also clamps the current level. */
+    setCap: (n: number) => void;
+    setEasy: (on: boolean) => void;
+    /** Force a bounce through the scripted hook. */
+    bounce: (launch?: boolean) => void;
   };
   /** Resource counts: geometries/textures from three, colliders/bodies from Rapier. */
   debugCounts: () => {
@@ -211,6 +256,10 @@ export class Game {
   readonly laser: Laser;
   readonly shield: Shield;
   private jetsShown = false;
+  readonly synth: DrumSynth;
+  private readonly rhythmFx: RhythmFx;
+  private drumIcons: DrumIcons | null = null;
+  private readonly muteUrl: boolean;
   private readonly testTargets: { remove(): void }[] = [];
 
   // ---- Controls gating and the touch button profile (see the level context API) ----
@@ -233,6 +282,7 @@ export class Game {
   private fpsTime = 0;
   private readonly debug: DebugHandle = { fps: 0, player: { x: 0, y: 0, z: 0 }, grounded: false,
     started: false,
+    rhythm: undefined as unknown as DebugHandle['rhythm'],
     touchUi: false,
     cameraYaw: 0,
     steeringYaw: 0,
@@ -269,6 +319,9 @@ export class Game {
     game: undefined as unknown as LevelGame,
     loadLevel: (id: string) => this.levels.load(id),
     setCameraYaw: (yaw: number) => this.cameraRig.snapBehind(yaw - Math.PI),
+    lookFrom: (pose) => {
+      this.cameraRig.testPose = pose;
+    },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
@@ -281,6 +334,15 @@ export class Game {
     },
     adaptFrame: (nowMs: number, moving: boolean) => this.renderer.observeFrame(nowMs, moving),
     placePlayer: (x: number, z: number) => this.player.placeAt(x, 0, z),
+    teleportFeet: (x: number, y: number, z: number) => {
+      this.player.teleport(x, y + 0.55, z);
+      this.player.updateVisual(1, 0);
+    },
+    testBox: (cx, cy, cz, hx, hy, hz, bounce = false) => {
+      const h = this.physics.addFixedCuboid({ x: hx, y: hy, z: hz }, { x: cx, y: cy, z: cz });
+      if (bounce) this.player.rhythm.registerBounce(h.collider);
+      this.physics.refreshQueries();
+    },
     shadowPhase: () => this.shadowPhase(),
     shadowSnap: (on: boolean) => {
       ShadowFollower.snapEnabled = on;
@@ -323,6 +385,16 @@ export class Game {
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
+    {
+      // Easy jump mode: saved setting (default on), the URL ?easy=0|1 overrides it for this session.
+      const q = new URLSearchParams(window.location.search);
+      const easy = q.get('easy');
+      this.player.rhythm.easyMode = easy === '0' ? false : easy === '1' ? true : this.save.data.settings.easyJump;
+      this.muteUrl = q.get('mute') === '1';
+    }
+    this.synth = new DrumSynth(() => this.muteUrl || !this.save.data.settings.sound);
+    // The AudioContext may only be created inside the first tap (iOS): StartGate runs this from the gesture.
+    startGate.onStart(() => this.synth.unlock());
     this.rings = new GroundRings(this.scene);
     this.player.onStomp((e) => {
       this.rings.spawn(e.x, e.y, e.z, e.radius, 0.4, 0xffc400);
@@ -336,6 +408,7 @@ export class Game {
     this.flashes = new BillboardRings(this.scene, this.cameraRig.camera, 8);
     this.stars = new DizzyStars(this.scene, this.cameraRig.camera, 3);
     this.player.flight.sparkles = this.sparkles;
+    this.rhythmFx = new RhythmFx(this.scene, this.player, this.sparkles, this.rings, this.flashes, () => this.cameraRig.bump(), this.synth);
     this.projectiles = new Projectiles(this.scene, this.physics.world, this.player, {
       sparkles: this.sparkles,
       flashes: this.flashes,
@@ -350,6 +423,8 @@ export class Game {
 
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
+    this.drumIcons = new DrumIcons(uiRoot);
+    this.debug.rhythm = this.makeRhythmDebug();
     if (new URLSearchParams(window.location.search).get('perf') === '1') {
       this.perfPanel = new PerfOverlay(uiRoot, (out) => this.collectPerfStats(out));
     }
@@ -418,6 +493,7 @@ export class Game {
         save: this.save,
         ui: uiRoot,
         game: this.api,
+        synth: this.synth,
       },
       player: this.player,
       cameraRig: this.cameraRig,
@@ -432,6 +508,8 @@ export class Game {
         this.profile.legacyTest = false;
         this.profile.transform = false;
         this.player.flight.resetLevelSettings();
+        this.player.rhythm.cap = MAX_LEVEL;
+        this.player.rhythm.reset();
         this.player.skills.shield.up = false;
         this.player.speedScale = 1;
         this.setSkills({ ...this.save.data.skills });
@@ -453,6 +531,7 @@ export class Game {
         this.flashes.clear();
         this.stars.clear();
         this.player.skills.clearListeners();
+        this.player.rhythm.clearBounce();
         for (const t of this.testTargets) t.remove();
         this.testTargets.length = 0;
       },
@@ -606,6 +685,8 @@ export class Game {
     this.projectiles.update(dt);
     this.laser.update(dt);
     this.shield.update(dt);
+    this.rhythmFx.update(dt);
+    this.drumIcons?.update(this.player.mode === 'superglen', this.player.rhythm.level);
     const jets = this.player.flight.jetsOn;
     if (jets !== this.jetsShown) {
       this.jetsShown = jets;
@@ -615,6 +696,8 @@ export class Game {
 
   private warmSkillFx(on: boolean): void {
     this.player.flight.warm(on);
+    this.player.warmFx(on);
+    this.rhythmFx.warm(on);
     this.flashes.warm(on);
     this.stars.warm(on);
     this.projectiles.warm(on);
@@ -637,6 +720,50 @@ export class Game {
     this.profile.shield = u.shield;
     this.hud?.setSkillHelp(u);
     this.applyLayout();
+  }
+
+  /** Parents' page hook: easy jump mode on/off (saved). */
+  setEasyJump(on: boolean): void {
+    this.player.rhythm.easyMode = on;
+    this.save.setEasyJump(on);
+  }
+
+  /** Parents' page hook: synthesized sound on/off (saved). */
+  setSound(on: boolean): void {
+    this.save.setSound(on);
+  }
+
+  private makeRhythmDebug(): DebugHandle['rhythm'] {
+    return {
+      level: 0,
+      easy: true,
+      lastQuality: '',
+      perfect: 0,
+      good: 0,
+      misses: 0,
+      autos: 0,
+      bounces: 0,
+      normals: 0,
+      landEta: Infinity,
+      mantles: 0,
+      mantling: false,
+      chain: false,
+      lit: 0,
+      drumsVisible: false,
+      drumWrites: 0,
+      sounds: 0,
+      audio: false,
+      muted: false,
+      setLevel: (n) => this.player.rhythm.setLevel(n),
+      setCap: (n) => {
+        this.player.rhythm.cap = Math.max(0, Math.min(MAX_LEVEL, Math.round(n)));
+        this.player.rhythm.setLevel(this.player.rhythm.level);
+      },
+      setEasy: (on) => {
+        this.player.rhythm.easyMode = on;
+      },
+      bounce: (launch) => this.player.rhythm.bounce(launch),
+    };
   }
 
   private makeSkillsDebug(): DebugHandle['skills'] {
@@ -799,6 +926,27 @@ export class Game {
     this.debug.doubleJumps = pl.doubleJumps;
     this.debug.stomps = pl.stomps;
     this.debug.landings = pl.landings;
+    const rh = this.debug.rhythm;
+    const R = pl.rhythm;
+    rh.level = R.level;
+    rh.easy = R.easyMode;
+    rh.lastQuality = R.lastQuality;
+    rh.perfect = R.stats.perfect;
+    rh.good = R.stats.good;
+    rh.misses = R.stats.misses;
+    rh.autos = R.stats.autos;
+    rh.bounces = R.stats.bounces;
+    rh.normals = R.stats.normals;
+    rh.landEta = pl.landEta;
+    rh.mantles = pl.mantles;
+    rh.mantling = pl.mantling;
+    rh.chain = pl.bounceChain;
+    rh.lit = this.drumIcons ? this.drumIcons.lit : 0;
+    rh.drumsVisible = this.drumIcons ? this.drumIcons.visible : false;
+    rh.drumWrites = this.drumIcons ? this.drumIcons.writes : 0;
+    rh.sounds = this.synth.played;
+    rh.audio = !!this.synth.audioContext;
+    rh.muted = this.muteUrl || !this.save.data.settings.sound;
     const sk = this.debug.skills;
     const st = pl.skills.stats;
     sk.flying = pl.flight.isFlying;

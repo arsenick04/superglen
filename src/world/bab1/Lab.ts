@@ -4,6 +4,7 @@ import { ColorBatch } from './Batch';
 import { Kit, C, basic } from './Kit';
 import { Z, LAB, LAB_FLOOR, DOOR_HALF } from './Layout';
 import type { Sparkles } from './Fx';
+import { addRoofBox } from '../kits/Roofs';
 
 const F = LAB_FLOOR;
 const WALL_C = 0xe8f0fa;
@@ -98,6 +99,14 @@ export class Lab {
       kit.lit.box([w, 0.3, 0.1], [s * (DOOR_HALF + 0.3 + w / 2), F + 1.0, Z.labFront + 0.03], C.GOLD);
       kit.glow.box([w, 0.12, 0.08], [s * (DOOR_HALF + 0.3 + w / 2), F + 4.6, Z.labFront + 0.05], 0x6ff4ff);
     }
+    // Lintel over the entrance and a flat roof on the walls: nobody who reaches the roofs can drop into the lab through the
+    // open top or over the corridor before the story opens the way. The roof is a real walkable top (and a ravine
+    // surrounds the building, see Bab1Level).
+    const entryW = (DOOR_HALF + 0.3 + 0.05) * 2;
+    kit.solid([entryW, 3.0, 0.6], [0, 4.95, Z.labFront - 0.3], WALL_C);
+    const lidZ0 = Z.labFront + 0.3;
+    const lidZ1 = Z.labBack - 0.6;
+    addRoofBox(kit, { id: 'labRoof', size: [15.2, 0.3, lidZ0 - lidZ1], pos: [0, F + 6.45 + 0.15, (lidZ0 + lidZ1) / 2], color: 0xdfe9f6 });
     // Slim pillars with gold caps along the side walls for rhythm.
     for (const s of [-1, 1]) for (const z of [-64, -68, -72]) {
       kit.lit.box([0.35, 4.8, 0.5], [s * 6.9, F + 2.4, z], 0xcfdcf0);

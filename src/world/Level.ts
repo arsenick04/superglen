@@ -16,6 +16,7 @@ import type { Projectiles } from '../gameplay/Projectiles';
 import type { BillboardRings } from '../fx/BillboardRings';
 import type { DizzyStars } from '../fx/DizzyStars';
 import type { Sparkles } from './bab1/Fx';
+import type { DrumSynth } from '../audio/DrumSynth';
 
 /**
  * A level (story chapter or test area). The LevelManager owns its whole life cycle:
@@ -101,6 +102,8 @@ export interface LevelContext {
   /** The #ui overlay root: add level-specific HUD elements here (remove them in dispose or ctx.onDispose). */
   readonly ui: HTMLElement;
   readonly game: LevelGame;
+  /** The drum / cheer / boing synthesizer (no files; silent until the first tap or when muted). */
+  readonly synth: DrumSynth;
   /** Register a cleanup that runs when the level unloads (after Level.dispose, in reverse order). */
   onDispose(fn: () => void): void;
 }

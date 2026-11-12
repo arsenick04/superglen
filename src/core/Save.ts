@@ -1,4 +1,5 @@
 import type { PlayerMode } from '../player/PlayerConfig';
+import { Parkour } from '../config/parkour';
 
 /**
  * Progress storage. One versioned JSON blob in localStorage under `superglen.save.v1`.
@@ -19,12 +20,19 @@ export interface SaveData {
   skills: { laser: boolean; shield: boolean; fly: boolean };
   /** Mode the player was in last (restored by levels that want it). */
   lastMode: PlayerMode;
+  /** Settings for the future parents' page. */
+  settings: {
+    /** Easy jump mode: holding the jump button bounces by itself (see config/parkour.ts). */
+    easyJump: boolean;
+    /** Synthesized sound on/off. */
+    sound: boolean;
+  };
 }
 
 export type SkillName = keyof SaveData['skills'];
 
 function defaults(): SaveData {
-  return { version: SAVE_VERSION, chaptersDone: [], skills: { laser: false, shield: false, fly: false }, lastMode: 'glen' };
+  return { version: SAVE_VERSION, chaptersDone: [], skills: { laser: false, shield: false, fly: false }, lastMode: 'glen', settings: { easyJump: Parkour.easy.defaultOn, sound: true } };
 }
 
 /** Merge untrusted parsed JSON into a valid SaveData (unknown or malformed fields fall back to defaults). */
@@ -40,6 +48,11 @@ function sanitize(raw: unknown): SaveData {
     out.skills.fly = s.fly === true;
   }
   if (r.lastMode === 'glen' || r.lastMode === 'superglen') out.lastMode = r.lastMode;
+  if (typeof r.settings === 'object' && r.settings !== null) {
+    const st = r.settings as Record<string, unknown>;
+    if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
+    if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
+  }
   return out;
 }
 
@@ -97,6 +110,20 @@ export class SaveStore {
   setLastMode(mode: PlayerMode): void {
     if (this.data.lastMode === mode) return;
     this.data.lastMode = mode;
+    this.persist();
+  }
+
+  /** Parents' page: easy jump mode (default on). */
+  setEasyJump(on: boolean): void {
+    if (this.data.settings.easyJump === on) return;
+    this.data.settings.easyJump = on;
+    this.persist();
+  }
+
+  /** Parents' page: synthesized sound (default on). */
+  setSound(on: boolean): void {
+    if (this.data.settings.sound === on) return;
+    this.data.settings.sound = on;
     this.persist();
   }
 }

@@ -3,8 +3,37 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
 import { PlayerConfig as C, ModeTunings, type ModeTuning, type PlayerMode } from './PlayerConfig';
+import { LaunchSpeeds, Parkour, tableAt } from '../config/parkour';
 import { Flight, FlightConfig } from './skills/Flight';
 import { SkillHub } from './skills/Skills';
+import { Rhythm, type RhythmQuality } from './Rhythm';
+import { Mantle } from './Mantle';
+
+/*
+ * JUMP RULES (numbers: src/config/parkour.ts)
+ *
+ * Glen:      one small jump (0.9 m). No rhythm, no air jump, no flight.
+ * Superglen: rhythm level 0..4 sets the apex of a ground jump (1.6 / 2.1 / 2.7 / 3.4 / 4.2 m).
+ *   - A press within +-0.12 s ("tepat") or +-0.30 s ("bagus") of TOUCHDOWN raises the level by one, and that very jump
+ *     already uses the new level. A press BEFORE touchdown is buffered (up to 0.30 s) and fires on touchdown; a press
+ *     AFTER touchdown jumps at once.
+ *   - A press 0.30 .. 1.5 s after touchdown is a miss: plain jump, level - 1 (never to zero in one go).
+ *     Later than 1.5 s it is "the first jump after standing": plain jump, no penalty.
+ *   - Not jumping for 1.5 s on the ground lowers the level by one, again every further 1.5 s.
+ *   - Landing on a bounce drum (Rhythm.registerBounce) counts as a perfect press by itself.
+ *   - A second press in the air is the air jump (+1.2 m above where it is pressed), unless the fall is within 0.30 s
+ *     of touchdown: then it is the buffered rhythm press for the landing.
+ *
+ * HOLDING THE JUMP BUTTON (three features share it; the rule, in plain words):
+ *   1. A press jumps. Holding it on after the jump:
+ *   2. If flight is unlocked (Chapter 2 on) and this was NOT a timed press in a bounce chain (level 2 or more), the jets
+ *      switch on after 0.45 s: hold = fly.
+ *   3. Otherwise (flight still locked, or the child kept the button down through landings of a bounce chain), easy mode
+ *      bounces by itself on every touchdown; the level climbs by one every 2 landings up to 3. Level 4 needs timed taps.
+ * So: flight locked -> holding bounces. Flight unlocked -> a held jump flies; but a child who is already bouncing at
+ * level 2+ and keeps the button down keeps bouncing. Letting go of the button always ends it; flying ends the moment
+ * the button is released.
+ */
 
 const CAPSULE_HALF_HEIGHT = (C.height - 2 * C.radius) / 2; // half length of the cylinder part
 const CENTER_TO_FEET = C.height / 2;
@@ -96,6 +125,26 @@ export class Player {
   // ---- Mode and jump state (see PlayerConfig for the numbers) -------------
   private _mode: PlayerMode = 'glen';
   private tuning: ModeTuning = ModeTunings.glen;
+  /** Rhythm level, settings, bounce-drum registry and the `events` emitter (rhythmJump, rhythmLevel, ...). */
+  readonly rhythm = new Rhythm();
+  /** Same emitter as `rhythm.events`: `player.events.on('land', fn)`. */
+  readonly events = this.rhythm.events;
+  private readonly mantle: Mantle;
+  private simTime = 0;
+  private pressTime = -1e9;
+  private landTime = -1e9;
+  private idleTimer = 0;
+  private scriptedPress = false;
+  private bounceJump = false;
+  private chainHold = false;
+  private heldSincePress = false;
+  private autoJumps = 0;
+  private flewThisAir = false;
+  private landedFromFlight = false;
+  private mantleCount = 0;
+  private teleported = false;
+  /** Predicted seconds until the feet touch the ground (Infinity when flying or nothing below). */
+  landEta = Infinity;
   private timeSinceGrounded = 0;
   private airTime = 0;
   private jumpBufferTimer = 0;
@@ -123,6 +172,10 @@ export class Player {
   private belt!: THREE.Mesh;
   private shadow!: THREE.Mesh;
   private shadowMat!: THREE.MeshBasicMaterial;
+  private aura!: THREE.Mesh;
+  private auraMat!: THREE.MeshBasicMaterial;
+  /** Smoothed rhythm level (0..4) driving the aura and glow. */
+  private auraLevel = 0;
   private squash = 0;
   private squashVel = 0;
   /** 0..1 sitting/crouching look (the story lowers the body for the lunch scene). Visual only. */
@@ -132,7 +185,7 @@ export class Player {
   private spinning = false;
   private spinT = 0;
   private readonly stompListeners: StompListener[] = [];
-  private readonly stompEvent: StompEvent = { x: 0, y: 0, z: 0, radius: C.stompRadius, impact: 0 };
+  private readonly stompEvent: StompEvent = { x: 0, y: 0, z: 0, radius: Parkour.stompRadius, impact: 0 };
 
   // Reused temporaries (no per-step allocations).
   private readonly desired = { x: 0, y: 0, z: 0 };
@@ -168,6 +221,8 @@ export class Player {
     this.controller.setApplyImpulsesToDynamicBodies(true);
 
     this.flight = new Flight(this.skills);
+    this.mantle = new Mantle(world, this.collider, C.radius, CAPSULE_HALF_HEIGHT, CENTER_TO_FEET);
+    this.rhythm.bounceHook = (launch) => this.doBounce(launch);
     this.currPos.set(s.x, cy, s.z);
     this.prevPos.copy(this.currPos);
     this.visualPosition.copy(this.currPos);
@@ -197,6 +252,20 @@ export class Player {
     return this.flight.isFlying;
   }
 
+  /** Rhythm level for the camera and effects (0 in Glen mode). */
+  get rhythmLevel(): number {
+    return this._mode === 'superglen' ? this.rhythm.level : 0;
+  }
+
+  /** Ground below the player (world Y), valid when `hasGroundBelow`. Used by the landing ring. */
+  get groundBelowY(): number {
+    return this.groundY;
+  }
+
+  get hasGroundBelow(): boolean {
+    return this.hasGround;
+  }
+
   /** Turn the body to face `yaw` quickly for a moment (auto-aim, shield assist). Overrides walking turns. */
   turnTo(yaw: number): void {
     this.aimYaw = yaw;
@@ -210,7 +279,7 @@ export class Player {
   }
 
   /** A tiny cosmetic hop (about 0.25 m) when standing on the ground; ignored in the air. Not a jump. */
-  smallHop(speed = 3.4): void {
+  smallHop(speed: number = Parkour.smallHopSpeed): void {
     this.hopPending = speed;
   }
 
@@ -225,6 +294,13 @@ export class Player {
     this._mode = mode;
     this.tuning = ModeTunings[mode];
     if (mode === 'glen') this.flight.reset();
+    if (changed) {
+      this.rhythm.reset();
+      this.landTime = -1e9;
+      this.chainHold = false;
+      this.autoJumps = 0;
+      this.idleTimer = 0;
+    }
     this.bodyMat.color.setHex(this.tuning.color);
     this.faceMat.color.setHex(this.tuning.faceColor);
     this.belt.visible = mode === 'superglen';
@@ -245,6 +321,12 @@ export class Player {
 
   fixedUpdate(dt: number, cameraYaw: number): void {
     const T = this.tuning;
+    this.simTime += dt;
+    this.mantle.tick(dt);
+    if (this.mantle.active) {
+      this.stepMantle(dt);
+      return;
+    }
     // ---- Horizontal: camera-relative input -> target velocity ----------------
     let mx = this.inputEnabled ? this.input.move.x : 0;
     let my = this.inputEnabled ? this.input.move.y : 0;
@@ -309,13 +391,24 @@ export class Player {
       this.timeSinceGrounded += dt;
       this.airTime += dt;
     }
+    this.updateLandEta();
+
+    const sg = T.superglen;
+    const jumpDown = this.inputEnabled && this.input.isDown('jump');
+    const pressed = this.inputEnabled && this.input.wasPressed('jump');
+    if (!jumpDown) {
+      this.chainHold = false;
+      this.heldSincePress = false;
+      this.autoJumps = 0;
+    }
+    if (pressed) this.heldSincePress = true;
 
     // ---- Flight (Superglen + unlocked): hold jump in the air; see skills/Flight.ts ----
     const F = this.flight;
     const fi = F.inp;
-    fi.can = this._mode === 'superglen' && (F.enabled || F.forced);
-    fi.jumpDown = this.inputEnabled && this.input.isDown('jump');
-    fi.jumpPressed = this.inputEnabled && this.input.wasPressed('jump');
+    fi.can = sg && ((F.enabled && !this.chainHold) || F.forced);
+    fi.jumpDown = jumpDown;
+    fi.jumpPressed = pressed;
     fi.grounded = wasGrounded;
     fi.feetY = this.currPos.y - CENTER_TO_FEET;
     fi.groundY = this.hasGround ? this.groundY : Number.NaN;
@@ -326,26 +419,53 @@ export class Player {
     if (flying) {
       this.spinning = false;
       this.spinAngle = 0;
+      this.flewThisAir = true;
     }
+    if (F.justReleased) this.verticalVelocity = Math.min(this.verticalVelocity, 0); // released: fall at once
 
-    // Edge-triggered only: holding the button never repeats (wasPressed fires once per press).
-    if (this.inputEnabled && this.input.wasPressed('jump')) this.jumpBufferTimer = C.jumpBuffer;
+    // Edge-triggered: a press is buffered; holding only repeats through easy mode (see the rules at the top).
+    if (pressed) {
+      this.jumpBufferTimer = sg ? Parkour.windows.good : Parkour.glenJumpBuffer;
+      this.pressTime = this.simTime;
+      this.scriptedPress = false;
+    }
     if (flying) this.jumpBufferTimer = 0; // no jumps while the jets are in charge
     let jumped = false;
     if (this.jumpBufferTimer > 0) {
-      if (wasGrounded || this.timeSinceGrounded <= C.coyoteTime) {
-        this.startJump(false);
+      if (wasGrounded || this.timeSinceGrounded <= Parkour.coyoteTime) {
+        this.startJump(false, wasGrounded, false);
         jumped = true;
       } else if (
-        T.doubleJumpApex > 0 &&
+        sg &&
         !this.doubleUsed &&
-        this.airTime >= C.doubleJumpMinDelay &&
+        this.airTime >= Parkour.doubleJumpMinDelay &&
         !this.aboutToLand()
       ) {
-        this.startJump(true);
+        this.startJump(true, false, false);
         jumped = true;
       }
       if (!jumped) this.jumpBufferTimer -= dt;
+    }
+    if (sg && wasGrounded && !jumped) {
+      // Easy mode: the held button bounces on every touchdown (flight locked, or a held bounce chain).
+      if (
+        this.rhythm.easyMode &&
+        jumpDown &&
+        this.heldSincePress &&
+        (!F.enabled || this.chainHold) &&
+        this.verticalVelocity <= 0 &&
+        this.simTime - this.landTime >= Parkour.easy.gap
+      ) {
+        this.startJump(false, true, true);
+        jumped = true;
+      } else if (!jumped) {
+        // Standing or walking without a jump: the level sinks by one every idleDrop seconds.
+        this.idleTimer += dt;
+        if (this.idleTimer >= Parkour.idleDrop) {
+          this.idleTimer -= Parkour.idleDrop;
+          this.rhythm.lower();
+        }
+      }
     }
 
     // ---- Vertical ------------------------------------------------------------
@@ -361,8 +481,8 @@ export class Player {
       } else if (wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = -C.groundStickSpeed;
       } else {
-        const g = this.verticalVelocity > 0 ? T.gravityUp : T.gravityUp * T.fallMultiplier;
-        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, -C.maxFallSpeed);
+        const g = this.verticalVelocity > 0 ? Parkour.gravityUp : Parkour.gravityUp * Parkour.fallMultiplier;
+        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, -Parkour.maxFallSpeed);
       }
     }
 
@@ -423,6 +543,31 @@ export class Player {
     if (!wasGrounded && this.grounded) this.onLand(Math.max(0, -vyAtMove));
     if (!this.grounded) this.peakFeetY = Math.max(this.peakFeetY, this.next.y - CENTER_TO_FEET);
 
+    // ---- Auto mantle: airborne, heading into a ledge just above the head -----------
+    if (!this.grounded && !flying && this.inputEnabled && Parkour.mantle.enabled && this.verticalVelocity > -Parkour.mantle.maxFallSpeed) {
+      let hx = 0;
+      let hz = 0;
+      if (hasInput) {
+        hx = this.wishDir.x;
+        hz = this.wishDir.z;
+      } else {
+        const sp = Math.hypot(this.velocity.x, this.velocity.z);
+        if (sp >= Parkour.mantle.minSpeed) {
+          hx = this.velocity.x / sp;
+          hz = this.velocity.z / sp;
+        }
+      }
+      if ((hx !== 0 || hz !== 0) && this.mantle.tryStart(this.next.x, this.next.y, this.next.z, hx, hz)) {
+        this.velocity.set(0, 0, 0);
+        this.verticalVelocity = 0;
+        this.jumpBufferTimer = 0;
+        this.squash = -0.12;
+        this.squashVel = 0;
+        const ang = Math.atan2(hx, hz);
+        this.facing = this.prevFacing + angleDelta(this.prevFacing, ang);
+      }
+    }
+
     // ---- Safety: remember safe ground, respawn after a fall ------------------
     if (this.grounded) {
       this.groundedTime += dt;
@@ -437,17 +582,87 @@ export class Player {
   }
 
   /**
-   * Falling and so close to the ground that a press now is a buffered ground jump (fires on landing)
-   * rather than the air jump: within jumpBuffer seconds of landing at the current fall speed, min height floor.
+   * Falling (clearly past the apex) and so close to touchdown that a press now is the buffered rhythm press for the
+   * landing (within the good window, or a hair above the ground), not the air jump.
    */
   private aboutToLand(): boolean {
     if (this.verticalVelocity >= 0) return false;
-    return this.airHeight < Math.max(C.doubleJumpMinHeight, -this.verticalVelocity * C.jumpBuffer);
+    if (this.airHeight < Parkour.doubleJumpMinHeight) return true;
+    return this.verticalVelocity < -Parkour.doubleJumpApexGrace && this.landEta <= Parkour.windows.good;
   }
 
-  private startJump(air: boolean): void {
+  /** Seconds until the feet touch the ground, from the height and vertical speed (Infinity when unknown/flying). */
+  private updateLandEta(): void {
+    if (this.grounded || !this.hasGround || this.flight.isFlying || this.airHeight >= SHADOW_PROBE_RANGE - 0.01) {
+      this.landEta = Infinity;
+      return;
+    }
+    const gd = Parkour.gravityUp * Parkour.fallMultiplier;
+    const vy = this.verticalVelocity;
+    let h = this.airHeight;
+    let t0 = 0;
+    let s = -vy;
+    if (vy > 0) {
+      t0 = vy / Parkour.gravityUp;
+      h += (vy * vy) / (2 * Parkour.gravityUp);
+      s = 0;
+    }
+    this.landEta = t0 + (-s + Math.sqrt(s * s + 2 * gd * h)) / gd;
+  }
+
+  /**
+   * Decide the rhythm result of a ground jump and return its launch speed.
+   * `onGround` false = coyote jump (plain), `auto` = easy-mode bounce.
+   */
+  private judgeGroundJump(onGround: boolean, auto: boolean): RhythmQuality {
+    const R = this.rhythm;
+    const W = Parkour.windows;
+    let q: RhythmQuality = 'normal';
+    if (this.bounceJump) {
+      this.bounceJump = false;
+      q = 'perfect'; // the level was already raised by the bounce
+    } else if (auto) {
+      q = 'auto';
+      R.stats.autos++;
+      this.autoJumps++;
+      if (R.level > Parkour.easy.maxLevel) R.setLevel(Parkour.easy.maxLevel);
+      else if (this.autoJumps % Parkour.easy.landingsPerLevel === 0 && R.level < Parkour.easy.maxLevel) R.raise();
+    } else if (onGround && !this.scriptedPress && this.landTime > -1e8) {
+      const d = this.pressTime - this.landTime; // negative: pressed before touchdown
+      const a = Math.abs(d);
+      if (a <= W.perfect) {
+        q = 'perfect';
+        R.stats.perfect++;
+        R.raise();
+      } else if (a <= W.good) {
+        q = 'good';
+        R.stats.good++;
+        R.raise();
+      } else if (d > W.good && d <= Parkour.freshAfter) {
+        R.miss(); // too late: one level down, plain jump
+      }
+    }
+    if (q === 'normal') R.stats.normals++;
+    return q;
+  }
+
+  private startJump(air: boolean, onGround: boolean, auto: boolean): void {
     const T = this.tuning;
-    this.verticalVelocity = air ? T.doubleJumpSpeed : T.jumpSpeed;
+    const R = this.rhythm;
+    let speed: number;
+    let quality: RhythmQuality = 'normal';
+    if (air) speed = LaunchSpeeds.double;
+    else if (!T.superglen) speed = LaunchSpeeds.glen;
+    else {
+      quality = this.judgeGroundJump(onGround, auto);
+      speed = LaunchSpeeds.levels[R.level];
+      R.lastQuality = quality;
+      if (R.easyMode && (quality === 'perfect' || quality === 'good' || quality === 'auto') && R.level >= Parkour.easy.chainMinLevel && !this.landedFromFlight) this.chainHold = true;
+      this.idleTimer = 0;
+    }
+    this.landedFromFlight = false;
+    this.scriptedPress = false;
+    this.verticalVelocity = speed;
     this.jumpBufferTimer = 0;
     this.timeSinceGrounded = 1e9; // a coyote window must not allow a second ground jump
     this.grounded = false;
@@ -461,29 +676,130 @@ export class Player {
       this.airTime = 0;
       this.peakFeetY = this.currPos.y - CENTER_TO_FEET;
     }
-    this.squash = air ? 0.1 : 0.2; // light stretch on takeoff
+    const lvl = !air && T.superglen ? R.level : 0;
+    this.squash = air ? 0.1 : Parkour.fx.takeoffStretch + Parkour.fx.takeoffStretchPerLevel * lvl; // takeoff stretch ("nod")
     this.squashVel = 0;
+    if (!air && T.superglen) {
+      this.jumpEvent.level = R.level;
+      this.jumpEvent.quality = quality;
+      R.events.emit('rhythmJump', this.jumpEvent);
+    }
   }
+
+  private readonly jumpEvent: { level: number; quality: RhythmQuality } = { level: 0, quality: 'normal' };
+  private readonly landEvent = { impact: 0, x: 0, y: 0, z: 0 };
+  private readonly mantleEvent = { x: 0, y: 0, z: 0 };
+  private readonly bounceEvent = { level: 0 };
 
   private onLand(impact: number): void {
     this.landings++;
     this.spinning = false;
     this.spinAngle = 0;
-    if (impact > C.squashMinImpact) {
+    // The settle after a teleport / spawn is not a rhythm landing: a press right after it is a fresh jump.
+    if (this.teleported) this.teleported = false;
+    else this.landTime = this.simTime;
+    this.idleTimer = 0;
+    this.landedFromFlight = this.flewThisAir;
+    this.flewThisAir = false;
+    if (impact > Parkour.squashMinImpact) {
       this.squash = -Math.min(0.32, 0.08 + impact * 0.018);
       this.squashVel = 0;
     }
-    if (this.tuning.stomp && impact > C.stompMinImpact) {
+    const sg = this.tuning.superglen;
+    if (sg && impact > Parkour.stompMinImpact) {
       this.stomps++;
       this.squash = -0.34;
       const e = this.stompEvent;
       e.x = this.next.x;
       e.y = this.next.y - CENTER_TO_FEET;
       e.z = this.next.z;
-      e.radius = C.stompRadius;
+      e.radius = Parkour.stompRadius * (1 + Parkour.stompRadiusPerLevel * this.rhythm.level);
       e.impact = impact;
       for (const l of this.stompListeners) l(e);
     }
+    const le = this.landEvent;
+    le.impact = impact;
+    le.x = this.next.x;
+    le.y = this.next.y - CENTER_TO_FEET;
+    le.z = this.next.z;
+    this.rhythm.events.emit('land', le);
+    if (sg && this.rhythm.hasBounceSurfaces && impact > 0 && this.landedOnBounce()) this.doBounce(Parkour.bounce.launch);
+  }
+
+  /** What is under the feet: is it a registered bounce drum? (Only called on a touchdown, so the ray cost is fine.) */
+  private landedOnBounce(): boolean {
+    const r = this.groundRay;
+    r.origin.x = this.next.x;
+    r.origin.y = this.next.y;
+    r.origin.z = this.next.z;
+    const hit = this.world.castRay(r, CENTER_TO_FEET + Parkour.bounce.probe, true, undefined, undefined, this.collider);
+    return !!hit && this.rhythm.isBounce(hit.collider.handle);
+  }
+
+  /** A bounce drum was landed on (or Rhythm.bounce() was called): always perfect, level + 1, optional instant launch. */
+  private doBounce(launch: boolean): void {
+    const R = this.rhythm;
+    R.stats.bounces++;
+    R.stats.perfect++;
+    R.raise();
+    this.bounceEvent.level = R.level;
+    R.events.emit('bounce', this.bounceEvent);
+    this.idleTimer = 0;
+    if (launch && this.tuning.superglen) {
+      // Fire through the normal jump path on the next step, as an exactly-on-time press.
+      this.bounceJump = true;
+      this.scriptedPress = false;
+      this.jumpBufferTimer = Parkour.windows.good;
+      this.pressTime = this.landTime = this.simTime;
+    }
+  }
+
+  /** Drive the body through the mantle animation (controls locked). */
+  private stepMantle(dt: number): void {
+    const m = this.mantle;
+    this.probeGround();
+    this.velocity.set(0, 0, 0);
+    this.verticalVelocity = 0;
+    this.prevFacing = this.facing;
+    const done = m.step(dt);
+    this.next.x = m.x;
+    this.next.y = m.y;
+    this.next.z = m.z;
+    this.body.setNextKinematicTranslation(this.next);
+    this.grounded = false;
+    this.peakFeetY = Math.max(this.peakFeetY, this.next.y - CENTER_TO_FEET);
+    if (done) {
+      this.grounded = true;
+      this.mantleCount++;
+      this.landEta = Infinity;
+      this.timeSinceGrounded = 0;
+      this.airTime = 0;
+      this.doubleUsed = false;
+      this.squash = -0.1;
+      this.squashVel = 0;
+      this.groundedTime = 0;
+      const e = this.mantleEvent;
+      e.x = m.x;
+      e.y = m.y - CENTER_TO_FEET;
+      e.z = m.z;
+      this.rhythm.events.emit('mantle', e);
+      this.onLand(0); // a normal landing: rhythm level unchanged
+    }
+  }
+
+  /** True while a held jump button keeps bouncing instead of flying (see the rules at the top). */
+  get bounceChain(): boolean {
+    return this.chainHold;
+  }
+
+  /** True while the mantle animation runs. */
+  get mantling(): boolean {
+    return this.mantle.active;
+  }
+
+  /** Number of completed mantles (tests). */
+  get mantles(): number {
+    return this.mantleCount;
   }
 
   /** Ray straight down from the capsule center: ground height under the player for shadow, camera, jump rules. */
@@ -554,7 +870,7 @@ export class Player {
       this.pop += this.popVel * h;
       if (this.spinning) {
         this.spinT += h;
-        const t = this.spinT / C.spinTime;
+        const t = this.spinT / Parkour.spinTime;
         if (t >= 1) {
           this.spinning = false;
           this.spinAngle = 0;
@@ -563,6 +879,22 @@ export class Player {
           this.spinAngle = Math.PI * 2 * (1 - (1 - t) * (1 - t));
         }
       }
+    }
+    // Rhythm aura and body glow follow the level smoothly.
+    {
+      const target = this._mode === 'superglen' ? this.rhythm.level : 0;
+      this.auraLevel += (target - this.auraLevel) * Math.min(1, dt * 8);
+      if (this._mode !== 'superglen' && this.auraLevel < 0.01) this.auraLevel = 0;
+      const al = this.auraLevel;
+      const on = this._mode === 'superglen' && al > 0.02;
+      if (on !== this.aura.visible && !this.warmingFx) this.aura.visible = on;
+      if (on) {
+        const f = Parkour.fx;
+        const sc = tableAt(f.auraScale, al);
+        this.aura.scale.setScalar(sc);
+        this.auraMat.opacity = tableAt(f.auraOpacity, al);
+        this.bodyMat.emissiveIntensity = tableAt(f.glow, al);
+      } else if (this.bodyMat.emissiveIntensity !== 0) this.bodyMat.emissiveIntensity = 0;
     }
     const sy = (1 + this.squash) * (1 - 0.32 * this.crouch);
     const sxz = (1 - this.squash * 0.5) * (1 + 0.1 * this.crouch);
@@ -589,6 +921,14 @@ export class Player {
     }
   }
 
+  private warmingFx = false;
+  /** Show the aura for one shader pre-warm frame. */
+  warmFx(on: boolean): void {
+    this.warmingFx = on;
+    this.aura.visible = on || (this._mode === 'superglen' && this.auraLevel > 0.02);
+    if (on) this.auraMat.opacity = 0.2;
+  }
+
   /** Teleport to a capsule-center position without interpolation streaks. */
   teleport(x: number, y: number, z: number): void {
     this.next.x = x;
@@ -609,6 +949,14 @@ export class Player {
     this.airTime = 0;
     this.spinning = false;
     this.spinAngle = 0;
+    this.landTime = -1e9;
+    this.teleported = true;
+    this.idleTimer = 0;
+    this.chainHold = false;
+    this.flewThisAir = false;
+    this.landedFromFlight = false;
+    this.bounceJump = false;
+    this.mantle.reset();
     this.flight.reset();
     this.aimTime = 0;
     this.hopPending = 0;
@@ -656,7 +1004,9 @@ export class Player {
 
   /** A hop on its own (cutscene fun): same as a jump press, even while input is disabled. */
   hop(): void {
-    this.jumpBufferTimer = C.jumpBuffer;
+    this.jumpBufferTimer = Parkour.windows.good;
+    this.pressTime = this.simTime;
+    this.scriptedPress = true; // a scripted press never judges the rhythm
   }
 
   /** Back to the last safe ground (same floor resolution as a level spawn). */
@@ -671,7 +1021,7 @@ export class Player {
    * feet, squash/stretch) > spinGroup (pivot at the capsule center, flip) > meshes.
    */
   private buildPlaceholderMesh(): void {
-    this.bodyMat = new THREE.MeshStandardMaterial({ color: ModeTunings.glen.color, roughness: 0.6 });
+    this.bodyMat = new THREE.MeshStandardMaterial({ color: ModeTunings.glen.color, roughness: 0.6, emissive: 0xffc94d, emissiveIntensity: 0 });
     this.faceMat = new THREE.MeshStandardMaterial({ color: ModeTunings.glen.faceColor, roughness: 0.7 });
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2b1a12, roughness: 0.5 });
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc94d, roughness: 0.35, metalness: 0.2 });
@@ -700,6 +1050,21 @@ export class Player {
       eye.position.set(sx * 0.12, C.height * 0.27, C.radius * 0.9);
       this.spinGroup.add(eye);
     }
+
+    // Golden aura: a slightly larger translucent shell, thicker per rhythm level (Superglen only).
+    this.auraMat = new THREE.MeshBasicMaterial({
+      color: 0xffc94d,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+    });
+    this.aura = new THREE.Mesh(new THREE.CapsuleGeometry(C.radius * 1.12, CAPSULE_HALF_HEIGHT * 2 * 1.05, 4, 14), this.auraMat);
+    this.aura.visible = false;
+    this.aura.frustumCulled = false;
+    this.aura.renderOrder = 3;
+    this.spinGroup.add(this.aura);
 
     this.belt = new THREE.Mesh(new THREE.TorusGeometry(C.radius * 1.02, 0.04, 8, 28), goldMat);
     this.belt.rotation.x = Math.PI / 2;

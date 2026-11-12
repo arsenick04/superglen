@@ -10,12 +10,16 @@ import type { Physics } from '../core/Physics';
 import { PracticeTarget } from '../gameplay/props/PracticeTarget';
 import { FlyRing } from '../gameplay/props/FlyRing';
 import { BallThrower } from '../gameplay/props/BallThrower';
+import { ArenaLompat } from './arena/ArenaLompat';
 
 const SKY_COLOR = 0x8fd3ff; // cheerful morning sky
-const GROUND_SIZE = 60;
+/** The field is 60 m wide; it runs from z = +30 (south edge) to z = -100 (north edge). The Arena Lompat lies north of z = -30. */
+const GROUND_W = 60;
+const GROUND_Z0 = 30;
+const GROUND_Z1 = -100;
 
 /**
- * Flat test area: 60 x 60 m ground, morning lighting, sun shadows that follow the player.
+ * Test area: 60 x 130 m ground (the northern part is the Arena Lompat), morning lighting, sun shadows that follow the player.
  * Obstacle course is built in `buildProps()`.
  */
 export class TestArea implements Level {
@@ -30,6 +34,7 @@ export class TestArea implements Level {
   private readonly practice: PracticeTarget[] = [];
   private readonly rings: FlyRing[] = [];
   private thrower: BallThrower | null = null;
+  private arena: ArenaLompat | null = null;
   private info: Record<string, number | string | boolean> | null = null;
 
   build(ctx: LevelContext): void {
@@ -42,6 +47,7 @@ export class TestArea implements Level {
     this.buildGround(root, physics);
     this.buildProps(ctx.props);
     this.buildSkillsCorner(ctx);
+    this.arena = new ArenaLompat(ctx);
     this.info = ctx.game.debugInfo;
 
     // The test area owns the TEMPORARY Glen <-> Superglen toggle (E / star) and the full button sets.
@@ -51,7 +57,7 @@ export class TestArea implements Level {
     // Superglen's skills are all unlocked here (not saved), and flights stay inside the 60 x 60 m field.
     ctx.game.setSkills({ laser: true, shield: true, fly: true });
     ctx.player.flight.maxFlyHeight = 12;
-    ctx.player.flight.bounds = { minX: -28.5, maxX: 28.5, minZ: -28.5, maxZ: 28.5 };
+    ctx.player.flight.bounds = { minX: -28.5, maxX: 28.5, minZ: GROUND_Z1 + 1.5, maxZ: GROUND_Z0 - 1.5 };
   }
 
   fixedUpdate(dt: number): void {
@@ -65,6 +71,7 @@ export class TestArea implements Level {
     }
     for (const r of this.rings) r.tick(dt);
     this.thrower?.tick(dt);
+    this.arena?.tick(dt);
     const info = this.info;
     if (info) {
       info.practiceHits = hits;
@@ -75,8 +82,9 @@ export class TestArea implements Level {
   }
 
   /** Keep the shadow-casting sun centered on the player. Call once per frame. */
-  update(): void {
+  update(dt: number): void {
     this.follower.follow(this.player.visualPosition);
+    this.arena?.update(dt);
   }
 
   dispose(): void {
@@ -109,17 +117,20 @@ export class TestArea implements Level {
   }
 
   private buildGround(scene: THREE.Object3D, physics: Physics): void {
-    const geo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
+    const depth = GROUND_Z0 - GROUND_Z1;
+    const cz = (GROUND_Z0 + GROUND_Z1) / 2;
+    const geo = new THREE.PlaneGeometry(GROUND_W, depth);
     geo.rotateX(-Math.PI / 2);
-    const mat = new THREE.MeshStandardMaterial({ map: makeCheckerTexture(GROUND_SIZE / 4), roughness: 0.95 });
+    const mat = new THREE.MeshStandardMaterial({ map: makeCheckerTexture(GROUND_W / 4, depth / 4), roughness: 0.95 });
     const ground = new THREE.Mesh(geo, mat);
+    ground.position.z = cz;
     ground.receiveShadow = true;
     ground.matrixAutoUpdate = false;
     ground.updateMatrix();
     scene.add(ground);
 
     // Collider: thick slab whose top face is y = 0.
-    physics.addFixedCuboid({ x: GROUND_SIZE / 2, y: 0.5, z: GROUND_SIZE / 2 }, { x: 0, y: -0.5, z: 0 });
+    physics.addFixedCuboid({ x: GROUND_W / 2, y: 0.5, z: depth / 2 }, { x: 0, y: -0.5, z: cz });
   }
 
   /**
@@ -220,11 +231,12 @@ export class TestArea implements Level {
     props.box({ size: [0.6, 3, 10], position: [-22, 1.5, 0], color: PINK });
 
     // --- Low border wall (0.6 m tall, 0.5 m thick) around the 60 x 60 edge ---
-    const e = 29.75;
-    props.box({ size: [60, 0.6, 0.5], position: [0, 0.3, -e], color: TEAL });
-    props.box({ size: [60, 0.6, 0.5], position: [0, 0.3, e], color: TEAL });
-    props.box({ size: [0.5, 0.6, 59], position: [-e, 0.3, 0], color: TEAL });
-    props.box({ size: [0.5, 0.6, 59], position: [e, 0.3, 0], color: TEAL });
+    const e = GROUND_W / 2 - 0.25;
+    const zc = (GROUND_Z0 + GROUND_Z1) / 2;
+    props.box({ size: [GROUND_W, 0.6, 0.5], position: [0, 0.3, GROUND_Z1 + 0.25], color: TEAL });
+    props.box({ size: [GROUND_W, 0.6, 0.5], position: [0, 0.3, GROUND_Z0 - 0.25], color: TEAL });
+    props.box({ size: [0.5, 0.6, GROUND_Z0 - GROUND_Z1 - 1], position: [-e, 0.3, zc], color: TEAL });
+    props.box({ size: [0.5, 0.6, GROUND_Z0 - GROUND_Z1 - 1], position: [e, 0.3, zc], color: TEAL });
   }
 
   /**
@@ -253,7 +265,7 @@ export class TestArea implements Level {
 }
 
 /** Soft two-tone grass checker (2 m tiles) so movement is easy to perceive on flat ground. */
-function makeCheckerTexture(repeat: number): THREE.Texture {
+function makeCheckerTexture(repeatX: number, repeatY: number): THREE.Texture {
   const size = 64;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -270,7 +282,7 @@ function makeCheckerTexture(repeat: number): THREE.Texture {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(repeat, repeat);
+  tex.repeat.set(repeatX, repeatY);
   tex.magFilter = THREE.NearestFilter;
   tex.anisotropy = 4;
   return tex;

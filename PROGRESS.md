@@ -339,11 +339,87 @@ Kegagalan `bab2-flow` adalah kelemahan tes: ia menunggu 15 detik waktu nyata sem
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Paket P1: Parkour, mekanik (12 November 2026): selesai
+
+Mengikuti `PAKET_P1_PARKOUR.md`. Yang sudah ada dari A3 dan B2 diperluas, tidak dibuat ulang.
+
+### Yang selesai
+- **`src/config/parkour.ts`**: satu-satunya tempat angka lompat. `PlayerConfig` tidak lagi memuat angka lompat (ada tes yang memeriksanya).
+- **Lompat Irama Barongsai** (mode Superglen):
+  | Tingkat | Tinggi lompat | Nada tambur |
+  |---|---|---|
+  | 0 | 1,6 m | G |
+  | 1 | 2,1 m | A |
+  | 2 | 2,7 m | B |
+  | 3 | 3,4 m | D |
+  | 4 "Lompat Singa" | 4,2 m | E, plus sorak |
+  - Tekan lompat dalam 0,12 detik dari saat mendarat = "tepat", dalam 0,3 detik = "bagus". Keduanya naik satu tingkat.
+  - Terlewat = turun satu tingkat, bukan ke nol. Diam 1,5 detik = turun satu tingkat.
+  - Double jump menambah 1,2 m. Glen (mode sekolah) tetap lompat kecil 0,9 m.
+- **Mode mudah (default aktif)**: tahan tombol lompat, Superglen memantul sendiri dan naik pelan sampai tingkat 3. Tingkat 4 hanya dengan menekan sendiri tepat waktu. `?easy=0` mematikannya; setelan tersimpan untuk halaman orang tua nanti.
+- **Umpan balik tanpa teks**: cincin cahaya di kaki berdenyut menjelang mendarat, aura emas makin tebal, jejak percikan mulai tingkat 2, kamera menjauh di tingkat tinggi, 5 ikon tambur di kiri atas.
+- **Suara tambur** bernada pentatonik, disintesis di browser tanpa file audio. Sorak di tingkat 4 dan "boing" saat mendarat dari tinggi. `?mute=1` mematikan.
+- **Mantle otomatis**: kalau tepi pijakan paling tinggi 0,5 m di atas kepala dan pemain bergerak ke arahnya, karakter menarik diri naik.
+- **Terbang (permintaan pemilik)**: melepas tombol lompat langsung menghentikan terbang dan karakter jatuh normal. Tahan lagi di udara untuk menyalakan jet kembali.
+- **Genteng yang tembus (permintaan pemilik)**: semua atap, genteng, tenda toko, dan tepi di Chapter 1 sekarang punya pijakan sesuai bentuknya. Genteng miring bisa dipijak tanpa tergelincir. Tepi dilebarkan 10 cm.
+- **Arena Lompat** di level uji (`?level=test`, di sebelah utara area lama):
+  - **Menara Irama**: 5 lantai, tiap lantai butuh satu tingkat irama lebih tinggi, dengan ikon tambur 1 sampai 5 dan bintang emas di puncak.
+  - 5 tiang Barongsai baru dengan tinggi sesuai tiap tingkat (puncak lebar 1,4 m).
+  - 3 tambur pantul berjajar: mendarat di atasnya selalu dihitung tepat dan naik satu tingkat.
+  - Rumah mini dan ruko mini lengkap dengan rute naik (peti, tenda, balkon, papan reklame, atap).
+- Kit pijakan di `src/world/kits/` untuk dipakai P2.
+
+### Aturan tombol lompat yang ditahan
+Menahan tombol lompat membuat Superglen memantul sendiri. Setelah terbang terbuka (Chapter 2), menahan tombol membuatnya terbang, kecuali ia sedang memantul berturut-turut di tingkat 2 atau lebih. Melepas tombol selalu menghentikan semuanya.
+
+### Yang belum (bagian P2, sesuai pembagian paket)
+- Tendang dinding (wall kick).
+- `npm run check:reach` (tes jangkauan otomatis). `CLAUDE.md` mewajibkannya sebelum paket parkour dianggap selesai, tetapi `PAKET_P1_PARKOUR.md` menaruhnya di P2. Jadi P1 selesai tanpa itu, dan ini dicatat sebagai utang P2.
+- Kit modul bangunan untuk seluruh kota dan rute naik di semua rumah Chapter 1. Malam ini rumah Chapter 1 hanya diberi pijakan di atap, belum rute naik.
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` | Lulus |
+| Mekanik parkour (tinggi tiap tingkat, jendela waktu, mode mudah, mantle, suara, terbang) | Lulus 82 dari 82 |
+| Arena dan genteng (menara, tambur, rumah, ruko, 74 titik uji atap) | Lulus 54 dari 54 |
+| Smoke test penuh (31 skenario) | 874 dari 875. Satu pemeriksaan anggaran memori saat memantul meleset (17,9 KB per frame, batas 16 KB) |
+| Pemeriksaan memori itu diulang sendiri 3 kali | Lulus 3 kali (10,6 sampai 13,6 KB per frame) |
+| Error console | 0 |
+
+Tinggi terukur per tingkat: 1,62 / 2,12 / 2,72 / 3,46 / 4,22 m. Arena: paling banyak 100 draw call dan 10,9 ribu segitiga. **Fps di perangkat asli belum diukur**, karena sesi ini berjalan di cloud; butir "tes di iPhone, catat fps" dari P1 belum terpenuhi.
+
+### Masalah yang diketahui
+- **Tes anggaran memori tidak stabil di run penuh.** Pengukurannya bergantung pada waktu pembersihan memori browser dan bisa meleset sekitar 30%. Memantul memakai sekitar 3 KB per frame lebih banyak daripada berjalan, jadi marginnya tipis. Batasnya tidak dilonggarkan; alokasi saat memantul perlu dikurangi di P2.
+- Menara Irama dirancang agar tiap lantai butuh lompat + double jump + mantle pada tingkatnya. Bot tes melakukannya dengan tepat; belum diketahui apakah anak 5 tahun bisa.
+- Dengan mode mudah saja (tahan tombol) pemain mencapai lantai 0 dan 1. Lantai sampai tingkat 3 butuh tambahan double jump. Spesifikasi menyebut mode mudah naik sampai tingkat 3, dan itu benar untuk tingkatnya, tetapi belum tentu cukup untuk lantainya.
+- Ruko mini: dengan double jump, balkonnya bisa dicapai di tingkat 1, bukan tingkat 2 sampai 3 seperti di spesifikasi. Tanpa double jump butuh tingkat 3.
+- Di Chapter 2, cincin terbang sekarang menuntut tombol tetap ditahan, karena melepasnya langsung jatuh. Menyalakan ulang butuh tahan 0,45 detik.
+- Pagar hijau setinggi 10 m di tepi Chapter 1 terlihat seperti dinding besar dari atas atap.
+- Ikon tambur di layar sentuh kecil (sekitar 20 px).
+- Glen (mode sekolah) juga bisa mantle.
+- Tangkapan layar mantle tidak memperlihatkan dindingnya; mantle diverifikasi lewat angka.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Apakah jendela 0,12 dan 0,3 detik terasa pas untuk anak 5 tahun.
+- Suara tambur di Safari iPhone (volume, mulai dari ketukan pertama, tombol senyap).
+- Jarak antar tambur pantul (2,9 m) dengan kecepatan jalan penuh.
+
+### Keputusan yang diambil sendiri
+- Ikon tambur yang menyala = tingkat + 1, supaya tingkat 4 menyalakan kelima ikon.
+- Tekanan lompat di dekat puncak lompatan selalu dihitung double jump, bukan tekanan irama, supaya lompatan tingkat 0 tetap bisa di-double jump.
+- Mendarat dari terbang tetap memicu hentakan Superglen.
+- Agen sempat terhenti karena batas pemakaian dan dilanjutkan setelah reset. Tidak ada pekerjaan yang hilang.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
 
 ## Untuk dicoba besok pagi
-1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Tutup tab lama dulu. Jalan beberapa saat dan rasakan apakah gerak sudah mulus. Kalau masih tersendat, buka dengan `?perf=1`, jalan 20 detik, ketuk panel di tengah atas, dan kirim tangkapan layarnya.
-2. **Mainkan Chapter 2 bersama anak**: di lab, dekati Nino dan tekan tombol bicara. Tahan tombol lompat untuk terbang melewati cincin, tekan tombol petir untuk laser, tahan tombol perisai saat bola datang. Perhatikan di mana ia bingung.
-3. **Catat**: angka FPS di aula, apakah menahan tombol untuk terbang terasa nyaman, dan apakah bola mudah ditangkis. Untuk mengulang dari awal, tambahkan `?reset=1`.
+Belum tayang: perubahan ada di branch `claude/superglen-setup-a1-9bdih5`. Setelah di-merge ke `main`, buka https://arsenick04.github.io/superglen/?level=test di Safari iPhone (landscape) atau di PC, lalu ketuk bintang untuk jadi Superglen.
+1. **Lompat irama sampai tingkat 3**: tekan lompat tepat saat mendarat, berulang kali. Lihat ikon tambur di kiri atas bertambah dan dengarkan nada tambur naik. Lalu jalan ke utara dan coba Menara Irama dan tiga tambur pantul.
+2. **Naik ke atap rumah**: di Arena Lompat, naik rumah mini lewat peti dan tenda. Di Chapter 1 (buka tanpa `?level=test`), lompat ke genteng rumah dan pastikan tidak tembus.
+3. **Mode mudah**: tahan saja tombol lompat dan biarkan Superglen memantul sendiri sampai tingkat 3. Coba juga terbang: lepas tombol, ia harus langsung jatuh.

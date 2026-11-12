@@ -36,7 +36,7 @@ export class Hall {
     for (const s of [-1, 1]) kit.solid([0.6, 5, HALL_LEN + 0.6], [s * SIDE, 2.5, HALL_MID], WALL);
     const bw = SIDE - DOOR_HALF;
     for (const s of [-1, 1]) kit.solid([bw + 0.3, 5, 0.6], [s * (DOOR_HALF + (bw + 0.3) / 2), 2.5, Z.hallBack - 0.3], 0x8e3328);
-    kit.lit.box([DOOR_HALF * 2, 1.6, 0.6], [0, 4.2, Z.hallBack - 0.3], 0x8e3328);
+    kit.solid([DOOR_HALF * 2, 1.6, 0.6], [0, 4.2, Z.hallBack - 0.3], 0x8e3328); // lintel over the door
     kit.solid([SIDE * 2 + 0.6, 0.4, HALL_LEN], [0, CEIL_Y + 0.2, HALL_MID], 0x5a2a2a);
     for (let z = Z.facade - 2; z > Z.hallBack; z -= 4) {
       kit.lit.box([SIDE * 2, 0.35, 0.5], [0, CEIL_Y - 0.15, z], 0x3d1c1c);

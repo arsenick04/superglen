@@ -14,14 +14,14 @@ export const FlightConfig = {
   /** Default ceiling above the ground below (m). Levels override with `player.flight.maxFlyHeight`. */
   defaultMaxHeight: 12,
   riseSpeed: 4,
-  /** Velocity smoothing (1/s) while the jets are on / while gliding. */
+  /** Velocity smoothing (1/s) while the jets are on / during the scripted descent of `autoLaunch`. */
   riseEase: 6,
   glideEase: 5,
   /** Within this distance under the ceiling the rise slows to a hover (m). */
   easeDistance: 1.2,
   /** Fastest descent when above the ceiling (m/s). */
   ceilingPushDown: 3,
-  /** Slow descent after releasing the jump button (m/s). */
+  /** Gentle descent of the SCRIPTED launch (`autoLaunch`) only; a real release just falls (m/s). */
   glideSpeed: 2.2,
   flySpeed: 7,
   accel: 16,
@@ -78,15 +78,16 @@ const FLAME_Z = -0.12;
  *
  *   hold Lompat (0.45 s, counted from the press)  -> jets on: gentle rise to the ceiling, then hover
  *   stick / keys                                  -> move horizontally (camera relative), no input = hover in place
- *   release Lompat                                -> slow glide down, full horizontal control
- *   hold Lompat again during the glide            -> rises again (no limit, no fuel)
+ *   release Lompat                                -> the jets stop AT ONCE; the character falls with normal gravity
+ *                                                    (horizontal control stays, the landing is harmless)
+ *   press and hold Lompat again in the air        -> the jets re-ignite after the same 0.45 s hold (no limit, no fuel)
  *
  * Level API:
  *   player.flight.enabled = true            unlock (or ctx.game.setSkills({ fly: true }))
  *   player.flight.maxFlyHeight = 8          ceiling above the ground below (m), reset to 12 on every level load
  *   player.flight.bounds = { minX, ... }    optional flight box (eased back at the edge)
  *   player.flight.isFlying / jetsOn         in flight mode / jets burning
- *   player.flight.autoLaunch(20)            scripted launch: rises (up to the ceiling), hovers briefly, then glides
+ *   player.flight.autoLaunch(20)            scripted launch: rises (up to the ceiling), hovers briefly, then glides down by itself
  *   player.skills.on('flightStart' | 'flightStop', fn)
  */
 export class Flight {
@@ -122,6 +123,10 @@ export class Flight {
   private readonly flames = new THREE.Group();
   private readonly flameMeshes: THREE.Mesh[] = [];
   private warming = false;
+  /** The current flight belongs to `autoLaunch`: it ends in a gentle scripted glide (controls are locked there). */
+  private scripted = false;
+  /** True for the one fixed step in which a released button ended the flight (the Player cuts upward speed). */
+  justReleased = false;
 
   constructor(private readonly hub: SkillHub) {}
 
@@ -162,6 +167,7 @@ export class Flight {
    */
   autoLaunch(height: number): void {
     this.forceHold = true;
+    this.scripted = true;
     this.autoTarget = height;
     this.autoCeilTimer = 0;
     this.grace = 0.25;
@@ -172,6 +178,8 @@ export class Flight {
   reset(): void {
     this.end();
     this.forceHold = false;
+    this.scripted = false;
+    this.justReleased = false;
     this.heldTime = 0;
     this.armed = false;
     this.ceilInit = false;
@@ -181,6 +189,7 @@ export class Flight {
   /** One fixed step. Reads `inp`, updates the state and `vy`. */
   step(dt: number): void {
     const i = this.inp;
+    this.justReleased = false;
     if (i.jumpPressed) {
       this.heldTime = 0;
       this.armed = true;
@@ -205,7 +214,7 @@ export class Flight {
     }
     if (i.grounded && this.grace <= 0) {
       this.forceHold = false;
-      this.end(); // landed: soft by construction (we only ever descend at glideSpeed)
+      this.end(); // landed
       return;
     }
 
@@ -230,10 +239,18 @@ export class Flight {
     }
 
     const hold = i.jumpDown || this.forceHold;
-    if (hold && this.state === GLIDE) this.ignite(i.vy);
-    else if (!hold && this.state === JETS) {
-      this.state = GLIDE;
-      this.hub.emit('flightStop', undefined);
+    if (hold && this.state === GLIDE) {
+      if (i.jumpDown) this.scripted = false; // the child took over
+      this.ignite(i.vy);
+    } else if (!hold && this.state === JETS) {
+      if (this.scripted) {
+        this.state = GLIDE; // scripted launch: gentle descent while the controls are locked
+        this.hub.emit('flightStop', undefined);
+      } else {
+        this.justReleased = true;
+        this.end(); // released: stop at once, the Player falls with normal gravity
+        return;
+      }
     }
 
     let want: number;
@@ -381,6 +398,7 @@ export class Flight {
   }
 
   private end(): void {
+    this.scripted = false;
     if (this.state === OFF) return;
     const jets = this.state === JETS;
     this.state = OFF;
