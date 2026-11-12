@@ -13,6 +13,8 @@ export interface TouchButtonDef {
   bottom: number;
   /** If set, the button hangs from the top edge instead of standing on the bottom edge. */
   top?: number;
+  /** Optional: computes size/position from the visible viewport (overrides the static fields above). */
+  place?: (m: ViewMetrics) => Placement;
 }
 
 const JUMP_ICON =
@@ -37,33 +39,99 @@ const SHIELD_ICON =
 const STAR_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 L39.5 23 L59 24.5 L44 37 L48.8 56 L32 45.5 L15.2 56 L20 37 L5 24.5 L24.5 23 Z" fill="#ffe066" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
 
-/** Transform star, top right below the safe-area inset; present in both layouts (test area only). */
-const TRANSFORM_BUTTON: TouchButtonDef = {
-  action: 'transform',
-  icon: STAR_ICON,
-  color: '#6c5ce7',
-  size: 84,
-  right: 20,
-  bottom: 0,
-  top: 12,
-};
+/** Visible page size and safe-area insets (CSS px). */
+export interface ViewMetrics {
+  w: number;
+  h: number;
+  insetTop: number;
+  insetRight: number;
+  insetBottom: number;
+  insetLeft: number;
+}
 
-/** Glen mode: Lompat (big, bottom-right) and Bicara/Ambil (raised, to its left). Jump must stay first. */
+export interface Placement {
+  size: number;
+  right: number;
+  bottom: number;
+  top?: number;
+}
+
+/** Below this visible height the compact "short" arrangement is used (Safari with its bars shown). */
+export const SHORT_HEIGHT = 360;
+export const MIN_BUTTON = 80;
+/** Touch buttons must stay out of the joystick zone (fraction of width, see TouchConfig.joystickZone). */
+const JOYSTICK_ZONE = 0.45;
+
+const isShort = (m: ViewMetrics): boolean => m.h < SHORT_HEIGHT;
+const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+
+/** Jump is the biggest button. Short: scales with the height, 88..100. Tall: 104. */
+function jumpSize(m: ViewMetrics): number {
+  return isShort(m) ? Math.round(clamp(m.h * 0.34, 88, 100)) : 104;
+}
+
+/** Horizontal gap between the buttons of the short bottom row; shrinks (down to 10) when width is tight. */
+function shortGap(m: ViewMetrics, buttons: number): number {
+  const free = m.w * (1 - JOYSTICK_ZONE) - m.insetRight - 4;
+  const used = SHORT_MARGIN + jumpSize(m) + (buttons - 1) * MIN_BUTTON;
+  return clamp((free - used) / buttons, 10, 24);
+}
+const SHORT_MARGIN = 16;
+const SHORT_BOTTOM = 12;
+const SHORT_RAISE = 28;
+
+/** Transform star: top-right corner on its own (top margin differs per arrangement). */
+function transformPlacement(m: ViewMetrics): Placement {
+  return isShort(m)
+    ? { size: MIN_BUTTON, right: 20, bottom: 0, top: 8 }
+    : { size: 84, right: 20, bottom: 0, top: 12 };
+}
+
+function jumpPlacement(m: ViewMetrics): Placement {
+  return isShort(m)
+    ? { size: jumpSize(m), right: SHORT_MARGIN, bottom: SHORT_BOTTOM }
+    : { size: 104, right: 24, bottom: 24 };
+}
+
+function interactPlacement(m: ViewMetrics): Placement {
+  if (!isShort(m)) return { size: 88, right: 148, bottom: 66 };
+  const g = shortGap(m, 2);
+  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + g, bottom: SHORT_BOTTOM + 16 };
+}
+
+function laserPlacement(m: ViewMetrics): Placement {
+  if (!isShort(m)) return { size: 88, right: 150, bottom: 30 };
+  const g = shortGap(m, 3);
+  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + g, bottom: SHORT_BOTTOM };
+}
+
+/** Tall: above jump. Short: raised and further left, so the three form a gentle arc along the bottom-right. */
+function shieldPlacement(m: ViewMetrics): Placement {
+  if (!isShort(m)) return { size: 88, right: 32, bottom: 150 };
+  const g = shortGap(m, 3);
+  return {
+    size: MIN_BUTTON,
+    right: SHORT_MARGIN + jumpSize(m) + g + MIN_BUTTON + g,
+    bottom: SHORT_BOTTOM + SHORT_RAISE,
+  };
+}
+
+/** Glen mode: Lompat (big, bottom-right) and Bicara/Ambil (to its left). Jump must stay first. */
 export const GLEN_BUTTONS: readonly TouchButtonDef[] = [
-  { action: 'jump', icon: JUMP_ICON, color: '#ff9f1c', size: 104, right: 26, bottom: 24 },
-  { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66 },
-  TRANSFORM_BUTTON,
+  { action: 'jump', icon: JUMP_ICON, color: '#ff9f1c', size: 104, right: 24, bottom: 24, place: jumpPlacement },
+  { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: interactPlacement },
+  { action: 'transform', icon: STAR_ICON, color: '#6c5ce7', size: 84, right: 20, bottom: 0, top: 12, place: transformPlacement },
 ];
 
 /**
- * Superglen mode: Lompat Barongsai (largest, gold, in the corner), Laser to its left and Perisai above it,
- * forming an arc around the thumb. Gaps of >= 22 px between buttons.
+ * Superglen mode: Lompat Barongsai (largest, gold, in the corner), Laser to its left and Perisai above it
+ * (tall) or raised further left (short), forming an arc around the thumb.
  */
 export const SUPERGLEN_BUTTONS: readonly TouchButtonDef[] = [
-  { action: 'jump', icon: BARONGSAI_ICON, color: '#f2b705', size: 104, right: 24, bottom: 24 },
-  { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 30 },
-  { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150 },
-  TRANSFORM_BUTTON,
+  { action: 'jump', icon: BARONGSAI_ICON, color: '#f2b705', size: 104, right: 24, bottom: 24, place: jumpPlacement },
+  { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 30, place: laserPlacement },
+  { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150, place: shieldPlacement },
+  { action: 'transform', icon: STAR_ICON, color: '#6c5ce7', size: 84, right: 20, bottom: 0, top: 12, place: transformPlacement },
 ];
 
 /** DOM for the touch controls. Pure view: TouchSource owns all the event logic. */
@@ -91,26 +159,66 @@ export class TouchControls {
     this.base.appendChild(this.knob);
     this.layer.appendChild(this.base);
 
+    this.probe = div('tc-inset-probe');
+    document.body.appendChild(this.probe);
+
     this.setLayout(GLEN_BUTTONS);
     root.appendChild(this.layer);
+
+    window.addEventListener('resize', this.relayout);
+    window.addEventListener('orientationchange', this.relayout);
+    window.visualViewport?.addEventListener('resize', this.relayout);
+  }
+
+  private defs: readonly TouchButtonDef[] = [];
+  private readonly probe: HTMLDivElement;
+  private readonly relayout = (): void => this.applyPlacement();
+
+  private metrics(): ViewMetrics {
+    const cs = getComputedStyle(this.probe);
+    return {
+      w: window.innerWidth,
+      h: window.innerHeight,
+      insetTop: parseFloat(cs.paddingTop) || 0,
+      insetRight: parseFloat(cs.paddingRight) || 0,
+      insetBottom: parseFloat(cs.paddingBottom) || 0,
+      insetLeft: parseFloat(cs.paddingLeft) || 0,
+    };
+  }
+
+  /** Position and size every button for the current visible viewport. */
+  private applyPlacement(): void {
+    const m = this.metrics();
+    for (const d of this.defs) {
+      const b = this.buttons.get(d.action);
+      if (!b) continue;
+      const p: Placement = d.place ? d.place(m) : d;
+      b.style.width = b.style.height = `${Math.max(MIN_BUTTON, p.size)}px`;
+      b.style.right = `calc(env(safe-area-inset-right) + ${p.right}px)`;
+      if (p.top !== undefined) {
+        b.style.top = `calc(env(safe-area-inset-top) + ${p.top}px)`;
+        b.style.bottom = '';
+      } else {
+        b.style.bottom = `calc(env(safe-area-inset-bottom) + ${p.bottom}px)`;
+        b.style.top = '';
+      }
+    }
   }
 
   /** Replace all buttons (Glen <-> Superglen). */
   setLayout(defs: readonly TouchButtonDef[]): void {
     for (const b of this.buttons.values()) b.remove();
     this.buttons.clear();
+    this.defs = defs;
     for (const d of defs) {
       const b = div('tc-button');
       b.dataset.action = d.action;
-      b.style.width = b.style.height = `${d.size}px`;
-      b.style.right = `calc(env(safe-area-inset-right) + ${d.right}px)`;
-      if (d.top !== undefined) b.style.top = `calc(env(safe-area-inset-top) + ${d.top}px)`;
-      else b.style.bottom = `calc(env(safe-area-inset-bottom) + ${d.bottom}px)`;
       b.style.background = d.color;
       b.innerHTML = d.icon;
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
     }
+    this.applyPlacement();
   }
 
   setPressed(action: Action, pressed: boolean): void {
@@ -132,6 +240,10 @@ export class TouchControls {
   }
 
   dispose(): void {
+    window.removeEventListener('resize', this.relayout);
+    window.removeEventListener('orientationchange', this.relayout);
+    window.visualViewport?.removeEventListener('resize', this.relayout);
+    this.probe.remove();
     this.layer.remove();
   }
 }

@@ -113,7 +113,8 @@ const layoutInfo = () => {
   const tr = document.querySelector('.tc-button[data-action=transform]');
   const trr = tr && tr.getBoundingClientRect();
   const transformOk = !!trr && trr.width >= 80 && trr.height >= 80 && trr.top >= 0 && trr.right <= vw && getComputedStyle(tr).display !== 'none';
-  return { vw, vh, n: boxes.length, inside, overlap, minBtn, actions, transformOk };
+  const minLeft = Math.min(...q('.tc-button').map((r) => r.left));
+  return { vw, vh, minLeft, n: boxes.length, inside, overlap, minBtn, actions, transformOk };
 };
 
 /** Deterministic driver: real key events, but the game loop is paused and stepped in 1/60 s frames. */
@@ -521,19 +522,64 @@ async function touchScenario(page, check) {
   // Layout at other sizes (leave the fullscreen the start tap entered, or Chromium refuses to resize)
   await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
   await sleep(500);
-  for (const [w, h, name] of [
-    [667, 375, 'layout-667x375'],
-    [1024, 768, 'layout-1024x768'],
-  ]) {
+  const MATRIX = [
+    [844, 281], [844, 250], [844, 330], [667, 250], [568, 320], [932, 300], [1024, 768], [1366, 1024],
+  ];
+  for (const [w, h] of MATRIX) {
     await page.setViewportSize({ width: w, height: h });
     await sleep(500);
     for (let pass = 0; pass < 2; pass++) {
       await bot.step(1);
+      const mode = bot.last.mode;
+      const tag = `${w}x${h} ${mode}`;
       const li2 = await page.evaluate(layoutInfo);
-      const expect = bot.last.mode === 'superglen' ? 'jump,laser,shield,transform' : 'jump,interact,transform';
-      check(`${w}x${h} ${bot.last.mode}: controls inside viewport`, li2.inside && li2.actions.join() === expect, li2.actions.join());
-      check(`${w}x${h} ${bot.last.mode}: no overlap, buttons >= 80, transform visible`, !li2.overlap && li2.minBtn >= 80 && li2.transformOk, `min ${li2.minBtn}`);
-      await shot(page, `${name}-${bot.last.mode}`);
+      const expect = mode === 'superglen' ? 'jump,laser,shield,transform' : 'jump,interact,transform';
+      check(`${tag}: controls inside viewport/safe-area`, li2.inside && li2.actions.join() === expect, li2.actions.join());
+      check(`${tag}: no overlap (incl. transform), buttons >= 80, transform visible`, !li2.overlap && li2.minBtn >= 80 && li2.transformOk, `min ${li2.minBtn}`);
+      check(`${tag}: no button in the joystick zone`, li2.minLeft >= li2.vw * 0.45, `left ${li2.minLeft.toFixed(0)} vs ${(li2.vw * 0.45).toFixed(0)}`);
+      if (w === 844 && (h === 281 || h === 250) && mode === 'superglen') await shot(page, `layout-${w}x${h}-superglen`);
+      // Tap each action button in the middle: exactly that button reacts.
+      for (const act of li2.actions.filter((a) => a !== 'transform')) {
+        const p = await centerOf(act);
+        await fingers.down(12, p.x, p.y);
+        await sleep(40);
+        const pressed = await page.evaluate(() => [...document.querySelectorAll('.tc-button.pressed')].map((e) => e.dataset.action).join());
+        if (act === 'jump') {
+          await bot.step(4);
+          const air = await bot.step(1);
+          check(`${tag}: jump tap leaves the ground`, !air.g && pressed === 'jump', `${pressed} y=${air.y.toFixed(2)}`);
+        } else {
+          check(`${tag}: tap ${act} presses only ${act}`, pressed === act, pressed);
+        }
+        await fingers.up(12);
+        for (let i = 0; i < 300 && !bot.last.g; i++) await bot.step(1);
+        await bot.step(10);
+        await sleep(120);
+        if (act === 'interact' && mode === 'glen') {
+          // In Glen mode the interact button also toggles Superglen (test area): go back to Glen.
+          check(`${tag}: interact tap switched mode`, bot.last.mode === 'superglen', bot.last.mode);
+          await tapAction('transform');
+          await bot.step(1);
+        }
+      }
+      // Hit test: when two buttons' 10 px hit margins overlap, the nearest centre wins.
+      if (mode === 'superglen' && w === 568) {
+        const pt = await page.evaluate(() => {
+          const laser = document.querySelector('.tc-button[data-action=laser]');
+          const shield = document.querySelector('.tc-button[data-action=shield]');
+          const vw = window.innerWidth;
+          const sr0 = shield.getBoundingClientRect();
+          const lr0 = laser.getBoundingClientRect();
+          laser.style.right = `${vw - lr0.right + (lr0.left - sr0.right) - 4}px`; // gap of 4 px
+          const sr = shield.getBoundingClientRect();
+          return { x: sr.right + 1.5, y: sr.top + sr.height / 2 };
+        });
+        await fingers.down(13, pt.x, pt.y);
+        await sleep(40);
+        const pressed = await page.evaluate(() => [...document.querySelectorAll('.tc-button.pressed')].map((e) => e.dataset.action).join());
+        check(`${tag}: overlapping hit margins pick the nearest button centre`, pressed === 'shield', pressed);
+        await fingers.up(13);
+      }
       await tapAction('transform');
     }
   }
