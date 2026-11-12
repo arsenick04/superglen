@@ -29,7 +29,8 @@ export class Story {
   free = false;
   private readonly party: Celebration;
   private readonly tmp = new THREE.Vector3();
-  private busy = false;
+  private runId = 0;
+  private current: Exercise | null = null;
 
   constructor(private readonly p: StoryParts) {
     this.party = new Celebration(p.env.ctx, 'Chapter 2 selesai!', p.env.ctx.fx.sparkles);
@@ -98,14 +99,18 @@ export class Story {
         center: new THREE.Vector3(x, 0.6, z),
         radius: r,
         onEnter: () => {
-          if (this.busy || !this.free || !ctx.game.controlsEnabled) return;
-          this.busy = true;
+          if (!this.free || !ctx.game.controlsEnabled || ex.active) return;
+          const id = ++this.runId;
+          this.current?.stop();
+          this.current = ex;
           ctx.seq.run(async () => {
             await ex.run({ voice: false });
+            if (id !== this.runId) return;
             this.cheer();
             await ctx.seq.wait(1.2);
+            if (id !== this.runId) return;
             this.p.env.row.hide();
-            this.busy = false;
+            this.current = null;
           });
         },
       });
@@ -214,7 +219,7 @@ export class Story {
     this.step = 'bonk';
     game.setControlsEnabled(false);
     // Wide view from below: the camera would otherwise be squeezed against the ceiling Glen is about to hit.
-    ctx.cameraRig.setFraming(this.tmp.set(pl.visualPosition.x, 1, pl.visualPosition.z), { weight: 0.8, distance: 5 });
+    ctx.cameraRig.setFraming(this.tmp.set(pl.visualPosition.x, 4, pl.visualPosition.z), { weight: 0.5, distance: 5, pitch: -10 * Math.PI / 180 });
     pl.flight.maxFlyHeight = 40;
     pl.flight.autoLaunch(40);
     let t = 0;

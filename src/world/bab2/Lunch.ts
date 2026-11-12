@@ -61,6 +61,7 @@ export class Lunch {
       const b = document.createElement('div');
       b.className = 'b2-nyam';
       b.textContent = 'Nyam!';
+      b.addEventListener('animationend', () => b.classList.remove('show'));
       b.style.left = l;
       b.style.top = tp;
       ctx.ui.appendChild(b);

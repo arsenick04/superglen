@@ -142,14 +142,14 @@ export const SUPERGLEN_BUTTONS: readonly TouchButtonDef[] = [
 
 function storyInteractPlacement(m: ViewMetrics): Placement {
   if (!isShort(m)) return interactPlacement(m);
-  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + shortGap(m, 3), bottom: SHORT_BOTTOM + 16 };
+  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + shortGap(m, 3), bottom: SHORT_BOTTOM + 8 };
 }
 
 /** Laser in the story set: tall = above Bicara; short = stacked on top of Bicara. */
 function storyLaserPlacement(m: ViewMetrics): Placement {
   if (!isShort(m)) return { size: 88, right: 150, bottom: 166 };
   const i = storyInteractPlacement(m);
-  return { size: MIN_BUTTON, right: i.right, bottom: i.bottom + MIN_BUTTON + 10 };
+  return { size: MIN_BUTTON, right: i.right, bottom: i.bottom + MIN_BUTTON + 4 };
 }
 
 const STORY_INTERACT: TouchButtonDef = { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: storyInteractPlacement };

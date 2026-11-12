@@ -125,6 +125,8 @@ export class ThirdPersonCamera {
   private frameWeight = 0.5;
   private frameYaw: number | null = null;
   private frameExtra = 0;
+  private framePitch: number | null = null;
+  private pitchRestore: number | null = null;
   private readonly framePoint = new THREE.Vector3();
 
   private readonly ray: RAPIER.Ray;
@@ -175,11 +177,15 @@ export class ThirdPersonCamera {
    * the camera eases toward `yaw` (camera-on-the-+Z-side convention of `yaw`) and backs off by `distance` m.
    * `null` returns to the normal follow view. Input look is still honoured (it simply fights the ease).
    */
-  setFraming(point: THREE.Vector3 | null, opts: { weight?: number; yaw?: number; distance?: number } = {}): void {
+  setFraming(point: THREE.Vector3 | null, opts: { weight?: number; yaw?: number; distance?: number; pitch?: number } = {}): void {
     if (!point) {
       this.frameOn = false;
+      if (this.framePitch !== null) this.pitchRestore ??= CameraConfig.defaultPitch;
+      this.framePitch = null;
       return;
     }
+    if (opts.pitch !== undefined && this.framePitch === null) this.pitchRestore = this.pitch;
+    this.framePitch = opts.pitch ?? null;
     this.frameOn = true;
     this.framePoint.copy(point);
     this.frameWeight = opts.weight ?? 0.5;
@@ -239,6 +245,12 @@ export class ThirdPersonCamera {
       if (this.frameOn && this.frameYaw !== null) {
         this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
       }
+    }
+    if (this.frameOn && this.framePitch !== null) {
+      this.pitch += (this.framePitch - this.pitch) * (1 - Math.exp(-2 * dt));
+    } else if (this.pitchRestore !== null) {
+      this.pitch += (this.pitchRestore - this.pitch) * (1 - Math.exp(-2 * dt));
+      if (Math.abs(this.pitchRestore - this.pitch) < 0.01) this.pitchRestore = null;
     }
 
     if (!this.initialized) {

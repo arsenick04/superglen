@@ -1605,7 +1605,7 @@ async function bab1ReturnScenario(page, check) {
   let s = await d.st();
   check('returning player starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `mode ${s.mode} z ${s.player.z.toFixed(1)}`);
   await expectStanding(page, check, 'returning start in the lab', FLOOR);
-  check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false && !s.objective.active);
+  check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false);
   await shot(page, 'bab1-return');
   check('returning (Chapter 2 not played): the objective beam points at Nino', s.objective.active && Math.abs(s.objective.x - 4.2) < 0.5 && Math.abs(s.objective.z + 70.5) < 0.5, JSON.stringify(s.objective));
   check('returning: all skills still locked, flying ceiling set for the small lab', !s.skills.unlocked.fly && s.skills.maxFlyHeight < 6, `maxFly ${s.skills.maxFlyHeight}`);
@@ -1634,8 +1634,9 @@ async function bab1ReturnScenario(page, check) {
   check('Nino offers a talk prompt', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
   await d.tap('e');
   check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  await d.adv(200); // the line ends (game time), then the fade to Chapter 2 starts
   await page.evaluate(() => window.__superglen.pause(false));
-  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 30000 });
   check('after the line the game fades into Chapter 2 (bab2)', true);
   await page.goto(URL + '?reset=1&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
@@ -1726,9 +1727,12 @@ function makeBab2Inputs(page, mode, fingers) {
   const set = (a) => async (on) => {
     if (on && !held.has(a)) {
       const c = await page.evaluate((a) => {
-        const r = document.querySelector(`.tc-button[data-action=${a}]`).getBoundingClientRect();
+        const b = document.querySelector(`.tc-button[data-action=${a}]`);
+        if (!b) return null;
+        const r = b.getBoundingClientRect();
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
       }, a);
+      if (!c) return; // button not unlocked yet: nothing to press
       await fingers.down(ids[a], c.x, c.y);
       held.add(a);
     } else if (!on && held.has(a)) {
@@ -2034,6 +2038,8 @@ async function bab2DesktopScenario(page, check) {
   const inp = makeBab2Inputs(page, 'kbd');
   const map = { hall: 'bab2-hall', bonk: 'bab2-bonk', rings: 'bab2-rings', laser: 'bab2-laser', shield: 'bab2-shield', lunch: 'bab2-lunch', alarm: 'bab2-alarm' };
   await playBab2(page, check, d, inp, 'desktop', async (name) => {
+    if (name === 'laser') { await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); await page.evaluate(() => window.__superglen.advance(40, false)); }
+    if (name === 'shield') { await page.evaluate(() => window.__superglen.setCameraYaw(-Math.PI / 2)); await page.evaluate(() => window.__superglen.advance(40, false)); }
     if (map[name]) { await page.evaluate(() => window.__superglen.advance(2, true)); await shot(page, map[name]); }
   });
   // Leak: bab2 -> test -> bab2 twice must not grow.
@@ -2088,7 +2094,8 @@ async function bab2TouchScenario(page, check) {
       if (vis(row)) items.push(['row', rect(row)]);
       const pr = document.querySelector('.prompt');
       if (pr && !pr.hidden) items.push(['prompt', rect(pr.querySelector('.prompt-icon'))]);
-      for (const b of document.querySelectorAll('.tc-button')) items.push(['button:' + b.dataset.action, rect(b)]);
+      // (a button in its 0.6 s pop-in animation is momentarily bigger: measured once it has settled)
+      for (const b of document.querySelectorAll('.tc-button:not(.tc-pop)')) items.push(['button:' + b.dataset.action, rect(b)]);
       const vw = window.innerWidth, vh = window.innerHeight;
       const bad = [];
       for (const [n, a] of items) if (a.l < -1 || a.t < -1 || a.r > vw + 1 || a.b > vh + 1) bad.push(n + '-outside');
@@ -2182,6 +2189,7 @@ async function bab2FlowScenario(page, check) {
   s = await d.st();
   const dist1 = Math.hypot(s.levelInfo.goalX - s.player.x, s.levelInfo.goalZ - s.player.z);
   check('flow: target fallback after 25 s: the target came closer (<= 6.5 m)', s.levelInfo.targetFallbacks >= 1 && dist1 <= 6.5 && dist1 <= dist0 + 0.01, `${dist0.toFixed(1)} m -> ${dist1.toFixed(1)} m, fallbacks ${s.levelInfo.targetFallbacks}`);
+  await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // face the targets (the beam and arrow show the way)
   for (let i = 0; i < 2400; i += 30) {
     s = await d.st();
     if (s.levelInfo.targets >= 5) break;

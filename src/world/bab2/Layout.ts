@@ -31,8 +31,8 @@ export const RING_PATH: readonly (readonly [number, number, number])[] = [
   [-3, 7.6, -36],
 ];
 export const RING_RADIUS = 2.4;
-/** Highest point the jets lift Superglen in normal play (m above the ground); the ceiling is above it. */
-export const FLY_MAX = 11;
+/** Highest point the jets lift Superglen in normal play (m above the ground); well under the ceiling so the camera is never squeezed against it. */
+export const FLY_MAX = 8.5;
 
 /**
  * Practice targets: ground position, disc height, optional slow path. 5 to 14 m from the laser spot, on the side the

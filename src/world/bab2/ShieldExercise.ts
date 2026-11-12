@@ -63,6 +63,14 @@ export class ShieldExercise implements Exercise {
     });
   }
 
+  stop(): void {
+    this.active = false;
+    this.resolve = null;
+    for (const u of this.unsubs) u();
+    this.unsubs = [];
+    this.thrower.enabled = false;
+  }
+
   goal(out: { x: number; y: number; z: number }): boolean {
     if (!this.active) return false;
     out.x = PADS.shield.x;

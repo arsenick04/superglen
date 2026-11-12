@@ -68,6 +68,15 @@ export class LaserExercise implements Exercise {
     });
   }
 
+  stop(): void {
+    this.active = false;
+    this.resolve = null;
+    this.unsub?.();
+    this.unsub = null;
+    for (const t of this.targets) t.hide();
+    this.env.ctx.objectives.clear();
+  }
+
   goal(out: { x: number; y: number; z: number }): boolean {
     if (!this.active) return false;
     const i = TARGET_GROUPS[this.group]?.find((k) => !this.targets[k].isDown && this.targets[k].group.visible);

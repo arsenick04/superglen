@@ -28,6 +28,8 @@ export interface Exercise {
   readonly count: number;
   /** Start a round; resolves after the fifth. */
   run(opts: RunOptions): Promise<void>;
+  /** Abandon the round (free play: the child stepped on another icon). Nothing is left on screen. */
+  stop(): void;
   /** Fixed-step update (props, timers, fallbacks). */
   tick(dt: number): void;
   /** Where the current goal is (test helper / objective): null when idle. */

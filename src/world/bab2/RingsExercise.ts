@@ -60,6 +60,16 @@ export class RingsExercise implements Exercise {
     });
   }
 
+  stop(): void {
+    this.active = false;
+    this.resolve = null;
+    this.current = -1;
+    this.fading.length = 0;
+    for (const r of this.rings) r.group.visible = false;
+    this.env.ctx.objectives.clear();
+    this.env.hold.set(false);
+  }
+
   goal(out: { x: number; y: number; z: number }): boolean {
     if (!this.active || this.current < 0) return false;
     const c = this.rings[this.current].centre;
