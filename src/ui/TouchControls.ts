@@ -1,4 +1,5 @@
 import type { Action } from '../input/Input';
+import type { PlayerMode } from '../player/PlayerConfig';
 
 /** One on-screen button. Layout is data so the Superglen layout (3 buttons in an arc) can swap in. */
 export interface TouchButtonDef {
@@ -134,6 +135,64 @@ export const SUPERGLEN_BUTTONS: readonly TouchButtonDef[] = [
   { action: 'transform', icon: STAR_ICON, color: '#6c5ce7', size: 84, right: 20, bottom: 0, top: 12, place: transformPlacement },
 ];
 
+// ---- Story layouts (every level except the test area) ----------------------------------------------
+// Superglen story set: Lompat Barongsai in the corner, Bicara/Ambil always next to it (same spot as in Glen
+// mode), Perisai above/left and Laser above Bicara. Skills that are not unlocked yet are simply left out, so
+// the remaining buttons never move. Short layout uses ONE gap for all three, so the columns cannot collide.
+
+function storyInteractPlacement(m: ViewMetrics): Placement {
+  if (!isShort(m)) return interactPlacement(m);
+  return { size: MIN_BUTTON, right: SHORT_MARGIN + jumpSize(m) + shortGap(m, 3), bottom: SHORT_BOTTOM + 16 };
+}
+
+/** Laser in the story set: tall = above Bicara; short = stacked on top of Bicara. */
+function storyLaserPlacement(m: ViewMetrics): Placement {
+  if (!isShort(m)) return { size: 88, right: 150, bottom: 166 };
+  const i = storyInteractPlacement(m);
+  return { size: MIN_BUTTON, right: i.right, bottom: i.bottom + MIN_BUTTON + 10 };
+}
+
+const STORY_INTERACT: TouchButtonDef = { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: storyInteractPlacement };
+const STORY_LASER: TouchButtonDef = { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 166, place: storyLaserPlacement };
+const STORY_SHIELD: TouchButtonDef = { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150, place: shieldPlacement };
+const GLEN_JUMP = GLEN_BUTTONS[0];
+const SUPERGLEN_JUMP = SUPERGLEN_BUTTONS[0];
+const TRANSFORM = GLEN_BUTTONS[2];
+
+/** What the current level allows on screen. */
+export interface ControlProfile {
+  /** The test area keeps its old full button sets (incl. the temporary Glen <-> Superglen star). */
+  legacyTest: boolean;
+  /** Show the "Berubah" star (only where the story allows the transformation). */
+  transform: boolean;
+  /** Unlocked skills (Superglen mode only). */
+  laser: boolean;
+  shield: boolean;
+}
+
+const layoutCache = new Map<string, readonly TouchButtonDef[]>();
+
+/** Button set for a mode and profile. Results are cached: the same arguments return the same array. */
+export function getLayout(mode: PlayerMode, p: ControlProfile): readonly TouchButtonDef[] {
+  if (p.legacyTest) return mode === 'superglen' ? SUPERGLEN_BUTTONS : GLEN_BUTTONS;
+  const key = `${mode}|${p.transform ? 1 : 0}${mode === 'superglen' ? `${p.laser ? 1 : 0}${p.shield ? 1 : 0}` : ''}`;
+  let defs = layoutCache.get(key);
+  if (!defs) {
+    const list: TouchButtonDef[] = [];
+    if (mode === 'superglen') {
+      list.push(SUPERGLEN_JUMP, STORY_INTERACT);
+      if (p.laser) list.push(STORY_LASER);
+      if (p.shield) list.push(STORY_SHIELD);
+    } else {
+      list.push(GLEN_JUMP, GLEN_BUTTONS[1]);
+    }
+    if (p.transform) list.push(TRANSFORM);
+    defs = list;
+    layoutCache.set(key, defs);
+  }
+  return defs;
+}
+
 /** DOM for the touch controls. Pure view: TouchSource owns all the event logic. */
 export class TouchControls {
   readonly layer: HTMLDivElement;
@@ -171,6 +230,7 @@ export class TouchControls {
   }
 
   private defs: readonly TouchButtonDef[] = [];
+  private readonly pulsing = new Set<Action>();
   private readonly probe: HTMLDivElement;
   private readonly relayout = (): void => this.applyPlacement();
 
@@ -217,8 +277,16 @@ export class TouchControls {
       b.innerHTML = d.icon;
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
+      if (this.pulsing.has(d.action)) b.classList.add('pulse');
     }
     this.applyPlacement();
+  }
+
+  /** Gently pulse a button ("press me now"), e.g. Bicara/Ambil while something is in reach. */
+  setPulse(action: Action, on: boolean): void {
+    if (on) this.pulsing.add(action);
+    else this.pulsing.delete(action);
+    this.buttons.get(action)?.classList.toggle('pulse', on);
   }
 
   setPressed(action: Action, pressed: boolean): void {

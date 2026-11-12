@@ -497,3 +497,305 @@ html.touch-ui .start-text-pc {
   text-align: center;
   padding: 0 20px;
 }
+
+/* ---- Dialog bubble ---- */
+.dlg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 4;
+}
+.dlg[hidden] {
+  display: none;
+}
+/* Touch: the bottom belongs to the joystick and buttons, so the bubble sits at the top, between the
+   fps pill / star button (130 px each side). */
+html.touch-ui .dlg {
+  top: calc(env(safe-area-inset-top) + 8px);
+  bottom: auto;
+  left: calc(env(safe-area-inset-left) + 130px);
+  right: calc(env(safe-area-inset-right) + 130px);
+}
+.dlg-card {
+  box-sizing: border-box;
+  width: min(760px, 92vw);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 4px solid #ffd23f;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+}
+html.touch-ui .dlg-card {
+  width: 100%;
+}
+.dlg-card.pop {
+  animation: dlg-pop 0.28s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.dlg-face {
+  flex: none;
+  width: 76px;
+  height: 76px;
+}
+.dlg-face svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.dlg-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #2b3a55;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.22;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-wrap: pretty;
+}
+.dlg-next {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  animation: dlg-next 0.9s ease-in-out infinite;
+}
+.dlg-next svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@media (max-height: 450px) {
+  .dlg-face {
+    width: 60px;
+    height: 60px;
+  }
+  .dlg-text {
+    font-size: 23px;
+  }
+  .dlg-card {
+    gap: 10px;
+    padding: 8px 12px 8px 8px;
+    border-radius: 28px;
+  }
+}
+@keyframes dlg-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes dlg-next {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* ---- World prompt icon (above the thing you can talk to / take) ---- */
+.prompt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: none;
+  will-change: transform;
+}
+.prompt[hidden] {
+  display: none;
+}
+.prompt-bob {
+  position: absolute;
+  left: -40px;
+  bottom: 0;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: prompt-bob 0.8s ease-in-out infinite;
+}
+.prompt-icon {
+  box-sizing: border-box;
+  width: 80px;
+  height: 80px;
+  padding: 14px;
+  border-radius: 50%;
+  background: #ff9f1c;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.prompt-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.prompt-key {
+  display: none;
+  margin-top: 6px;
+  min-width: 30px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #fff;
+  color: #2b3a55;
+  border: 2px solid #2b3a55;
+  border-bottom-width: 5px;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: center;
+}
+html:not(.touch-ui) .prompt-key {
+  display: block;
+}
+@keyframes prompt-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ---- Objective edge arrow ---- */
+.edge-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: none;
+  will-change: transform;
+}
+.edge-arrow[hidden] {
+  display: none;
+}
+.edge-arrow-icon {
+  position: absolute;
+  left: -32px;
+  top: -32px;
+  width: 64px;
+  height: 64px;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+  animation: edge-pulse 0.9s ease-in-out infinite;
+}
+.edge-arrow-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@keyframes edge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+/* ---- Level fade ---- */
+.fade {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: #fff8e1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.fade.on {
+  opacity: 1;
+}
+.fade.instant {
+  transition: none;
+}
+
+/* Touch button pulse: "something is in reach" */
+.tc-button.pulse {
+  animation: tc-pulse 0.85s ease-in-out infinite;
+  box-shadow: 0 0 0 6px rgba(255, 210, 63, 0.75), 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+@keyframes tc-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlg-card.pop,
+  .dlg-next,
+  .prompt-bob,
+  .edge-arrow-icon,
+  .tc-button.pulse {
+    animation: none;
+  }
+  .fade {
+    transition: none;
+  }
+}
+
+/* Bab 1: chapter-done star and the transformation flash */
+.bab1-star {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  z-index: 40;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.bab1-star.show {
+  display: flex;
+  animation: bab1-star-pop 3.2s ease-out forwards;
+}
+.bab1-star svg {
+  width: 40vh;
+  height: 40vh;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+.bab1-star-text {
+  font-size: clamp(16px, 4.6vh, 34px);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+@keyframes bab1-star-pop {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-40deg); opacity: 0; }
+  20% { transform: translate(-50%, -50%) scale(1.2) rotate(8deg); opacity: 1; }
+  32% { transform: translate(-50%, -50%) scale(0.94) rotate(-3deg); opacity: 1; }
+  42% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  88% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+}
+.bab1-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, #fffbe0 0%, #ffe27a 60%, #ffc94d 100%);
+}

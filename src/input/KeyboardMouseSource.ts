@@ -5,7 +5,7 @@ const KEY_ACTIONS: Readonly<Record<Action, readonly string[]>> = {
   jump: ['Space'],
   laser: ['KeyJ'],
   shield: ['KeyK'],
-  interact: ['KeyE'],
+  interact: ['KeyE', 'Enter', 'NumpadEnter'],
   transform: [],
 };
 

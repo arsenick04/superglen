@@ -27,6 +27,8 @@ export interface StaticBodyHandle {
 /** Thin wrapper around the Rapier world. RAPIER.init() must have resolved before construction. */
 export class Physics {
   readonly world: RAPIER.World;
+  /** Bodies created for the current level (statics via addFixed*, anything passed to `track`). */
+  private readonly levelBodies = new Set<RAPIER.RigidBody>();
 
   constructor() {
     this.world = new RAPIER.World({ x: 0, y: WORLD_GRAVITY, z: 0 });
@@ -43,6 +45,7 @@ export class Physics {
     if (rotation) desc.setRotation(rotation);
     const body = this.world.createRigidBody(desc);
     const collider = this.world.createCollider(RAPIER.ColliderDesc.cuboid(half.x, half.y, half.z), body);
+    this.levelBodies.add(body);
     return { body, collider };
   }
 
@@ -52,7 +55,35 @@ export class Physics {
     if (rotation) desc.setRotation(rotation);
     const body = this.world.createRigidBody(desc);
     const collider = this.world.createCollider(RAPIER.ColliderDesc.cylinder(halfHeight, radius), body);
+    this.levelBodies.add(body);
     return { body, collider };
+  }
+
+  /** Register a level-owned body (e.g. a dynamic ball) so `disposeLevelBodies` removes it. */
+  track(body: RAPIER.RigidBody): void {
+    this.levelBodies.add(body);
+  }
+
+  /** Remove every tracked body and its colliders. The player's own body is never tracked. */
+  disposeLevelBodies(): void {
+    for (const b of this.levelBodies) this.world.removeRigidBody(b);
+    this.levelBodies.clear();
+  }
+
+  /**
+   * Make freshly added colliders visible to scene queries (ray/shape casts, character controller):
+   * Rapier updates its broad-phase only inside `step()`. Call after building a level, before placing the player.
+   */
+  refreshQueries(): void {
+    this.world.step();
+  }
+
+  get colliderCount(): number {
+    return this.world.colliders.len();
+  }
+
+  get bodyCount(): number {
+    return this.world.bodies.len();
   }
 
   dispose(): void {
