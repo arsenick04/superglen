@@ -125,6 +125,8 @@ export class Player {
   private shadowMat!: THREE.MeshBasicMaterial;
   private squash = 0;
   private squashVel = 0;
+  /** 0..1 sitting/crouching look (the story lowers the body for the lunch scene). Visual only. */
+  crouch = 0;
   private pop = 0;
   private popVel = 0;
   private spinning = false;
@@ -199,6 +201,12 @@ export class Player {
   turnTo(yaw: number): void {
     this.aimYaw = yaw;
     this.aimTime = 0.3;
+  }
+
+  /** Comic squash (negative, e.g. -0.35) or stretch (positive) that springs back by itself. Visual only. */
+  squashBounce(amount: number): void {
+    this.squash = amount;
+    this.squashVel = 0;
   }
 
   /** A tiny cosmetic hop (about 0.25 m) when standing on the ground; ignored in the air. Not a jump. */
@@ -556,8 +564,8 @@ export class Player {
         }
       }
     }
-    const sy = 1 + this.squash;
-    const sxz = 1 - this.squash * 0.5;
+    const sy = (1 + this.squash) * (1 - 0.32 * this.crouch);
+    const sxz = (1 - this.squash * 0.5) * (1 + 0.1 * this.crouch);
     this.squashGroup.scale.set(sxz, sy, sxz);
     this.object.scale.setScalar(1 + this.pop);
 
@@ -606,6 +614,7 @@ export class Player {
     this.hopPending = 0;
     this.squash = 0;
     this.squashVel = 0;
+    this.crouch = 0;
     this.peakFeetY = y - CENTER_TO_FEET;
   }
 

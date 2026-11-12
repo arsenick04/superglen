@@ -17,6 +17,8 @@ export interface BallThrowerOptions {
   gravity?: number;
   /** Ball colour (bright, default tomato red). */
   color?: number;
+  /** Seconds the machine stays dizzy after the shield sent a ball back (default 2.5). */
+  dizzyTime?: number;
   id?: string;
 }
 
@@ -70,18 +72,22 @@ export class BallThrower {
   private spinT = 99;
   private yaw = 0;
   private telegraphing = false;
-  private readonly range: number;
-  private readonly interval: number;
-  private readonly telegraph: number;
-  private readonly speed: number;
+  /** Tunable at run time (a story slows the machine down when the child struggles). */
+  range: number;
+  interval: number;
+  telegraph: number;
+  speed: number;
+  private readonly dizzyTime: number;
   private readonly gravity: number;
-  private readonly color: number;
+  /** Colour of the next ball (change between throws for variety). */
+  color: number;
   private readonly groundY: number;
 
   constructor(
     private readonly env: PropEnv,
     opts: BallThrowerOptions,
   ) {
+    this.dizzyTime = opts.dizzyTime ?? 2.5;
     this.range = opts.range ?? 12;
     this.interval = opts.interval ?? 3;
     this.telegraph = opts.telegraph ?? 0.8;
@@ -223,7 +229,7 @@ export class BallThrower {
 
   private react(): void {
     this.returned++;
-    this.dizzy = 2.5;
+    this.dizzy = this.dizzyTime;
     this.spinT = 0;
     this.cycle = 0;
     this.setTelegraph(false);

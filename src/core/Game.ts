@@ -23,7 +23,8 @@ import { Interactions } from '../gameplay/Interactions';
 import { Objectives } from '../gameplay/Objectives';
 import { LevelManager } from '../world/LevelManager';
 import type { LevelGame } from '../world/Level';
-import { DEFAULT_LEVEL, LEVELS } from '../world/levels';
+import { LEVELS } from '../world/levels';
+import { startLevelFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
 import { startGate } from './StartGate';
@@ -467,7 +468,7 @@ export class Game {
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
     const wanted = new URLSearchParams(window.location.search).get('level');
-    this.levels.loadInstant(wanted && this.levels.has(wanted) ? wanted : DEFAULT_LEVEL);
+    this.levels.loadInstant(wanted && this.levels.has(wanted) ? wanted : startLevelFor(this.save));
 
     // Live getters (a load finishes in real time even while the loop is paused for tests).
     Object.defineProperties(this.debug, {

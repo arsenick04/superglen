@@ -99,6 +99,24 @@ export class FlyRing {
     o.onPass?.(this);
   }
 
+  /** Light up again right now (a ring reused by a new round). */
+  rearm(): void {
+    this.cooldown = 0;
+    this.setArmed(true);
+  }
+
+  /** Move the ring (story fallback: a ring that comes closer to the player). */
+  moveTo(x: number, y: number, z: number): void {
+    this.opts.x = x;
+    this.opts.y = y;
+    this.opts.z = z;
+    this.group.position.set(x, y, z);
+  }
+
+  get centre(): { x: number; y: number; z: number } {
+    return this.opts;
+  }
+
   private setArmed(on: boolean): void {
     this.armed = on;
     this.mat.color.setHex(on ? 0xffd23f : 0x7dffa0);

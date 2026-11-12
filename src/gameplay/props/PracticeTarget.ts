@@ -77,13 +77,16 @@ export class PracticeTarget {
   private dir = 1;
   private readonly height: number;
   private readonly groundY: number;
+  private appearT = 99;
+  private baseScale = 1;
+  private readonly baseRadius: number;
 
   constructor(
     private readonly env: PropEnv,
     private readonly opts: PracticeTargetOptions,
   ) {
     const h = (this.height = opts.height ?? 1.2);
-    const R = opts.radius ?? 0.5;
+    const R = (this.baseRadius = opts.radius ?? 0.5);
     this.groundY = opts.groundY ?? 0;
     this.redTex = discTexture('#e8453c');
     this.greenTex = discTexture('#2fbf5b');
@@ -121,6 +124,45 @@ export class PracticeTarget {
 
   get isDown(): boolean {
     return this.state !== READY;
+  }
+
+  /** Story use: pop up from the floor (scale 1 = normal; bigger for a helping hand). Standing and targetable. */
+  show(scale = 1): void {
+    this.baseScale = scale;
+    this.group.visible = true;
+    this.appearT = 0;
+    this.reset();
+    this.target.radius = this.baseRadius * 1.1 * scale;
+  }
+
+  /** Story use: gone (invisible, not targetable). */
+  hide(): void {
+    this.group.visible = false;
+    this.target.enabled = false;
+    this.state = DOWN;
+  }
+
+  /** Grow the (visible) target and its aim radius, e.g. when the child struggles. */
+  enlarge(scale: number): void {
+    this.baseScale = scale;
+    this.group.scale.setScalar(scale);
+    this.target.radius = this.baseRadius * 1.1 * scale;
+  }
+
+  /** Stop gliding along the path (the stand stays where it is). */
+  settle(): void {
+    this.opts.path = undefined;
+  }
+
+  /** Move the stand (story fallback: a target that comes closer). */
+  moveTo(x: number, z: number): void {
+    this.group.position.x = x;
+    this.group.position.z = z;
+    this.updateAim();
+  }
+
+  get position(): THREE.Vector3 {
+    return this.group.position;
   }
 
   /** Stand it up again, ready for the next shot. */
@@ -181,6 +223,13 @@ export class PracticeTarget {
       sc = 1 + Math.exp(-7 * this.boing) * Math.cos(this.boing * 24) * 0.3;
     }
     this.pivot.scale.setScalar(sc);
+    if (this.appearT < 0.45) {
+      this.appearT += dt;
+      const u = Math.min(1, this.appearT / 0.45);
+      const c = 1.70158;
+      const k = 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); // easeOutBack
+      this.group.scale.setScalar(Math.max(0.01, this.baseScale * k));
+    }
     this.pivot.rotation.x = this.tilt;
     this.disc.rotation.z = this.spin;
     this.updateAim();
@@ -228,6 +277,6 @@ export class PracticeTarget {
 
   private updateAim(): void {
     const g = this.group.position;
-    this.aim.set(g.x, g.y + this.height, g.z);
+    this.aim.set(g.x, g.y + this.height * this.baseScale, g.z);
   }
 }
