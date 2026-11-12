@@ -105,3 +105,12 @@ Singkat, dalam Bahasa Indonesia:
 - Masalah yang diketahui
 - Keputusan yang butuh pemilik proyek
 - Perkiraan kredit Higgsfield dan ElevenLabs yang terpakai
+
+## Aturan parkour (berlaku di atas spesifikasi lama)
+
+Semua hal tentang lompat, memanjat, undakan, dan Lompat Irama Barongsai
+mengikuti PAKET_P1_PARKOUR.md. Jika ada yang bertentangan dengan A3,
+SUPERGLEN_GAME_DESIGN.md bagian Dunia, atau paket lain, PAKET_P1_PARKOUR.md
+yang dipakai. Semua angka lompat hanya boleh ada di src/config/parkour.ts.
+Setiap bangunan baru wajib punya rute naik (lihat bagian 3 di file itu),
+dan npm run check:reach harus lulus sebelum paket dianggap selesai.
