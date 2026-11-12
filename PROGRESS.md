@@ -145,6 +145,10 @@ Tinggi terukur: Glen 0,90 m, Superglen 2,40 m, double jump 4,40 m. Tiang 1 m dan
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Pengingat untuk pemilik proyek
+
+- **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
+
 ## Untuk dicoba besok pagi
 1. **Merge PR, tunggu deploy sekitar 2 menit, lalu buka https://arsenick04.github.io/superglen/ di Safari iPhone posisi landscape.** Layar logo muncul, ketuk untuk mulai. Kalau tampilan lama masih muncul, tutup tab dan buka lagi.
 2. **Biarkan anak mencoba melompat**: tombol kuning untuk lompat. Ketuk tombol bintang di kanan atas untuk jadi Superglen, lalu lompat dua kali untuk berputar di udara. Jalan lurus ke depan untuk menemukan deretan tiang, lalu coba naik ke atasnya.
