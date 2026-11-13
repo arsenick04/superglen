@@ -414,12 +414,70 @@ Tinggi terukur per tingkat: 1,62 / 2,12 / 2,72 / 3,46 / 4,22 m. Arena: paling ba
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Perbaikan terbang, tombol Berubah, dan Paket P2: Dunia (13 November 2026): selesai, tanpa tendang dinding
+
+Orkestrator untuk paket ini adalah Opus, atas permintaan pemilik proyek, sampai batas Fable reset.
+
+### Permintaan pemilik proyek
+- **Terbang lebih mudah**: melepas tombol tidak lagi menjatuhkan karakter seperti batu. Ia turun dengan gravitasi lebih lembut, paling cepat 7 m/s (sekitar 5,8 m di detik pertama, dibanding sekitar 19 m kalau jatuh bebas). Satu tekanan di udara setelah terbang langsung menyalakan jet lagi, tanpa perlu menahan. Mendarat setelah terbang lembut, tanpa hentakan.
+- **Tombol kembali jadi Glen**: tombol bintang di kanan atas sekarang muncul di level cerita setelah Glen memakai kostum di Chapter 1, dan bisa bolak-balik Glen dan Superglen. Tersembunyi saat adegan cerita dan selama latihan Chapter 2. Di PC tombolnya **Q** (E tetap untuk bicara). Mode terakhir tersimpan.
+
+### Paket P2
+- **`npm run check:reach`** (`scripts/reachability.ts`): menghitung dari data level pijakan mana yang terjangkau di tiap tingkat irama, memakai angka di `src/config/parkour.ts`. Gagal kalau ada atap atau koin yang tidak terjangkau di tingkat bangunannya, kalau rute tidak sesuai kelas bangunan, atau kalau jarak antar atap melanggar aturan. Uji mandirinya mencocokkan hasil bot di Arena Lompat.
+- **Rute naik di setiap bangunan Chapter 1**, dibangun dari data murni `src/world/bab1/StreetData.ts`:
+  | Bangunan | Kelas | Tinggi dinding | Tingkat irama |
+  |---|---|---|---|
+  | 3 rumah | rumah | 3,4 sampai 3,8 m | 0 |
+  | 6 ruko | ruko | 6,65 sampai 7,9 m | 2 (sebagian rutenya sendiri butuh 3) |
+  | Sekolah | ruko | 7,0 m | 2 |
+  | Gedung Barongsai | landmark | 11,9 m | 4, dengan bintang besar di puncak |
+  - Pijakan: tumpukan peti, AC, kanopi pintu, tenda toko, balkon toko, papan nama, patung singa, pilar, teras, dek menara. Pijakan yang bisa diinjak diberi tepi emas.
+  - **48 koin** menunjuk rute, semuanya terbukti terjangkau.
+- **Ruko mini di arena** sekarang butuh tingkat 2, sesuai aturan kelas ruko (sebelumnya bisa tingkat 1 dengan double jump).
+- **Memori saat memantul** turun dari rata-rata 14,2 KB menjadi 5,5 KB per frame. Pemeriksaan memori yang sempat meleset di P1 sekarang punya margin lebar.
+- **Design doc**: bagian Kontrol dan Dunia di `SUPERGLEN_GAME_DESIGN.md` diperbarui dengan ringkasan parkour.
+
+### Yang belum
+- **Tendang dinding (wall kick)**: opsional di P2. Tidak dikerjakan karena subagent sonnet kena batas mingguan sampai 15 November 2026 pukul 07.00 UTC. Agennya berhenti sebelum menyentuh file.
+
+### Perubahan pada jalan Chapter 1 yang perlu diketahui
+- Gedung Barongsai sekarang punya teras datar dan menara dengan dek di puncak, supaya bisa dipanjat. Bentuk atap bertingkat lamanya diganti.
+- Tembok sekolah jadi teras setebal 1,9 m.
+- Pohon dan lampu di deretan ruko sekarang bisa ditembus, supaya tidak jadi pijakan yang memotong rute.
+- Pagar tanaman di gang samping diturunkan jadi 0,6 m.
+- Rumah sedikit lebih dangkal supaya atapnya tidak bisa melompat ke ruko di seberang gang.
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` | Lulus |
+| `npm run check:reach`, juga dengan `--strict` | Lulus, 0 error, 0 peringatan (dijalankan orkestrator) |
+| Rute bangunan (rumah tingkat 0 sampai 1, ruko tingkat 2 dan tidak di 0 sampai 1, landmark tingkat 4 dan tidak di 3) | Lulus 20 dari 20 desktop, 3 dari 3 sentuh (dijalankan orkestrator) |
+| Terbang lebih lembut dan tekan ulang | Lulus 23 dari 23 (dijalankan orkestrator) |
+| Tombol Berubah di layar sentuh | Lulus 19 dari 19 (dijalankan orkestrator) |
+| Smoke test penuh | Belum selesai saat catatan ini ditulis; hasilnya menyusul di commit berikutnya |
+
+Draw call dan segitiga di jalan Chapter 1: paling banyak 68 dan 53,4 ribu, dalam batas 150 dan 60 ribu. Sisa ruang segitiga sekitar 6,6 ribu, jadi dekorasi tambahan di jalan perlu hati-hati. **Fps di perangkat asli belum diukur.**
+
+### Masalah yang diketahui
+- **Ruko tinggi untuk anak**: naik ke ruko butuh lompatan tingkat 2. Anak kemungkinan baru bisa setelah berlatih irama, atau lewat tembok sekolah.
+- **Gerbang landmark ketat**: lompatan ke menara 6,4 m; tingkat 3 mencapai 6,2 m, tingkat 4 mencapai 7,0 m. Bot berhasil, tetapi perlu dicoba di iPhone.
+- Pohon dan lampu di deretan ruko bisa ditembus, dan anak mungkin menyadarinya.
+- Tangkapan layar puncak landmark diambil sebelum perbaikan cahaya atap, jadi mungkin terlihat lebih gelap daripada di game.
+
+### Keputusan yang diambil sendiri
+- Tendang dinding ditunda, bukan dikerjakan oleh model lain, karena opsional dan model sonnet adalah yang ditetapkan untuk kode game.
+- Ruko yang atapnya bersentuhan berbagi tingkat minimum yang sama (2), karena anak bisa berjalan dari satu atap ke atap sebelahnya.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
 - **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
 
 ## Untuk dicoba besok pagi
-Belum tayang: perubahan ada di branch `claude/superglen-setup-a1-9bdih5`. Setelah di-merge ke `main`, buka https://arsenick04.github.io/superglen/?level=test di Safari iPhone (landscape) atau di PC, lalu ketuk bintang untuk jadi Superglen.
-1. **Lompat irama sampai tingkat 3**: tekan lompat tepat saat mendarat, berulang kali. Lihat ikon tambur di kiri atas bertambah dan dengarkan nada tambur naik. Lalu jalan ke utara dan coba Menara Irama dan tiga tambur pantul.
-2. **Naik ke atap rumah**: di Arena Lompat, naik rumah mini lewat peti dan tenda. Di Chapter 1 (buka tanpa `?level=test`), lompat ke genteng rumah dan pastikan tidak tembus.
-3. **Mode mudah**: tahan saja tombol lompat dan biarkan Superglen memantul sendiri sampai tingkat 3. Coba juga terbang: lepas tombol, ia harus langsung jatuh.
+Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/ di Safari iPhone (landscape) atau di PC.
+1. **Terbang**: di Chapter 2 atau `?level=test`, terbang lalu lepas tombol. Superglen harus turun dengan kecepatan sedang. Tekan sekali di udara dan ia langsung terbang lagi.
+2. **Tombol Berubah**: setelah Chapter 1 selesai, ketuk bintang di kanan atas (PC: Q) untuk kembali jadi Glen, lalu ketuk lagi jadi Superglen.
+3. **Naik ke atap di Chapter 1**: ikuti koin emas. Rumah bisa dinaiki dengan lompatan biasa; ruko butuh lompat irama tingkat 2; puncak gedung Barongsai butuh tingkat 4.
