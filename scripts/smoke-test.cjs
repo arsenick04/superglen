@@ -3414,7 +3414,7 @@ const parkourSnap = () => {
     misses: r.misses, autos: r.autos, bounces: r.bounces, normals: r.normals, eta: Number.isFinite(r.landEta) ? r.landEta : 99,
     mantles: r.mantles, mantling: r.mantling, lit: r.lit, drums: r.drumsVisible, writes: r.drumWrites, chain: r.chain, easy: r.easy,
     sounds: r.sounds, audio: r.audio, muted: r.muted, jumps: g.jumps, dj: g.doubleJumps, peak: g.peakFeetY, flying: g.skills.flying,
-    flights: g.skills.flights, x: g.player.x, z: g.player.z, mode: g.mode, stomps: g.stomps, programs: g.debugCounts().programs,
+    flights: g.skills.flights, kicks: r.wallKicks, kchain: r.kickChain, khint: r.kickHint, x: g.player.x, z: g.player.z, mode: g.mode, stomps: g.stomps, programs: g.debugCounts().programs,
   };
 };
 
@@ -4570,6 +4570,288 @@ async function arenaTouchScenario(page, check) {
   await shot(page, 'arena-touch-281');
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// Wall kick (PAKET_P1_PARKOUR.md section 2) and the Gang Tendang kick alley of the Arena Lompat.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Shared checks of the `wallkick` scenarios. `full` adds the desktop-only cases (flight needs a held key). */
+async function wallkickChecks(page, check, d, tag, full) {
+  const report = (label, v) => console.log(`   [wallkick ${tag}] ${label}: ${v}`);
+  const A = await d.load();
+  const K = A.kick;
+  const faceA = K.wallA.x + K.wallA.w / 2 + 0.1; // collider face (the friendly margin is 0.1 m)
+  const faceB = K.wallB.x - K.wallB.w / 2 - 0.1;
+  const walkTo = (x, z) => page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [x, z]);
+  const stopWalk = () => page.evaluate(() => window.__superglen.cancelWalk());
+  const setKick = (on) => page.evaluate((on) => window.__superglen.rhythm.setWallKick(on), on);
+  await setKick(true);
+  report('alley', `walls ${faceA.toFixed(2)} .. ${faceB.toFixed(2)} (gap ${(faceB - faceA).toFixed(2)} m), z ${K.z}`);
+  check(`${tag}: the alley gap is 2.2 m between the colliders and the walls are 9 m high`, Math.abs(faceB - faceA - 2.2) < 0.01 && K.top === 9);
+
+  // ---- 1. one kick: direction, height, hint ----------------------------------------------------------------------------------
+  await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+  await walkTo(K.wallA.x, K.z); // press toward wall A through the normal stick path
+  await d.step(8);
+  await d.tap();
+  for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+  const hintBefore = d.last.khint;
+  const y0 = d.last.y;
+  const x0 = d.last.x;
+  const dj0 = d.last.dj;
+  const lvl0 = d.last.level;
+  await d.tap();
+  const vyKick = d.last.vy;
+  let apex = d.last.y;
+  for (let i = 0; i < 12; i++) {
+    await d.step(1);
+    apex = Math.max(apex, d.last.y);
+  }
+  const xAway = d.last.x - x0;
+  const kicks1 = d.last.kicks;
+  // The second press on the SAME face, a few frames later, is the air jump, not a kick.
+  await d.tap();
+  const secondKick = d.last.kicks - kicks1;
+  const secondDj = d.last.dj - dj0;
+  for (let i = 0; i < 60; i++) {
+    await d.step(1);
+    apex = Math.max(apex, d.last.y);
+  }
+  report('kick', `hint ${hintBefore}, vy ${vyKick.toFixed(2)}, away ${xAway.toFixed(2)} m, apex ${(apex - y0).toFixed(2)}`);
+  check(`${tag}: the hint shows while a kick is possible (airborne, touching the wall)`, hintBefore === true);
+  check(`${tag}: a press against a tall wall in the air kicks: vertical speed positive (launch speed)`, vyKick > 7.5 && kicks1 === 1, `vy ${vyKick.toFixed(2)}, kicks ${kicks1}`);
+  check(`${tag}: the kick pushes away from the wall (x grows away from wall A)`, xAway > 0.3, `${xAway.toFixed(2)} m in 13 frames`);
+  check(`${tag}: a second press on the same face does not kick again: the air jump happens instead (kicks ${secondKick}, air jumps +${secondDj})`, secondKick === 0 && secondDj === 1);
+  check(`${tag}: the kick does not change the rhythm level (not a landing)`, d.last.level === lvl0 || d.last.grounded, `${lvl0} -> ${d.last.level}`);
+  // Clean apex measurement without the air jump on top.
+  {
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    await walkTo(K.wallA.x, K.z);
+    await d.step(8);
+    await d.tap();
+    for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+    const py = d.last.y;
+    await d.tap();
+    let top = d.last.y;
+    for (let i = 0; i < 40; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.y);
+      if (d.last.vy < -1) break;
+    }
+    report('apex', `${(top - py).toFixed(3)} m above the press point`);
+    check(`${tag}: kick apex = 1.4 m (+-0.15) above the press point`, Math.abs(top - py - 1.4) <= 0.15, `${(top - py).toFixed(3)} m`);
+    await stopWalk();
+    await d.step(80);
+  }
+
+  // ---- 2. the alley: a bot zig-zags up with alternating kicks ---------------------------------------------------------------------------
+  const climb = async (kicksOn, frames) => {
+    await setKick(kicksOn);
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    let target = 'A';
+    await walkTo(K.wallA.x, K.z);
+    let djSeen = d.last.dj;
+    let airDj = false;
+    let maxY = 0;
+    let topY = 0;
+    let kicks = 0;
+    let sawGrounded = 0;
+    for (let i = 0; i < frames; i++) {
+      const s = await d.step(1);
+      maxY = Math.max(maxY, s.y);
+      if (s.grounded && s.y > 8.5) {
+        topY = s.y;
+        break;
+      }
+      if (s.grounded) {
+        airDj = false;
+        sawGrounded++;
+        target = 'A';
+        if (sawGrounded % 3 === 1) {
+          await walkTo(K.wallA.x, K.z);
+          await d.tap();
+        }
+        continue;
+      }
+      if (s.khint && s.vy <= 0.5) {
+        const k0 = s.kicks;
+        const at = s.x < K.x ? 'A' : 'B';
+        await d.tap();
+        if (d.last.kicks > k0) {
+          kicks++;
+          target = at === 'A' ? 'B' : 'A';
+          await walkTo(target === 'A' ? K.wallA.x : K.wallB.x, K.z);
+        }
+      } else if (!s.khint && !airDj && s.vy <= 0.4 && s.vy > -1 && s.y > 1) {
+        airDj = true; // the air jump at the top, as a child would
+        await d.tap();
+      }
+      void djSeen;
+    }
+    return { maxY, topY, kicks, frames: d.last.kicks };
+  };
+  const res = await climb(true, 1500);
+  report('climb with kicks', `top ${res.topY.toFixed(2)} m, max ${res.maxY.toFixed(2)} m, ${res.kicks} kicks, chain now ${d.last.kchain}`);
+  check(`${tag}: with wall kicks the bot zig-zags up the Gang Tendang onto a wall top (9 m)`, res.topY > 8.5, `top ${res.topY.toFixed(2)} m, max ${res.maxY.toFixed(2)} m, kicks ${res.kicks}`);
+  await stopWalk();
+  // Walk to the star of the wall it stands on.
+  {
+    const onA = d.last.x < K.x;
+    const sw = onA ? K.wallA : K.wallB;
+    await walkTo(sw.x, K.z);
+    for (let i = 0; i < 160; i++) await d.step(1);
+    const id = onA ? 'reward_kickA' : 'reward_kickB';
+    const got = await page.evaluate((id) => window.__superglen.levelInfo[id] || 0, id);
+    check(`${tag}: the star on top of the wall is collected`, got >= 1, `${id} ${got}`);
+    await stopWalk();
+  }
+  // Same bot with wall kicks off, even at rhythm level 4 + air jump: it cannot get up (plain jumps top out below 7 m).
+  {
+    await setKick(false);
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    let maxY = 0;
+    let top = false;
+    for (let round = 0; round < 3; round++) {
+      await walkTo(K.wallA.x, K.z);
+      await d.rhythmTo(4);
+      let dj = false;
+      for (let i = 0; i < 140; i++) {
+        const s = await d.step(1);
+        maxY = Math.max(maxY, s.y);
+        if (s.grounded && s.y > 8.5) top = true;
+        if (!dj && !s.grounded && s.vy <= 0.4 && s.vy > -1) {
+          dj = true;
+          await d.tap();
+        }
+        if (s.grounded && i > 6) break;
+      }
+    }
+    await stopWalk();
+    report('climb without kicks', `max feet ${maxY.toFixed(2)} m (level 4 + air jump)`);
+    check(`${tag}: with wall kicks off the alley cannot be climbed, even at rhythm level 4 with the air jump (max ${maxY.toFixed(2)} m < 7)`, !top && maxY < 7.0, `max ${maxY.toFixed(2)} m`);
+    await setKick(true);
+  }
+
+  // ---- 3. where it must NOT kick -----------------------------------------------------------------------------------------------------------
+  const bx = 20;
+  const faceX = bx - 1.5;
+  await page.evaluate(([bx]) => {
+    const g = window.__superglen;
+    g.testBox(bx, 1.1, -80, 1.5, 1.1, 1.5, false, true); // low kickable box: top 2.2 m
+    g.testBox(bx, 3, -86, 1.5, 3, 1.5, false, true); // tall kickable box: top 6 m
+    g.testBox(bx, 3, -92, 1.5, 3, 1.5, true, true); // tall bounce drum (also marked kickable: the drum rule must win)
+    g.testBox(bx, 3, -98, 1.5, 3, 1.5); // tall ordinary wall (not kickable)
+  }, [bx]);
+  const boxCase = async (z, mode, toward, when = 'apex') => {
+    await d.stand(faceX - 0.36, 0, z, 0, 4, mode);
+    if (toward) await walkTo(bx, z);
+    await d.step(8);
+    const k0 = d.last.kicks;
+    const dj = d.last.dj;
+    const m0 = d.last.mantles;
+    await d.tap();
+    if (when === 'mid') await d.step(5); // rising along the wall: a ledge in reach is grabbed (the mantle starts, controls lock)
+    else for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+    await d.tap();
+    for (let i = 0; i < 20; i++) await d.step(1);
+    const out = { kicks: d.last.kicks - k0, dj: d.last.dj - dj, mantles: d.last.mantles - m0 };
+    await stopWalk();
+    await d.step(100);
+    return out;
+  };
+  const ctl = await boxCase(-86, 'superglen', true);
+  check(`${tag}: control: the same press against a 6 m box does kick`, ctl.kicks === 1, JSON.stringify(ctl));
+  const low = await boxCase(-80, 'superglen', false);
+  check(`${tag}: no kick against a low box (top 2.2 m is under head + 0.6 m): the air jump happens instead`, low.kicks === 0 && low.dj === 1, JSON.stringify(low));
+  const mant = await boxCase(-80, 'superglen', true, 'mid');
+  check(`${tag}: a ledge within mantle reach is mantled, not kicked (mantle wins)`, mant.kicks === 0 && mant.mantles >= 1, JSON.stringify(mant));
+  const drum = await boxCase(-92, 'superglen', true);
+  check(`${tag}: no kick against a bounce drum (a 6 m tall one, same press as the control)`, drum.kicks === 0 && drum.dj === 1, JSON.stringify(drum));
+  const plain = await boxCase(-98, 'superglen', true);
+  check(`${tag}: an ordinary tall wall (not marked kickable) is never kicked: building and tower heights keep their gates`, plain.kicks === 0 && plain.dj === 1, JSON.stringify(plain));
+  const glen = await boxCase(-86, 'glen', true);
+  check(`${tag}: no kick in Glen mode (simple jumps only)`, glen.kicks === 0 && glen.dj === 0, JSON.stringify(glen));
+
+  // ---- 4. a fresh press after a real flight re-ignites the jets instead of kicking (desktop: needs a held key) ----------------------
+  if (full) {
+    await page.evaluate(() => { window.__superglen.game.setSkills({ fly: true }); window.__superglen.skills.setMaxFlyHeight(6); });
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    await walkTo(K.wallA.x, K.z);
+    await d.step(8);
+    await d.down();
+    await d.step(110);
+    const flying = d.last.flying;
+    await d.up();
+    await d.step(12);
+    const k0 = d.last.kicks;
+    const fl0 = d.last.flights;
+    const hintAfter = d.last.khint;
+    await d.down();
+    await d.step(2);
+    await d.up();
+    report('flight', `flying ${flying}, hint after flight ${hintAfter}, flights +${d.last.flights - fl0}, kicks +${d.last.kicks - k0}`);
+    check(`${tag}: after a real flight a fresh press re-ignites the jets and does not kick (and no hint shows)`, flying && d.last.flights === fl0 + 1 && d.last.kicks === k0 && !hintAfter, `flying ${flying}, flights +${d.last.flights - fl0}, kicks +${d.last.kicks - k0}`);
+    await stopWalk();
+    await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+    await d.step(300);
+  }
+
+  // ---- 5. the picture: kicked off wall A, arriving at wall B (hint there, burst from the kick behind) ----------------------------------
+  await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+  await walkTo(K.wallA.x, K.z);
+  await d.step(8);
+  await d.tap();
+  for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+  await walkTo(K.wallB.x, K.z);
+  await d.tap();
+  let shown = false;
+  for (let i = 0; i < 40 && !shown; i++) {
+    await d.step(1);
+    shown = d.last.khint;
+  }
+  await d.step(1, true);
+  check(`${tag}: after the kick the hint shows again at the OTHER wall`, shown);
+  await shot(page, tag === 'desktop' ? 'wallkick' : 'wallkick-touch');
+  await stopWalk();
+}
+
+async function wallkickDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeArenaDriver(page);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await wallkickChecks(page, check, d, 'desktop', true);
+}
+
+async function wallkickTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  let d = null;
+  const tapBtn = async () => {
+    const jb = await page.evaluate(() => {
+      const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  d = makeArenaDriver(page, tapBtn);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await wallkickChecks(page, check, d, 'touch 844x281', false);
+}
+
 async function bab1RoofScenario(page, check) {
   await sleep(1500);
   await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
@@ -5229,6 +5511,8 @@ async function main() {
 
     results.push(await runScenario(browser, 'arena', { viewport: { width: 1280, height: 720 } }, arenaDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'arena-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, arenaTouchScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'wallkick', { viewport: { width: 1280, height: 720 } }, wallkickDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'wallkick-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, wallkickTouchScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'bab1-roofs', { viewport: { width: 1280, height: 720 } }, bab1RoofScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-routes', { viewport: { width: 1280, height: 720 } }, bab1RoutesScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-routes-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1RoutesTouchScenario, '?fps=0&reset=1'));

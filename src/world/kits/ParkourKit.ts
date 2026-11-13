@@ -1,3 +1,4 @@
+import type RAPIER from '@dimforge/rapier3d-compat';
 import { Parkour } from '../../config/parkour';
 import { Kit, C } from '../bab1/Kit';
 
@@ -46,6 +47,8 @@ export interface BlockOptions {
   capColor?: number;
   /** Draw the bright edge strip (default true). */
   edge?: boolean;
+  /** Called with the block's collider (e.g. to register it as a kickable wall). */
+  onCollider?: (c: RAPIER.Collider) => void;
 }
 
 /** Horizontal unit vector (x, z) a piece looks toward (grille, rail, stripes). */
@@ -75,7 +78,8 @@ export class ParkourKit {
     this.kit.lit.box([o.w, t - capH, o.d], [o.x, bottom + (t - capH) / 2, o.z], o.color);
     this.kit.lit.box([o.w + 0.04, capH, o.d + 0.04], [o.x, o.top - capH / 2, o.z], o.capColor ?? lighten(o.color));
     // Friendly collider: 10 cm wider on every side, same top.
-    this.kit.collider([o.w + 2 * f, t, o.d + 2 * f], [o.x, bottom + t / 2, o.z]);
+    const handle = this.kit.collider([o.w + 2 * f, t, o.d + 2 * f], [o.x, bottom + t / 2, o.z]);
+    o.onCollider?.(handle.collider);
     if (o.edge !== false) this.edge(o.x, o.z, o.w, o.d, o.top);
     const fh: Foothold = { id: o.id, group: o.group, kind: o.kind, x: o.x, z: o.z, w: o.w, d: o.d, top: o.top };
     this.footholds.push(fh);

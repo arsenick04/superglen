@@ -1,6 +1,6 @@
 import { Parkour } from '../../config/parkour';
 import { PlayerConfig } from '../../player/PlayerConfig';
-import { box, cylinder, hipRoof, type Building, type Coin, type Foothold, type Gate, type LevelReachData } from '../kits/ParkourData';
+import { box, cylinder, hipRoof, type Building, type KickAlley, type Coin, type Foothold, type Gate, type LevelReachData } from '../kits/ParkourData';
 
 /**
  * Pure layout data of the Arena Lompat (no three.js): `ArenaLompat.ts` builds it, `scripts/reachability.ts` checks it.
@@ -55,6 +55,11 @@ export const ARENA = {
   drums: { x: 18, z: [-38.5, -41.4, -44.3] as readonly number[] },
   house: { x: -6, z: -84, w: 5, d: 5, wall: 3.4 },
   ruko: { x: 8, z: -90, w: 7, d: 5.5 },
+  /**
+   * Gang Tendang (kick alley), east of the drums: two 2 m thick walls 9 m high along z, `gap` apart (drawn faces; the friendly
+   * colliders are 0.1 m wider on every side, so the real gap is 0.2 m less). Open at the south end. The tops are the platform.
+   */
+  kick: { x: 25, z: -72, len: 6, wall: 2.0, gap: 2.4, top: 9.0 },
 } as const;
 
 export const round2 = (v: number): number => Math.round(v * 100) / 100;
@@ -75,6 +80,7 @@ export interface ArenaLayout {
   drumLedge: Slab;
   floors: (Slab & { n: number })[];
   house: { crateA: Slab; crateB: Slab; awning: Slab; wall: number; roofH: number; roofW: number; roofD: number };
+  kick: { wallA: Slab; wallB: Slab };
   ruko: { crateA: Slab; balcony: Slab; sign: Slab; signThick: number; wall: number; roofH: number; roofW: number; roofD: number };
 }
 
@@ -138,7 +144,13 @@ function computeLayout(): ArenaLayout {
     roofW: R.w + 0.6,
     roofD: R.d + 0.6,
   };
-  return { poles, drums, drumLedge, floors, house, ruko };
+  const Kk = ARENA.kick;
+  const off = Kk.gap / 2 + Kk.wall / 2;
+  const kick = {
+    wallA: { id: 'kickWallA', x: Kk.x - off, z: Kk.z, top: Kk.top, w: Kk.wall, d: Kk.len },
+    wallB: { id: 'kickWallB', x: Kk.x + off, z: Kk.z, top: Kk.top, w: Kk.wall, d: Kk.len },
+  };
+  return { poles, drums, drumLedge, floors, house, ruko, kick };
 }
 
 export const ARENA_LAYOUT: ArenaLayout = computeLayout();
@@ -147,6 +159,9 @@ export const ARENA_LAYOUT: ArenaLayout = computeLayout();
 export const ARENA_REWARDS = {
   drumLedge: { x: ARENA_LAYOUT.drumLedge.x, y: ARENA_LAYOUT.drumLedge.top, z: ARENA_LAYOUT.drumLedge.z, size: 0.45 },
   tower: { x: ARENA.tower.x, y: ARENA_LAYOUT.floors[4].top, z: ARENA_LAYOUT.floors[4].z, size: 1.1 },
+  // One star on each wall top, so the zig-zag may end on either side.
+  kickA: { x: ARENA_LAYOUT.kick.wallA.x, y: ARENA_LAYOUT.kick.wallA.top, z: ARENA.kick.z, size: 0.6 },
+  kickB: { x: ARENA_LAYOUT.kick.wallB.x, y: ARENA_LAYOUT.kick.wallB.top, z: ARENA.kick.z, size: 0.6 },
   house: { x: ARENA.house.x, y: ARENA.house.wall + ARENA_LAYOUT.house.roofH * 0.92, z: ARENA.house.z, size: 0.4 },
   ruko: { x: ARENA.ruko.x, y: ARENA_LAYOUT.ruko.wall + ARENA_LAYOUT.ruko.roofH * 0.92, z: ARENA.ruko.z, size: 0.45 },
 };
@@ -162,6 +177,8 @@ function computeReachData(): LevelReachData {
   };
   slab(A.drumLedge, 'pier', { group: 'drums' });
   for (const f of A.floors) slab(f, 'pier', { group: 'tower' });
+  slab(A.kick.wallA, 'pier', { group: 'kick' });
+  slab(A.kick.wallB, 'pier', { group: 'kick' });
   slab(A.house.crateA, 'crate', { building: 'house' });
   slab(A.house.crateB, 'crate', { building: 'house' });
   slab(A.house.awning, 'awning', { building: 'house', thickness: 0.25 });
@@ -180,13 +197,17 @@ function computeReachData(): LevelReachData {
     { id: 'starHouse', pos: [R.house.x, R.house.y, R.house.z], on: 'houseRoof', level: 1 },
     { id: 'starRuko', pos: [R.ruko.x, R.ruko.y, R.ruko.z], on: 'rukoRoof', level: 3 },
     { id: 'starDrumLedge', pos: [R.drumLedge.x, R.drumLedge.y, R.drumLedge.z], on: 'drumLedge', level: 3 },
+    { id: 'starKickA', pos: [R.kickA.x, R.kickA.y, R.kickA.z], on: 'kickWallA', level: 4 },
+    { id: 'starKickB', pos: [R.kickB.x, R.kickB.y, R.kickB.z], on: 'kickWallB', level: 4 },
     { id: 'starTower', pos: [R.tower.x, R.tower.y, R.tower.z], on: 'floor4', level: 4 },
   ];
   const gates: Gate[] = [
     ...A.floors.map((f) => ({ foothold: f.id, level: f.n, notBelowLevel: f.n })),
     { foothold: 'drumLedge', level: 3, notBelowLevel: 3 },
   ];
-  return { id: 'arena', starts: ['ground'], footholds, buildings, coins, gates };
+  // The real gap between the two collider faces is the drawn gap minus the friendly margin on both walls.
+  const kickAlleys: KickAlley[] = [{ id: 'gangTendang', tops: [A.kick.wallA.id, A.kick.wallB.id], gap: ARENA.kick.gap - 2 * Parkour.world.friendly, wallTop: ARENA.kick.top }];
+  return { id: 'arena', starts: ['ground'], footholds, buildings, coins, gates, kickAlleys };
 }
 
 export const ARENA_REACH: LevelReachData = computeReachData();

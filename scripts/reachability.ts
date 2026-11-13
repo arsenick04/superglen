@@ -23,12 +23,18 @@
  *   matter as the way a child GETS the level; the flag is printed, not used for extra reach.
  * Calibrated by the self-tests below (Menara Irama, drums, mini house, mini ruko) which run first.
  *
+ * WALL KICKS (Gang Tendang, `kickAlleys` in the level data): the tops of two close tall walls. They are reachable iff kicks are
+ * enabled: the normal model must say "no route at any level, with the air jump" (else the alley is not a kick puzzle), and the
+ * kick model must reach them. Kick model: start with the weakest ground jump (level 0), then each kick adds `wallKick.apex`
+ * minus the fall during the crossing time beyond the kick's rise time; a kick needs the wall to reach `minWallAboveHead` above the
+ * head; at most `maxChain` kicks; the last step onto the wall top is the mantle. Printed as a separate section.
+ *
  * Exit code: 0 = all good (warnings allowed), 1 = at least one error or a failed self-test. `--strict` turns waived
  * findings and tight jumps into errors. `--quiet` prints only problems.
  */
 import { Parkour, launchSpeed } from '../src/config/parkour';
 import { PlayerConfig, ModeTunings } from '../src/player/PlayerConfig';
-import { topOf, type Foothold, type LevelReachData } from '../src/world/kits/ParkourData';
+import { topOf, type Foothold, type KickAlley, type LevelReachData } from '../src/world/kits/ParkourData';
 import { ARENA_REACH } from '../src/world/arena/ArenaData';
 import { STREET_REACH } from '../src/world/bab1/StreetData';
 
@@ -266,6 +272,9 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
     }
   }
 
+  const kickTops = new Set((data.kickAlleys ?? []).flatMap((a) => a.tops));
+  for (const a of data.kickAlleys ?? []) checkAlley(a, byId, A, err);
+
   // Coins / rewards.
   for (const c of data.coins) {
     let onId = c.on;
@@ -295,6 +304,7 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
     const hi = f.peak ?? topOf(f);
     if (c.pos[1] > hi + (Parkour.levels[lv].apex + Parkour.doubleJumpApex)) err(`koin "${c.id}" terlalu tinggi di atas "${f.id}" / coin too high above its foothold: ${(c.pos[1] - hi).toFixed(2)} m`);
     if (c.pos[1] < topOf(f) - 0.3) err(`koin "${c.id}" tertanam di bawah "${f.id}" / coin is below its foothold top`);
+    if (kickTops.has(f.id)) continue; // checked by the kick model (checkAlley)
     const m = minLevel(A.air, f.id);
     if (m < 0 || m > lv) err(`koin "${c.id}" di "${f.id}": tidak terjangkau di tingkat ${lv} (terendah ${m < 0 ? 'tidak ada' : m}) / not reachable at level ${lv}`);
     else tightWarn(`coin ${c.id}`, lv, A.air[lv], f.id);
@@ -343,6 +353,44 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
     }
   }
   if (!QUIET) printTable(data, A, rows);
+}
+
+/** Kick alleys: reachable with wall kicks only. See the WALL KICKS paragraph at the top. */
+function checkAlley(a: KickAlley, byId: Map<string, Foothold>, A: Analysis, err: (m: string) => void): void {
+  const W = Parkour.wallKick;
+  const wallKickOn = W.enabled;
+  // Crossing from one wall to the other: capsule surface to surface = gap - 2 * (radius + skin).
+  const travel = Math.max(0, a.gap - 2 * (PlayerConfig.radius + PlayerConfig.skinOffset));
+  const tCross = travel / W.pushSpeed;
+  const tRise = tUp(W.apex);
+  const drop = tCross > tRise ? 0.5 * Parkour.gravityUp * Parkour.fallMultiplier * (tCross - tRise) ** 2 : 0;
+  const gain = W.apex - drop;
+  if (travel > W.pushSpeed * (tRise + tFall(W.apex * 0.5)) * (1 - R.safety)) err(`gang tendang "${a.id}": celah ${a.gap.toFixed(2)} m terlalu lebar untuk tendangan / alley gap too wide for one kick (${travel.toFixed(2)} m to cross)`);
+  if (gain < W.apex * 0.5) err(`gang tendang "${a.id}": tiap tendangan hanya naik ${gain.toFixed(2)} m / each kick gains too little height`);
+  // Feet height reached after n kicks; a kick needs the wall to reach minWallAboveHead above the head.
+  const maxPressFeet = a.wallTop - HEAD - W.minWallAboveHead;
+  const heights: number[] = [Parkour.levels[0].apex];
+  for (let n = 1; n <= W.maxChain; n++) {
+    const f = heights[n - 1];
+    if (f > maxPressFeet + R.eps) break;
+    heights.push(f + gain);
+  }
+  const best = Math.max(...heights);
+  const noKickMax = Parkour.levels[MAX].apex + Parkour.doubleJumpApex + MANTLE_UP;
+  for (const id of a.tops) {
+    const f = byId.get(id);
+    if (!f) {
+      err(`gang tendang "${a.id}": pijakan "${id}" tidak ada / unknown top foothold`);
+      continue;
+    }
+    const top = topOf(f);
+    const plain = minLevel(A.air, id);
+    const kicksNeeded = heights.findIndex((h) => top <= h + MANTLE_UP - R.eps);
+    const withKick = wallKickOn && kicksNeeded >= 0;
+    if (plain >= 0) err(`gang tendang "${a.id}": "${id}" bisa dicapai TANPA tendangan di tingkat ${plain} / reachable without wall kicks (it must not be)`);
+    if (!withKick) err(`gang tendang "${a.id}": "${id}" (${top.toFixed(2)} m) tidak terjangkau dengan tendangan dinding (maks ${(best + MANTLE_UP).toFixed(2)} m, ${W.maxChain} tendangan) / not reachable with wall kicks`);
+    if (!QUIET) console.log(`  kick alley ${a.id}/${id}: top ${top.toFixed(2)} m, tanpa tendangan: x (maks ${noKickMax.toFixed(2)} m, tingkat 4 + lompat ganda + naik), dengan tendangan: ${withKick ? `v (${kicksNeeded} tendangan dari tingkat 0, +${gain.toFixed(2)} m tiap tendangan)` : 'x'}`);
+  }
 }
 
 function printTable(data: LevelReachData, A: Analysis, rows: { name: string; id: string; level: number; kind: string }[]): void {

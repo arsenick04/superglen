@@ -178,6 +178,48 @@ export const Parkour = {
     cooldown: 0.3,
   },
 
+  // ---- Wall kick ("tendang dinding"): Superglen only, in the air, pressed against a tall wall ---------------------------------
+  wallKick: {
+    enabled: true,
+    /**
+     * false = only walls registered as kickable (Rhythm.registerKick, like bounce drums) can be kicked off, i.e. the Gang Tendang.
+     * true = every tall wall. Leave it false: a kick adds 1.4 m, which would break the building / tower height gates of the
+     * Arena Lompat and Chapter 1 (and the reach model of `npm run check:reach`).
+     */
+    anyWall: false,
+    /** Height gained above the point where the jump is pressed (m). Fixed apex, like the air jump. */
+    apex: 1.4,
+    /** Speed pushed away from the wall along its normal (m/s). */
+    pushSpeed: 4,
+    /** A wall counts when it is closer than this to the capsule surface (m) and the player moves/presses toward it. */
+    probeDistance: 0.3,
+    /** Closer than this (m) the wall is touched: no movement toward it is needed. */
+    touchDistance: 0.12,
+    /** Wall normal must be within this many degrees of horizontal (near vertical wall). */
+    angleTolDeg: 25,
+    /** A contact still counts this long after the wall was last seen (s). */
+    contactMemory: 0.15,
+    /** Dot of the heading with the inverse wall normal needed for "moving toward" a wall that is not touched yet. */
+    minToward: 0.3,
+    /** Most kicks in one airtime (reset by landing or a mantle). */
+    maxChain: 6,
+    /** The wall must extend at least this far above the top of the head at the contact point (m): no kick on low boxes or ledges. */
+    minWallAboveHead: 0.6,
+    /** Not closer than this above the ground (m): a press that low is a ground jump / buffered rhythm press. */
+    minAirHeight: 0.4,
+    /** Look for a wall on every n-th fixed step while airborne (throttle, like the mantle). */
+    probeEvery: 2,
+    /** After a kick the air steering is weak for a while (no stick = no braking at all) so the push is not cancelled at once: scale and time (s). */
+    steerScale: 0.15,
+    steerLock: 0.4,
+    /** Kick feedback: sparkle count, drum note level (0..4) and the squash of the body. */
+    burst: 14,
+    drumLevel: 1,
+    squash: -0.18,
+    /** Hint icon (curved arrow) at the contact point: size (m), pulse (Hz), colour, push out of the wall (m). */
+    hint: { size: 0.7, pulseHz: 4, color: 0xffe27a, offset: 0.14, lift: 0.25 },
+  },
+
   // ---- World kit: footholds, roofs, bounce drums (src/world/kits, src/world/arena) ---------------------------------------
   world: {
     /** Colliders of usable footholds are wider than what is drawn by this much on every side (m): "almost" still counts. */
@@ -236,6 +278,7 @@ export const MAX_LEVEL = Parkour.levels.length - 1;
 export const LaunchSpeeds = {
   glen: launchSpeed(Parkour.glenApex),
   double: launchSpeed(Parkour.doubleJumpApex),
+  kick: launchSpeed(Parkour.wallKick.apex),
   levels: Parkour.levels.map((l) => launchSpeed(l.apex)) as readonly number[],
 };
 

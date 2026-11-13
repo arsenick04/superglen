@@ -64,6 +64,7 @@ export class ArenaLompat {
     this.buildTower();
     this.buildHouse();
     this.buildRuko();
+    this.buildKickAlley();
     this.kit.build(ctx.root);
     this.decals = this.buildTowerMarkers();
     ctx.onDispose(() => {
@@ -74,7 +75,7 @@ export class ArenaLompat {
     const off = ctx.player.rhythm.on('bounce', () => this.onBounce());
     ctx.onDispose(off);
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
-      ctx.game.debugInfo.arena = JSON.stringify({ footholds: this.pk.footholds, routes: this.routes, drumTop: ARENA_DRUM_TOP, markers: [1, 2, 3, 4, 5], buildings: this.buildings, rises: [0, 1, 2, 3, 4].map(towerRise) });
+      ctx.game.debugInfo.arena = JSON.stringify({ footholds: this.pk.footholds, routes: this.routes, drumTop: ARENA_DRUM_TOP, markers: [1, 2, 3, 4, 5], kick: { ...ARENA.kick, wallA: A.kick.wallA, wallB: A.kick.wallB }, buildings: this.buildings, rises: [0, 1, 2, 3, 4].map(towerRise) });
       ctx.game.debugInfo.roofs = this.roofs.json();
     }
   }
@@ -272,6 +273,35 @@ export class ArenaLompat {
     for (const f of [crateA, bal, sign]) this.trail(f.x, f.top, f.z);
     this.trail(R.x, wall + rh * 0.9, R.z);
     this.addReward('ruko', ARENA_REWARDS.ruko.x, ARENA_REWARDS.ruko.y, ARENA_REWARDS.ruko.z, ARENA_REWARDS.ruko.size);
+  }
+
+  // ---- Gang Tendang (kick alley): two tall walls, climbable only by wall kicks ---------------------------------------------------
+
+  /**
+   * Two 9 m walls 2.4 m apart (drawn), open at the south end. The kickable inner faces carry bright vertical stripes (unlit,
+   * so they read in shade); the wall tops are the platform, each has a star. Plain jumps top out at 7.0 m
+   * (level 4 + air jump + mantle), so only the kicks get up there (checked by `npm run check:reach`).
+   */
+  private buildKickAlley(): void {
+    const K = ARENA.kick;
+    const { wallA, wallB } = A.kick;
+    this.pk.block({ id: wallA.id, group: 'kick', kind: 'pier', x: wallA.x, z: wallA.z, w: wallA.w, d: wallA.d, top: wallA.top, color: C.LILAC, onCollider: (c) => this.ctx.player.rhythm.registerKick(c) });
+    this.pk.block({ id: wallB.id, group: 'kick', kind: 'pier', x: wallB.x, z: wallB.z, w: wallB.w, d: wallB.d, top: wallB.top, color: C.PINK, onCollider: (c) => this.ctx.player.rhythm.registerKick(c) });
+    const step = 0.8;
+    const n = Math.floor(K.len / step);
+    const z0 = K.z - ((n - 1) * step) / 2;
+    const inA = wallA.x + wallA.w / 2 + 0.03;
+    const inB = wallB.x - wallB.w / 2 - 0.03;
+    const h = K.top - 0.6;
+    for (let i = 0; i < n; i++) {
+      const color = i % 2 === 0 ? 0xffd23f : 0xffffff;
+      this.kit.glow.box([0.05, h, 0.36], [inA, 0.3 + h / 2, z0 + i * step], color);
+      this.kit.glow.box([0.05, h, 0.36], [inB, 0.3 + h / 2, z0 + i * step], color);
+    }
+    this.trail(wallA.x, wallA.top, wallA.z);
+    this.trail(wallB.x, wallB.top, wallB.z);
+    this.addReward('kickA', ARENA_REWARDS.kickA.x, ARENA_REWARDS.kickA.y, ARENA_REWARDS.kickA.z, ARENA_REWARDS.kickA.size);
+    this.addReward('kickB', ARENA_REWARDS.kickB.x, ARENA_REWARDS.kickB.y, ARENA_REWARDS.kickB.z, ARENA_REWARDS.kickB.size);
   }
 
   /** A plain solid building body with a small base trim. */

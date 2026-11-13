@@ -73,6 +73,19 @@ export interface Gate {
   notBelowLevel?: number;
 }
 
+/**
+ * A kick alley ("Gang Tendang"): two close parallel tall walls. Their tops are reachable ONLY with wall kicks (the checker
+ * proves both halves: no route at any rhythm level without kicks, a route with kicks). `gap` = distance between the two
+ * wall faces (collider to collider, m), `wallTop` = height of the wall tops (m).
+ */
+export interface KickAlley {
+  id: string;
+  /** Ids of the footholds on top of the walls. */
+  tops: string[];
+  gap: number;
+  wallTop: number;
+}
+
 export interface LevelReachData {
   id: string;
   /** Where the player may start / respawn: 'ground' or any foothold id. */
@@ -83,6 +96,8 @@ export interface LevelReachData {
   gates: Gate[];
   /** Roof-to-roof neighbours of a green route (rule 4): checked for gap and height difference. */
   greenLinks?: [string, string][];
+  /** Kick alleys (see KickAlley): their tops are exempt from the plain-jump reach rules and checked by the kick model. */
+  kickAlleys?: KickAlley[];
 }
 
 /** Top height of a foothold (the entry height for a sloped roof). */
