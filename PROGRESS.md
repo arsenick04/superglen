@@ -533,14 +533,70 @@ Semua 100 soal dites muat tanpa meluap di layar 844x281 dan 667x375. **Fps di pe
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Paket malam B4: suara (13 November 2026): selesai, musik menunggu file
+
+Orkestrator (Fable) hanya mendelegasikan dan meninjau. Pipeline dan aset oleh `asset-pipeline` (sonnet), kode game oleh `gameplay-dev` (sonnet), pemeriksaan oleh `qa-tester` (haiku).
+
+### Yang selesai
+- **174 klip suara ElevenLabs** di `public/audio/`: semua dialog Chapter 1 dan 2, kalimat Nino untuk kuis, 100 soal, kata Inggris dan Mandarin. Total 3,6 MB, semuanya disamakan kerasnya.
+- **Suara sementara** (dipilih otomatis, tercatat di `audio/voices.json`):
+  | Peran | Suara |
+  |---|---|
+  | Glen | Raihan (pria muda; tidak ada suara anak di akun) |
+  | Nino | Den |
+  | Mandarin | Sage, penutur asli dari Voice Library (dipilih pemilik proyek) |
+- **7 suara hewan** untuk kuis: kucing, ayam, kuda, singa dari rekaman domain publik Wikimedia Commons; anjing, sapi, bebek dari ElevenLabs Sound Effects. Sumber dan lisensi di `CREDITS.md`.
+- **Suara di dalam game** (`src/audio/AudioManager.ts`):
+  - Dialog dibacakan, dan balon menunggu sampai klip selesai. Ketukan tetap melewatinya.
+  - Kuis membacakan soal, lalu kata asing atau suara hewan. Tombol pengeras suara mengulang.
+  - Game tidak pernah memanggil ElevenLabs saat dimainkan. Semua suara adalah file.
+  - Kalau file suatu kalimat belum ada, teksnya tampil seperti biasa dan game tetap jalan.
+- **Jalur musik**: berulang per adegan, mulai dari ketukan pertama, mengecil saat ada suara, crossfade antar adegan. Musik diputar streaming, tidak dimuat utuh ke memori. **Belum ada lagu**: file soundtrack belum diunggah, jadi game masih tanpa musik.
+- **Halaman orang tua**: saklar Musik di samping saklar Suara.
+- **Script**: `npm run audio` (dialog dan kuis), `npm run audio:voices` (pilih suara), `npm run audio:sfx` (3 suara hewan). Semua melewati file yang sudah ada. Panduan di `audio/README.md`.
+
+### Cara mengganti suara nanti
+- **Rekaman sendiri**: taruh `public/audio/<id>.mp3` dengan id yang sama dan tandai `"source": "recorded"`. Script tidak akan menimpanya.
+- **Suara Glen baru**: ganti `voice_id` Glen di `audio/voices.json`, lalu `npm run audio`. Hanya kalimat Glen yang dibuat ulang.
+- **Soundtrack**: unggah ke `public/audio/music/` dan isi `public/audio/music/tracks.json` (adegan: `awal`, `jelajah`, `berubah`, `latihan`, `pertarungan`).
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build` | Lulus |
+| Skenario suara (dijalankan orkestrator) | Lulus 84 dari 84 |
+| Pemeriksaan memori (dijalankan orkestrator, 2 kali) | Lulus, sekitar 3 KB per frame dari batas 16 KB |
+| Smoke test penuh oleh `qa-tester` | Belum selesai saat catatan ini ditulis; hasilnya menyusul di commit berikutnya |
+
+Pemeriksaan memori yang sempat tidak stabil di P1 dan B4 sudah diperbaiki: pengukurannya sekarang memakai pemanasan dan median tiga jendela. Batasnya tidak dilonggarkan. Agen menjalankannya 8 kali berturut-turut, semuanya lulus.
+
+### Kredit ElevenLabs
+Akun: 6.374 dari 40.000 karakter terpakai bulan ini (sebelum B4: 4.657). Kenaikan selama B4 sekitar 1.700 menurut akun, untuk sekitar 3.900 karakter teks dan 6 efek suara. Selisihnya tidak bisa dijelaskan dari sini; angka akun yang dipegang. Higgsfield: 0.
+
+### Masalah yang diketahui
+- **Mutu suara belum didengar orkestrator maupun agen.** Semua pilihan berdasarkan data dan bentuk gelombang. Pemilik proyek perlu mendengarkan.
+- Suara Glen kemungkinan terdengar terlalu dewasa. Pemilik proyek akan menggantinya nanti.
+- Nada 18 kata Mandarin belum dicek penutur asli.
+- Suara anjing kemungkinan berisi tiga gonggongan, bukan dua, dan awalnya agak mendadak.
+- Lagu MP3 yang diulang mungkin punya jeda kecil di sambungannya.
+- Kode B4 ada di commit bertanda "WIP B4": agen terhenti oleh batas pemakaian setelah pekerjaannya tersimpan di sana.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Apakah suara mulai setelah ketukan pertama, dan apakah berbunyi saat tombol senyap aktif.
+- Apakah musik lanjut setelah aplikasi ditinggalkan lalu dibuka lagi.
+- Jeda sebelum kalimat pertama terdengar.
+
+### Catatan lingkungan
+- Sesi pindah ke lingkungan cloud "superglen" yang mengizinkan `commons.wikimedia.org` dan `upload.wikimedia.org` (untuk suara hewan). Kunci ElevenLabs tersimpan di lingkungan itu, tidak di repo.
+
 ## Pengingat untuk pemilik proyek
 
-- **Soundtrack Superglen (paket B4, paket berikutnya):** unggah file musik Anda ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus), lalu sebutkan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan.
-- **ID suara ElevenLabs (paket B4):** isi `voice_id` di `audio/voices.json` untuk Glen, Nino, Aara, tikus, warga, dan Mandarin, dari Voice Library di dashboard ElevenLabs.
-- **Nada Mandarin:** minta penutur asli memeriksa 18 kata di bagian B3 di atas.
+- **Soundtrack Superglen:** jalur musik sudah siap, tinggal filenya. Unggah ke `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB), lalu sebutkan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, latihan, pertarungan.
+- **Suara Glen:** masih suara sementara. Pilih suara lain atau rekam sendiri kalau sudah sempat.
+- **Nada Mandarin:** minta penutur asli memeriksa 18 kata di bagian B3.
 
 ## Untuk dicoba besok pagi
-Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/ di Safari iPhone (landscape) atau di PC.
-1. **Tantangan Pintar di lab**: setelah Chapter 1, dekati layar biru Nino di lab dan tekan tombol bicara. Biarkan anak menjawab 3 soal sendiri dan lihat koin serta stikernya.
-2. **Chapter 2 dengan kunci kuis**: mulai Chapter 2 (`?reset=1` untuk mengulang). Tiap skill sekarang terbuka setelah 3 soal. Perhatikan soal mana yang terlalu mudah atau terlalu sulit.
-3. **Halaman orang tua**: di layar awal, tekan lama logo 3 detik. Lihat statistik per kategori dan coba saklar "lompat mudah".
+Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/?reset=1 di Safari iPhone (landscape) atau di PC. Pastikan tombol senyap iPhone mati dan volume naik.
+1. **Dengarkan Chapter 1**: Glen dan Nino sekarang berbicara. Perhatikan apakah suaranya cocok dan apakah "Barongsai", "Superglen", dan "Nino" diucapkan benar.
+2. **Tantangan Pintar dengan suara**: jawab beberapa soal. Nino membacakan soalnya; coba soal tebak hewan dari suara dan soal Mandarin, dan tombol pengeras suara untuk mengulang.
+3. **Halaman orang tua**: tekan lama logo 3 detik, coba saklar Suara dan Musik.
