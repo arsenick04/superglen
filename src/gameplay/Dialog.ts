@@ -31,6 +31,8 @@ export interface LineInfo {
 }
 
 export type LineStartListener = (id: string | undefined, speaker: string, text: string) => void;
+/** A line was advanced (tap, auto, level unload): the audio manager stops its clip. */
+export type LineEndListener = () => void;
 
 /** Auto-advance time: long enough to listen to the voice, at least 2.2 s. */
 export function defaultLineDuration(text: string): number {
@@ -63,6 +65,7 @@ export class Dialog {
   private tapPending = false;
   private locked = false;
   private readonly listeners: LineStartListener[] = [];
+  private readonly endListeners: LineEndListener[] = [];
   /** True during the fixed step in which an `interact` press was used by the dialog (Interactions must skip it). */
   pressConsumed = false;
 
@@ -82,6 +85,21 @@ export class Dialog {
   /** The audio manager hooks in here: play public/audio/{id}.mp3 and, if it wants, call setLineDuration. */
   onLineStart(cb: LineStartListener): void {
     this.listeners.push(cb);
+  }
+
+  /** The audio manager hooks in here too: stop the clip when a line ends (advanced by tap or by time, or cancelled). */
+  onLineEnd(cb: LineEndListener): void {
+    this.endListeners.push(cb);
+  }
+
+  /** Ids of every table line that starts with `prefix` (to preload a chapter's voice files). */
+  idsWithPrefix(prefix: string): string[] {
+    return [...this.table.keys()].filter((k) => k.startsWith(prefix));
+  }
+
+  /** Seconds the current line has been showing (game time). */
+  get lineElapsed(): number {
+    return this.current ? this.elapsed : 0;
   }
 
   /** True while a line is showing or queued (and during the short gap between two lines). */
@@ -134,6 +152,7 @@ export class Dialog {
 
   /** Drop everything on screen and in the queue; pending promises never settle. Used on level unload. */
   cancelAll(): void {
+    if (this.current) this.notifyEnd();
     this.queue.length = 0;
     this.current = null;
     this.idle = 0;
@@ -215,9 +234,20 @@ export class Dialog {
     }
   }
 
+  private notifyEnd(): void {
+    for (const l of this.endListeners) {
+      try {
+        l();
+      } catch (err) {
+        console.error('Dialog onLineEnd listener failed:', err);
+      }
+    }
+  }
+
   private finishCurrent(): void {
     const item = this.current;
     this.current = null;
+    this.notifyEnd();
     if (this.queue.length > 0) {
       this.start(this.queue.shift() as Item);
     } else {

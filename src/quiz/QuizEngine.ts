@@ -1,5 +1,7 @@
 import type { SaveStore, QuizCategorySave } from '../core/Save';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { AudioManager } from '../audio/AudioManager';
+import { QuizLines } from './lines';
 import { QuizPanel } from '../ui/QuizPanel';
 import { loadBank, type QuizBank } from './QuizBank';
 import {
@@ -56,6 +58,8 @@ export function makeRng(seed: number): () => number {
 export interface QuizDeps {
   save: SaveStore;
   synth: DrumSynth;
+  /** Voice files: the quiz preloads the prompts of a challenge, and the panel asks whether an animal sound can be heard. */
+  audio: AudioManager;
   /** The #ui overlay root. */
   ui: HTMLElement;
   /** The overlay opened / closed (the game locks the controls and lets go of the mouse). */
@@ -94,6 +98,7 @@ export class QuizEngine {
       bank: this.bank,
       save: deps.save,
       speak: (id, text, kind) => this.announce(id, text, kind),
+      soundNeedsWord: (id) => !deps.audio.hasFile(id) || deps.audio.silent,
       onOpenChange: deps.onOpenChange,
       album: () => this.albumPages(),
     });
@@ -113,7 +118,7 @@ export class QuizEngine {
     this.listeners.push(cb);
   }
 
-  private announce(audioId: string, text: string, kind: 'prompt' | 'word' | 'nino'): void {
+  private announce(audioId: string, text: string, kind: 'prompt' | 'word' | 'nino' | 'sound'): void {
     this.spoken.push(audioId);
     if (this.spoken.length > 200) this.spoken.shift();
     for (const l of this.listeners) {
@@ -171,9 +176,12 @@ export class QuizEngine {
     }
     const taken = new Set<string>();
     this.panel.openChallenge(reason, reason === 'terminal');
+    // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
+    this.deps.audio.preload(Object.values(QuizLines).map((l) => l.id));
     for (let i = 0; i < count; i++) {
       const q = this.choose(cats[i], taken);
       taken.add(q.id);
+      this.deps.audio.preload(this.audioIds(q));
       const prep = this.prepare(q);
       const out = await this.panel.ask(prep, i, count, (wrong) => {
         const rec = this.record(q, wrong);
@@ -226,6 +234,15 @@ export class QuizEngine {
     tiers.push(pool);
     for (const t of tiers) if (t.length > 0) return t[Math.floor(this.rng() * t.length)];
     throw new Error(`Quiz: no questions for ${cat}`);
+  }
+
+  /** Every voice / sound file a question can play. */
+  audioIds(q: Question): string[] {
+    const d = q.display;
+    const ids = [q.audio_id];
+    if (d.kind === 'speak') ids.push(d.speak_audio_id);
+    if (d.kind === 'sound') ids.push(d.sound_id);
+    return ids;
   }
 
   /** Shuffle the on-screen order of the three choices (the answer is tracked by position). */

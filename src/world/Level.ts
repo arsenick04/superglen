@@ -17,6 +17,7 @@ import type { BillboardRings } from '../fx/BillboardRings';
 import type { DizzyStars } from '../fx/DizzyStars';
 import type { Sparkles } from './bab1/Fx';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { AudioManager } from '../audio/AudioManager';
 import type { QuizEngine } from '../quiz/QuizEngine';
 
 /**
@@ -107,6 +108,12 @@ export interface LevelContext {
   readonly game: LevelGame;
   /** The drum / cheer / boing synthesizer (no files; silent until the first tap or when muted). */
   readonly synth: DrumSynth;
+  /**
+   * Voice / sfx / music files. `ctx.audio.music.setScene('jelajah')` picks the looping music (it starts with the first tap and
+   * crossfades); `ctx.audio.preload(ids)` loads the chapter's voice lines in the background.
+   * Everything is silent and harmless when the files do not exist.
+   */
+  readonly audio: AudioManager;
   /** Tantangan Pintar: `await ctx.quiz.run({ category, reason })` shows 3 questions over the game (controls locked meanwhile). */
   readonly quiz: QuizEngine;
   /** Register a cleanup that runs when the level unloads (after Level.dispose, in reverse order). */

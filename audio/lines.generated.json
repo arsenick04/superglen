@@ -1,0 +1,1394 @@
+[
+  {
+    "id": "bab1_glen_pulang",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hore, pulang sekolah!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_lompat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo, kita lompat!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_gedung",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_pagar",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada celah di pagar. Aku bisa masuk!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_gelap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Gelap, ya. Nyalakan senter dulu.",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_panel",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Apa ini? Ada panel yang menyala.",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_dinding",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wow, dindingnya terbuka!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_lab",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, lab rahasia!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_tombol",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada tombol besar. Tekan, ah!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_halo",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sistem aktif. Halo.",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_siapa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kamu siapa?",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_terpilih",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku Nino. Kamu terpilih karena hatimu, Glen.",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_kostum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini kostum Barongsai Super. Silakan pakai.",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_superglen",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku jadi Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_semua_nyala",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ups, semua tombolnya menyala!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_glen_tertawa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hahaha, geli!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_lompat_barongsai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu bisa Lompat Barongsai. Tekan lompat dua kali!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab1_nino_besok",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Besok pagi kita latihan, ya!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab2_nino_pagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Superglen! Ayo latihan.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_terbang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tahan tombol lompat untuk terbang.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_glen_aduh",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aduh! Kepala kena atap!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_pelan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hehe, pelan-pelan saja.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_cincin",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Terbang lewat lima cincin cahaya.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_cincin_bagus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bagus! Terus!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_laser",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang laser. Kena lima sasaran, ya.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_tenang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tenang dulu, baru bidik.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_laser_bagus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kena! Bagus!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_perisai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku lempar bola karet. Pakai perisai!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_tangkis",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, kena perisai!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_coba_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hampir! Coba lagi.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_bekal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Istirahat dulu. Ayo makan bekal.",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_glen_enak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nyam, enak!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_nino_alarm",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm! Ada masalah di pasar!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "bab2_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Superglen siap!",
+    "source": "audio/dialog.json",
+    "category": "bab2"
+  },
+  {
+    "id": "quiz_nino_kunci",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kunci ini butuh jawaban pintar!",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_hampir",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hampir! Coba lagi.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_tinggal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini dia! Ketuk yang ini ya.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_selesai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tantangan selesai! Ini koin dan stikermu.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_kepingan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Wah, kamu dapat kepingan memori ilmuwan!",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_pilih",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mau tantangan apa? Pilih satu ya.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_album",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini album stikermu!",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_energi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Energi Pintar menyala! Kostummu makin kuat.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_nino_terminal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Layar Nino menyala! Ayo main Tantangan Pintar.",
+    "source": "audio/dialog.json",
+    "category": "quiz_nino"
+  },
+  {
+    "id": "quiz_hitung_001",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa apel?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_002",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa bintang?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_003",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa kucing?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_004",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa ikan?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_005",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa bola?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_006",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa balon?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_007",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa bintang?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_008",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada berapa pisang?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_009",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa bakpao semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_010",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa kucing semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_011",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa ikan semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_012",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa bola semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_013",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa balon semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_014",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa bintang semuanya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_015",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_016",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_017",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_018",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_019",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_020",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Berapa hasil tambahnya?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_inggris_001",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya kucing?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_002",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya anjing?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_003",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya burung?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_004",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya ikan?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_005",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya apel?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_006",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya jeruk?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_007",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya bola?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_008",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya buku?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_009",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_009_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Dog!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_010",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_010_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Apple!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_011",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_011_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Fish!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_012",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_012_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Bird!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_013",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_013_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Ball!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_014",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_014_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Banana!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_015",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_015_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Red!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_016",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya ayah?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_017",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_017_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Mother!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_inggris_018",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya sekolah?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_019",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya pensil?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_020",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Nino bilang apa? Pilih gambarnya!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_020_kata",
+    "speaker": "nino",
+    "lang": "en",
+    "text": "Table!",
+    "source": "src/data/quiz/inggris.json",
+    "category": "speak_en"
+  },
+  {
+    "id": "quiz_mandarin_001",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_001_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "你好",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_002",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_002_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "谢谢",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_003",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_003_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "再见",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_004",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Angka ini artinya apa?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_004_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "三",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_005",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Angka ini artinya apa?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_005_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "五",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_006",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Angka ini artinya apa?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_006_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "八",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_007",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Angka ini artinya apa?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_007_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "十",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_008",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_008_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "红色",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_009",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_009_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "蓝色",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_010",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_010_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "黄色",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_011",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_011_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "绿色",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_012",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_012_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "狮子",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_013",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_013_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "猫",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_014",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_014_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "狗",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_015",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_015_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "家",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_016",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_016_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "学校",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_017",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_017_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "银行",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_018",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang benar, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_018_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "医院",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_019",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Warna Barongsai ini artinya apa?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_019_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "红色",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_020",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "quiz_mandarin_020_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "银行",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_hewan_001",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_002",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_003",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_004",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_005",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_006",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_007",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dengarkan suaranya. Siapa itu?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_008",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_009",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_010",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_011",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_012",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_013",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_014",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini bayangan siapa, ya?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_015",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku punya belalai panjang. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_016",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku punya telinga panjang. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_017",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku berenang dan punya sirip. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_018",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku suka bergelantungan di pohon. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_019",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku berkokok setiap pagi. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_hewan_020",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku berbelang dan mengaum. Siapa aku?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "quiz_baca_001",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf b?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_002",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf a?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_003",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf m?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_004",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf k?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_005",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf p?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_006",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf i?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_007",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana huruf s?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_008",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata bu?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_009",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata ka?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_010",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata ba?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_011",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata bo?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_012",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata ki?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_013",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana suku kata ku?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_014",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_015",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_016",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_017",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_018",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_019",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_020",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih gambar yang sesuai kata ini.",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  }
+]

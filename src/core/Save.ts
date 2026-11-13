@@ -25,8 +25,10 @@ export interface SaveData {
   settings: {
     /** Easy jump mode: holding the jump button bounces by itself (see config/parkour.ts). */
     easyJump: boolean;
-    /** Synthesized sound on/off. */
+    /** Sound on/off (voice, effects and the synthesized drum; off also silences the music). */
     sound: boolean;
+    /** Background music on/off (default on). */
+    music: boolean;
   };
   quiz: QuizSave;
 }
@@ -78,7 +80,7 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, sound: true },
+    settings: { easyJump: Parkour.easy.defaultOn, sound: true, music: true },
     quiz: defaultQuiz(),
   };
 }
@@ -129,6 +131,7 @@ function sanitize(raw: unknown): SaveData {
     const st = r.settings as Record<string, unknown>;
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
+    if (typeof st.music === 'boolean') out.settings.music = st.music;
   }
   return out;
 }
@@ -205,7 +208,14 @@ export class SaveStore {
     this.persist();
   }
 
-  /** Parents' page: synthesized sound (default on). */
+  /** Parents' page: background music (default on). */
+  setMusic(on: boolean): void {
+    if (this.data.settings.music === on) return;
+    this.data.settings.music = on;
+    this.persist();
+  }
+
+  /** Parents' page: sound (default on). */
   setSound(on: boolean): void {
     if (this.data.settings.sound === on) return;
     this.data.settings.sound = on;

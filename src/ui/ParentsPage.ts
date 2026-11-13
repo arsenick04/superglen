@@ -7,6 +7,7 @@ export interface ParentsDeps {
   quiz: QuizEngine;
   setEasyJump: (on: boolean) => void;
   setSound: (on: boolean) => void;
+  setMusic: (on: boolean) => void;
   /** Called after "reset progres" has cleared the save (the game reloads so every level starts clean). */
   afterReset: () => void;
 }
@@ -107,6 +108,10 @@ export class ParentsPage {
     }));
     right.append(this.toggle('Suara', 'sound', save.data.settings.sound, (on) => {
       this.deps.setSound(on);
+      this.render();
+    }));
+    right.append(this.toggle('Musik', 'music', save.data.settings.music, (on) => {
+      this.deps.setMusic(on);
       this.render();
     }));
     const actions = el('div', 'parents-actions');

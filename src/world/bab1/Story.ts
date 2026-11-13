@@ -281,6 +281,7 @@ export class Story {
     this.step = 'transform';
     this.setTarget(null);
     game.setControlsEnabled(false);
+    ctx.audio.music.setScene('berubah'); // one-shot sting; back to the exploring music after the line below
     const from = lab.costume.position.clone();
     const pp = pl.visualPosition;
     let last = 0;
@@ -306,6 +307,7 @@ export class Story {
     });
     this.flash.style.opacity = '0';
     await dialog.say('bab1_glen_superglen', { lockControls: true });
+    ctx.audio.music.setScene('jelajah');
   }
 
   private async funnyEnding(): Promise<void> {
