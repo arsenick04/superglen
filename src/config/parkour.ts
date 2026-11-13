@@ -194,6 +194,28 @@ export const Parkour = {
     rewardRadius: 1.5,
     rewardWindow: 2.4,
   },
+
+  // ---- Reach model (scripts/reachability.ts, `npm run check:reach`) -----------------------------------------------------
+  // Only the checker reads these; they never change how the game plays. Everything else the checker needs (apex per level,
+  // air jump, mantle, capsule, gravities, friendly edge, run speed) is read from the blocks above and from PlayerConfig.
+  reachModel: {
+    /** Conservative horizontal reach = ideal reach times (1 - safety). Edges only inside the ideal reach are "tight jump" warnings. */
+    safety: 0.15,
+    /** Tolerance on height comparisons (m): float noise, not a design margin. */
+    eps: 0.005,
+    /** Tower self-test: a floor must be out of reach at level N-1 by at least this much and at most this much (m). */
+    gateShortMin: 0.15,
+    gateShortMax: 0.5,
+    /** Layout rules of PAKET_P1_PARKOUR.md section 3 (rule 4: green route between neighbouring roofs). */
+    greenMaxGap: 3,
+    greenMaxHeightDiff: 1.5,
+    /** Building classes (rule 3): wall height range (m) and the allowed range of the minimum rhythm level of the roof route. */
+    classes: {
+      house: { minWall: 3, maxWall: 4, minLevel: 0, maxLevel: 1 },
+      ruko: { minWall: 6, maxWall: 8, minLevel: 2, maxLevel: 3 },
+      landmark: { minWall: 10, maxWall: 12, minLevel: 4, maxLevel: 4 },
+    },
+  },
 } as const;
 
 /**
