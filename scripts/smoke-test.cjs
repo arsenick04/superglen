@@ -6217,6 +6217,8 @@ async function audioNoFilesScenario(page, check, touch) {
   check(`audio ${tag}: the hewan bank has a sound question`, found.length === 1, JSON.stringify(found));
   if (found.length === 1) {
     await page.evaluate((ids) => { const a = window.__superglen.audio; ids.forEach((i) => a.hide(i)); }, found[0].ids);
+    await sleep(500); // the discovery pass above may still have a word queued; it runs into the hidden ids
+    const base = await audioSt(page);
     const noAnim = await page.addStyleTag({ content: '.qp *, .qp { animation: none !important; transition: none !important; }' });
     await page.evaluate((id) => window.__superglen.quiz.preview(id), found[0].id);
     await audioAdv(page, 6);
@@ -6228,7 +6230,7 @@ async function audioNoFilesScenario(page, check, touch) {
       check(`audio ${tag}: the sound-word bubble fits (no overlap, nothing outside the display)`, lay.bad.length === 0, lay.bad.join());
     }
     a = await audioSt(page);
-    check(`audio ${tag}: the prompt and the sound ids were reported missing once each, nothing played, no error`, found[0].ids.every((i) => a.missing.includes(i)) && loggedOnce(w, a.missing) && a.sfxPlayed === 0 && a.voicesPlayed === 0, JSON.stringify(a.missing));
+    check(`audio ${tag}: the prompt and the sound ids were reported missing once each, nothing played, no error`, found[0].ids.every((i) => a.missing.includes(i)) && loggedOnce(w, a.missing) && a.sfxPlayed === base.sfxPlayed && a.voicesPlayed === base.voicesPlayed, JSON.stringify(a.missing));
     await page.evaluate(() => window.__superglen.quiz.close());
     await noAnim.evaluate((e) => e.remove());
   }
@@ -6404,6 +6406,7 @@ async function audioClipsScenario(page, check, touch) {
       a.inject(A.ids[1], 0.8, true);
       B.ids.forEach((i) => a.hide(i));
     }, { A, B });
+    await sleep(500);
     const s0 = (await audioSt(page)).sfxPlayed;
     await page.evaluate((id) => window.__superglen.quiz.preview(id), A.id);
     await audioAdv(page, 6);
@@ -6490,7 +6493,8 @@ async function audioChapterScenario(page, check) {
   await audioAdv(page, 30);
   a = await audioSt(page);
   const idx = await page.evaluate(async () => (await (await fetch('audio/index.json')).json()));
-  check('audio chapter: the quiz and Chapter 1 ran; every missing id was logged exactly once', a.missing.length >= 3 && loggedOnce(w, a.missing), `${a.missing.length} missing, ${w.infos.length} logs`);
+  console.log(`   audio chapter: ${a.missing.length} ids without a file, ${a.voicesPlayed} clips played, ${idx.length} files in the manifest`);
+  check('audio chapter: the quiz and Chapter 1 ran; every id without a file was logged exactly once (files that exist simply play)', loggedOnce(w, a.missing) && w.infos.length === a.missing.length, `${a.missing.length} missing, ${w.infos.length} logs`);
   const origin = new globalThis.URL(page.url()).origin;
   const foreign = w.reqs.filter((u) => !(u.startsWith('data:') || u.startsWith('blob:') || new globalThis.URL(u).origin === origin));
   check('audio chapter: no request went to any host other than the game\'s own origin', foreign.length === 0, foreign.slice(0, 3).join(' | '));

@@ -90,6 +90,8 @@ export class AudioManager {
   private readonly ready: Promise<void>;
   private readonly missing = new Set<string>();
   private readonly failed = new Set<string>();
+  /** Test hook: ids that must behave as missing even if the manifest lists them (survives a load still in flight). */
+  private readonly hiddenIds = new Set<string>();
   private readonly base = import.meta.env.BASE_URL;
 
   // ---- Decoded clips ----
@@ -255,7 +257,7 @@ export class AudioManager {
 
   /** Is there a file (or a test clip) for this voice / sfx id? False until the manifest has loaded. */
   hasFile(id: string): boolean {
-    return this.injected.has(id) || this.available.has(id);
+    return this.injected.has(id) || (this.available.has(id) && !this.hiddenIds.has(id));
   }
 
   private noteMissing(id: string): void {
@@ -271,6 +273,10 @@ export class AudioManager {
   private async load(id: string, logMissing: boolean): Promise<AudioBuffer | null> {
     const inj = this.injected.get(id);
     if (inj) return inj;
+    if (this.hiddenIds.has(id)) {
+      if (logMissing) this.noteMissing(id);
+      return null;
+    }
     const hit = this.cache.get(id);
     if (hit) {
       this.cache.delete(id); // LRU: most recently used goes last
@@ -763,11 +769,13 @@ export class AudioManager {
           const d = buf.getChannelData(0);
           for (let i = 0; i < d.length; i++) d[i] = 0.05 * Math.sin((2 * Math.PI * 440 * i) / sr);
         }
+        self.hiddenIds.delete(id);
         self.injected.set(id, buf);
         return true;
       },
       /** Pretend this file does not exist (drops it from the manifest, the clips and the cache). */
       hide(id: string): void {
+        self.hiddenIds.add(id);
         self.available.delete(id);
         self.injected.delete(id);
         const buf = self.cache.get(id);
