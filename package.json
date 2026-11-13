@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "node scripts/smoke-test.cjs"
+    "test:smoke": "node scripts/smoke-test.cjs",
+    "check:reach": "tsx scripts/reachability.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@types/three": "^0.187.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
   }

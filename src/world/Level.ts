@@ -50,8 +50,10 @@ export interface LevelGame {
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
-  setPlayerMode(mode: PlayerMode): void;
-  /** Show the "Berubah" star on touch. Reset to false on every level load. */
+  setPlayerMode(mode: PlayerMode, persist?: boolean): void;
+  /**
+   * Allow the child to switch Glen <-> Superglen (touch star button, PC key Q). Reset to false on every level load.
+   * The star is hidden while controls are locked (sequences, dialogs, fades) even when allowed. */
   setTransformAllowed(allowed: boolean): void;
   /**
    * Unlock / lock skills at runtime (omitted keys stay as they are). Updates the touch buttons (laser and shield; flying

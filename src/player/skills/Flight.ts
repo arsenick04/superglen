@@ -23,6 +23,15 @@ export const FlightConfig = {
   ceilingPushDown: 3,
   /** Gentle descent of the SCRIPTED launch (`autoLaunch`) only; a real release just falls (m/s). */
   glideSpeed: 2.2,
+  /**
+   * After the jets are released (button let go) the character is "airborne after flight": it falls with this share of the
+   * normal fall gravity (Parkour.gravityUp * Parkour.fallMultiplier) and never faster than `afterFlightMaxFall` (m/s).
+   * Clearly a drop (no hover), but not a stone; the landing stays below the stomp / boing impact speeds.
+   */
+  afterFlightGravityFactor: 0.5,
+  afterFlightMaxFall: 7,
+  /** A fresh PRESS while airborne after a flight restarts the jets at once (no hold time). Set false for the old hold rule. */
+  reigniteOnPress: true,
   flySpeed: 7,
   accel: 16,
   decel: 14,
@@ -78,9 +87,17 @@ const FLAME_Z = -0.12;
  *
  *   hold Lompat (0.45 s, counted from the press)  -> jets on: gentle rise to the ceiling, then hover
  *   stick / keys                                  -> move horizontally (camera relative), no input = hover in place
- *   release Lompat                                -> the jets stop AT ONCE; the character falls with normal gravity
- *                                                    (horizontal control stays, the landing is harmless)
- *   press and hold Lompat again in the air        -> the jets re-ignite after the same 0.45 s hold (no limit, no fuel)
+ *   release Lompat                                -> the jets stop AT ONCE; "airborne after flight" (`afterFlight`): the
+ *                                                    character falls with softer gravity and a capped fall speed
+ *                                                    (afterFlightGravityFactor / afterFlightMaxFall), full air control
+ *   press Lompat again while afterFlight          -> the jets re-ignite IMMEDIATELY (no hold), holding keeps rising
+ *   afterFlight ends on: landing, mantle, re-ignition, teleport / level load / mode change (reset()).
+ *
+ * PRECEDENCE: the first ignition from the ground (or a normal jump) still needs the 0.45 s hold, so a tap is a jump
+ * and the air jump / rhythm jumps are untouched. While afterFlight, a press is ALWAYS the re-ignite: Flight.step runs
+ * before the Player's jump buffer and ignites in the same step, and the Player discards the buffered press while the
+ * jets are in charge, so the air jump can never eat the re-ignite press (the air jump is still available after a
+ * flight only if the child never presses again, which then is simply not needed).
  *
  * Level API:
  *   player.flight.enabled = true            unlock (or ctx.game.setSkills({ fly: true }))
@@ -115,6 +132,8 @@ export class Flight {
   private autoTarget = 0;
   private autoCeilTimer = 0;
   private grace = 0;
+  /** Jets were burning in this airtime and have been released: soft fall, press = instant re-ignite. */
+  private _afterFlight = false;
   private bobT = 0;
   private bobAmp = 0;
   private flameAmount = 0;
@@ -141,6 +160,14 @@ export class Flight {
   /** In flight mode: jets burning or gliding down. */
   get isFlying(): boolean {
     return this.state !== OFF;
+  }
+  /** Airborne after a real flight (released the button): the Player uses the soft fall while this is true and not flying. */
+  get afterFlight(): boolean {
+    return this._afterFlight && this.state === OFF;
+  }
+  /** Leave the after-flight state (mantle, landing). */
+  clearAfterFlight(): void {
+    this._afterFlight = false;
   }
   /** Jets burning right now. */
   get jetsOn(): boolean {
@@ -180,6 +207,7 @@ export class Flight {
     this.forceHold = false;
     this.scripted = false;
     this.justReleased = false;
+    this._afterFlight = false;
     this.heldTime = 0;
     this.armed = false;
     this.ceilInit = false;
@@ -202,8 +230,11 @@ export class Flight {
     if (this.grace > 0) this.grace -= dt;
     if (!Number.isNaN(i.groundY)) this.lastGroundY = i.groundY;
 
+    if (i.grounded && this.grace <= 0) this._afterFlight = false;
     if (this.state === OFF) {
-      if (i.can && !i.grounded && this.armed && this.heldTime >= FlightConfig.holdTime) this.ignite(i.vy);
+      if (!i.can) this._afterFlight = false;
+      const reignite = FlightConfig.reigniteOnPress && this._afterFlight && i.jumpPressed;
+      if (i.can && !i.grounded && (reignite || (this.armed && this.heldTime >= FlightConfig.holdTime))) this.ignite(i.vy);
       else return;
     }
 
@@ -248,6 +279,7 @@ export class Flight {
         this.hub.emit('flightStop', undefined);
       } else {
         this.justReleased = true;
+        this._afterFlight = true;
         this.end(); // released: stop at once, the Player falls with normal gravity
         return;
       }
@@ -390,6 +422,7 @@ export class Flight {
   private ignite(vy: number): void {
     const was = this.state;
     this.state = JETS;
+    this._afterFlight = false;
     if (was === OFF) {
       this.vy = vy;
       this.hub.stats.flights++;

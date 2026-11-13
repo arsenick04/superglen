@@ -1,71 +1,119 @@
 import { Kit, C } from './Kit';
-import { Z, STREET_HALF, BOUNDARY } from './Layout';
+import { STREET_HALF, BOUNDARY } from './Layout';
 import { addHipRoof, addRoofBox } from '../kits/Roofs';
+import { ParkourKit } from '../kits/ParkourKit';
+import { STREET_BUILDINGS, TREES, LAMPS, SIDE_STREETS, PLAZA_HEDGE, LOW, SCHOOL, shopAwning, BODY, type StreetBuilding } from './StreetData';
 
 type V3 = readonly [number, number, number];
 
-/** Houses on both sides: [centre z, wall colour, roof colour, height, shop?]. Left faces +X, right faces -X. */
-const LEFT: readonly [number, number, number, number, boolean][] = [
-  [1.5, C.PEACH, C.RED, 5.2, false],
-  [-5.5, C.SKY, C.DEEP_RED, 5.8, true],
-  [-12.5, C.YELLOW, C.TEAL, 5.0, false],
-  [-26.5, C.MINT, C.RED, 5.6, true],
-  [-33.0, C.LILAC, C.DEEP_RED, 5.2, false],
-];
-const RIGHT: readonly [number, number, number, number, boolean][] = [
-  [0.0, C.MINT, C.DEEP_RED, 5.4, false],
-  [-7.0, C.PINK, C.TEAL, 5.0, true],
-  [-14.0, C.SKY, C.RED, 5.8, false],
-  [-28.5, C.YELLOW, C.DEEP_RED, 5.2, true],
-];
-
-function house(kit: Kit, side: -1 | 1, zc: number, wall: number, roof: number, h: number, shop: boolean): void {
+/**
+ * One house or ruko: body, walkable hip roof, windows and door (decoration, no colliders) and the climbing pieces that
+ * StreetData.ts describes (crates, AC unit, window ledge, shop-front bay with balcony, sign board, shop awning).
+ * Positions and heights of everything climbable come from the data; nothing about reach is decided here.
+ */
+function building(kit: Kit, pk: ParkourKit, b: StreetBuilding): void {
+  const side = b.side;
+  const zc = b.z;
+  const h = b.wall;
   const x = side * (STREET_HALF + 3);
   const face = side * STREET_HALF;
-  kit.solid([6, h, 7.2], [x, h / 2, zc], wall);
-  // Walkable hip roof (collider = the drawn pyramid, +10 cm at the eaves; slopes 25-28 degrees: no sliding).
-  addHipRoof(kit, { id: `house${side > 0 ? 'R' : 'L'}${zc}`, cx: x, cz: zc, baseY: h, w: 7.4, d: 8.4, h: 2.0, color: roof });
-  kit.deco.box([0.5, 0.2, 7.6], [face - side * 0.1, h + 0.05, zc], C.CREAM); // eave trim
-  // Door and two windows on the street face.
+  const dims = BODY[b.cls];
+  const wallC = C[b.wallColor];
+  kit.solid([dims.w, h, dims.d], [x, h / 2, zc], wallC);
+  // Walkable hip roof (collider = the drawn pyramid, +10 cm at the eaves; slopes 22-33 degrees: no sliding).
+  const r = b.roof;
+  addHipRoof(kit, { id: r.id, cx: r.cx, cz: r.cz, baseY: h, w: r.w, d: r.d, h: r.h, color: C[b.roofColor] });
+  kit.deco.box([0.5, 0.2, dims.d + 0.4], [face - side * 0.1, h + 0.05, zc], C.CREAM); // eave trim
   const fx = face - side * 0.04;
-  kit.deco.box([0.1, 2.1, 1.2], [fx, 1.05, zc], shop ? C.RED : C.BROWN);
-  kit.glow.box([0.06, 0.5, 0.5], [fx - side * 0.02, 1.5, zc + 0.0], 0xfff1b0);
-  for (const dz of [-2.2, 2.2]) {
-    kit.deco.box([0.1, 1.3, 1.3], [fx, 2.1, zc + dz], C.WHITE);
-    kit.glow.box([0.05, 1.05, 1.05], [fx - side * 0.04, 2.1, zc + dz], 0x9fdcff);
-    // flower box
-    kit.deco.box([0.45, 0.28, 1.2], [fx - side * 0.2, 1.35, zc + dz], C.BROWN);
-    for (let i = -1; i <= 1; i++) kit.deco.sph(0.17, [fx - side * 0.2, 1.6, zc + dz + i * 0.38], i === 0 ? C.PINK : C.ORANGE);
-    kit.collider([0.65, 0.28, 1.4], [fx - side * 0.2, 1.35, zc + dz]); // the window box is solid (a foothold at 1.5 m)
-  }
-  // Upper windows.
-  for (const dz of [-2.0, 0, 2.0]) {
-    kit.deco.box([0.1, 1.1, 1.0], [fx, 3.6, zc + dz], C.WHITE);
-    kit.glow.box([0.05, 0.85, 0.8], [fx - side * 0.04, 3.6, zc + dz], 0x9fdcff);
-  }
-  if (shop) {
-    // Striped awning over the door.
-    for (let i = 0; i < 6; i++) {
-      kit.deco.box([1.1, 0.14, 0.62], [face - side * 0.55, 2.55 - 0.0, zc - 1.55 + i * 0.62], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
+  const win = (dz: number, y: number, w: number, hh: number): void => {
+    kit.deco.box([0.1, hh, w], [fx, y, zc + dz], C.WHITE);
+    kit.glow.box([0.05, hh - 0.25, w - 0.25], [fx - side * 0.04, y, zc + dz], 0x9fdcff);
+  };
+
+  if (b.cls === 'house') {
+    // Door and two windows with flower boxes (decoration only: the child may walk through them).
+    kit.deco.box([0.1, 2.1, 1.2], [fx, 1.05, zc], b.shop ? C.RED : C.BROWN);
+    kit.glow.box([0.06, 0.5, 0.5], [fx - side * 0.02, 1.5, zc], 0xfff1b0);
+    for (const dz of [-1.9, 1.9]) {
+      win(dz, 2.1, 1.3, 1.3);
+      kit.deco.box([0.45, 0.28, 1.2], [fx - side * 0.2, 1.35, zc + dz], C.BROWN);
+      for (let i = -1; i <= 1; i++) kit.deco.sph(0.17, [fx - side * 0.2, 1.6, zc + dz + i * 0.38], i === 0 ? C.PINK : C.ORANGE);
     }
-    // One collider for the whole striped awning (14 degrees: walkable, no sliding), drawn above.
-    addRoofBox(kit, { id: `awning${side > 0 ? 'R' : 'L'}${zc}`, size: [1.1, 0.14, 3.72], pos: [face - side * 0.55, 2.55, zc], rot: [0, 0, side * 0.25] });
-    kit.deco.box([0.1, 0.7, 2.6], [fx, 2.95, zc], C.GOLD); // sign
+    if (b.shop) {
+      const a = shopAwning(b);
+      const n = 5;
+      const step = a.d / n;
+      for (let i = 0; i < n; i++) {
+        kit.deco.box([a.w, 0.14, step], [face - side * (a.w / 2), 2.55, zc - a.d / 2 + (i + 0.5) * step], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
+      }
+      // One collider for the whole striped awning (14 degrees: walkable, no sliding), drawn above.
+      addRoofBox(kit, { id: a.id, size: [a.w, 0.14, a.d], pos: [face - side * (a.w / 2), 2.55, zc], rot: [0, 0, side * 0.25] });
+      kit.deco.box([0.1, 0.6, 2.2], [fx, 2.95, zc], C.GOLD); // sign
+    }
+  } else {
+    // Ruko: floors with windows, bands between them; the door and a window sit on the shop-front bay.
+    const fh = h / b.floors;
+    for (let f = 1; f < b.floors; f++) kit.deco.box([0.16, 0.18, dims.d + 0.3], [face - side * 0.08, f * fh, zc], C.CREAM);
+    for (let f = 0; f < b.floors; f++) {
+      const y = f * fh + fh * 0.55;
+      win(-2.7, y, 1.1, 1.3);
+      win(3.0, y, 1.1, 1.3);
+    }
+    const bay = b.pieces.find((p) => p.type === 'bay');
+    if (bay) {
+      // Shop door and window painted on the bay's outer face.
+      const bx = bay.x - side * (bay.w / 2 + 0.04);
+      kit.deco.box([0.1, 2.1, 1.1], [bx, 1.05, bay.z - 0.4], b.shop ? C.RED : C.BROWN);
+      kit.glow.box([0.06, 0.5, 0.5], [bx - side * 0.02, 1.5, bay.z - 0.4], 0xfff1b0);
+      kit.deco.box([0.1, 1.2, 1.5], [bx, 3.2, bay.z], C.WHITE);
+      kit.glow.box([0.05, 0.95, 1.25], [bx - side * 0.04, 3.2, bay.z], 0x9fdcff);
+    }
+    kit.deco.box([0.1, 0.6, 1.9], [fx, 2.6, zc - 2.25], C.GOLD); // shop sign on the wall beside the bay
+  }
+
+  // The climbing pieces (bright edge on every top, friendly colliders, recorded as footholds).
+  for (const p of b.pieces) {
+    switch (p.type) {
+      case 'crate':
+        pk.crateStack(p.id, b.id, p.x, p.z, p.n ?? 1);
+        break;
+      case 'ac':
+        pk.acUnit(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.8, p.face);
+        break;
+      case 'ledge':
+        pk.windowLedge(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.5);
+        break;
+      case 'bay':
+        pk.balcony(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.face, b.wallColor === 'YELLOW' ? C.ORANGE : C.YELLOW);
+        break;
+      case 'sign':
+        pk.signBoard(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.5);
+        break;
+      case 'awning':
+        pk.awning(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.25, p.face);
+        break;
+      case 'tank':
+        pk.tank(p.id, b.id, p.x, p.z, p.top - 1.2, 1.2, p.w / 2);
+        break;
+    }
   }
 }
 
-function tree(kit: Kit, x: number, z: number, s = 1): void {
-  kit.solidCyl(0.2 * s, 1.5 * s, [x, 0.75 * s, z], C.BROWN);
+/** `solid` false: soft scenery next to a ruko (no collider: a footing there would lower the ruko's hop, see StreetData.ts). */
+function tree(kit: Kit, x: number, z: number, s = 1, solid = true): void {
+  if (solid) kit.solidCyl(0.2 * s, 1.5 * s, [x, 0.75 * s, z], C.BROWN);
+  else kit.lit.cyl(0.2 * s, 1.5 * s, [x, 0.75 * s, z], C.BROWN);
   kit.lit.sph(1.0 * s, [x, 2.2 * s, z], C.GREEN);
   kit.lit.sph(0.8 * s, [x + 0.45 * s, 2.9 * s, z + 0.2 * s], C.DARK_GREEN);
   kit.lit.sph(0.7 * s, [x - 0.4 * s, 2.7 * s, z - 0.3 * s], C.GREEN);
 }
 
-function lamp(kit: Kit, x: number, z: number): void {
-  kit.solidCyl(0.07, 3.2, [x, 1.6, z], C.GREY);
+function lamp(kit: Kit, x: number, z: number, solid = true): void {
+  if (solid) kit.solidCyl(0.07, 3.2, [x, 1.6, z], C.GREY);
+  else kit.deco.cyl(0.07, 3.2, [x, 1.6, z], C.GREY);
   kit.deco.sph(0.28, [x, 3.35, z], 0xfff1c1);
   kit.glow.sph(0.2, [x, 3.35, z], 0xffe9a0);
-  kit.physics.addFixedCylinder(0.28, 0.3, { x, y: 3.35, z }); // the lantern is a flat 60 cm top at the height it is drawn
+  if (solid) kit.physics.addFixedCylinder(0.28, 0.3, { x, y: 3.35, z }); // the lantern is a flat 60 cm top at the height it is drawn
 }
 
 function hedge(kit: Kit, size: V3, pos: V3): void {
@@ -85,7 +133,8 @@ function bike(kit: Kit, x: number, z: number, color: number): void {
  * Part A: the street from the school wall (z +5.5) to the plaza (z -36). Boundary walls, houses, side-street
  * mouths blocked by hedges and planters, trees, lamps. All static.
  */
-export function buildStreet(kit: Kit): void {
+export function buildStreet(kit: Kit): ParkourKit {
+  const pk = new ParkourKit(kit, true);
   // --- Ground, road, sidewalks, markings (visual only; the one big slab is added by the level) ---
   // The meadow ends where the floor collider ends (see Bab1Level): anything beyond is a deep ravine that returns you to the last safe spot.
   kit.deco.box([40, 0.2, 51.6], [0, -0.1, -16.8], 0x86d16a);
@@ -112,17 +161,21 @@ export function buildStreet(kit: Kit): void {
   }
 
   // --- School wall with the closed gate behind the spawn ---
-  const sz = Z.schoolWall;
-  kit.solid([BOUNDARY * 2, 4.8, 0.6], [0, 2.4, sz + 0.3], 0xffd9a8);
-  addRoofBox(kit, { id: 'schoolWallCap', size: [BOUNDARY * 2, 0.5, 0.8], pos: [0, 4.9, sz + 0.3], color: C.RED, noSamples: true });
-  kit.roofs?.add({ id: 'schoolWallCap', kind: 'flat', samples: [{ x: -6, y: 5.15, z: sz + 0.3 }, { x: -5, y: 5.15, z: sz + 0.3 }] });
+  // The school is a ruko-class building (7 m): its way up is the wall cap (5.15 m, a level-2 hop, bright edge) and then the
+  // flat roof. Nothing low stands against the wall (no gate-leaf or arch collider: a footing there would make the cap too easy).
+  const sz = SCHOOL.wallZ;
+  const wd = SCHOOL.wallDepth;
+  kit.solid([BOUNDARY * 2, SCHOOL.wallTop, wd], [0, SCHOOL.wallTop / 2, sz + wd / 2], 0xffd9a8);
+  // The cap is flush with the wall face (no lip in front: a lip would stop a jumping child's head under it) and 1.9 m deep.
+  addRoofBox(kit, { id: 'schoolWallCap', size: [BOUNDARY * 2, 0.5, wd - 0.2], pos: [0, SCHOOL.wallTop + 0.1, sz + wd / 2], color: C.RED, noSamples: true });
+  kit.roofs?.add({ id: 'schoolWallCap', kind: 'flat', samples: [{ x: -6, y: SCHOOL.capTop, z: sz + wd / 2 }, { x: -5, y: SCHOOL.capTop, z: sz + wd / 2 }] });
+  pk.edge(0, sz + wd / 2, BOUNDARY * 2, wd - 0.2, SCHOOL.capTop);
   kit.lit.box([BOUNDARY * 2, 0.3, 0.7], [0, 0.15, sz - 0.02], C.CREAM);
-  kit.solid([5.2, 2.6, 0.5], [0, 1.3, sz - 0.05], C.TEAL); // gate leaves
+  kit.lit.box([5.2, 2.6, 0.5], [0, 1.3, sz - 0.05], C.TEAL); // gate leaves (painted on, no collider)
   for (let i = -8; i <= 8; i++) kit.deco.cyl(0.05, 2.5, [i * 0.3, 1.3, sz - 0.4], C.YELLOW);
   kit.deco.box([5.4, 0.12, 0.2], [0, 2.1, sz - 0.4], C.GOLD);
   kit.deco.box([5.4, 0.12, 0.2], [0, 0.5, sz - 0.4], C.GOLD);
-  kit.deco.box([7, 0.8, 0.5], [0, 3.55, sz - 0.1], C.RED); // arch sign
-  kit.collider([7.2, 0.8, 0.7], [0, 3.55, sz - 0.1]); // a ledge you can stand on above the gate
+  kit.lit.box([7, 0.8, 0.5], [0, 3.55, sz - 0.1], C.RED); // arch sign
   kit.glow.add('pyr', [0, 3.55, sz - 0.4], [0.7, 0.55, 0.12], 0xffd23f, [Math.PI / 2, 0, 0]); // star-ish marker
   kit.deco.cyl(0.07, 4.4, [3.9, 2.2, sz - 0.5], C.GREY); // flag pole
   kit.deco.box([1.4, 0.8, 0.05], [4.65, 4.0, sz - 0.5], C.RED);
@@ -130,37 +183,32 @@ export function buildStreet(kit: Kit): void {
   kit.deco.sph(0.15, [3.9, 4.5, sz - 0.5], C.GOLD);
   // The school itself, behind the wall: a real flat-roofed building as wide as the walled street (no pockets behind
   // the wall), walkable on top. Beyond its back edge there is only the ravine: a fall returns you to the last safe spot.
-  addRoofBox(kit, { id: 'schoolRoof', size: [BOUNDARY * 2 + 1, 7, 12.2], pos: [0, 3.5, sz + 6.6], color: 0xfff0c4, noSamples: true });
-  kit.roofs?.add({ id: 'schoolRoof', kind: 'flat', samples: [{ x: -5, y: 7, z: sz + 8 }, { x: -3.5, y: 7, z: sz + 8 }, { x: 8, y: 7, z: sz + 10 }] });
-  for (let i = -3; i <= 3; i++) kit.deco.box([1.4, 1.2, 0.1], [i * 2.6, 3.2, sz + 0.78], C.SKY);
+  addRoofBox(kit, { id: 'schoolRoof', size: [SCHOOL.roofW, SCHOOL.roofTop, SCHOOL.roofD - 0.2], pos: [0, SCHOOL.roofTop / 2, SCHOOL.roofZ], color: 0xfff0c4, noSamples: true });
+  kit.roofs?.add({ id: 'schoolRoof', kind: 'flat', samples: [{ x: -5, y: SCHOOL.roofTop, z: sz + 8 }, { x: -3.5, y: SCHOOL.roofTop, z: sz + 8 }, { x: 8, y: SCHOOL.roofTop, z: sz + 10 }] });
+  pk.edge(0, SCHOOL.roofZ, SCHOOL.roofW - 1, SCHOOL.roofD - 0.6, SCHOOL.roofTop);
+  for (let i = -3; i <= 3; i++) kit.deco.box([1.4, 1.2, 0.1], [i * 2.6, 6.0, SCHOOL.roofFront + 0.0], C.SKY);
 
-  // --- Houses ---
-  for (const [z, w, r, h, shop] of LEFT) house(kit, -1, z, w, r, h, shop);
-  for (const [z, w, r, h, shop] of RIGHT) house(kit, 1, z, w, r, h, shop);
+  // --- Houses and rukos (data: StreetData.ts) ---
+  for (const b of STREET_BUILDINGS) building(kit, pk, b);
 
-  // --- Side streets: blocked by hedges, planters and a bike rack; behind them a short dead-end pocket ---
-  // Left mouth z -15.8 .. -23.2
-  hedge(kit, [1.0, 1.5, 7.4], [-STREET_HALF - 0.5, 0.75, -19.5]);
-  kit.solid([6, 5, 0.6], [-10, 2.5, -23.5], 0xffd0a8); // pocket sides/back
-  kit.solid([0.6, 5, 7.6], [-13.2, 2.5, -19.5], 0xffd0a8);
-  kit.solid([6, 5, 0.6], [-10, 2.5, -15.5], 0xffd0a8);
+  // --- Side streets: blocked by low hedges, planters and garden walls (knee-high: hopped over, never a trap); behind them a short dead-end pocket ---
+  const SS = SIDE_STREETS;
+  hedge(kit, [SS.hedgeL.w, LOW, SS.hedgeL.d], [SS.hedgeL.x, LOW / 2, SS.hedgeL.z]);
+  for (const w of SS.pocketL) kit.solid([w.w, LOW, w.d], [w.x, LOW / 2, w.z], 0xffd0a8);
   bike(kit, -6.3, -17.6, C.RED);
   bike(kit, -6.3, -18.9, C.BLUE);
   bike(kit, -6.3, -20.2, C.GOLD);
   kit.deco.box([0.1, 0.5, 3.4], [-6.6, 0.25, -18.9], C.GREY); // rack
-  // Right mouth z -17.3 .. -25.7
-  kit.solid([1.0, 1.6, 8.4], [STREET_HALF + 0.5, 0.8, -21.5], C.BROWN); // big planter row
-  for (let z = -18; z > -25.5; z -= 0.9) {
-    kit.deco.sph(0.38, [STREET_HALF + 0.5, 1.7, z], (z * 3) % 2 > 1 ? C.PINK : C.ORANGE);
-    kit.deco.sph(0.3, [STREET_HALF + 0.3, 1.9, z - 0.4], C.YELLOW);
+  kit.solid([SS.planterR.w, LOW, SS.planterR.d], [SS.planterR.x, LOW / 2, SS.planterR.z], C.BROWN); // big planter row
+  for (let z = -18; z > -26; z -= 0.9) {
+    kit.deco.sph(0.38, [SS.planterR.x, LOW + 0.1, z], (z * 3) % 2 > 1 ? C.PINK : C.ORANGE);
+    kit.deco.sph(0.3, [SS.planterR.x - 0.2, LOW + 0.3, z - 0.4], C.YELLOW);
   }
-  kit.solid([6, 5, 0.6], [10, 2.5, -25.9], 0xc9e4ff);
-  kit.solid([0.6, 5, 8.8], [13.2, 2.5, -21.5], 0xc9e4ff);
-  kit.solid([6, 5, 0.6], [10, 2.5, -17.0], 0xc9e4ff);
+  for (const w of SS.pocketR) kit.solid([w.w, LOW, w.d], [w.x, LOW / 2, w.z], 0xc9e4ff);
 
-  // --- Dressing: trees and lamps along both sidewalks ---
-  for (const [x, z, s] of [[-5.9, -1, 1], [5.9, -3, 1.1], [-5.9, -9.8, 0.9], [5.9, -11, 1], [-5.9, -23, 1.1], [5.9, -27.5, 1], [-5.9, -30, 1]] as const) tree(kit, x, z, s);
-  for (const [x, z] of [[-3.6, -4], [3.6, -6], [-3.6, -14], [3.6, -17], [-3.6, -26], [3.6, -23], [-3.6, -33], [3.6, -33]] as const) lamp(kit, x, z);
+  // --- Dressing: trees and lamps along both sidewalks (next to the rukos they are soft: no collider) ---
+  for (const [x, z, sc, solid] of TREES.slice(0, 7)) tree(kit, x, z, sc, solid);
+  for (const [x, z, solid] of LAMPS) lamp(kit, x, z, solid);
   // Bunting-free benches near the plaza.
   for (const s of [-1, 1]) {
     kit.deco.box([1.8, 0.1, 0.5], [s * 9, 0.45, -37.3], C.BROWN);
@@ -168,12 +216,11 @@ export function buildStreet(kit: Kit): void {
     kit.collider([1.8, 0.5, 0.5], [s * 9, 0.25, -37.3]); // seat (a 0.5 m step)
     kit.collider([1.8, 1.0, 0.1], [s * 9, 0.5, -37.5]); // backrest
   }
-  tree(kit, -10.5, -39.5, 1.2);
-  tree(kit, 11, -40, 1.2);
-  tree(kit, 9.2, -34.5, 1.0);
+  for (const [x, z, sc, solid] of TREES.slice(7)) tree(kit, x, z, sc, solid);
 
   // The street's closing: low houses end at z -36.3 so the plaza opens. A soft hedge row hides the join.
-  hedge(kit, [5.6, 1.5, 0.9], [-10.5, 0.75, -36.6]);
+  hedge(kit, [PLAZA_HEDGE.w, PLAZA_HEDGE.top, PLAZA_HEDGE.d], [PLAZA_HEDGE.x, PLAZA_HEDGE.top / 2, PLAZA_HEDGE.z]);
+  return pk;
 }
 
 /** The big ground slab (collider) of the outdoor part and the hall: top face y = 0, z from +9 to the hall's back wall. */

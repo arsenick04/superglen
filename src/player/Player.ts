@@ -8,6 +8,7 @@ import { Flight, FlightConfig } from './skills/Flight';
 import { SkillHub } from './skills/Skills';
 import { Rhythm, type RhythmQuality } from './Rhythm';
 import { Mantle } from './Mantle';
+import { WallKick } from './WallKick';
 
 /*
  * JUMP RULES (numbers: src/config/parkour.ts)
@@ -23,6 +24,17 @@ import { Mantle } from './Mantle';
  *   - Landing on a bounce drum (Rhythm.registerBounce) counts as a perfect press by itself.
  *   - A second press in the air is the air jump (+1.2 m above where it is pressed), unless the fall is within 0.30 s
  *     of touchdown: then it is the buffered rhythm press for the landing.
+ *
+ * PRESS PRECEDENCE IN THE AIR (a fresh press, Superglen; highest first):
+ *   1. flight re-ignite after a real flight (Flight.step: while "airborne after flight" a press always restarts the jets)
+ *   2. wall kick (only off walls registered with Rhythm.registerKick, i.e. the Gang Tendang): touching (or just moved toward / touched within 0.15 s) a tall near-vertical wall, kick not yet used on that
+ *      face, fewer than 6 kicks this airtime, at least 0.4 m above the ground -> +1.4 m and a push away from the wall.
+ *      It does not use up the air jump, does not change the rhythm level (not a landing), is never done in Glen mode, on a
+ *      bounce drum, on a low obstacle (the wall must reach 0.6 m above the head) or while mantling (a ledge within mantle
+ *      reach is that low, so the mantle wins by itself).
+ *   3. air jump (once per airtime)
+ *   4. buffered rhythm press for the landing
+ * A ground jump (or the coyote jump) always comes before all of these.
  *
  * HOLDING THE JUMP BUTTON (three features share it; the rule, in plain words):
  *   1. A press jumps. Holding it on after the jump:
@@ -130,6 +142,10 @@ export class Player {
   /** Same emitter as `rhythm.events`: `player.events.on('land', fn)`. */
   readonly events = this.rhythm.events;
   private readonly mantle: Mantle;
+  private readonly wallKick: WallKick;
+  /** Test-only switch: false = wall kicks are off (the Gang Tendang cannot be climbed). */
+  wallKickEnabled = true;
+  private kickLock = 0;
   private simTime = 0;
   private pressTime = -1e9;
   private landTime = -1e9;
@@ -222,6 +238,7 @@ export class Player {
 
     this.flight = new Flight(this.skills);
     this.mantle = new Mantle(world, this.collider, C.radius, CAPSULE_HALF_HEIGHT, CENTER_TO_FEET);
+    this.wallKick = new WallKick(world, this.collider, C.radius, CENTER_TO_FEET, (h) => !this.rhythm.isBounce(h) && (Parkour.wallKick.anyWall || this.rhythm.isKick(h)));
     this.rhythm.bounceHook = (launch) => this.doBounce(launch);
     this.currPos.set(s.x, cy, s.z);
     this.prevPos.copy(this.currPos);
@@ -323,6 +340,7 @@ export class Player {
     const T = this.tuning;
     this.simTime += dt;
     this.mantle.tick(dt);
+    if (this.kickLock > 0) this.kickLock -= dt;
     if (this.mantle.active) {
       this.stepMantle(dt);
       return;
@@ -358,7 +376,11 @@ export class Player {
     if (flyingNow) {
       rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
       this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);
-    } else if (!this.grounded) rate *= C.airControl;
+    } else if (!this.grounded) {
+      rate *= C.airControl;
+      // Just after a wall kick the push must carry: no stick = no braking, a stick against it is weak.
+      if (this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
+    }
     // Move velocity toward target by at most rate*dt (frame-rate independent at fixed dt).
     this.tmp.subVectors(this.targetVel, this.velocity);
     const diff = this.tmp.length();
@@ -423,6 +445,27 @@ export class Player {
     }
     if (F.justReleased) this.verticalVelocity = Math.min(this.verticalVelocity, 0); // released: fall at once
 
+    // ---- Wall kick: contact memory and hint (airborne Superglen only), see the precedence rules at the top ----
+    const WK = Parkour.wallKick;
+    const kickOk =
+      sg && WK.enabled && this.wallKickEnabled && !wasGrounded && !flying && !F.afterFlight && this.inputEnabled &&
+      this.airHeight >= WK.minAirHeight && this.timeSinceGrounded > Parkour.coyoteTime;
+    let kx = 0;
+    let kz = 0;
+    if (kickOk) {
+      if (hasInput) {
+        kx = this.wishDir.x;
+        kz = this.wishDir.z;
+      } else {
+        const sp = Math.hypot(this.velocity.x, this.velocity.z);
+        if (sp > 0.5) {
+          kx = this.velocity.x / sp;
+          kz = this.velocity.z / sp;
+        }
+      }
+    }
+    this.wallKick.update(this.simTime, this.currPos.x, this.currPos.y, this.currPos.z, kx, kz, kickOk);
+
     // Edge-triggered: a press is buffered; holding only repeats through easy mode (see the rules at the top).
     if (pressed) {
       this.jumpBufferTimer = sg ? Parkour.windows.good : Parkour.glenJumpBuffer;
@@ -434,6 +477,9 @@ export class Player {
     if (this.jumpBufferTimer > 0) {
       if (wasGrounded || this.timeSinceGrounded <= Parkour.coyoteTime) {
         this.startJump(false, wasGrounded, false);
+        jumped = true;
+      } else if (pressed && kickOk && this.wallKick.tryKick(this.simTime, this.currPos.x, this.currPos.y, this.currPos.z, kx, kz)) {
+        this.doWallKick();
         jumped = true;
       } else if (
         sg &&
@@ -481,8 +527,10 @@ export class Player {
       } else if (wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = -C.groundStickSpeed;
       } else {
-        const g = this.verticalVelocity > 0 ? Parkour.gravityUp : Parkour.gravityUp * Parkour.fallMultiplier;
-        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, -Parkour.maxFallSpeed);
+        const soft = F.afterFlight && this.verticalVelocity <= 0;
+        const g = this.verticalVelocity > 0 ? Parkour.gravityUp : Parkour.gravityUp * Parkour.fallMultiplier * (soft ? FlightConfig.afterFlightGravityFactor : 1);
+        const floor = soft ? Math.min(this.verticalVelocity, -FlightConfig.afterFlightMaxFall) : -Parkour.maxFallSpeed;
+        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, floor);
       }
     }
 
@@ -561,6 +609,7 @@ export class Player {
         this.velocity.set(0, 0, 0);
         this.verticalVelocity = 0;
         this.jumpBufferTimer = 0;
+        this.flight.clearAfterFlight();
         this.squash = -0.12;
         this.squashVel = 0;
         const ang = Math.atan2(hx, hz);
@@ -593,7 +642,7 @@ export class Player {
 
   /** Seconds until the feet touch the ground, from the height and vertical speed (Infinity when unknown/flying). */
   private updateLandEta(): void {
-    if (this.grounded || !this.hasGround || this.flight.isFlying || this.airHeight >= SHADOW_PROBE_RANGE - 0.01) {
+    if (this.grounded || !this.hasGround || this.flight.isFlying || this.flight.afterFlight || this.airHeight >= SHADOW_PROBE_RANGE - 0.01) {
       this.landEta = Infinity;
       return;
     }
@@ -686,6 +735,50 @@ export class Player {
     }
   }
 
+  /** The kick itself: fixed apex, push away from the wall, turn away, feedback event. The air jump stays available. */
+  private doWallKick(): void {
+    const W = this.wallKick;
+    const K = Parkour.wallKick;
+    this.verticalVelocity = LaunchSpeeds.kick;
+    this.velocity.x = W.nx * K.pushSpeed;
+    this.velocity.z = W.nz * K.pushSpeed;
+    this.jumpBufferTimer = 0;
+    this.timeSinceGrounded = 1e9;
+    this.grounded = false;
+    this.kickLock = K.steerLock;
+    this.turnTo(Math.atan2(W.nx, W.nz));
+    this.squash = K.squash;
+    this.squashVel = 0;
+    const e = this.kickEvent;
+    e.x = W.px;
+    e.y = W.py;
+    e.z = W.pz;
+    e.nx = W.nx;
+    e.nz = W.nz;
+    e.chain = W.chain;
+    this.rhythm.events.emit('wallKick', e);
+  }
+
+  /** Wall kicks done so far (tests). */
+  get wallKicks(): number {
+    return this.wallKick.total;
+  }
+
+  /** Kicks in this airtime. */
+  get kickChain(): number {
+    return this.wallKick.chain;
+  }
+
+  /** True while a kick is possible right now; the contact point to draw the hint at is `kickContact`. */
+  get kickHint(): boolean {
+    return this.wallKick.available && !this.grounded;
+  }
+
+  get kickContact(): { px: number; py: number; pz: number; nx: number; nz: number } {
+    return this.wallKick;
+  }
+
+  private readonly kickEvent = { x: 0, y: 0, z: 0, nx: 0, nz: 0, chain: 0 };
   private readonly jumpEvent: { level: number; quality: RhythmQuality } = { level: 0, quality: 'normal' };
   private readonly landEvent = { impact: 0, x: 0, y: 0, z: 0 };
   private readonly mantleEvent = { x: 0, y: 0, z: 0 };
@@ -693,6 +786,7 @@ export class Player {
 
   private onLand(impact: number): void {
     this.landings++;
+    this.wallKick.landed();
     this.spinning = false;
     this.spinAngle = 0;
     // The settle after a teleport / spawn is not a rhythm landing: a press right after it is a fresh jump.
@@ -701,6 +795,7 @@ export class Player {
     this.idleTimer = 0;
     this.landedFromFlight = this.flewThisAir;
     this.flewThisAir = false;
+    this.flight.clearAfterFlight();
     if (impact > Parkour.squashMinImpact) {
       this.squash = -Math.min(0.32, 0.08 + impact * 0.018);
       this.squashVel = 0;
@@ -957,6 +1052,8 @@ export class Player {
     this.landedFromFlight = false;
     this.bounceJump = false;
     this.mantle.reset();
+    this.wallKick.reset();
+    this.kickLock = 0;
     this.flight.reset();
     this.aimTime = 0;
     this.hopPending = 0;

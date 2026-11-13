@@ -1,65 +1,20 @@
 import * as THREE from 'three';
 import { Parkour } from '../../config/parkour';
-import { PlayerConfig } from '../../player/PlayerConfig';
 import type { LevelContext } from '../Level';
 import { Kit, C } from '../bab1/Kit';
 import { makeMaterials } from '../bab1/Batch';
 import { Sparkles } from '../bab1/Fx';
 import { ParkourKit, EDGE_COLOR, type Foothold } from '../kits/ParkourKit';
+import { ARENA, ARENA_LAYOUT, ARENA_REWARDS, PIER as ARENA_PIER, reach, towerRise } from './ArenaData';
 import { RoofList, addHipRoof } from '../kits/Roofs';
 import { makeStarGeometry, Reward } from './Reward';
 
-// =====================================================================================================================
-// Reach numbers, all derived from src/config/parkour.ts (nothing is copied):
-//   head      = capsule height (1.1 m): the mantle grabs a ledge top up to `maxAboveHead` (0.5 m) above the head,
-//               so a ledge up to head + 0.5 = 1.6 m above the FEET can be pulled onto
-//   plain(L)  = apex(L) + 1.6          a level-L jump plus the mantle
-//   full(L)   = apex(L) + 1.2 + 1.6    ... plus the double jump pressed at the top (the most a child can do at level L)
-//   cantilever slabs (ledge, balcony, sign, AC) are only grabbed while the chest probe (0.55 m above the feet) hits their
-//   front face, so a slab of thickness t is reached at feet >= top - t - 0.55 instead of top - 1.6.
-//
-//   level      0     1     2     3     4
-//   apex      1.6   2.1   2.7   3.4   4.2
-//   plain(L)  3.2   3.7   4.3   5.0   5.8
-//   full(L)   4.4   4.9   5.5   6.2   7.0
-//
-// TOWER (Menara Irama): floor N (N >= 1) is a pier whose top is `rise(N)` above floor N-1, between full(N-1) and full(N):
-//   rise = full(N-1) + 0.5 * (full(N) - full(N-1))  -> 4.65, 5.20, 5.85, 6.60 (margin 0.25 .. 0.4 m on both sides)
-//   floor 0 is the first pier: plain(0) - 0.2 = 3.0 above the ground (a level-0 jump + mantle, no double jump needed).
-// Gaps between piers (edge to edge) widen: 1.0, 1.5, 2.0, 2.5 m. A pier is 4.7 x 4.7 m: room for the three in-place
-// bounces that build the level (and a run-up).
-// =====================================================================================================================
+// Layout numbers (positions, heights, reach formulas) live in ArenaData.ts: pure data shared with the reachability checker
+// (`npm run check:reach`). This file only builds what that data describes.
+export { reach, towerRise, ARENA };
 
-const L = Parkour.levels.map((l) => l.apex);
-const HEAD = PlayerConfig.height;
-const MANTLE_UP = HEAD + Parkour.mantle.maxAboveHead;
-const DJ = Parkour.doubleJumpApex;
-/** Height above the feet at which the mantle probe looks for a wall (m). */
-const PROBE = Parkour.mantle.probeHeight;
-export const reach = {
-  apex: (lv: number): number => L[lv],
-  plain: (lv: number): number => L[lv] + MANTLE_UP,
-  full: (lv: number): number => L[lv] + DJ + MANTLE_UP,
-  /** Highest slab top (thickness t) reachable from a floor by level lv with double jump and mantle. */
-  slab: (lv: number, t: number): number => L[lv] + DJ + t + PROBE,
-};
-
-/** Rise of tower floor n above the one below (floor 0: above the ground). */
-export function towerRise(n: number): number {
-  if (n === 0) return reach.plain(0) - 0.2;
-  return reach.full(n - 1) + 0.5 * (reach.full(n) - reach.full(n - 1));
-}
-const TOWER_GAPS = [0, 1.0, 1.5, 2.0, 2.5] as const;
-const PIER = 4.7;
-
-/** World layout of the arena (x, z in metres; the arena lies north (-z) of the spawn). */
-export const ARENA = {
-  tower: { x: -20, z0: -40, size: PIER },
-  poles: { z: -34, xs: [-7, -3.5, 0, 3.5, 7], radius: 0.7 },
-  drums: { x: 18, z: [-38.5, -41.4, -44.3] as readonly number[] },
-  house: { x: -6, z: -84, w: 5, d: 5, wall: 3.4 },
-  ruko: { x: 8, z: -90, w: 7, d: 5.5 },
-} as const;
+const PIER = ARENA_PIER;
+const A = ARENA_LAYOUT;
 
 /** The route of a building, as data for the smoke test: ids in order and the highest level each hop is designed for. */
 export interface RouteStep {
@@ -109,6 +64,7 @@ export class ArenaLompat {
     this.buildTower();
     this.buildHouse();
     this.buildRuko();
+    this.buildKickAlley();
     this.kit.build(ctx.root);
     this.decals = this.buildTowerMarkers();
     ctx.onDispose(() => {
@@ -119,7 +75,7 @@ export class ArenaLompat {
     const off = ctx.player.rhythm.on('bounce', () => this.onBounce());
     ctx.onDispose(off);
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
-      ctx.game.debugInfo.arena = JSON.stringify({ footholds: this.pk.footholds, routes: this.routes, drumTop: ARENA_DRUM_TOP, markers: [1, 2, 3, 4, 5], buildings: this.buildings, rises: [0, 1, 2, 3, 4].map(towerRise) });
+      ctx.game.debugInfo.arena = JSON.stringify({ footholds: this.pk.footholds, routes: this.routes, drumTop: ARENA_DRUM_TOP, markers: [1, 2, 3, 4, 5], kick: { ...ARENA.kick, wallA: A.kick.wallA, wallB: A.kick.wallB }, buildings: this.buildings, rises: [0, 1, 2, 3, 4].map(towerRise) });
       ctx.game.debugInfo.roofs = this.roofs.json();
     }
   }
@@ -134,7 +90,7 @@ export class ArenaLompat {
   private buildPoles(): void {
     const P = ARENA.poles;
     const colors = [C.RED, C.ORANGE, C.GOLD, C.TEAL, C.BLUE];
-    P.xs.forEach((x, i) => this.pk.pole(`pole${i}`, 'poles', x, P.z, L[i] - 0.2, P.radius, colors[i]));
+    A.poles.forEach((p, i) => this.pk.pole(p.id, 'poles', p.x, p.z, p.top, P.radius, colors[i]));
   }
 
   // ---- Three bounce drums ----------------------------------------------------------------------------------------------
@@ -166,9 +122,7 @@ export class ArenaLompat {
       this.pk.footholds.push({ id: `drum${this.drums.length}`, group: 'drums', kind: 'drum', x, z: zz, w: D.radius * 2, d: D.radius * 2, top });
     }
     // The high ledge after the third drum: needs the level the third bounce gives (3).
-    const lastZ = z[z.length - 1];
-    const ledgeTop = top + (reach.full(2) + 0.5 * (reach.full(3) - reach.full(2)));
-    const ledgeZ = lastZ - D.radius - 1.0 - PIER / 2;
+    const { top: ledgeTop, z: ledgeZ } = A.drumLedge;
     this.pk.block({ id: 'drumLedge', group: 'drums', kind: 'pier', x, z: ledgeZ, w: PIER, d: PIER, top: ledgeTop, color: C.ORANGE });
     this.routes.drums = [
       { id: 'drum1', needs: 0 },
@@ -176,7 +130,7 @@ export class ArenaLompat {
       { id: 'drum3', needs: 2 },
       { id: 'drumLedge', needs: 3 },
     ];
-    this.addReward('drumLedge', x, ledgeTop, ledgeZ, 0.45);
+    this.addReward('drumLedge', ARENA_REWARDS.drumLedge.x, ARENA_REWARDS.drumLedge.y, ARENA_REWARDS.drumLedge.z, ARENA_REWARDS.drumLedge.size);
     this.trail(x, ledgeTop, ledgeZ);
   }
 
@@ -201,18 +155,14 @@ export class ArenaLompat {
   // ---- Tower ---------------------------------------------------------------------------------------------------------------
 
   private buildTower(): void {
-    const T = ARENA.tower;
     const colors = [C.RED, C.ORANGE, C.GOLD, C.TEAL, C.BLUE];
-    let z = T.z0;
-    let top = 0;
     const route: RouteStep[] = [];
-    for (let n = 0; n < 5; n++) {
-      if (n > 0) z -= PIER + TOWER_GAPS[n];
-      top += towerRise(n);
-      this.pk.block({ id: `floor${n}`, group: 'tower', kind: 'pier', x: T.x, z, w: PIER, d: PIER, top, color: colors[n] });
-      route.push({ id: `floor${n}`, needs: n });
-      this.trail(T.x, top, z);
-      if (n === 4) this.addReward('tower', T.x, top, z, 1.1);
+    for (const f of A.floors) {
+      const n = f.n;
+      this.pk.block({ id: f.id, group: 'tower', kind: 'pier', x: f.x, z: f.z, w: f.w, d: f.d, top: f.top, color: colors[n] });
+      route.push({ id: f.id, needs: n });
+      this.trail(f.x, f.top, f.z);
+      if (n === 4) this.addReward('tower', ARENA_REWARDS.tower.x, ARENA_REWARDS.tower.y, ARENA_REWARDS.tower.z, ARENA_REWARDS.tower.size);
     }
     this.routes.tower = route;
   }
@@ -249,14 +199,12 @@ export class ArenaLompat {
       idx.push(i0, i0 + 1, i0 + 2, i0, i0 + 2, i0 + 3);
     };
     const T = ARENA.tower;
-    let z = T.z0;
-    let top = 0;
     const W = 3.5;
     const H = W * (ch / cw);
     const V = (x: number, y: number, zz: number): THREE.Vector3 => new THREE.Vector3(x, y, zz);
-    for (let n = 0; n < 5; n++) {
-      if (n > 0) z -= PIER + TOWER_GAPS[n];
-      top += towerRise(n);
+    for (const f of A.floors) {
+      const n = f.n;
+      const { z, top } = f;
       // On top (read from the south).
       quad(V(T.x - W / 2, top + 0.03, z + H / 2 + 0.6), V(T.x + W / 2, top + 0.03, z + H / 2 + 0.6), V(T.x + W / 2, top + 0.03, z - H / 2 + 0.6), V(T.x - W / 2, top + 0.03, z - H / 2 + 0.6), n);
       // On the south face, just under the edge (visible from the floor below it).
@@ -282,13 +230,13 @@ export class ArenaLompat {
     const zf = H.z + H.d / 2; // front face (+z)
     this.body(H.x, H.z, H.w, H.wall, H.d, C.PEACH);
     this.windowsAndDoor(H.x, zf, H.w, H.wall, 1);
-    const crateA = this.pk.crateStack('houseCrateA', 'house', H.x - 1.9, zf + 0.7, 1);
-    const crateB = this.pk.crateStack('houseCrateB', 'house', H.x - 0.6, zf + 0.7, 2);
-    // The awning juts out 1.8 m: its outer half is well clear of the roof edge (which overhangs 0.4 m).
-    const awn = this.pk.awning('houseAwning', 'house', H.x + 1.3, zf + 1.0, crateB.top + 0.8, 2.2, 1.6);
+    const HL = A.house;
+    const crateA = this.pk.crateStack(HL.crateA.id, 'house', HL.crateA.x, HL.crateA.z, 1);
+    const crateB = this.pk.crateStack(HL.crateB.id, 'house', HL.crateB.x, HL.crateB.z, 2);
+    const awn = this.pk.awning(HL.awning.id, 'house', HL.awning.x, HL.awning.z, HL.awning.top, HL.awning.w, HL.awning.d);
     this.buildings.house = { x: H.x, z: H.z, w: H.w, d: H.d, wall: H.wall };
-    const rh = 1.3;
-    addHipRoof(this.kit, { id: 'houseRoof', cx: H.x, cz: H.z, baseY: H.wall, w: H.w + 0.6, d: H.d + 0.6, h: rh, color: C.DEEP_RED });
+    const rh = HL.roofH;
+    addHipRoof(this.kit, { id: 'houseRoof', cx: H.x, cz: H.z, baseY: H.wall, w: HL.roofW, d: HL.roofD, h: rh, color: C.DEEP_RED });
     this.routes.house = [
       { id: crateA.id, needs: 0 },
       { id: crateB.id, needs: 0 },
@@ -297,7 +245,7 @@ export class ArenaLompat {
     ];
     for (const f of [crateA, crateB, awn]) this.trail(f.x, f.top, f.z);
     this.trail(H.x, H.wall + rh * 0.9, H.z);
-    this.addReward('house', H.x, H.wall + rh * 0.92, H.z, 0.4);
+    this.addReward('house', ARENA_REWARDS.house.x, ARENA_REWARDS.house.y, ARENA_REWARDS.house.z, ARENA_REWARDS.house.size);
   }
 
   // ---- Mini ruko (3 floors, 7.9 m): crates -> balcony bay (level 1 with the air jump, level 3 without) -> sign board -> roof -----------------------------------
@@ -305,36 +253,55 @@ export class ArenaLompat {
   private buildRuko(): void {
     const R = ARENA.ruko;
     const zf = R.z + R.d / 2;
-    const crateTop = 2 * 0.9;
-    // The balcony bay is a pier like a tower floor: its top is 4.65 m above the crates, between what level 0 (4.4) and
-    // level 1 (4.9) can reach with the air jump and the mantle; without the air jump it takes level 3 (plain 5.0, level 2 4.3).
-    const balconyTop = round2(crateTop + reach.full(0) + 0.5 * (reach.full(1) - reach.full(0)));
-    const signTop = balconyTop + 0.75;
-    const wall = balconyTop + 1.45;
+    const RL = A.ruko;
+    const wall = RL.wall;
     this.body(R.x, R.z, R.w, wall, R.d, C.MINT);
     for (const fy of [Math.round(wall / 3), Math.round((2 * wall) / 3)]) this.kit.deco.box([R.w + 0.2, 0.18, 0.2], [R.x, fy, zf + 0.05], C.CREAM); // floor bands
     this.windowsAndDoor(R.x, zf, R.w, wall, 3);
-    const crateA = this.pk.crateStack('rukoCrateA', 'ruko', R.x - 3.0, zf + 0.7, 1);
-    const crateB = this.pk.crateStack('rukoCrateB', 'ruko', R.x - 1.6, zf + 0.7, 2);
-    // The balcony starts 0.5 m right of the top crate; the sign board sits at its right end.
-    const bw = 2.4;
-    const bx = R.x - 0.4 + bw / 2 - 0.0;
-    const bal = this.pk.balcony('rukoBalcony', 'ruko', bx, zf + 0.9, balconyTop, bw, 1.8);
-    // The sign juts out past the roof edge (which overhangs 0.4 m) so there is room to stand on it.
-    const sign = this.pk.signBoard('rukoSign', 'ruko', bx + bw / 2 + 0.5, zf + 0.9, signTop, 1.0, 1.2, 0.5);
+    const crateA = this.pk.crateStack(RL.crateA.id, 'ruko', RL.crateA.x, RL.crateA.z, 1);
+    const bal = this.pk.balcony(RL.balcony.id, 'ruko', RL.balcony.x, RL.balcony.z, RL.balcony.top, RL.balcony.w, RL.balcony.d);
+    const sign = this.pk.signBoard(RL.sign.id, 'ruko', RL.sign.x, RL.sign.z, RL.sign.top, RL.sign.w, RL.sign.d, RL.signThick);
     this.buildings.ruko = { x: R.x, z: R.z, w: R.w, d: R.d, wall };
-    const rh = 1.5;
-    addHipRoof(this.kit, { id: 'rukoRoof', cx: R.x, cz: R.z, baseY: wall, w: R.w + 0.6, d: R.d + 0.6, h: rh, color: C.DEEP_RED });
+    const rh = RL.roofH;
+    addHipRoof(this.kit, { id: 'rukoRoof', cx: R.x, cz: R.z, baseY: wall, w: RL.roofW, d: RL.roofD, h: rh, color: C.DEEP_RED });
     this.routes.ruko = [
       { id: crateA.id, needs: 0 },
-      { id: crateB.id, needs: 0 },
-      { id: bal.id, needs: 1 },
+      { id: bal.id, needs: 2 },
       { id: sign.id, needs: 0 },
       { id: 'rukoRoof', needs: 0 },
     ];
-    for (const f of [crateA, crateB, bal, sign]) this.trail(f.x, f.top, f.z);
+    for (const f of [crateA, bal, sign]) this.trail(f.x, f.top, f.z);
     this.trail(R.x, wall + rh * 0.9, R.z);
-    this.addReward('ruko', R.x, wall + rh * 0.92, R.z, 0.45);
+    this.addReward('ruko', ARENA_REWARDS.ruko.x, ARENA_REWARDS.ruko.y, ARENA_REWARDS.ruko.z, ARENA_REWARDS.ruko.size);
+  }
+
+  // ---- Gang Tendang (kick alley): two tall walls, climbable only by wall kicks ---------------------------------------------------
+
+  /**
+   * Two 9 m walls 2.4 m apart (drawn), open at the south end. The kickable inner faces carry bright vertical stripes (unlit,
+   * so they read in shade); the wall tops are the platform, each has a star. Plain jumps top out at 7.0 m
+   * (level 4 + air jump + mantle), so only the kicks get up there (checked by `npm run check:reach`).
+   */
+  private buildKickAlley(): void {
+    const K = ARENA.kick;
+    const { wallA, wallB } = A.kick;
+    this.pk.block({ id: wallA.id, group: 'kick', kind: 'pier', x: wallA.x, z: wallA.z, w: wallA.w, d: wallA.d, top: wallA.top, color: C.LILAC, onCollider: (c) => this.ctx.player.rhythm.registerKick(c) });
+    this.pk.block({ id: wallB.id, group: 'kick', kind: 'pier', x: wallB.x, z: wallB.z, w: wallB.w, d: wallB.d, top: wallB.top, color: C.PINK, onCollider: (c) => this.ctx.player.rhythm.registerKick(c) });
+    const step = 0.8;
+    const n = Math.floor(K.len / step);
+    const z0 = K.z - ((n - 1) * step) / 2;
+    const inA = wallA.x + wallA.w / 2 + 0.03;
+    const inB = wallB.x - wallB.w / 2 - 0.03;
+    const h = K.top - 0.6;
+    for (let i = 0; i < n; i++) {
+      const color = i % 2 === 0 ? 0xffd23f : 0xffffff;
+      this.kit.glow.box([0.05, h, 0.36], [inA, 0.3 + h / 2, z0 + i * step], color);
+      this.kit.glow.box([0.05, h, 0.36], [inB, 0.3 + h / 2, z0 + i * step], color);
+    }
+    this.trail(wallA.x, wallA.top, wallA.z);
+    this.trail(wallB.x, wallB.top, wallB.z);
+    this.addReward('kickA', ARENA_REWARDS.kickA.x, ARENA_REWARDS.kickA.y, ARENA_REWARDS.kickA.z, ARENA_REWARDS.kickA.size);
+    this.addReward('kickB', ARENA_REWARDS.kickB.x, ARENA_REWARDS.kickB.y, ARENA_REWARDS.kickB.z, ARENA_REWARDS.kickB.size);
   }
 
   /** A plain solid building body with a small base trim. */
@@ -430,7 +397,6 @@ export class ArenaLompat {
 }
 
 const ARENA_DRUM_TOP = Parkour.world.drum.height;
-const round2 = (v: number): number => Math.round(v * 100) / 100;
 
 /** A drum seen from above: gold ring, red band, cream skin and a gold centre. */
 function paintDrum(g: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {

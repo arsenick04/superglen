@@ -36,6 +36,16 @@ export interface MantleEvent {
   z: number;
 }
 
+export interface WallKickEvent {
+  /** Contact point on the wall, wall normal (horizontal, pointing out of the wall) and kicks so far in this airtime. */
+  x: number;
+  y: number;
+  z: number;
+  nx: number;
+  nz: number;
+  chain: number;
+}
+
 /**
  * Events on `player.events`:
  *   rhythmJump  every Superglen ground jump (quality perfect / good / normal / auto)
@@ -44,6 +54,7 @@ export interface MantleEvent {
  *   bounce      a bounce drum was landed on (always perfect)
  *   land        any touchdown (feet position, impact speed): sound and fx hook here
  *   mantle      the character pulled itself onto a ledge
+ *   wallKick    Superglen kicked off a wall (contact point, normal, chain)
  */
 export interface PlayerEventMap {
   rhythmJump: RhythmJumpEvent;
@@ -52,6 +63,7 @@ export interface PlayerEventMap {
   bounce: BounceEvent;
   land: LandEvent;
   mantle: MantleEvent;
+  wallKick: WallKickEvent;
 }
 
 /**
@@ -64,6 +76,7 @@ export interface PlayerEventMap {
  *      throws the player up at once with the new level's jump. Emits `bounce` and `rhythmJump {quality:'perfect'}`.
  *   player.rhythm.bounce()                   the same effect without a collider (scripted / trigger volumes)
  *   player.rhythm.unregisterBounce(collider) / clearBounce()  (the Game clears all of them when a level unloads)
+ * KICKABLE WALLS: player.rhythm.registerKick(collider) marks a wall the Superglen wall kick may use (same lifetime as the drums).
  */
 export class Rhythm {
   /** Current level 0..4. Read-only for everybody except Player (use setLevel for tests/story). */
@@ -81,6 +94,7 @@ export class Rhythm {
   bounceHook: ((launch: boolean) => void) | null = null;
 
   private readonly bounceHandles = new Set<number>();
+  private readonly kickHandles = new Set<number>();
   private readonly levelEvent: RhythmLevelEvent = { level: 0, previous: 0 };
   private readonly missEvent: RhythmMissEvent = { level: 0 };
 
@@ -99,6 +113,16 @@ export class Rhythm {
 
   clearBounce(): void {
     this.bounceHandles.clear();
+    this.kickHandles.clear();
+  }
+
+  /** Mark a fixed collider as a kickable wall (wall kick, see Parkour.wallKick.anyWall). Cleared with `clearBounce`. */
+  registerKick(collider: RAPIER.Collider): void {
+    this.kickHandles.add(collider.handle);
+  }
+
+  isKick(handle: number): boolean {
+    return this.kickHandles.has(handle);
   }
 
   isBounce(handle: number): boolean {

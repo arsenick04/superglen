@@ -31,6 +31,8 @@ interface EmitterState extends Emitter {
   removed: boolean;
 }
 
+/** Shared default for `burst` (a default `{}` would allocate on every call). */
+const NO_OPTS: { up?: number; gravity?: number; life?: number } = {};
 const COLORS_PARTY = [0xffd23f, 0xff6b6b, 0x4dabf7, 0x2ec4b6, 0xff8fb1, 0xb8f2a8];
 
 /**
@@ -102,7 +104,7 @@ export class Sparkles {
   }
 
   /** Round burst. `color` -1 = party colours (confetti). */
-  burst(x: number, y: number, z: number, n: number, speed: number, color: number, opts: { up?: number; gravity?: number; life?: number } = {}): void {
+  burst(x: number, y: number, z: number, n: number, speed: number, color: number, opts: { up?: number; gravity?: number; life?: number } = NO_OPTS): void {
     const up = opts.up ?? 0.5;
     for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2;

@@ -52,7 +52,7 @@ export class TestArea implements Level {
 
     // The test area owns the TEMPORARY Glen <-> Superglen toggle (E / star) and the full button sets.
     ctx.game.setLegacyTestControls(true);
-    this.modeController = new ModeController(ctx.player, ctx.input, (m) => ctx.game.setPlayerMode(m));
+    this.modeController = new ModeController(ctx.player, ctx.input, (m) => ctx.game.setPlayerMode(m), true);
 
     // Superglen's skills are all unlocked here (not saved), and flights stay inside the 60 x 60 m field.
     ctx.game.setSkills({ laser: true, shield: true, fly: true });

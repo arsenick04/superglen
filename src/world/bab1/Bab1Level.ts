@@ -14,6 +14,8 @@ import { Atmosphere, Flashlight, type Zone } from './Lighting';
 import { FunnyFx } from './FunnyFx';
 import { LabDoor } from './LabDoor';
 import { Story } from './Story';
+import { StreetFx } from './StreetFx';
+import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
 
 /**
  * Bab 1: Komputer Kuno Barongsai. One continuous level along -Z: street, old Barongsai building, dim hall, laboratory.
@@ -34,6 +36,7 @@ export class Bab1Level implements Level {
   private funny!: FunnyFx;
   private door!: LabDoor;
   private story!: Story;
+  private streetFx!: StreetFx;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -44,7 +47,8 @@ export class Bab1Level implements Level {
     this.done = ctx.save.isChapterDone('bab1');
     // First visit: no powers yet. Afterwards the unlocked ones (from the save) stay on.
     if (!this.done) ctx.game.setSkills({ laser: false, shield: false, fly: false });
-    ctx.game.setTransformAllowed(false);
+    // The star (touch) / Q (PC) back to Glen exists from the moment of the costume on (Story.transform) and for returning players.
+    ctx.game.setTransformAllowed(this.done);
     // The lab is small: flying is harmless (low ceiling, a flight box around the whole walkable area).
     ctx.player.flight.maxFlyHeight = 4.5;
     ctx.player.flight.bounds = { minX: -13, maxX: 13, minZ: Z.labBack + 0.8, maxZ: 8 };
@@ -70,13 +74,29 @@ export class Bab1Level implements Level {
     const labKit = new Kit(physics, mats, false);
     for (const k of [street, building, hallKit, labKit]) k.roofs = this.roofs;
 
-    buildStreet(street);
+    const pk = buildStreet(street);
     this.jump = new JumpTutorial(ctx, street, this.sparkles);
     this.exterior = new BuildingExterior(building, root, this.sparkles);
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
     this.door = new LabDoor(ctx, labKit, this.sparkles);
-    if (this.testInfo) ctx.game.debugInfo.roofs = this.roofs.json();
+    this.streetFx = new StreetFx(ctx, this.sparkles);
+    if (this.testInfo) {
+      ctx.game.debugInfo.roofs = this.roofs.json();
+      // Layout data for the smoke test: the climbable footholds (drawn size, top), the route of each building, the coins.
+      ctx.game.debugInfo.street = JSON.stringify({
+        footholds: STREET_REACH.footholds.map((f) => ({ id: f.id, x: f.center[0], z: f.center[2], w: f.size[0], d: f.size[2], top: f.center[1] + f.size[1] / 2 })),
+        built: pk.footholds.map((f) => f.id),
+        routes: streetRoutes(),
+        buildings: [
+          ...STREET_BUILDINGS.map((b) => ({ id: b.id, cls: b.cls, level: b.level, wall: b.wall, x: b.roof.cx, z: b.z, w: BODY[b.cls].w, d: BODY[b.cls].d, roof: b.roof.id })),
+          { id: 'school', cls: 'ruko', level: 2, wall: SCHOOL.roofTop, x: 0, z: SCHOOL.roofZ, w: SCHOOL.roofW, d: SCHOOL.roofD, roof: 'schoolRoof' },
+          { id: 'barongsai', cls: 'landmark', level: 4, wall: 11.9, x: 0, z: -49, w: 9, d: 9, roof: 'barongsaiRoof2' },
+        ],
+        coins: this.streetFx.coinPositions(),
+        coinOn: Object.fromEntries(STREET_REACH.coins.map((c) => [c.id, c.on])),
+      });
+    }
     street.build(root);
     building.build(root);
     hallKit.build(root);
@@ -110,6 +130,8 @@ export class Bab1Level implements Level {
     let zone: Zone = 0;
     if (p.z < Z.hallBack - 0.6) zone = 2;
     else if (p.z < Z.facade - 0.3) zone = 1;
+    // On the roofs (above the hall and the lab) it is daylight again: the dim zones are only the rooms underneath.
+    if (p.y > 5.6) zone = 0;
     this.atmosphere.setZone(zone);
     this.atmosphere.update(dt, p, this.ctx.cameraRig.yaw);
     this.flashlight.update(dt, this.ctx.player, this.atmosphere.hallAmount);
@@ -120,6 +142,7 @@ export class Bab1Level implements Level {
     this.door.update(dt);
     this.jump.update(dt);
     this.funny.update(dt);
+    this.streetFx.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

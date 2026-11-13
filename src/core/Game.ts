@@ -4,6 +4,7 @@ import { Physics, FIXED_DT } from './Physics';
 import { Input, type Action, type InputSource, type Vec2 } from '../input/Input';
 import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
+import { ModeController } from '../player/ModeController';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { GroundRings } from '../fx/GroundRings';
 import { BillboardRings } from '../fx/BillboardRings';
@@ -126,9 +127,9 @@ export interface DebugHandle {
   teleportFeet: (x: number, y: number, z: number) => void;
   /**
    * Test helper: add a fixed box (centre, half extents) to the level (removed on unload). `bounce` registers it as
-   * a bounce drum (Rhythm.registerBounce).
+   * a bounce drum (Rhythm.registerBounce), `kick` as a kickable wall (Rhythm.registerKick).
    */
-  testBox: (cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, bounce?: boolean) => void;
+  testBox: (cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, bounce?: boolean, kick?: boolean) => void;
   /**
    * Fractional shadow-map texel position (0..1, x and y) of a fixed world point, or null without a shadow light.
    * While the player walks this must stay constant (snapped shadow camera); a drifting value = swimming shadows.
@@ -190,6 +191,12 @@ export interface DebugHandle {
     landEta: number;
     mantles: number;
     mantling: boolean;
+    /** Wall kicks so far, kicks in this airtime, and whether the kick hint shows right now. */
+    wallKicks: number;
+    kickChain: number;
+    kickHint: boolean;
+    /** Test-only: false switches the wall kick off. */
+    setWallKick: (on: boolean) => void;
     /** A held jump button keeps bouncing (no jets) because of a timed bounce chain. */
     chain: boolean;
     /** Lit drum icons / icon strip shown / DOM updates so far. */
@@ -267,6 +274,9 @@ export class Game {
   private fading = false;
   private dialogLocked = false;
   private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false };
+  /** The level lets the child switch Glen <-> Superglen (the star button / Q); the button also needs live controls. */
+  private transformAllowed = false;
+  private readonly modeCtl: ModeController;
   private currentLayout: readonly TouchButtonDef[] | null = null;
   /** What levels call (LevelContext.game). */
   private readonly api: LevelGame;
@@ -338,9 +348,10 @@ export class Game {
       this.player.teleport(x, y + 0.55, z);
       this.player.updateVisual(1, 0);
     },
-    testBox: (cx, cy, cz, hx, hy, hz, bounce = false) => {
+    testBox: (cx, cy, cz, hx, hy, hz, bounce = false, kick = false) => {
       const h = this.physics.addFixedCuboid({ x: hx, y: hy, z: hz }, { x: cx, y: cy, z: cz });
       if (bounce) this.player.rhythm.registerBounce(h.collider);
+      if (kick) this.player.rhythm.registerKick(h.collider);
       this.physics.refreshQueries();
     },
     shadowPhase: () => this.shadowPhase(),
@@ -385,6 +396,8 @@ export class Game {
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
+    // Story levels: star button / Q (E stays 'talk'). The test level has its own controller that also takes E.
+    this.modeCtl = new ModeController(this.player, this.input, (m) => this.setPlayerMode(m), false, () => this.transformUsable);
     {
       // Easy jump mode: saved setting (default on), the URL ?easy=0|1 overrides it for this session.
       const q = new URLSearchParams(window.location.search);
@@ -408,7 +421,7 @@ export class Game {
     this.flashes = new BillboardRings(this.scene, this.cameraRig.camera, 8);
     this.stars = new DizzyStars(this.scene, this.cameraRig.camera, 3);
     this.player.flight.sparkles = this.sparkles;
-    this.rhythmFx = new RhythmFx(this.scene, this.player, this.sparkles, this.rings, this.flashes, () => this.cameraRig.bump(), this.synth);
+    this.rhythmFx = new RhythmFx(this.scene, this.player, this.sparkles, this.rings, this.flashes, () => this.cameraRig.bump(), this.synth, this.cameraRig.camera);
     this.projectiles = new Projectiles(this.scene, this.physics.world, this.player, {
       sparkles: this.sparkles,
       flashes: this.flashes,
@@ -464,10 +477,11 @@ export class Game {
       get controlsEnabled() {
         return self.controlsEnabled;
       },
-      setPlayerMode: (mode) => this.setPlayerMode(mode),
+      setPlayerMode: (mode, persist = true) => this.setPlayerMode(mode, persist),
       setTransformAllowed: (on) => {
-        this.profile.transform = on;
-        this.applyLayout();
+        this.transformAllowed = on;
+        this.hud?.setTransformHelp(on);
+        this.refreshTransform();
       },
       setSkills: (sk, persist) => this.setSkills(sk, persist),
       setSkillButtons: (sk) => this.setSkills({ laser: sk.laser, shield: sk.shield }),
@@ -506,6 +520,8 @@ export class Game {
       onBeforeBuild: () => {
         this.levelControls = true;
         this.profile.legacyTest = false;
+        this.transformAllowed = false;
+        this.hud?.setTransformHelp(false);
         this.profile.transform = false;
         this.player.flight.resetLevelSettings();
         this.player.rhythm.cap = MAX_LEVEL;
@@ -665,6 +681,7 @@ export class Game {
 
   private fixedStep(dt: number): void {
     this.levels.fixedUpdate(dt); // sequences first, then the level (e.g. the test area's mode toggle)
+    this.modeCtl.fixedUpdate();
     this.dialog.fixedUpdate(dt);
     this.interactions.fixedUpdate();
     this.objectives.fixedUpdate();
@@ -747,6 +764,12 @@ export class Game {
       landEta: Infinity,
       mantles: 0,
       mantling: false,
+      wallKicks: 0,
+      kickChain: 0,
+      kickHint: false,
+      setWallKick: (on) => {
+        this.player.wallKickEnabled = on;
+      },
       chain: false,
       lit: 0,
       drumsVisible: false,
@@ -824,10 +847,10 @@ export class Game {
   }
 
   /** Glen <-> Superglen: player look/tuning, touch buttons and a quick golden flash ring. */
-  private setPlayerMode(mode: PlayerMode): void {
+  private setPlayerMode(mode: PlayerMode, persist = true): void {
     const changed = mode !== this.player.mode;
     this.player.setMode(mode);
-    this.save.setLastMode(mode);
+    if (persist) this.save.setLastMode(mode);
     this.applyLayout();
     if (changed) {
       const f = this.player.getFeetPosition(this.feet);
@@ -850,6 +873,17 @@ export class Game {
 
   private updateControls(): void {
     this.player.inputEnabled = this.controlsEnabled;
+    this.refreshTransform();
+  }
+
+  /** Is the star / Q switch usable right now (the story allows it and no sequence, dialog or fade holds the controls)? */
+  private get transformUsable(): boolean {
+    return this.transformAllowed && this.controlsEnabled && !this.profile.legacyTest;
+  }
+
+  private refreshTransform(): void {
+    this.profile.transform = this.transformAllowed && this.controlsEnabled;
+    this.applyLayout();
   }
 
   private readonly feet = new THREE.Vector3();
@@ -940,6 +974,9 @@ export class Game {
     rh.landEta = pl.landEta;
     rh.mantles = pl.mantles;
     rh.mantling = pl.mantling;
+    rh.wallKicks = pl.wallKicks;
+    rh.kickChain = pl.kickChain;
+    rh.kickHint = pl.kickHint;
     rh.chain = pl.bounceChain;
     rh.lit = this.drumIcons ? this.drumIcons.lit : 0;
     rh.drumsVisible = this.drumIcons ? this.drumIcons.visible : false;

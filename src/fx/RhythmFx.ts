@@ -19,6 +19,13 @@ const SPARK_GOLD = 0xffd23f;
  * Pooled and allocation free per frame; the ring's material is the same plain MeshBasicMaterial program as the other
  * rings, so no shader compiles in play (it is shown once for the pre-warm).
  */
+/** Option objects of the bursts, made once (a literal at the call site would allocate on every jump). */
+const AUTO_BURST = { gravity: 3, life: 0.6 };
+const GOOD_BURST = { gravity: 3, life: 0.9, up: 0.9 };
+const LION_BURST = { gravity: 1.5, life: 1.2, up: 0.5 };
+const KICK_BURST = { gravity: 3.5, life: 0.55, up: 0.6 };
+const DUST = 0xfff3d6;
+
 export class RhythmFx {
   private readonly ring: THREE.Mesh;
   private readonly ringMat: THREE.MeshBasicMaterial;
@@ -28,6 +35,10 @@ export class RhythmFx {
   private warming = false;
   private readonly offs: (() => void)[] = [];
   private readonly feet = new THREE.Vector3();
+  /** Wall-kick hint: a curved arrow that always faces the camera, shown at the contact point while a kick is possible. */
+  private readonly hint: THREE.Mesh;
+  private readonly hintMat: THREE.MeshBasicMaterial;
+  private hintShown = false;
 
   constructor(
     scene: THREE.Scene,
@@ -37,6 +48,7 @@ export class RhythmFx {
     private readonly flashes: BillboardRings,
     private readonly bump: () => void,
     private readonly synth: DrumSynth,
+    private readonly camera: THREE.Camera,
   ) {
     const geo = new THREE.RingGeometry(0.78, 1, 44);
     geo.rotateX(-Math.PI / 2);
@@ -57,6 +69,21 @@ export class RhythmFx {
     this.ring.renderOrder = 2;
     scene.add(this.ring);
 
+    this.hintMat = new THREE.MeshBasicMaterial({
+      map: makeKickIcon(),
+      color: Parkour.wallKick.hint.color,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      depthTest: false,
+      fog: false,
+    });
+    this.hint = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.hintMat);
+    this.hint.visible = false;
+    this.hint.frustumCulled = false;
+    this.hint.renderOrder = 7;
+    scene.add(this.hint);
+
     const ev = player.events;
     this.offs.push(
       ev.on('rhythmJump', (e) => {
@@ -70,6 +97,12 @@ export class RhythmFx {
       ev.on('land', (e) => {
         if (e.impact >= Parkour.boingMinImpact) this.synth.boing();
       }),
+      ev.on('wallKick', (e) => {
+        const K = Parkour.wallKick;
+        this.synth.drum(K.drumLevel, false);
+        this.sparkles.burst(e.x + e.nx * 0.1, e.y, e.z + e.nz * 0.1, K.burst, 2.6, DUST, KICK_BURST);
+        this.flashes.spawn(e.x + e.nx * 0.12, e.y, e.z + e.nz * 0.12, 0.7, 0.25, DUST, 0.85);
+      }),
     );
   }
 
@@ -78,15 +111,15 @@ export class RhythmFx {
     const F = Parkour.fx;
     const top = level >= Parkour.levels.length - 1;
     if (quality === 'auto') {
-      this.sparkles.burst(x, y + 0.1, z, 5, 1.8, SPARK_GOLD, { gravity: 3, life: 0.6 });
+      this.sparkles.burst(x, y + 0.1, z, 5, 1.8, SPARK_GOLD, AUTO_BURST);
       return;
     }
     const perfect = quality === 'perfect';
     this.groundRings.spawn(x, y, z, perfect ? 2.2 : 1.5, perfect ? 0.45 : 0.35, perfect ? GOLD : 0xfff2a8, perfect ? 1 : 0.8);
-    this.sparkles.burst(x, y + 0.15, z, perfect ? F.burstPerfect : F.burstGood, perfect ? 4.2 : 3, perfect ? -1 : SPARK_GOLD, { gravity: 3, life: 0.9, up: 0.9 });
+    this.sparkles.burst(x, y + 0.15, z, perfect ? F.burstPerfect : F.burstGood, perfect ? 4.2 : 3, perfect ? -1 : SPARK_GOLD, GOOD_BURST);
     if (top) {
       // "Lompat Singa": a roar of sparkles, a big flash and a tiny camera dip.
-      this.sparkles.burst(x, y + 0.6, z, F.burstLion, 6, -1, { gravity: 1.5, life: 1.2, up: 0.5 });
+      this.sparkles.burst(x, y + 0.6, z, F.burstLion, 6, -1, LION_BURST);
       this.flashes.spawn(x, y + 0.7, z, 2.6, 0.5, SPARK_GOLD, 0.95);
       this.bump();
     }
@@ -95,6 +128,11 @@ export class RhythmFx {
   /** Show the ring for one shader pre-warm frame. */
   warm(on: boolean): void {
     this.warming = on;
+    this.hint.visible = on || this.hintShown;
+    if (on) {
+      this.hint.position.set(0, -500, 0);
+      this.hintMat.opacity = 0.5;
+    }
     this.ring.visible = on || this.ringState >= 0;
     if (on) {
       this.ring.position.set(0, -500, 0);
@@ -129,6 +167,22 @@ export class RhythmFx {
       this.ring.visible = this.warming;
     }
 
+    // Wall-kick hint: a pulsing curved arrow at the contact point.
+    const H = Parkour.wallKick.hint;
+    if (sg && p.kickHint) {
+      const c = p.kickContact;
+      const pulse = 0.5 + 0.5 * Math.sin(this.clock * Math.PI * 2 * H.pulseHz);
+      this.hint.position.set(c.px + c.nx * H.offset, c.py + H.lift, c.pz + c.nz * H.offset);
+      this.hint.quaternion.copy(this.camera.quaternion);
+      this.hint.scale.setScalar(H.size * (0.9 + 0.2 * pulse));
+      this.hintMat.opacity = 0.65 + 0.35 * pulse;
+      this.hint.visible = true;
+      this.hintShown = true;
+    } else if (this.hintShown) {
+      this.hintShown = false;
+      this.hint.visible = this.warming;
+    }
+
     // Air trail from level 2 up.
     const lvl = p.rhythmLevel;
     if (sg && lvl >= F.trailFromLevel && !p.grounded && !p.flying && dt > 0) {
@@ -147,4 +201,45 @@ export class RhythmFx {
     for (const o of this.offs) o();
     this.offs.length = 0;
   }
+}
+
+/** A bold curved arrow (white with a dark outline, tinted by the material): "kick off here". */
+function makeKickIcon(): THREE.CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const g = canvas.getContext('2d');
+  if (g) {
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const arc = (): void => {
+      g.beginPath();
+      g.arc(64, 70, 36, Math.PI * 0.95, Math.PI * 1.95, false);
+    };
+    const head = (): void => {
+      g.beginPath();
+      g.moveTo(100, 94);
+      g.lineTo(80, 62);
+      g.lineTo(120, 62);
+      g.closePath();
+    };
+    g.strokeStyle = '#3b1d12';
+    g.lineWidth = 26;
+    arc();
+    g.stroke();
+    g.lineWidth = 10;
+    head();
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 14;
+    arc();
+    g.stroke();
+    head();
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }

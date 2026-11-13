@@ -37,8 +37,9 @@ export class Bab2Level implements Level {
     const done = ctx.save.isChapterDone('bab2');
     const { root, physics, scene, game } = ctx;
 
+    // Story: Superglen is required (not saved as the last mode) and the switch stays hidden until the chapter is done.
     game.setTransformAllowed(false);
-    game.setPlayerMode('superglen');
+    game.setPlayerMode(done ? ctx.save.data.lastMode : 'superglen', done);
     // Finished chapter: every power is ready. Story: only Lompat Barongsai until each unlock step.
     game.setSkills(done ? { laser: true, shield: true, fly: true } : { laser: false, shield: false, fly: false });
     const fl = ctx.player.flight;

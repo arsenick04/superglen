@@ -3,9 +3,10 @@ import type { Player } from './Player';
 import type { PlayerMode } from './PlayerConfig';
 
 /**
- * TEMPORARY test-area switch Glen <-> Superglen. Owned by the `test` level only (world/TestArea.ts);
- * story levels change the mode through the level context (`ctx.game.setPlayerMode`).
- * PC: E ('interact'). Touch: the star button ('transform'), or the Bicara/Ambil button in Glen mode.
+ * The one Glen <-> Superglen switch. Touch: the star button ('transform'). PC: Q ('transform').
+ * `interactToggles` additionally makes E ('interact') toggle: only the `test` level does that (story levels use E to talk).
+ * `canToggle` lets the owner veto a press (locked controls, levels where Superglen is required).
+ * Owned by the Game (story levels) and by the test area (which keeps its legacy E toggle).
  */
 export class ModeController {
   constructor(
@@ -13,11 +14,14 @@ export class ModeController {
     private readonly input: Input,
     /** Applies the mode (player, touch layout, flash ring): ctx.game.setPlayerMode. */
     private readonly setMode: (mode: PlayerMode) => void,
+    private readonly interactToggles = false,
+    private readonly canToggle: () => boolean = () => true,
   ) {}
 
   /** Call once per fixed step, before the player update (reads the press edge). */
   fixedUpdate(): void {
-    if (this.input.wasPressed('interact') || this.input.wasPressed('transform')) this.toggle();
+    const pressed = this.input.wasPressed('transform') || (this.interactToggles && this.input.wasPressed('interact'));
+    if (pressed && this.canToggle()) this.toggle();
   }
 
   toggle(): void {

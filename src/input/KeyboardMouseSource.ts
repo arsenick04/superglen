@@ -6,7 +6,7 @@ const KEY_ACTIONS: Readonly<Record<Action, readonly string[]>> = {
   laser: ['KeyJ'],
   shield: ['KeyK'],
   interact: ['KeyE', 'Enter', 'NumpadEnter'],
-  transform: [],
+  transform: ['KeyQ'],
 };
 
 /** Mouse buttons (MouseEvent.button) per action. Only active while the pointer is locked. */

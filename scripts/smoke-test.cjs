@@ -1468,6 +1468,8 @@ async function playChapter(page, check, d, beat, opts = {}) {
   await beat('costume', d);
   s = await d.until((s) => s.controlsEnabled && s.levelInfo.step === 'costume', 900);
   check('controls unlocked after the sequence', !!s);
+  check('bab1 before the costume: no transform star (Glen cannot switch yet)', await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
+  check('bab1 before the costume: PC help card has no "Q: berubah"', await page.evaluate(() => !document.querySelector('.hud-controls').textContent.includes('Q: berubah')));
   s = await d.st();
   check('objective on the costume', Math.abs(s.objective.x + 4.6) < 0.5 && Math.abs(s.objective.z + 71.5) < 0.5, JSON.stringify(s.objective));
   if (!opts.skipPoles) await cameraAngleShots(page, check, d);
@@ -1485,6 +1487,7 @@ async function playChapter(page, check, d, beat, opts = {}) {
   s = await d.until((s) => s.mode === 'superglen', 200);
   check('taking the costume sets mode superglen', !!s);
   await d.adv(40, true);
+  check('bab1 funny ending (controls locked): transform star hidden', await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await beat('superglen', d);
   s = await d.until((s) => d.seen.includes('bab1_glen_superglen'), 200);
   check('superglen line shown', !!s);
@@ -1505,7 +1508,22 @@ async function playChapter(page, check, d, beat, opts = {}) {
   s = await d.st();
   check('save: chaptersDone contains bab1', s.save.data.chaptersDone.includes('bab1'));
   check('controls enabled in free play', s.controlsEnabled);
-  if (opts.skipPoles) return;
+  check('bab1 after the costume: transform star appears once controls are free', await page.evaluate(() => !!document.querySelector('.tc-button[data-action=transform]')));
+  check('bab1 after the costume: PC help card lists "Q: berubah"', await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('Q: berubah')));
+  if (opts.skipPoles) {
+    // touch: tap the star -> Glen -> tap again -> Superglen
+    const tapStar = async () => {
+      const c = await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=transform]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await page.touchscreen.tap(c.x, c.y);
+      await d.adv(4, true);
+    };
+    await tapStar();
+    check('touch: tapping the star in the lab switches back to Glen', (await d.st()).mode === 'glen');
+    await shot(page, 'transform-back-281');
+    await tapStar();
+    check('touch: tapping the star again switches to Superglen', (await d.st()).mode === 'superglen');
+    return;
+  }
   // --- F. practice poles ---
   await d.adv(200);
   const poles = [[3.7, -74.8, 0.1], [5.9, -74.8, 0.9], [5.9, -72.6, 1.7]];
@@ -1606,7 +1624,7 @@ async function bab1PlankScenario(page, check) {
 async function bab1ReturnScenario(page, check) {
   // Runs on a page where the save says bab1 is done (set before the reload).
   await sleep(1500);
-  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.evaluate(() => { window.__superglen.save.markChapterDone('bab1'); window.__superglen.save.setLastMode('superglen'); });
   await page.goto(URL + '?fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
@@ -1622,6 +1640,47 @@ async function bab1ReturnScenario(page, check) {
   await shot(page, 'bab1-return');
   check('returning (Chapter 2 not played): the objective beam points at Nino', s.objective.active && Math.abs(s.objective.x - 4.2) < 0.5 && Math.abs(s.objective.z + 70.5) < 0.5, JSON.stringify(s.objective));
   check('returning: all skills still locked, flying ceiling set for the small lab', !s.skills.unlocked.fly && s.skills.maxFlyHeight < 6, `maxFly ${s.skills.maxFlyHeight}`);
+  // ---- transform back to Glen: Q on PC, the star on touch; skills follow the mode; the last mode is remembered ----
+  {
+    const acts = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
+    const help = await page.evaluate(() => [...document.querySelectorAll('.hud-controls li')].map((e) => e.textContent));
+    check('returning: transform star present, PC card lists "Q: berubah" and "E: bicara / ambil"', (await acts()) === 'jump,interact,transform' && help.includes('Q: berubah') && help.includes('E: bicara / ambil'), `${await acts()} | ${help.join(' / ')}`);
+    await d.tap('q');
+    check('Q switches Superglen -> Glen in the story lab', (await d.st()).mode === 'glen');
+    check('...Glen buttons: jump + interact + star', (await acts()) === 'jump,interact,transform', await acts());
+    await d.tap('q');
+    check('Q again switches back to Superglen', (await d.st()).mode === 'superglen');
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: true, shield: true }));
+    await d.adv(2);
+    check('Superglen with skills: jump, interact, laser, shield + star', (await acts()) === 'jump,interact,laser,shield,transform', await acts());
+    await d.tap('q');
+    check('Glen: the skill buttons are gone (jump + interact + star)', (await acts()) === 'jump,interact,transform' && (await d.st()).mode === 'glen', await acts());
+    await d.tap('q');
+    check('Superglen again: the skill buttons are back', (await acts()) === 'jump,interact,laser,shield,transform', await acts());
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: false, shield: false }));
+    await d.adv(2);
+    // Locked controls hide the star and ignore Q.
+    await page.evaluate(() => window.__superglen.game.setControlsEnabled(false));
+    await d.adv(2);
+    await d.tap('q');
+    check('controls locked: star hidden and Q does nothing', (await acts()) === 'jump,interact' && (await d.st()).mode === 'superglen', await acts());
+    await page.evaluate(() => window.__superglen.game.setControlsEnabled(true));
+    await d.adv(2);
+    // Leave as Glen: the next visit starts as Glen.
+    await d.tap('q');
+    check('left the game as Glen: the save remembers it', (await d.st()).save.data.lastMode === 'glen');
+    await page.goto(URL + '?fps=0');
+    await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+    await sleep(1500);
+    await page.mouse.click(640, 360);
+    await sleep(600);
+    await page.evaluate(() => window.__superglen.pause(true));
+    await d.adv(40, true);
+    s = await d.st();
+    check('reload: the returning player starts as Glen with the star visible', s.mode === 'glen' && (await acts()) === 'jump,interact,transform', `${s.mode} ${await acts()}`);
+    await d.tap('q');
+    check('...and Q makes Superglen again (saved)', (await d.st()).mode === 'superglen' && (await d.st()).save.data.lastMode === 'superglen');
+  }
   // Camera collision: a pole between the camera and the player must pull the camera in (never inside the pole).
   await d.walk(5.9, -71.0, 600);
   await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // camera on the -Z side, pole at z -72.6 in between
@@ -1647,6 +1706,7 @@ async function bab1ReturnScenario(page, check) {
   check('Nino offers a talk prompt', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
   await d.tap('e');
   check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  check('E talks to Nino and does not switch the mode (E is not the transform key in story levels)', (await d.st()).mode === 'superglen');
   await d.adv(200); // the line ends (game time), then the fade to Chapter 2 starts
   await page.evaluate(() => window.__superglen.pause(false));
   await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 30000 });
@@ -1722,7 +1782,7 @@ async function bab1TouchScenario(page, check) {
   check('touch: jump button pulses during the jump lesson', pulsed);
   check('touch: dialog bubble, prompt icon and buttons never overlap at any sampled beat', overlaps === 0, `${overlaps} overlaps in ${samples.length} samples`);
   const a = await actions();
-  check('touch: Superglen buttons after the chapter: jump + interact only (no laser/shield/star)', a === 'jump,interact', a);
+  check('touch: Superglen buttons after the chapter: jump + interact + star (no laser/shield yet)', a === 'jump,interact,transform', a);
   void fingers;
 }
 
@@ -1793,6 +1853,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: only Lompat Barongsai at the start (no skill unlocked)`, !s.skills.unlocked.fly && !s.skills.unlocked.laser && !s.skills.unlocked.shield, JSON.stringify(s.skills.unlocked));
   if (tag === 'touch') check('touch: buttons at the start are jump + interact', (await actions()) === 'jump,interact', await actions());
   else check('desktop: help card does not list skills yet', await page.evaluate(() => !document.querySelector('.hud-controls').textContent.includes('Tahan Spasi')));
+  check(`${tag}: Chapter 2 story: no transform star (Superglen is required)`, await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await expectStanding(page, check, `bab2 at start (${tag})`);
   check(`${tag}: first line bab2_nino_pagi`, d.seen.includes('bab2_nino_pagi'), d.seen.join());
   check(`${tag}: objective beam on the flying pad`, s.objective.active && Math.abs(s.objective.x) < 0.5 && Math.abs(s.objective.z + 9) < 0.5, JSON.stringify(s.objective));
@@ -2036,12 +2097,14 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: alarm then siap lines in order`, !!s && d.seen.indexOf('bab2_nino_alarm') < d.seen.indexOf('bab2_glen_siap'), d.seen.join());
   s = await d.until((s) => s.levelInfo.step === 'done', 600, 10);
   check(`${tag}: chapter done step`, !!s);
+  check(`${tag}: transform star still hidden until the celebration is over`, await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await celebrationChecks(page, check, d, async (name) => { await beat(name, d); }, { chapter: 2, tag, shotName: tag === 'touch' ? 'bab2-done-touch' : 'bab2-done', skipPoles: tag === 'touch' });
   s = await d.st();
   check(`${tag}: save has bab2 done and all three skills`, s.save.data.chaptersDone.includes('bab2') && s.save.data.skills.laser && s.save.data.skills.shield && s.save.data.skills.fly, JSON.stringify(s.save.data));
   check(`${tag}: no Nyam bubble after the chapter is done`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
   s = await d.until((s) => s.levelInfo.step === 'free', 400, 10);
   check(`${tag}: free play follows (controls on, all skills)`, !!s && s.controlsEnabled && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield);
+  check(`${tag}: free play: the transform star is available`, await page.evaluate(() => !!document.querySelector('.tc-button[data-action=transform]')));
   console.log(`   bab2 ${tag} budgets: ${areas.join(' | ')}`);
   return { hits, areas };
 }
@@ -2183,7 +2246,7 @@ async function bab2FlowScenario(page, check) {
     if (startClick) await page.mouse.click(640, 360);
     await sleep(500);
   };
-  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.persist(); }, [chapters, skills]);
+  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.persist(); }, [chapters, skills]);
   const ALL = { laser: true, shield: true, fly: true };
   const NONE = { laser: false, shield: false, fly: false };
   const d = makeStoryDriver(page, check);
@@ -2830,7 +2893,7 @@ async function skillsDesktopScenario(page, check) {
     await d.step(18);
     const vy1 = d.last.vy;
     report('after releasing at the ceiling', `vy after 2 frames ${vyNow.toFixed(2)}, after 20 frames ${vy1.toFixed(2)} m/s`);
-    check('release: the jets stop at once (vy < 0 within 2 frames), no slow glide plateau', vyNow < 0 && vy1 < -9 && !d.last.flying && d.last.y < y0, `vy ${vyNow.toFixed(2)} -> ${vy1.toFixed(2)}`);
+    check('release: the jets stop at once (vy < 0 within 2 frames), soft fall capped at -7 m/s, no slow glide plateau', vyNow < 0 && vy1 < -6 && vy1 >= -7.1 && !d.last.flying && d.last.y < y0, `vy ${vyNow.toFixed(2)} -> ${vy1.toFixed(2)}`);
     const x0 = d.last.x;
     await d.step(4);
     const vx = (d.last.x - x0) / (4 / 60);
@@ -2854,13 +2917,14 @@ async function skillsDesktopScenario(page, check) {
     await d.up('Space');
     await d.step(8);
     const hDown = d.last.h;
-    check('released: falling under normal gravity at once', d.last.vy < -1.5 && hDown < 5.9 && !d.last.flying, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    check('released: falling at once (softer gravity)', d.last.vy < -1.5 && hDown < 5.9 && !d.last.flying, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
     const f0 = d.last.flights;
+    const dj0 = d.last.dj;
     await d.down('Space');
-    await d.step(10);
-    check('hold Space again in the air: the air jump fires first (the jets follow after the 0.45 s hold)', d.last.vy > 0 && !d.last.flying, `vy ${d.last.vy.toFixed(2)}`);
+    await d.step(2);
+    check('press Space again in the air after a flight: the jets re-ignite at once (re-ignite wins over the air jump)', d.last.flying && d.last.flights === f0 + 1 && d.last.dj === dj0, `flying ${d.last.flying}, flights +${d.last.flights - f0}, dj +${d.last.dj - dj0}`);
     await d.step(30);
-    check('...then the jets re-ignite (a child can catch themselves)', d.last.flying && d.last.flights === f0 + 1, `flying ${d.last.flying}, flights +${d.last.flights - f0}`);
+    check('...and it rises (a child can catch themselves)', d.last.vy > 0.5, `vy ${d.last.vy.toFixed(2)}`);
     await d.step(120);
     check('...up to the ceiling again, no limit on re-ignitions', d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)}`);
     await d.land();
@@ -3350,7 +3414,7 @@ const parkourSnap = () => {
     misses: r.misses, autos: r.autos, bounces: r.bounces, normals: r.normals, eta: Number.isFinite(r.landEta) ? r.landEta : 99,
     mantles: r.mantles, mantling: r.mantling, lit: r.lit, drums: r.drumsVisible, writes: r.drumWrites, chain: r.chain, easy: r.easy,
     sounds: r.sounds, audio: r.audio, muted: r.muted, jumps: g.jumps, dj: g.doubleJumps, peak: g.peakFeetY, flying: g.skills.flying,
-    flights: g.skills.flights, x: g.player.x, z: g.player.z, mode: g.mode, stomps: g.stomps, programs: g.debugCounts().programs,
+    flights: g.skills.flights, kicks: r.wallKicks, kchain: r.kickChain, khint: r.kickHint, x: g.player.x, z: g.player.z, mode: g.mode, stomps: g.stomps, programs: g.debugCounts().programs,
   };
 };
 
@@ -3629,7 +3693,7 @@ async function parkourDesktopScenario(page, check) {
     await d.step(8);
     const v10 = d.last.vy;
     report('release while flying', `vy after 2 frames ${v2.toFixed(2)}, after 10 frames ${v10.toFixed(2)} m/s (height ${yUp.toFixed(1)} m)`);
-    check('release: flying stops at once, vertical speed goes negative under normal gravity (no -2.2 m/s plateau)', v2 < 0 && v10 < -5 && !d.last.flying, `${v2.toFixed(2)} -> ${v10.toFixed(2)}`);
+    check('release: flying stops at once, vertical speed goes negative with the soft fall (no -2.2 m/s plateau, never below -7 m/s)', v2 < 0 && v10 < -2.5 && v10 >= -7.1 && !d.last.flying, `${v2.toFixed(2)} -> ${v10.toFixed(2)}`);
     await d.untilGrounded();
     check('...and lands without trouble', d.last.grounded && !d.last.flying);
     // re-hold in the air
@@ -3648,7 +3712,7 @@ async function parkourDesktopScenario(page, check) {
         break;
       }
     }
-    check('press and hold again in the air: the jets re-ignite (after the 0.45 s hold)', again > 0 && again <= 45 && d.last.flights === f1 + 1, `after ${again} frames`);
+    check('press again in the air after a flight: the jets re-ignite at once (no 0.45 s hold)', again > 0 && again <= 3 && d.last.flights === f1 + 1, `after ${again} frames`);
     await d.up();
     await d.untilGrounded();
     await d.step(30);
@@ -4022,6 +4086,13 @@ async function parkourPerfScenario(page, check) {
   await d.step(240, true);
   await d.up();
   await d.untilGrounded();
+  // Warm the plain (not rendered) stepping path too: the first seconds of any run allocate far more than a settled one
+  // (JIT, lazy buffers), which made this budget flake. The measured run below is the second one.
+  await d.setup(0);
+  await d.down();
+  await page.evaluate(() => { for (let i = 0; i < 480; i++) window.__superglen.advance(1, false); });
+  await d.up();
+  await d.untilGrounded();
   await d.setup(0);
   await d.step(3, true);
   const p0 = d.last.programs;
@@ -4297,7 +4368,7 @@ async function arenaBuildings(page, check, d) {
     let cur = null;
     for (let i = 0; i < steps.length; i++) {
       const st = steps[i];
-      const lv = Math.min(air ? st.needs : st.needs > 0 ? 3 : 0, cap);
+      const lv = Math.min(air ? st.needs : st.needs > 0 ? 4 : 0, cap);
       if (st.id.endsWith('Roof')) {
         const roof = A.roofs.find((r) => r.id === st.id);
         const t = roof.samples[0];
@@ -4344,17 +4415,19 @@ async function arenaBuildings(page, check, d) {
   check('house: ...and without the air jump (plain jumps only)', hn.reached, hn.log.join(' '));
   const rres = await routeRun('ruko', 3, 'arena-ruko');
   report('ruko route (cap 3)', JSON.stringify(rres));
-  check('ruko: the route crates -> balcony bay -> sign board -> roof reaches the roof with rhythm level <= 3', rres.reached, rres.log.join(' '));
+  check('ruko: the route crate -> balcony bay -> sign board -> roof reaches the roof with rhythm level <= 3', rres.reached, rres.log.join(' '));
   const need = Math.max(...A.routes.ruko.map((s) => s.needs));
-  check('ruko: no foothold on the route needs more than level 3 (designed: level 1 with the air jump)', need <= 3 && need >= 1, `highest designed level ${need}`);
+  check('ruko: the hardest hop of the route is level 2 (class ruko: levels 2-3)', need === 2, `highest designed level ${need}`);
   const r0 = await routeRun('ruko', 0, null);
-  check('ruko: the roof is NOT reached with level 0 only (the balcony hop is 4.65 m, level 0 reaches 4.4 m at best)', !r0.reached, r0.log.join(' '));
+  check('ruko: the roof is NOT reached with level 0 only', !r0.reached, r0.log.join(' '));
   const r1 = await routeRun('ruko', 1, null);
-  check('ruko: level 1 is enough with the air jump', r1.reached, r1.log.join(' '));
-  const n2 = await routeRun('ruko', 2, null, false);
-  check('ruko: without the air jump level 2 is NOT enough (jump + mantle: 4.3 m)', !n2.reached, n2.log.join(' '));
+  check('ruko: the roof is NOT reached with level 1 (the balcony hop is 5.2 m above the crate, level 1 reaches 4.9 m)', !r1.reached, r1.log.join(' '));
+  const r2 = await routeRun('ruko', 2, null);
+  check('ruko: level 2 is enough with the air jump', r2.reached, r2.log.join(' '));
   const n3 = await routeRun('ruko', 3, null, false);
-  check('ruko: without the air jump level 3 is enough (jump + mantle: 5.0 m)', n3.reached, n3.log.join(' '));
+  check('ruko: without the air jump level 3 is NOT enough (jump + mantle: 5.0 m)', !n3.reached, n3.log.join(' '));
+  const n4 = await routeRun('ruko', 4, null, false);
+  check('ruko: without the air jump level 4 is enough (jump + mantle: 5.8 m)', n4.reached, n4.log.join(' '));
 }
 
 async function arenaDesktopScenario(page, check) {
@@ -4366,7 +4439,7 @@ async function arenaDesktopScenario(page, check) {
   await d.step(10);
   await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   await d.load();
-  check('arena data is published to the test (levelInfo.arena / roofs)', d.arena.footholds.length >= 20 && Object.keys(d.arena.routes).length === 4);
+  check('arena data is published to the test (levelInfo.arena / roofs)', d.arena.footholds.length >= 19 && Object.keys(d.arena.routes).length === 4);
   d.arena.roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
 
   // ---- screenshots from above ----
@@ -4497,6 +4570,288 @@ async function arenaTouchScenario(page, check) {
   await shot(page, 'arena-touch-281');
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// Wall kick (PAKET_P1_PARKOUR.md section 2) and the Gang Tendang kick alley of the Arena Lompat.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Shared checks of the `wallkick` scenarios. `full` adds the desktop-only cases (flight needs a held key). */
+async function wallkickChecks(page, check, d, tag, full) {
+  const report = (label, v) => console.log(`   [wallkick ${tag}] ${label}: ${v}`);
+  const A = await d.load();
+  const K = A.kick;
+  const faceA = K.wallA.x + K.wallA.w / 2 + 0.1; // collider face (the friendly margin is 0.1 m)
+  const faceB = K.wallB.x - K.wallB.w / 2 - 0.1;
+  const walkTo = (x, z) => page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [x, z]);
+  const stopWalk = () => page.evaluate(() => window.__superglen.cancelWalk());
+  const setKick = (on) => page.evaluate((on) => window.__superglen.rhythm.setWallKick(on), on);
+  await setKick(true);
+  report('alley', `walls ${faceA.toFixed(2)} .. ${faceB.toFixed(2)} (gap ${(faceB - faceA).toFixed(2)} m), z ${K.z}`);
+  check(`${tag}: the alley gap is 2.2 m between the colliders and the walls are 9 m high`, Math.abs(faceB - faceA - 2.2) < 0.01 && K.top === 9);
+
+  // ---- 1. one kick: direction, height, hint ----------------------------------------------------------------------------------
+  await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+  await walkTo(K.wallA.x, K.z); // press toward wall A through the normal stick path
+  await d.step(8);
+  await d.tap();
+  for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+  const hintBefore = d.last.khint;
+  const y0 = d.last.y;
+  const x0 = d.last.x;
+  const dj0 = d.last.dj;
+  const lvl0 = d.last.level;
+  await d.tap();
+  const vyKick = d.last.vy;
+  let apex = d.last.y;
+  for (let i = 0; i < 12; i++) {
+    await d.step(1);
+    apex = Math.max(apex, d.last.y);
+  }
+  const xAway = d.last.x - x0;
+  const kicks1 = d.last.kicks;
+  // The second press on the SAME face, a few frames later, is the air jump, not a kick.
+  await d.tap();
+  const secondKick = d.last.kicks - kicks1;
+  const secondDj = d.last.dj - dj0;
+  for (let i = 0; i < 60; i++) {
+    await d.step(1);
+    apex = Math.max(apex, d.last.y);
+  }
+  report('kick', `hint ${hintBefore}, vy ${vyKick.toFixed(2)}, away ${xAway.toFixed(2)} m, apex ${(apex - y0).toFixed(2)}`);
+  check(`${tag}: the hint shows while a kick is possible (airborne, touching the wall)`, hintBefore === true);
+  check(`${tag}: a press against a tall wall in the air kicks: vertical speed positive (launch speed)`, vyKick > 7.5 && kicks1 === 1, `vy ${vyKick.toFixed(2)}, kicks ${kicks1}`);
+  check(`${tag}: the kick pushes away from the wall (x grows away from wall A)`, xAway > 0.3, `${xAway.toFixed(2)} m in 13 frames`);
+  check(`${tag}: a second press on the same face does not kick again: the air jump happens instead (kicks ${secondKick}, air jumps +${secondDj})`, secondKick === 0 && secondDj === 1);
+  check(`${tag}: the kick does not change the rhythm level (not a landing)`, d.last.level === lvl0 || d.last.grounded, `${lvl0} -> ${d.last.level}`);
+  // Clean apex measurement without the air jump on top.
+  {
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    await walkTo(K.wallA.x, K.z);
+    await d.step(8);
+    await d.tap();
+    for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+    const py = d.last.y;
+    await d.tap();
+    let top = d.last.y;
+    for (let i = 0; i < 40; i++) {
+      await d.step(1);
+      top = Math.max(top, d.last.y);
+      if (d.last.vy < -1) break;
+    }
+    report('apex', `${(top - py).toFixed(3)} m above the press point`);
+    check(`${tag}: kick apex = 1.4 m (+-0.15) above the press point`, Math.abs(top - py - 1.4) <= 0.15, `${(top - py).toFixed(3)} m`);
+    await stopWalk();
+    await d.step(80);
+  }
+
+  // ---- 2. the alley: a bot zig-zags up with alternating kicks ---------------------------------------------------------------------------
+  const climb = async (kicksOn, frames) => {
+    await setKick(kicksOn);
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    let target = 'A';
+    await walkTo(K.wallA.x, K.z);
+    let djSeen = d.last.dj;
+    let airDj = false;
+    let maxY = 0;
+    let topY = 0;
+    let kicks = 0;
+    let sawGrounded = 0;
+    for (let i = 0; i < frames; i++) {
+      const s = await d.step(1);
+      maxY = Math.max(maxY, s.y);
+      if (s.grounded && s.y > 8.5) {
+        topY = s.y;
+        break;
+      }
+      if (s.grounded) {
+        airDj = false;
+        sawGrounded++;
+        target = 'A';
+        if (sawGrounded % 3 === 1) {
+          await walkTo(K.wallA.x, K.z);
+          await d.tap();
+        }
+        continue;
+      }
+      if (s.khint && s.vy <= 0.5) {
+        const k0 = s.kicks;
+        const at = s.x < K.x ? 'A' : 'B';
+        await d.tap();
+        if (d.last.kicks > k0) {
+          kicks++;
+          target = at === 'A' ? 'B' : 'A';
+          await walkTo(target === 'A' ? K.wallA.x : K.wallB.x, K.z);
+        }
+      } else if (!s.khint && !airDj && s.vy <= 0.4 && s.vy > -1 && s.y > 1) {
+        airDj = true; // the air jump at the top, as a child would
+        await d.tap();
+      }
+      void djSeen;
+    }
+    return { maxY, topY, kicks, frames: d.last.kicks };
+  };
+  const res = await climb(true, 1500);
+  report('climb with kicks', `top ${res.topY.toFixed(2)} m, max ${res.maxY.toFixed(2)} m, ${res.kicks} kicks, chain now ${d.last.kchain}`);
+  check(`${tag}: with wall kicks the bot zig-zags up the Gang Tendang onto a wall top (9 m)`, res.topY > 8.5, `top ${res.topY.toFixed(2)} m, max ${res.maxY.toFixed(2)} m, kicks ${res.kicks}`);
+  await stopWalk();
+  // Walk to the star of the wall it stands on.
+  {
+    const onA = d.last.x < K.x;
+    const sw = onA ? K.wallA : K.wallB;
+    await walkTo(sw.x, K.z);
+    for (let i = 0; i < 160; i++) await d.step(1);
+    const id = onA ? 'reward_kickA' : 'reward_kickB';
+    const got = await page.evaluate((id) => window.__superglen.levelInfo[id] || 0, id);
+    check(`${tag}: the star on top of the wall is collected`, got >= 1, `${id} ${got}`);
+    await stopWalk();
+  }
+  // Same bot with wall kicks off, even at rhythm level 4 + air jump: it cannot get up (plain jumps top out below 7 m).
+  {
+    await setKick(false);
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    let maxY = 0;
+    let top = false;
+    for (let round = 0; round < 3; round++) {
+      await walkTo(K.wallA.x, K.z);
+      await d.rhythmTo(4);
+      let dj = false;
+      for (let i = 0; i < 140; i++) {
+        const s = await d.step(1);
+        maxY = Math.max(maxY, s.y);
+        if (s.grounded && s.y > 8.5) top = true;
+        if (!dj && !s.grounded && s.vy <= 0.4 && s.vy > -1) {
+          dj = true;
+          await d.tap();
+        }
+        if (s.grounded && i > 6) break;
+      }
+    }
+    await stopWalk();
+    report('climb without kicks', `max feet ${maxY.toFixed(2)} m (level 4 + air jump)`);
+    check(`${tag}: with wall kicks off the alley cannot be climbed, even at rhythm level 4 with the air jump (max ${maxY.toFixed(2)} m < 7)`, !top && maxY < 7.0, `max ${maxY.toFixed(2)} m`);
+    await setKick(true);
+  }
+
+  // ---- 3. where it must NOT kick -----------------------------------------------------------------------------------------------------------
+  const bx = 20;
+  const faceX = bx - 1.5;
+  await page.evaluate(([bx]) => {
+    const g = window.__superglen;
+    g.testBox(bx, 1.1, -80, 1.5, 1.1, 1.5, false, true); // low kickable box: top 2.2 m
+    g.testBox(bx, 3, -86, 1.5, 3, 1.5, false, true); // tall kickable box: top 6 m
+    g.testBox(bx, 3, -92, 1.5, 3, 1.5, true, true); // tall bounce drum (also marked kickable: the drum rule must win)
+    g.testBox(bx, 3, -98, 1.5, 3, 1.5); // tall ordinary wall (not kickable)
+  }, [bx]);
+  const boxCase = async (z, mode, toward, when = 'apex') => {
+    await d.stand(faceX - 0.36, 0, z, 0, 4, mode);
+    if (toward) await walkTo(bx, z);
+    await d.step(8);
+    const k0 = d.last.kicks;
+    const dj = d.last.dj;
+    const m0 = d.last.mantles;
+    await d.tap();
+    if (when === 'mid') await d.step(5); // rising along the wall: a ledge in reach is grabbed (the mantle starts, controls lock)
+    else for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+    await d.tap();
+    for (let i = 0; i < 20; i++) await d.step(1);
+    const out = { kicks: d.last.kicks - k0, dj: d.last.dj - dj, mantles: d.last.mantles - m0 };
+    await stopWalk();
+    await d.step(100);
+    return out;
+  };
+  const ctl = await boxCase(-86, 'superglen', true);
+  check(`${tag}: control: the same press against a 6 m box does kick`, ctl.kicks === 1, JSON.stringify(ctl));
+  const low = await boxCase(-80, 'superglen', false);
+  check(`${tag}: no kick against a low box (top 2.2 m is under head + 0.6 m): the air jump happens instead`, low.kicks === 0 && low.dj === 1, JSON.stringify(low));
+  const mant = await boxCase(-80, 'superglen', true, 'mid');
+  check(`${tag}: a ledge within mantle reach is mantled, not kicked (mantle wins)`, mant.kicks === 0 && mant.mantles >= 1, JSON.stringify(mant));
+  const drum = await boxCase(-92, 'superglen', true);
+  check(`${tag}: no kick against a bounce drum (a 6 m tall one, same press as the control)`, drum.kicks === 0 && drum.dj === 1, JSON.stringify(drum));
+  const plain = await boxCase(-98, 'superglen', true);
+  check(`${tag}: an ordinary tall wall (not marked kickable) is never kicked: building and tower heights keep their gates`, plain.kicks === 0 && plain.dj === 1, JSON.stringify(plain));
+  const glen = await boxCase(-86, 'glen', true);
+  check(`${tag}: no kick in Glen mode (simple jumps only)`, glen.kicks === 0 && glen.dj === 0, JSON.stringify(glen));
+
+  // ---- 4. a fresh press after a real flight re-ignites the jets instead of kicking (desktop: needs a held key) ----------------------
+  if (full) {
+    await page.evaluate(() => { window.__superglen.game.setSkills({ fly: true }); window.__superglen.skills.setMaxFlyHeight(6); });
+    await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+    await walkTo(K.wallA.x, K.z);
+    await d.step(8);
+    await d.down();
+    await d.step(110);
+    const flying = d.last.flying;
+    await d.up();
+    await d.step(12);
+    const k0 = d.last.kicks;
+    const fl0 = d.last.flights;
+    const hintAfter = d.last.khint;
+    await d.down();
+    await d.step(2);
+    await d.up();
+    report('flight', `flying ${flying}, hint after flight ${hintAfter}, flights +${d.last.flights - fl0}, kicks +${d.last.kicks - k0}`);
+    check(`${tag}: after a real flight a fresh press re-ignites the jets and does not kick (and no hint shows)`, flying && d.last.flights === fl0 + 1 && d.last.kicks === k0 && !hintAfter, `flying ${flying}, flights +${d.last.flights - fl0}, kicks +${d.last.kicks - k0}`);
+    await stopWalk();
+    await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+    await d.step(300);
+  }
+
+  // ---- 5. the picture: kicked off wall A, arriving at wall B (hint there, burst from the kick behind) ----------------------------------
+  await d.stand(faceA + 0.36, 0, K.z, 0, 4);
+  await walkTo(K.wallA.x, K.z);
+  await d.step(8);
+  await d.tap();
+  for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+  await walkTo(K.wallB.x, K.z);
+  await d.tap();
+  let shown = false;
+  for (let i = 0; i < 40 && !shown; i++) {
+    await d.step(1);
+    shown = d.last.khint;
+  }
+  await d.step(1, true);
+  check(`${tag}: after the kick the hint shows again at the OTHER wall`, shown);
+  await shot(page, tag === 'desktop' ? 'wallkick' : 'wallkick-touch');
+  await stopWalk();
+}
+
+async function wallkickDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeArenaDriver(page);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await wallkickChecks(page, check, d, 'desktop', true);
+}
+
+async function wallkickTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  let d = null;
+  const tapBtn = async () => {
+    const jb = await page.evaluate(() => {
+      const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  d = makeArenaDriver(page, tapBtn);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  await wallkickChecks(page, check, d, 'touch 844x281', false);
+}
+
 async function bab1RoofScenario(page, check) {
   await sleep(1500);
   await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
@@ -4526,7 +4881,7 @@ async function bab1RoofScenario(page, check) {
   // Falling off a roof to the outside returns to the last safe spot, never leaves the playable area
   const br = roofs.find((r) => r.id === 'barongsaiRoof1').samples;
   const falls = [];
-  for (const [label, from, tx, tz] of [['east', br[0], 40, br[0].z], ['west', br[2], -40, br[0].z], ['north', br[0], 0, -90], ['south', br[0], 0, 30]]) {
+  for (const [label, from, tx, tz] of [['east', br[0], 40, br[0].z], ['west', br[2], -40, br[0].z], ['north', br[2], 0, -90], ['south', br[0], 0, 30]]) {
     await page.evaluate((s) => { const g = window.__superglen; g.cancelWalk(); g.teleportFeet(s.x, s.y + 0.5, s.z); g.advance(60, false); }, from);
     const r = await page.evaluate(([tx, tz]) => {
       const g = window.__superglen;
@@ -4564,7 +4919,7 @@ async function bab1RoofScenario(page, check) {
     g.cancelWalk();
     return { x: g.player.x, y: g.feetY };
   }, hr);
-  check('bab1: walking east over a street house roof ends at the tall boundary hedge (x <= 14.6), still on the roof', out.x <= 14.6 && out.y > 4, JSON.stringify(out));
+  check('bab1: walking east over a street house roof ends at the tall boundary hedge (x <= 14.6), still on the roof', out.x <= 14.6 && out.y > 3.4, JSON.stringify(out));
   // The lab stays shut from above: standing on the lab roof, the lab floor is not reachable (the roof is solid)
   const lab = roofs.find((r) => r.id === 'labRoof').samples[0];
   const labRes = await page.evaluate((s) => {
@@ -4578,6 +4933,441 @@ async function bab1RoofScenario(page, check) {
   await page.evaluate(() => window.__superglen.save.reset());
   await page.evaluate(() => window.__superglen.pause(false));
 }
+
+
+// ============================ Bab 1 street: climbing routes (PAKET_P1_PARKOUR.md section 3, package P2) ============================
+
+/**
+ * Climbs the route of one street building with the normal input path (walkTo for steering, real Space presses, the
+ * arena's rhythmTo helper for the level, the air jump at the top). `cap` is the highest rhythm level the player may hold.
+ * Returns { reached, log }.
+ */
+async function streetRouteRun(page, d, S, roofs, bid, cap) {
+  const b = S.buildings.find((x) => x.id === bid);
+  const steps = S.routes[bid];
+  const side = b.x >= 0 ? 1 : -1;
+  const first = S.fh[steps[0].id];
+  let sx;
+  let sz;
+  if (bid === 'school') { sx = 0; sz = 3.0; }
+  else if (bid === 'barongsai') { sx = first.x; sz = first.z + 2.4; }
+  else { sx = first.x - side * (first.w / 2 + 1.8); sz = first.z; }
+  await d.stand(sx, 0, sz, 0, cap);
+  const log = [];
+  for (let i = 0; i < steps.length; i++) {
+    const st = steps[i];
+    const lv = Math.min(st.needs, cap);
+    if (i > 0) await d.step(100);
+    if (st.id === b.roof) {
+      const roof = roofs.find((r) => r.id === st.id);
+      const t = roof.samples[0];
+      await d.rhythmTo(lv);
+      await d.dash(t.x, t.z, { useDouble: st.needs > 0 });
+      const ok = d.last.grounded && d.last.y > b.wall - 0.2 && Math.abs(d.last.x - b.x) < b.w / 2 + 0.8 && Math.abs(d.last.z - b.z) < b.d / 2 + 0.8;
+      log.push(`${st.id}:${ok ? 'ok' : 'NO'}(y ${d.last.y.toFixed(2)})`);
+      return { reached: ok, log, y: d.last.y };
+    }
+    const f = S.fh[st.id];
+    await d.rhythmTo(lv);
+    await d.dash(f.x, f.z, { useDouble: true });
+    // The dash stops at the first touchdown (possibly perched on the rim): walk onto the middle like a child holding the stick.
+    if (st.id !== 'towerDeck') {
+      await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [f.x, f.z]);
+      await d.step(45);
+      await d.cancelWalk();
+      await d.step(10);
+    }
+    const ok = d.on(f, 0.35);
+    log.push(`${st.id}:${ok ? 'ok' : 'NO'}(y ${d.last.y.toFixed(2)}${ok ? '' : ` at ${d.last.x.toFixed(2)}, ${d.last.z.toFixed(2)} ${d.last.grounded ? 'grounded' : 'air'}, target ${f.x} ${f.z} top ${f.top}`})`);
+    if (!ok) return { reached: false, log, y: d.last.y };
+  }
+  return { reached: false, log };
+}
+
+async function streetSetup(page, touchTap) {
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+}
+
+async function bab1RoutesScenario(page, check) {
+  await streetSetup(page);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeArenaDriver(page);
+  await d.step(60);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  const S = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.street));
+  const roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+  S.fh = Object.fromEntries(S.footholds.map((f) => [f.id, f]));
+  const taken = () => page.evaluate(() => (window.__superglen.levelInfo.streetTaken || '').split(',').filter(Boolean));
+  const report = (label, v) => console.log(`   [street] ${label}: ${v}`);
+  check('bab1 street: data published (9 buildings + school + landmark, at least 2 houses and 2 rukos, a route for each)', S.buildings.length === 11 && S.buildings.filter((b) => b.cls === 'house').length >= 2 && S.buildings.filter((b) => b.cls === 'ruko').length >= 4 && S.buildings.every((b) => S.routes[b.id] && S.routes[b.id].length >= 2), `${S.buildings.length} buildings`);
+  check('bab1 street: every foothold of the data was built (data and builder agree)', S.footholds.filter((f) => /:(bay|sign|crate|ac|canopy)/.test(f.id)).every((f) => S.built.includes(f.id)), `built ${S.built.length}`);
+  const coinsTotal = S.coins.length;
+  report('coins on the street', coinsTotal);
+
+  // Wall heights match the class (rule 3).
+  const bad = S.buildings.filter((b) => (b.cls === 'house' && (b.wall < 3 || b.wall > 4)) || (b.cls === 'ruko' && (b.wall < 6 || b.wall > 8)) || (b.cls === 'landmark' && (b.wall < 10 || b.wall > 12)));
+  check('bab1 street: wall heights fit their class (house 3-4 m, ruko 6-8 m, landmark 10-12 m)', bad.length === 0, bad.map((b) => `${b.id} ${b.wall}`).join(', '));
+
+  const walkRoof = async (roofId) => {
+    // walk to the roof's middle (the coin and the star lie there)
+    const b = S.buildings.find((x) => x.roof === roofId);
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [b.x, b.z]);
+    await d.step(150);
+    await d.cancelWalk();
+  };
+
+  // ---- Houses: levels 0-1 ----
+  const t0 = await taken();
+  const h1 = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 1);
+  report('house R (shop awning) at cap 1', JSON.stringify(h1));
+  check('house (shop, crates > awning > roof): the roof is reached with rhythm level <= 1', h1.reached, h1.log.join(' '));
+  if (h1.reached) await walkRoof('houseR-29.5');
+  const t1 = await taken();
+  const onRoute = (bid) => S.coins.filter((c) => c.id.startsWith(bid + ':') && (S.coinOn[c.id] === 'ground' || S.routes[bid].some((st) => st.id === S.coinOn[c.id])));
+  const houseCoins = onRoute('houseR-29.5');
+  const gotHouse = houseCoins.filter((c) => t1.includes(c.id)).length;
+  check('house: the route coins are collected on the way (ground, crate, awning, roof): all of them', houseCoins.length >= 4 && gotHouse === houseCoins.length, `${gotHouse}/${houseCoins.length} (${t1.filter((i) => i.startsWith('houseR-29.5:')).join(' ')})`);
+  report('coins taken in total after the house', `${t1.length - t0.length}`);
+  const h0 = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 0);
+  check('house: the roof is also reachable with level 0 only', h0.reached, h0.log.join(' '));
+  const h2 = await streetRouteRun(page, d, S, roofs, 'houseL-33.6', 0);
+  check('house (AC unit > canopy > roof): reached with level 0', h2.reached, h2.log.join(' '));
+
+  // ---- Ruko: level 2, NOT with level 0 or 1 ----
+  const r2 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 2);
+  report('ruko R0 at cap 2', JSON.stringify(r2));
+  check('ruko (bay > sign board > roof): the roof is reached with rhythm level 2', r2.reached, r2.log.join(' '));
+  if (r2.reached) await walkRoof('rukoR0');
+  const t2 = await taken();
+  const rukoCoins = onRoute('rukoR0');
+  const gotRuko = rukoCoins.filter((c) => t2.includes(c.id)).length;
+  check('ruko: the coins of the route are collected (ground, bay, sign board, roof)', gotRuko === rukoCoins.length, `${gotRuko}/${rukoCoins.length}`);
+  const r1 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 1);
+  check('ruko: the roof is NOT reached with level 1 (the bay is 5.2 m up: level 1 gives 4.9 m)', !r1.reached, r1.log.join(' '));
+  const r0 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 0);
+  check('ruko: the roof is NOT reached with level 0', !r0.reached, r0.log.join(' '));
+  const r3 = await streetRouteRun(page, d, S, roofs, 'rukoL1.5', 3);
+  check('ruko (left side, 5.85 m bay): reached with level 3', r3.reached, r3.log.join(' '));
+  const r3b = await streetRouteRun(page, d, S, roofs, 'rukoL1.5', 2);
+  check('ruko (left side, 5.85 m bay): NOT reached with level 2', !r3b.reached, r3b.log.join(' '));
+
+  // ---- School: wall cap is level 2 ----
+  const sc = await streetRouteRun(page, d, S, roofs, 'school', 2);
+  check('school: the wall cap and the roof behind it are reached with level 2', sc.reached, sc.log.join(' '));
+  const sc1 = await streetRouteRun(page, d, S, roofs, 'school', 1);
+  check('school: NOT reached with level 1', !sc1.reached, sc1.log.join(' '));
+
+  // ---- Landmark: level 4 ----
+  const lm = await streetRouteRun(page, d, S, roofs, 'barongsai', 4);
+  report('landmark at cap 4', JSON.stringify(lm));
+  check('landmark (lion > pillar > terrace > tower): the tower roof is reached with level 4', lm.reached, lm.log.join(' '));
+  if (lm.reached) {
+    await page.evaluate(() => { const g = window.__superglen; g.cancelWalk(); });
+    await walkRoof('barongsaiRoof2');
+    const star = await page.evaluate(() => window.__superglen.levelInfo.reward_landmark || 0);
+    check('landmark: standing on the tower roof takes the big gold star', star >= 1, `reward ${star}`);
+    // the shot: Superglen on the roof, the star and the view
+    await page.evaluate(() => { const g = window.__superglen; g.lookFrom([-9, 19.5, -38, 0, 13.5, -49]); g.advance(3, true); });
+    await shot(page, 'street-landmark-top');
+    await page.evaluate(() => window.__superglen.lookFrom(null));
+  }
+  const lm3 = await streetRouteRun(page, d, S, roofs, 'barongsai', 3);
+  check('landmark: NOT reached with level 3 (the tower hop is 6.4 m; level 3 gives 6.2 m)', !lm3.reached, lm3.log.join(' '));
+
+  // ---- Screenshots: high view with routes, a ruko ----
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(0, 0.03, 0); g.advance(30, false); g.lookFrom([0, 40, 16, 0, 2, -16]); g.advance(3, true); });
+  await shot(page, 'street-routes');
+  await page.evaluate(() => { const g = window.__superglen; g.lookFrom([-1.5, 5.5, 3.5, 7, 4, -1.5]); g.advance(3, true); });
+  await shot(page, 'street-ruko');
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+
+  // ---- Perf per area ----
+  const calls = {};
+  for (const [name, pose] of [['spawn', [0, 3, 8, 0, 3, -8]], ['street high', [0, 40, 16, 0, 2, -16]], ['mid street', [0, 4, -8, 0, 4, -30]], ['plaza + landmark', [0, 6, -30, 0, 8, -50]], ['landmark top', [-9, 19.5, -38, 0, 13.5, -49]]]) {
+    await page.evaluate((p) => { const g = window.__superglen; g.lookFrom(p); g.advance(3, true); }, pose);
+    calls[name] = await page.evaluate(() => { const c = window.__superglen.debugCounts(); return `${c.calls} calls ${c.triangles} tris`; });
+  }
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  console.log('   [street] draw calls / triangles per viewpoint:', JSON.stringify(calls));
+  const worst = Object.values(calls).map((v) => v.split(' ').map(Number)).reduce((m, v) => [Math.max(m[0], v[0]), Math.max(m[1], v[2])], [0, 0]);
+  check('perf: street viewpoints stay inside the budget (< 150 draw calls, <= 60k triangles)', worst[0] < 150 && worst[1] <= 60000, JSON.stringify(calls));
+
+  // ---- Safety: nothing leaves the playable area from the new routes ----
+  const out = await page.evaluate(() => {
+    const g = window.__superglen;
+    const bad = [];
+    const spots = [[9, 8, -4], [-9, 8, -10], [0, 7.2, 8], [0, 12.5, -48]];
+    for (const [x, y, z] of spots) {
+      g.cancelWalk();
+      g.teleportFeet(x, y + 0.5, z);
+      g.advance(40, false);
+      for (const [tx, tz] of [[60, z], [-60, z], [x, 60], [x, -90]]) {
+        g.walkTo(tx, tz);
+        for (let i = 0; i < 300; i++) g.advance(1, false);
+        g.cancelWalk();
+        g.advance(240, false); // a fall into the ravine takes a while to be returned
+        const p = g.player;
+        if (!(g.feetY > -2 && Math.abs(p.x) < 15.5 && p.z > -80 && p.z < 20)) bad.push(`from ${x},${y},${z} to ${tx},${tz}: ${p.x.toFixed(1)},${g.feetY.toFixed(1)},${p.z.toFixed(1)}`);
+      }
+    }
+    return bad;
+  });
+  check('safety: walking off any new roof in every direction always ends inside the playable area (never outside, never stuck below)', out.length === 0, out.join(' | '));
+  await page.evaluate(() => window.__superglen.save.reset());
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+async function bab1RoutesTouchScenario(page, check) {
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  let d = null;
+  const center = () => page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  const tapBtn = async () => {
+    const jb = await center();
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  d = makeArenaDriver(page, tapBtn);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  const S = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.street));
+  const roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+  S.fh = Object.fromEntries(S.footholds.map((f) => [f.id, f]));
+  check('touch 844x281 (street): the jump button is a real on-screen button >= 80 x 80', await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect(); return r.width >= 80 && r.height >= 80; }));
+  const h = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 1);
+  check('touch: the house route (crates > awning > roof) is climbed with the jump button', h.reached, h.log.join(' '));
+  const r = await streetRouteRun(page, d, S, roofs, 'rukoR0', 2);
+  check('touch: the ruko route (bay > sign board > roof) is climbed with the jump button at level 2', r.reached, r.log.join(' '));
+  await page.evaluate(() => { const g = window.__superglen; g.setCameraYaw(Math.PI / 2); g.advance(30, false); g.lookFrom([-2, 11, 3, 8, 6, -3]); g.advance(3, true); });
+  await shot(page, 'street-touch-281');
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+
+// ============================ Flight fix: soft fall after the jets, instant re-ignite ============================
+
+/** Shared checks for flightfix. `ctl` abstracts the jump input: { hold(), release() } (keyboard or finger). */
+async function flightfixChecks(page, check, d, ctl, tag) {
+  const report = (label, v) => console.log(`   [flightfix ${tag}] ${label}: ${v}`);
+  await d.maxFly(12);
+  await d.step(30);
+  const f0 = d.last.flights;
+  await ctl.hold();
+  await d.step(220);
+  check(`${tag}: holding jump flies up to the ceiling`, d.last.flying && d.last.h > 11, `h ${d.last.h.toFixed(2)}`);
+  const y0 = d.last.y;
+  await ctl.release();
+  await d.step(2);
+  const v2 = d.last.vy;
+  let minVy = 0;
+  for (let i = 0; i < 58; i++) {
+    await d.step(1);
+    minVy = Math.min(minVy, d.last.vy);
+  }
+  const softDrop = y0 - d.last.y;
+  report('soft fall', `vy after 2 frames ${v2.toFixed(2)}, fastest ${minVy.toFixed(2)}, drop in 1 s ${softDrop.toFixed(2)} m`);
+  check(`${tag}: release: vertical speed goes negative within 2 frames, jets off`, v2 < 0 && !d.last.flying, `vy ${v2.toFixed(2)}`);
+  check(`${tag}: release: the fall is capped (never below -7.1 m/s) but really falls (reaches < -6)`, minVy >= -7.1 && minVy < -6, `${minVy.toFixed(2)}`);
+  check(`${tag}: release: drops more than 4 m in the first second (clearly not the old -2.2 m/s glide)`, softDrop > 4, `${softDrop.toFixed(2)} m`);
+
+  // A plain fall from a high point, same duration: much faster.
+  const px = d.last.x;
+  const pz = d.last.z;
+  await page.evaluate(([x, z]) => window.__superglen.teleportFeet(x, 60, z), [px, pz]);
+  await d.step(2);
+  const yp = d.last.y;
+  let minPlain = 0;
+  for (let i = 0; i < 58; i++) {
+    await d.step(1);
+    minPlain = Math.min(minPlain, d.last.vy);
+  }
+  const plainDrop = yp - d.last.y;
+  report('plain fall', `fastest ${minPlain.toFixed(2)}, drop ${plainDrop.toFixed(2)} m`);
+  check(`${tag}: the soft fall is slower than a plain fall from the same height`, softDrop < plainDrop * 0.5 && minPlain < -15, `soft ${softDrop.toFixed(1)} m vs plain ${plainDrop.toFixed(1)} m`);
+  await d.land();
+
+  // Back up, release, fall a little, press once: the jets restart at once.
+  await d.step(30);
+  await ctl.hold();
+  await d.step(150);
+  await ctl.release();
+  await d.step(20);
+  const yPress = d.last.y;
+  const vBefore = d.last.vy;
+  const dj0 = d.last.dj;
+  const fl0 = d.last.flights;
+  await ctl.hold();
+  await d.step(2);
+  check(`${tag}: one press in mid-fall re-ignites the jets within 2 frames (re-ignite wins over the air jump)`, vBefore < -2 && d.last.flying && d.last.flights === fl0 + 1 && d.last.dj === dj0, `vy before ${vBefore.toFixed(2)}, flying ${d.last.flying}, dj +${d.last.dj - dj0}`);
+  await d.step(38);
+  check(`${tag}: ...and it rises again while held`, d.last.vy > 0.5 && d.last.y > yPress, `vy ${d.last.vy.toFixed(2)}, ${d.last.y.toFixed(2)} vs ${yPress.toFixed(2)}`);
+  // A quick tap (release at once) re-ignites and drops again; do it twice in a row.
+  await ctl.release();
+  await d.step(15);
+  const fl1 = d.last.flights;
+  await ctl.hold();
+  await d.step(1);
+  await ctl.release();
+  await d.step(2);
+  check(`${tag}: a quick tap in mid-fall also re-ignites (one more flight)`, d.last.flights === fl1 + 1, `flights +${d.last.flights - fl1}`);
+  await d.step(10);
+
+  // Landing after a flight: gentle, no stomp.
+  const st = d.last.stomps;
+  let worst = 0;
+  for (let i = 0; i < 700 && !d.last.grounded; i++) {
+    await d.step(1);
+    worst = Math.min(worst, d.last.vy);
+  }
+  await d.step(20);
+  check(`${tag}: landing after a flight is gentle: grounded, no stomp, impact < 8 m/s`, d.last.grounded && d.last.stomps === st && worst >= -7.1, `fastest ${worst.toFixed(2)}, stomps ${st}->${d.last.stomps}`);
+  check(`${tag}: the first ignition from the ground is unchanged (flights counted only for real flights)`, d.last.flights >= f0 + 3, `+${d.last.flights - f0}`);
+}
+
+async function flightfixDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.step(30);
+  await d.tap('e', 20);
+  check('flightfix: E switches the test area to Superglen', d.last.mode === 'superglen' || (await d.snap()).mode === 'superglen');
+  // Normal jumps never flew: unchanged.
+  {
+    const y0 = (await d.step(1)).y;
+    const f0 = d.last.flights;
+    await d.tap('Space');
+    let peak = 0;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 4) break;
+    }
+    check('flightfix: tap jump is unchanged (level 0 apex 1.52-1.68 m), no flight', peak > 1.52 && peak < 1.68 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
+    await d.step(10);
+    const dj0 = d.last.dj;
+    await d.tap('Space');
+    peak = 0;
+    for (let i = 0; i < 200; i++) {
+      if (i === 22) await d.tap('Space');
+      else await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 30) break;
+    }
+    check('flightfix: double jump on a normal jump still works (apex 3.0-3.5 m, no flight)', peak > 3.0 && peak < 3.5 && d.last.dj === dj0 + 1 && d.last.flights === f0, `${peak.toFixed(2)} m, dj +${d.last.dj - dj0}`);
+    await d.step(30);
+  }
+  await flightfixChecks(page, check, d, { hold: () => d.down('Space'), release: () => d.up('Space') }, 'desktop');
+}
+
+async function flightfixTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  await d.mode('superglen');
+  await d.step(20);
+  const jp = await page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  await flightfixChecks(page, check, d, { hold: () => fingers.down(2, jp.x, jp.y), release: () => fingers.up(2) }, 'touch 844x281');
+}
+
+// ============================ Transform button in the story levels (touch layout) ============================
+
+async function check_glen(check, page) {
+  check('bab1 lab 844x281: screenshot taken as Glen with the star visible', await page.evaluate(() => window.__superglen.mode === 'glen' && !!document.querySelector('.tc-button[data-action=transform]')));
+}
+
+async function transformTouchScenario(page, check) {
+  await sleep(1500);
+  await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.save.setLastMode('superglen'); });
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(2000);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+  const mode = () => page.evaluate(() => window.__superglen.mode);
+  const tapStar = async () => {
+    const c = await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=transform]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.touchscreen.tap(c.x, c.y);
+    await adv(4);
+  };
+  await adv(30);
+  for (const h of [281, 390]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    for (const want of ['superglen', 'glen']) {
+      if ((await mode()) !== want) await tapStar();
+      for (const sk of [false, true]) {
+        await page.evaluate((on) => window.__superglen.game.setSkills({ laser: on, shield: on }), sk);
+        await adv(2);
+        const l = await page.evaluate(layoutInfo);
+        const exp = want === 'superglen' ? (sk ? 'jump,interact,laser,shield,transform' : 'jump,interact,transform') : 'jump,interact,transform';
+        check(`bab1 lab 844x${h} ${want} skills=${+sk}: buttons ${exp}`, l.actions.join() === exp, l.actions.join());
+        check(`bab1 lab 844x${h} ${want} skills=${+sk}: star >= 80 px, inside, no overlap with the other controls`, l.transformOk && l.inside && !l.overlap && l.minBtn >= 79.5, JSON.stringify({ t: l.transformOk, i: l.inside, o: l.overlap, m: l.minBtn }));
+      }
+    }
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: false, shield: false }));
+    if (h === 281) {
+      await tapStar();
+      const m1 = await mode();
+      await tapStar();
+      check('bab1 lab: the star toggles Glen <-> Superglen both ways', m1 !== (await mode()), `${m1} -> ${await mode()}`);
+      if ((await mode()) !== 'glen') await tapStar();
+      await page.evaluate(() => window.__superglen.advance(4, true));
+      await check_glen(check, page);
+      await shot(page, 'transform-back-281');
+    }
+  }
+  // Chapter 2 story: the star stays hidden (Superglen is required).
+  await page.setViewportSize({ width: 844, height: 281 });
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.evaluate(() => window.__superglen.save.reset());
+  await page.evaluate(() => window.__superglen.loadLevel('bab2'));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
+  await sleep(800);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await adv(30);
+  const l2 = await page.evaluate(layoutInfo);
+  check('bab2 story 844x281: no star, inside and no overlap', !l2.actions.includes('transform') && l2.inside && !l2.overlap, l2.actions.join());
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -4693,10 +5483,15 @@ async function main() {
 
     results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
 
+    results.push(await runScenario(browser, 'flightfix-desktop', { viewport: { width: 1280, height: 720 } }, flightfixDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'flightfix-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, flightfixTouchScenario, '?level=test&fps=0'));
+
     results.push(await runScenario(browser, 'bab1', { viewport: { width: 1280, height: 720 } }, bab1DesktopScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'bab1-transform-ui', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, transformTouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
@@ -4716,7 +5511,11 @@ async function main() {
 
     results.push(await runScenario(browser, 'arena', { viewport: { width: 1280, height: 720 } }, arenaDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'arena-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, arenaTouchScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'wallkick', { viewport: { width: 1280, height: 720 } }, wallkickDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'wallkick-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, wallkickTouchScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'bab1-roofs', { viewport: { width: 1280, height: 720 } }, bab1RoofScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-routes', { viewport: { width: 1280, height: 720 } }, bab1RoutesScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-routes-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1RoutesTouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 
@@ -4753,7 +5552,10 @@ async function main() {
   process.exit(failed ? 1 : 0);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+module.exports = { roofProbe, makeArenaDriver, makeParkourDriver, streetRouteRun, streetSetup, URL, PORT, sleep };
