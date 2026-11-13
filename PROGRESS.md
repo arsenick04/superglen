@@ -414,7 +414,7 @@ Tinggi terukur per tingkat: 1,62 / 2,12 / 2,72 / 3,46 / 4,22 m. Arena: paling ba
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
-## Perbaikan terbang, tombol Berubah, dan Paket P2: Dunia (13 November 2026): selesai, tanpa tendang dinding
+## Perbaikan terbang, tombol Berubah, dan Paket P2: Dunia (13 November 2026): selesai
 
 Orkestrator untuk paket ini adalah Opus, atas permintaan pemilik proyek, sampai batas Fable reset.
 
@@ -437,8 +437,10 @@ Orkestrator untuk paket ini adalah Opus, atas permintaan pemilik proyek, sampai 
 - **Memori saat memantul** turun dari rata-rata 14,2 KB menjadi 5,5 KB per frame. Pemeriksaan memori yang sempat meleset di P1 sekarang punya margin lebar.
 - **Design doc**: bagian Kontrol dan Dunia di `SUPERGLEN_GAME_DESIGN.md` diperbarui dengan ringkasan parkour.
 
-### Yang belum
-- **Tendang dinding (wall kick)**: opsional di P2. Tidak dikerjakan karena subagent sonnet kena batas mingguan sampai 15 November 2026 pukul 07.00 UTC. Agennya berhenti sebelum menyentuh file.
+- **Tendang dinding (wall kick)**: saat di udara menempel dinding yang bisa ditendang, tekan lompat untuk menendang ke atas (+1,4 m) dan menjauh. Sekali per permukaan dinding, maksimal 6 kali per lompatan, jadi bisa zig-zag naik di antara dua dinding berdekatan. Ikon panah melengkung muncul di dinding saat tendangan tersedia.
+  - **Hanya dinding yang ditandai** yang bisa ditendang (dinding bergaris emas-putih). Kalau semua dinding tinggi bisa ditendang, tambahan 1,4 m per tendangan membuat pemain melewati gerbang tingkat irama di menara, ruko, dan sekolah. `Parkour.wallKick.anyWall` di `parkour.ts` bisa diubah kalau suatu saat ingin semua dinding.
+  - Prioritas tombol di udara: nyalakan ulang jet setelah terbang, lalu tendang dinding, lalu double jump. Tendangan tidak memakai jatah double jump.
+  - **Gang Tendang** di Arena Lompat: dua dinding setinggi 9 m dengan bintang di atasnya, hanya bisa dicapai dengan tendangan. `check:reach` memeriksanya.
 
 ### Perubahan pada jalan Chapter 1 yang perlu diketahui
 - Gedung Barongsai sekarang punya teras datar dan menara dengan dek di puncak, supaya bisa dipanjat. Bentuk atap bertingkat lamanya diganti.
@@ -455,7 +457,9 @@ Orkestrator untuk paket ini adalah Opus, atas permintaan pemilik proyek, sampai 
 | Rute bangunan (rumah tingkat 0 sampai 1, ruko tingkat 2 dan tidak di 0 sampai 1, landmark tingkat 4 dan tidak di 3) | Lulus 20 dari 20 desktop, 3 dari 3 sentuh (dijalankan orkestrator) |
 | Terbang lebih lembut dan tekan ulang | Lulus 23 dari 23 (dijalankan orkestrator) |
 | Tombol Berubah di layar sentuh | Lulus 19 dari 19 (dijalankan orkestrator) |
-| Smoke test penuh oleh `qa-tester` (36 skenario) | Lulus 971 dari 971, 0 error console, sekali jalan |
+| Smoke test penuh oleh `qa-tester` sebelum tendang dinding (36 skenario) | Lulus 971 dari 971, 0 error console |
+| Tendang dinding (desktop dan sentuh) | Lulus 35 dari 35 |
+| Smoke test penuh setelah tendang dinding, dijalankan orkestrator (38 skenario) | Lulus 1006 dari 1006 |
 
 Draw call dan segitiga di jalan Chapter 1: paling banyak 68 dan 53,4 ribu, dalam batas 150 dan 60 ribu. Sisa ruang segitiga sekitar 6,6 ribu, jadi dekorasi tambahan di jalan perlu hati-hati. **Fps di perangkat asli belum diukur.**
 
@@ -466,7 +470,7 @@ Draw call dan segitiga di jalan Chapter 1: paling banyak 68 dan 53,4 ribu, dalam
 - Tangkapan layar puncak landmark diambil sebelum perbaikan cahaya atap, jadi mungkin terlihat lebih gelap daripada di game.
 
 ### Keputusan yang diambil sendiri
-- Tendang dinding ditunda, bukan dikerjakan oleh model lain, karena opsional dan model sonnet adalah yang ditetapkan untuk kode game.
+- Tendang dinding hanya di dinding yang ditandai, supaya gerbang tingkat irama tidak bisa dilewati.
 - Ruko yang atapnya bersentuhan berbagi tingkat minimum yang sama (2), karena anak bisa berjalan dari satu atap ke atap sebelahnya.
 
 ### Kredit terpakai
@@ -480,4 +484,4 @@ Higgsfield: 0. ElevenLabs: 0.
 Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/ di Safari iPhone (landscape) atau di PC.
 1. **Terbang**: di Chapter 2 atau `?level=test`, terbang lalu lepas tombol. Superglen harus turun dengan kecepatan sedang. Tekan sekali di udara dan ia langsung terbang lagi.
 2. **Tombol Berubah**: setelah Chapter 1 selesai, ketuk bintang di kanan atas (PC: Q) untuk kembali jadi Glen, lalu ketuk lagi jadi Superglen.
-3. **Naik ke atap di Chapter 1**: ikuti koin emas. Rumah bisa dinaiki dengan lompatan biasa; ruko butuh lompat irama tingkat 2; puncak gedung Barongsai butuh tingkat 4.
+3. **Naik ke atap**: di Chapter 1 ikuti koin emas (rumah dengan lompatan biasa, ruko tingkat 2, puncak gedung Barongsai tingkat 4). Di `?level=test`, cari Gang Tendang yang bergaris emas-putih dan tendang dinding bolak-balik sampai ke bintang.
