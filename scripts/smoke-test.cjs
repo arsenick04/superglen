@@ -6139,7 +6139,12 @@ const audioDialog = (page) => page.evaluate(() => { const d = window.__superglen
 async function audioHit(page, sel, touch) {
   const c = await page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
   if (touch) await page.touchscreen.tap(c.x, c.y);
-  else await page.mouse.click(c.x, c.y);
+  else {
+    // With the pointer locked, mouse events go to the canvas (PC players advance with E): let go first.
+    await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
+    await sleep(150);
+    await page.mouse.click(c.x, c.y);
+  }
 }
 
 /** The ids a quiz question announces (prompt, then the word / sound id when it has one). */
@@ -6212,8 +6217,10 @@ async function audioNoFilesScenario(page, check, touch) {
   check(`audio ${tag}: the hewan bank has a sound question`, found.length === 1, JSON.stringify(found));
   if (found.length === 1) {
     await page.evaluate((ids) => { const a = window.__superglen.audio; ids.forEach((i) => a.hide(i)); }, found[0].ids);
+    const noAnim = await page.addStyleTag({ content: '.qp *, .qp { animation: none !important; transition: none !important; }' });
     await page.evaluate((id) => window.__superglen.quiz.preview(id), found[0].id);
     await audioAdv(page, 6);
+    await sleep(700); // the sound id is asked for after the prompt (real-time chain)
     const word = await page.evaluate(() => { const e = document.querySelector('.qp-display .qp-soundword'); return e ? e.textContent : null; });
     check(`audio ${tag}: sound question with a missing sound file shows the animal word in a bubble`, word !== null && SOUND_WORDS.includes(word), String(word));
     if (touch) {
@@ -6223,9 +6230,10 @@ async function audioNoFilesScenario(page, check, touch) {
     a = await audioSt(page);
     check(`audio ${tag}: the prompt and the sound ids were reported missing once each, nothing played, no error`, found[0].ids.every((i) => a.missing.includes(i)) && loggedOnce(w, a.missing) && a.sfxPlayed === 0 && a.voicesPlayed === 0, JSON.stringify(a.missing));
     await page.evaluate(() => window.__superglen.quiz.close());
+    await noAnim.evaluate((e) => e.remove());
   }
-  const origin = new URL(page.url()).origin;
-  check(`audio ${tag}: every request went to the page's own origin and none failed`, w.reqs.every((u) => u.startsWith('data:') || u.startsWith('blob:') || new URL(u).origin === origin) && w.bad.length === 0, w.bad.join(' | '));
+  const origin = new globalThis.URL(page.url()).origin;
+  check(`audio ${tag}: every request went to the page's own origin and none failed`, w.reqs.every((u) => u.startsWith('data:') || u.startsWith('blob:') || new globalThis.URL(u).origin === origin) && w.bad.length === 0, w.bad.join(' | '));
 }
 
 /** Injected clips: voice, bubble timing, ducking, crossfade, toggles, quiz sequence. */
@@ -6483,10 +6491,10 @@ async function audioChapterScenario(page, check) {
   a = await audioSt(page);
   const idx = await page.evaluate(async () => (await (await fetch('audio/index.json')).json()));
   check('audio chapter: the quiz and Chapter 1 ran; every missing id was logged exactly once', a.missing.length >= 3 && loggedOnce(w, a.missing), `${a.missing.length} missing, ${w.infos.length} logs`);
-  const origin = new URL(page.url()).origin;
-  const foreign = w.reqs.filter((u) => !(u.startsWith('data:') || u.startsWith('blob:') || new URL(u).origin === origin));
+  const origin = new globalThis.URL(page.url()).origin;
+  const foreign = w.reqs.filter((u) => !(u.startsWith('data:') || u.startsWith('blob:') || new globalThis.URL(u).origin === origin));
   check('audio chapter: no request went to any host other than the game\'s own origin', foreign.length === 0, foreign.slice(0, 3).join(' | '));
-  const mp3 = w.reqs.filter((u) => /\/audio\/[^/]+\.mp3$/.test(new URL(u).pathname)).map((u) => new URL(u).pathname.split('/').pop().replace('.mp3', ''));
+  const mp3 = w.reqs.filter((u) => /\/audio\/[^/]+\.mp3$/.test(new globalThis.URL(u).pathname)).map((u) => new globalThis.URL(u).pathname.split('/').pop().replace('.mp3', ''));
   check('audio chapter: the game only requests mp3 files the manifest lists, and nothing returned 4xx/5xx', mp3.every((id) => idx.includes(id)) && w.bad.length === 0, JSON.stringify({ mp3, bad: w.bad }));
   await page.evaluate(() => window.__superglen.loadLevel('bab2'));
   await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
