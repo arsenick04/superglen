@@ -18,6 +18,7 @@ export class Hud {
   private readonly list: HTMLUListElement | HTMLDivElement;
   private lastFpsShown = -1;
   private story = false;
+  private transformHelp = false;
   private skillLines: string[] = [];
   private dismissed = false;
 
@@ -74,6 +75,13 @@ export class Hud {
     this.renderHelp();
   }
 
+  /** Story levels: show "Q: berubah" once the child may switch Glen <-> Superglen. */
+  setTransformHelp(on: boolean): void {
+    if (on === this.transformHelp) return;
+    this.transformHelp = on;
+    this.renderHelp();
+  }
+
   /** Extra key lines for the skills the story has unlocked so far. */
   setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }): void {
     const lines: string[] = [];
@@ -89,6 +97,7 @@ export class Hud {
     const lines = this.story
       ? ['W A S D atau panah: jalan', 'Mouse: putar kamera', 'Spasi: lompat', 'E: bicara / ambil']
       : ['W A S D atau panah: jalan', 'Spasi: lompat', 'E: berubah jadi Superglen', 'Mouse: putar kamera'];
+    if (this.story && this.transformHelp) lines.push('Q: berubah');
     lines.push(...this.skillLines, 'Esc: lepas kursor');
     this.list.replaceChildren(...lines.map((t) => el('li', '', t)));
   }

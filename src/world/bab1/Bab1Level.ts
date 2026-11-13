@@ -44,7 +44,8 @@ export class Bab1Level implements Level {
     this.done = ctx.save.isChapterDone('bab1');
     // First visit: no powers yet. Afterwards the unlocked ones (from the save) stay on.
     if (!this.done) ctx.game.setSkills({ laser: false, shield: false, fly: false });
-    ctx.game.setTransformAllowed(false);
+    // The star (touch) / Q (PC) back to Glen exists from the moment of the costume on (Story.transform) and for returning players.
+    ctx.game.setTransformAllowed(this.done);
     // The lab is small: flying is harmless (low ceiling, a flight box around the whole walkable area).
     ctx.player.flight.maxFlyHeight = 4.5;
     ctx.player.flight.bounds = { minX: -13, maxX: 13, minZ: Z.labBack + 0.8, maxZ: 8 };

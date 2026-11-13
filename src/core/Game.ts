@@ -4,6 +4,7 @@ import { Physics, FIXED_DT } from './Physics';
 import { Input, type Action, type InputSource, type Vec2 } from '../input/Input';
 import { KeyboardMouseSource } from '../input/KeyboardMouseSource';
 import { Player } from '../player/Player';
+import { ModeController } from '../player/ModeController';
 import { ThirdPersonCamera, CameraConfig } from '../camera/ThirdPersonCamera';
 import { GroundRings } from '../fx/GroundRings';
 import { BillboardRings } from '../fx/BillboardRings';
@@ -267,6 +268,9 @@ export class Game {
   private fading = false;
   private dialogLocked = false;
   private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false };
+  /** The level lets the child switch Glen <-> Superglen (the star button / Q); the button also needs live controls. */
+  private transformAllowed = false;
+  private readonly modeCtl: ModeController;
   private currentLayout: readonly TouchButtonDef[] | null = null;
   /** What levels call (LevelContext.game). */
   private readonly api: LevelGame;
@@ -385,6 +389,8 @@ export class Game {
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
+    // Story levels: star button / Q (E stays 'talk'). The test level has its own controller that also takes E.
+    this.modeCtl = new ModeController(this.player, this.input, (m) => this.setPlayerMode(m), false, () => this.transformUsable);
     {
       // Easy jump mode: saved setting (default on), the URL ?easy=0|1 overrides it for this session.
       const q = new URLSearchParams(window.location.search);
@@ -464,10 +470,11 @@ export class Game {
       get controlsEnabled() {
         return self.controlsEnabled;
       },
-      setPlayerMode: (mode) => this.setPlayerMode(mode),
+      setPlayerMode: (mode, persist = true) => this.setPlayerMode(mode, persist),
       setTransformAllowed: (on) => {
-        this.profile.transform = on;
-        this.applyLayout();
+        this.transformAllowed = on;
+        this.hud?.setTransformHelp(on);
+        this.refreshTransform();
       },
       setSkills: (sk, persist) => this.setSkills(sk, persist),
       setSkillButtons: (sk) => this.setSkills({ laser: sk.laser, shield: sk.shield }),
@@ -506,6 +513,8 @@ export class Game {
       onBeforeBuild: () => {
         this.levelControls = true;
         this.profile.legacyTest = false;
+        this.transformAllowed = false;
+        this.hud?.setTransformHelp(false);
         this.profile.transform = false;
         this.player.flight.resetLevelSettings();
         this.player.rhythm.cap = MAX_LEVEL;
@@ -665,6 +674,7 @@ export class Game {
 
   private fixedStep(dt: number): void {
     this.levels.fixedUpdate(dt); // sequences first, then the level (e.g. the test area's mode toggle)
+    this.modeCtl.fixedUpdate();
     this.dialog.fixedUpdate(dt);
     this.interactions.fixedUpdate();
     this.objectives.fixedUpdate();
@@ -824,10 +834,10 @@ export class Game {
   }
 
   /** Glen <-> Superglen: player look/tuning, touch buttons and a quick golden flash ring. */
-  private setPlayerMode(mode: PlayerMode): void {
+  private setPlayerMode(mode: PlayerMode, persist = true): void {
     const changed = mode !== this.player.mode;
     this.player.setMode(mode);
-    this.save.setLastMode(mode);
+    if (persist) this.save.setLastMode(mode);
     this.applyLayout();
     if (changed) {
       const f = this.player.getFeetPosition(this.feet);
@@ -850,6 +860,17 @@ export class Game {
 
   private updateControls(): void {
     this.player.inputEnabled = this.controlsEnabled;
+    this.refreshTransform();
+  }
+
+  /** Is the star / Q switch usable right now (the story allows it and no sequence, dialog or fade holds the controls)? */
+  private get transformUsable(): boolean {
+    return this.transformAllowed && this.controlsEnabled && !this.profile.legacyTest;
+  }
+
+  private refreshTransform(): void {
+    this.profile.transform = this.transformAllowed && this.controlsEnabled;
+    this.applyLayout();
   }
 
   private readonly feet = new THREE.Vector3();

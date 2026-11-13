@@ -80,7 +80,7 @@ export class Story {
     lab.setNinoVisible(1);
     lab.setCompartment(1);
     lab.showCoins();
-    ctx.game.setPlayerMode('superglen');
+    ctx.game.setPlayerMode(ctx.save.data.lastMode); // the mode the child left in
     this.addNinoTalk();
     this.p.door.enable();
     ctx.game.debugInfo.chapterDone = true;
@@ -299,6 +299,7 @@ export class Story {
         flipped = true;
         lab.hideCostume();
         game.setPlayerMode('superglen');
+        game.setTransformAllowed(true); // from now on the star / Q may switch back (hidden while controls are locked)
         for (let i = 0; i < 3; i++) ctx.fx.rings.spawn(pp.x, pp.y - 0.5 + i * 0.5, pp.z, 1.6 + i * 0.9, 0.7, 0xffd23f);
         sparkles.burst(pp.x, pp.y, pp.z, 40, 5, 0xffd23f, { gravity: 2 });
       }

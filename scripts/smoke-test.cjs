@@ -1468,6 +1468,8 @@ async function playChapter(page, check, d, beat, opts = {}) {
   await beat('costume', d);
   s = await d.until((s) => s.controlsEnabled && s.levelInfo.step === 'costume', 900);
   check('controls unlocked after the sequence', !!s);
+  check('bab1 before the costume: no transform star (Glen cannot switch yet)', await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
+  check('bab1 before the costume: PC help card has no "Q: berubah"', await page.evaluate(() => !document.querySelector('.hud-controls').textContent.includes('Q: berubah')));
   s = await d.st();
   check('objective on the costume', Math.abs(s.objective.x + 4.6) < 0.5 && Math.abs(s.objective.z + 71.5) < 0.5, JSON.stringify(s.objective));
   if (!opts.skipPoles) await cameraAngleShots(page, check, d);
@@ -1485,6 +1487,7 @@ async function playChapter(page, check, d, beat, opts = {}) {
   s = await d.until((s) => s.mode === 'superglen', 200);
   check('taking the costume sets mode superglen', !!s);
   await d.adv(40, true);
+  check('bab1 funny ending (controls locked): transform star hidden', await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await beat('superglen', d);
   s = await d.until((s) => d.seen.includes('bab1_glen_superglen'), 200);
   check('superglen line shown', !!s);
@@ -1505,7 +1508,22 @@ async function playChapter(page, check, d, beat, opts = {}) {
   s = await d.st();
   check('save: chaptersDone contains bab1', s.save.data.chaptersDone.includes('bab1'));
   check('controls enabled in free play', s.controlsEnabled);
-  if (opts.skipPoles) return;
+  check('bab1 after the costume: transform star appears once controls are free', await page.evaluate(() => !!document.querySelector('.tc-button[data-action=transform]')));
+  check('bab1 after the costume: PC help card lists "Q: berubah"', await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('Q: berubah')));
+  if (opts.skipPoles) {
+    // touch: tap the star -> Glen -> tap again -> Superglen
+    const tapStar = async () => {
+      const c = await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=transform]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await page.touchscreen.tap(c.x, c.y);
+      await d.adv(4, true);
+    };
+    await tapStar();
+    check('touch: tapping the star in the lab switches back to Glen', (await d.st()).mode === 'glen');
+    await shot(page, 'transform-back-281');
+    await tapStar();
+    check('touch: tapping the star again switches to Superglen', (await d.st()).mode === 'superglen');
+    return;
+  }
   // --- F. practice poles ---
   await d.adv(200);
   const poles = [[3.7, -74.8, 0.1], [5.9, -74.8, 0.9], [5.9, -72.6, 1.7]];
@@ -1606,7 +1624,7 @@ async function bab1PlankScenario(page, check) {
 async function bab1ReturnScenario(page, check) {
   // Runs on a page where the save says bab1 is done (set before the reload).
   await sleep(1500);
-  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.evaluate(() => { window.__superglen.save.markChapterDone('bab1'); window.__superglen.save.setLastMode('superglen'); });
   await page.goto(URL + '?fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
@@ -1622,6 +1640,47 @@ async function bab1ReturnScenario(page, check) {
   await shot(page, 'bab1-return');
   check('returning (Chapter 2 not played): the objective beam points at Nino', s.objective.active && Math.abs(s.objective.x - 4.2) < 0.5 && Math.abs(s.objective.z + 70.5) < 0.5, JSON.stringify(s.objective));
   check('returning: all skills still locked, flying ceiling set for the small lab', !s.skills.unlocked.fly && s.skills.maxFlyHeight < 6, `maxFly ${s.skills.maxFlyHeight}`);
+  // ---- transform back to Glen: Q on PC, the star on touch; skills follow the mode; the last mode is remembered ----
+  {
+    const acts = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
+    const help = await page.evaluate(() => [...document.querySelectorAll('.hud-controls li')].map((e) => e.textContent));
+    check('returning: transform star present, PC card lists "Q: berubah" and "E: bicara / ambil"', (await acts()) === 'jump,interact,transform' && help.includes('Q: berubah') && help.includes('E: bicara / ambil'), `${await acts()} | ${help.join(' / ')}`);
+    await d.tap('q');
+    check('Q switches Superglen -> Glen in the story lab', (await d.st()).mode === 'glen');
+    check('...Glen buttons: jump + interact + star', (await acts()) === 'jump,interact,transform', await acts());
+    await d.tap('q');
+    check('Q again switches back to Superglen', (await d.st()).mode === 'superglen');
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: true, shield: true }));
+    await d.adv(2);
+    check('Superglen with skills: jump, interact, laser, shield + star', (await acts()) === 'jump,interact,laser,shield,transform', await acts());
+    await d.tap('q');
+    check('Glen: the skill buttons are gone (jump + interact + star)', (await acts()) === 'jump,interact,transform' && (await d.st()).mode === 'glen', await acts());
+    await d.tap('q');
+    check('Superglen again: the skill buttons are back', (await acts()) === 'jump,interact,laser,shield,transform', await acts());
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: false, shield: false }));
+    await d.adv(2);
+    // Locked controls hide the star and ignore Q.
+    await page.evaluate(() => window.__superglen.game.setControlsEnabled(false));
+    await d.adv(2);
+    await d.tap('q');
+    check('controls locked: star hidden and Q does nothing', (await acts()) === 'jump,interact' && (await d.st()).mode === 'superglen', await acts());
+    await page.evaluate(() => window.__superglen.game.setControlsEnabled(true));
+    await d.adv(2);
+    // Leave as Glen: the next visit starts as Glen.
+    await d.tap('q');
+    check('left the game as Glen: the save remembers it', (await d.st()).save.data.lastMode === 'glen');
+    await page.goto(URL + '?fps=0');
+    await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+    await sleep(1500);
+    await page.mouse.click(640, 360);
+    await sleep(600);
+    await page.evaluate(() => window.__superglen.pause(true));
+    await d.adv(40, true);
+    s = await d.st();
+    check('reload: the returning player starts as Glen with the star visible', s.mode === 'glen' && (await acts()) === 'jump,interact,transform', `${s.mode} ${await acts()}`);
+    await d.tap('q');
+    check('...and Q makes Superglen again (saved)', (await d.st()).mode === 'superglen' && (await d.st()).save.data.lastMode === 'superglen');
+  }
   // Camera collision: a pole between the camera and the player must pull the camera in (never inside the pole).
   await d.walk(5.9, -71.0, 600);
   await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // camera on the -Z side, pole at z -72.6 in between
@@ -1647,6 +1706,7 @@ async function bab1ReturnScenario(page, check) {
   check('Nino offers a talk prompt', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
   await d.tap('e');
   check('Nino says bab1_nino_besok', (await d.st()).dialog.id === 'bab1_nino_besok');
+  check('E talks to Nino and does not switch the mode (E is not the transform key in story levels)', (await d.st()).mode === 'superglen');
   await d.adv(200); // the line ends (game time), then the fade to Chapter 2 starts
   await page.evaluate(() => window.__superglen.pause(false));
   await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 30000 });
@@ -1722,7 +1782,7 @@ async function bab1TouchScenario(page, check) {
   check('touch: jump button pulses during the jump lesson', pulsed);
   check('touch: dialog bubble, prompt icon and buttons never overlap at any sampled beat', overlaps === 0, `${overlaps} overlaps in ${samples.length} samples`);
   const a = await actions();
-  check('touch: Superglen buttons after the chapter: jump + interact only (no laser/shield/star)', a === 'jump,interact', a);
+  check('touch: Superglen buttons after the chapter: jump + interact + star (no laser/shield yet)', a === 'jump,interact,transform', a);
   void fingers;
 }
 
@@ -1793,6 +1853,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: only Lompat Barongsai at the start (no skill unlocked)`, !s.skills.unlocked.fly && !s.skills.unlocked.laser && !s.skills.unlocked.shield, JSON.stringify(s.skills.unlocked));
   if (tag === 'touch') check('touch: buttons at the start are jump + interact', (await actions()) === 'jump,interact', await actions());
   else check('desktop: help card does not list skills yet', await page.evaluate(() => !document.querySelector('.hud-controls').textContent.includes('Tahan Spasi')));
+  check(`${tag}: Chapter 2 story: no transform star (Superglen is required)`, await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await expectStanding(page, check, `bab2 at start (${tag})`);
   check(`${tag}: first line bab2_nino_pagi`, d.seen.includes('bab2_nino_pagi'), d.seen.join());
   check(`${tag}: objective beam on the flying pad`, s.objective.active && Math.abs(s.objective.x) < 0.5 && Math.abs(s.objective.z + 9) < 0.5, JSON.stringify(s.objective));
@@ -2036,12 +2097,14 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: alarm then siap lines in order`, !!s && d.seen.indexOf('bab2_nino_alarm') < d.seen.indexOf('bab2_glen_siap'), d.seen.join());
   s = await d.until((s) => s.levelInfo.step === 'done', 600, 10);
   check(`${tag}: chapter done step`, !!s);
+  check(`${tag}: transform star still hidden until the celebration is over`, await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]')));
   await celebrationChecks(page, check, d, async (name) => { await beat(name, d); }, { chapter: 2, tag, shotName: tag === 'touch' ? 'bab2-done-touch' : 'bab2-done', skipPoles: tag === 'touch' });
   s = await d.st();
   check(`${tag}: save has bab2 done and all three skills`, s.save.data.chaptersDone.includes('bab2') && s.save.data.skills.laser && s.save.data.skills.shield && s.save.data.skills.fly, JSON.stringify(s.save.data));
   check(`${tag}: no Nyam bubble after the chapter is done`, await page.evaluate(() => document.querySelectorAll('.b2-nyam').length === 0));
   s = await d.until((s) => s.levelInfo.step === 'free', 400, 10);
   check(`${tag}: free play follows (controls on, all skills)`, !!s && s.controlsEnabled && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield);
+  check(`${tag}: free play: the transform star is available`, await page.evaluate(() => !!document.querySelector('.tc-button[data-action=transform]')));
   console.log(`   bab2 ${tag} budgets: ${areas.join(' | ')}`);
   return { hits, areas };
 }
@@ -2183,7 +2246,7 @@ async function bab2FlowScenario(page, check) {
     if (startClick) await page.mouse.click(640, 360);
     await sleep(500);
   };
-  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.persist(); }, [chapters, skills]);
+  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.persist(); }, [chapters, skills]);
   const ALL = { laser: true, shield: true, fly: true };
   const NONE = { laser: false, shield: false, fly: false };
   const d = makeStoryDriver(page, check);
@@ -2830,7 +2893,7 @@ async function skillsDesktopScenario(page, check) {
     await d.step(18);
     const vy1 = d.last.vy;
     report('after releasing at the ceiling', `vy after 2 frames ${vyNow.toFixed(2)}, after 20 frames ${vy1.toFixed(2)} m/s`);
-    check('release: the jets stop at once (vy < 0 within 2 frames), no slow glide plateau', vyNow < 0 && vy1 < -9 && !d.last.flying && d.last.y < y0, `vy ${vyNow.toFixed(2)} -> ${vy1.toFixed(2)}`);
+    check('release: the jets stop at once (vy < 0 within 2 frames), soft fall capped at -7 m/s, no slow glide plateau', vyNow < 0 && vy1 < -6 && vy1 >= -7.1 && !d.last.flying && d.last.y < y0, `vy ${vyNow.toFixed(2)} -> ${vy1.toFixed(2)}`);
     const x0 = d.last.x;
     await d.step(4);
     const vx = (d.last.x - x0) / (4 / 60);
@@ -2854,13 +2917,14 @@ async function skillsDesktopScenario(page, check) {
     await d.up('Space');
     await d.step(8);
     const hDown = d.last.h;
-    check('released: falling under normal gravity at once', d.last.vy < -1.5 && hDown < 5.9 && !d.last.flying, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
+    check('released: falling at once (softer gravity)', d.last.vy < -1.5 && hDown < 5.9 && !d.last.flying, `h ${hDown.toFixed(2)}, vy ${d.last.vy.toFixed(2)}`);
     const f0 = d.last.flights;
+    const dj0 = d.last.dj;
     await d.down('Space');
-    await d.step(10);
-    check('hold Space again in the air: the air jump fires first (the jets follow after the 0.45 s hold)', d.last.vy > 0 && !d.last.flying, `vy ${d.last.vy.toFixed(2)}`);
+    await d.step(2);
+    check('press Space again in the air after a flight: the jets re-ignite at once (re-ignite wins over the air jump)', d.last.flying && d.last.flights === f0 + 1 && d.last.dj === dj0, `flying ${d.last.flying}, flights +${d.last.flights - f0}, dj +${d.last.dj - dj0}`);
     await d.step(30);
-    check('...then the jets re-ignite (a child can catch themselves)', d.last.flying && d.last.flights === f0 + 1, `flying ${d.last.flying}, flights +${d.last.flights - f0}`);
+    check('...and it rises (a child can catch themselves)', d.last.vy > 0.5, `vy ${d.last.vy.toFixed(2)}`);
     await d.step(120);
     check('...up to the ceiling again, no limit on re-ignitions', d.last.h > 5.6 && d.last.h < 6.2, `${d.last.h.toFixed(2)}`);
     await d.land();
@@ -3629,7 +3693,7 @@ async function parkourDesktopScenario(page, check) {
     await d.step(8);
     const v10 = d.last.vy;
     report('release while flying', `vy after 2 frames ${v2.toFixed(2)}, after 10 frames ${v10.toFixed(2)} m/s (height ${yUp.toFixed(1)} m)`);
-    check('release: flying stops at once, vertical speed goes negative under normal gravity (no -2.2 m/s plateau)', v2 < 0 && v10 < -5 && !d.last.flying, `${v2.toFixed(2)} -> ${v10.toFixed(2)}`);
+    check('release: flying stops at once, vertical speed goes negative with the soft fall (no -2.2 m/s plateau, never below -7 m/s)', v2 < 0 && v10 < -2.5 && v10 >= -7.1 && !d.last.flying, `${v2.toFixed(2)} -> ${v10.toFixed(2)}`);
     await d.untilGrounded();
     check('...and lands without trouble', d.last.grounded && !d.last.flying);
     // re-hold in the air
@@ -3648,7 +3712,7 @@ async function parkourDesktopScenario(page, check) {
         break;
       }
     }
-    check('press and hold again in the air: the jets re-ignite (after the 0.45 s hold)', again > 0 && again <= 45 && d.last.flights === f1 + 1, `after ${again} frames`);
+    check('press again in the air after a flight: the jets re-ignite at once (no 0.45 s hold)', again > 0 && again <= 3 && d.last.flights === f1 + 1, `after ${again} frames`);
     await d.up();
     await d.untilGrounded();
     await d.step(30);
@@ -4579,6 +4643,210 @@ async function bab1RoofScenario(page, check) {
   await page.evaluate(() => window.__superglen.pause(false));
 }
 
+// ============================ Flight fix: soft fall after the jets, instant re-ignite ============================
+
+/** Shared checks for flightfix. `ctl` abstracts the jump input: { hold(), release() } (keyboard or finger). */
+async function flightfixChecks(page, check, d, ctl, tag) {
+  const report = (label, v) => console.log(`   [flightfix ${tag}] ${label}: ${v}`);
+  await d.maxFly(12);
+  await d.step(30);
+  const f0 = d.last.flights;
+  await ctl.hold();
+  await d.step(220);
+  check(`${tag}: holding jump flies up to the ceiling`, d.last.flying && d.last.h > 11, `h ${d.last.h.toFixed(2)}`);
+  const y0 = d.last.y;
+  await ctl.release();
+  await d.step(2);
+  const v2 = d.last.vy;
+  let minVy = 0;
+  for (let i = 0; i < 58; i++) {
+    await d.step(1);
+    minVy = Math.min(minVy, d.last.vy);
+  }
+  const softDrop = y0 - d.last.y;
+  report('soft fall', `vy after 2 frames ${v2.toFixed(2)}, fastest ${minVy.toFixed(2)}, drop in 1 s ${softDrop.toFixed(2)} m`);
+  check(`${tag}: release: vertical speed goes negative within 2 frames, jets off`, v2 < 0 && !d.last.flying, `vy ${v2.toFixed(2)}`);
+  check(`${tag}: release: the fall is capped (never below -7.1 m/s) but really falls (reaches < -6)`, minVy >= -7.1 && minVy < -6, `${minVy.toFixed(2)}`);
+  check(`${tag}: release: drops more than 4 m in the first second (clearly not the old -2.2 m/s glide)`, softDrop > 4, `${softDrop.toFixed(2)} m`);
+
+  // A plain fall from a high point, same duration: much faster.
+  const px = d.last.x;
+  const pz = d.last.z;
+  await page.evaluate(([x, z]) => window.__superglen.teleportFeet(x, 60, z), [px, pz]);
+  await d.step(2);
+  const yp = d.last.y;
+  let minPlain = 0;
+  for (let i = 0; i < 58; i++) {
+    await d.step(1);
+    minPlain = Math.min(minPlain, d.last.vy);
+  }
+  const plainDrop = yp - d.last.y;
+  report('plain fall', `fastest ${minPlain.toFixed(2)}, drop ${plainDrop.toFixed(2)} m`);
+  check(`${tag}: the soft fall is slower than a plain fall from the same height`, softDrop < plainDrop * 0.5 && minPlain < -15, `soft ${softDrop.toFixed(1)} m vs plain ${plainDrop.toFixed(1)} m`);
+  await d.land();
+
+  // Back up, release, fall a little, press once: the jets restart at once.
+  await d.step(30);
+  await ctl.hold();
+  await d.step(150);
+  await ctl.release();
+  await d.step(20);
+  const yPress = d.last.y;
+  const vBefore = d.last.vy;
+  const dj0 = d.last.dj;
+  const fl0 = d.last.flights;
+  await ctl.hold();
+  await d.step(2);
+  check(`${tag}: one press in mid-fall re-ignites the jets within 2 frames (re-ignite wins over the air jump)`, vBefore < -2 && d.last.flying && d.last.flights === fl0 + 1 && d.last.dj === dj0, `vy before ${vBefore.toFixed(2)}, flying ${d.last.flying}, dj +${d.last.dj - dj0}`);
+  await d.step(38);
+  check(`${tag}: ...and it rises again while held`, d.last.vy > 0.5 && d.last.y > yPress, `vy ${d.last.vy.toFixed(2)}, ${d.last.y.toFixed(2)} vs ${yPress.toFixed(2)}`);
+  // A quick tap (release at once) re-ignites and drops again; do it twice in a row.
+  await ctl.release();
+  await d.step(15);
+  const fl1 = d.last.flights;
+  await ctl.hold();
+  await d.step(1);
+  await ctl.release();
+  await d.step(2);
+  check(`${tag}: a quick tap in mid-fall also re-ignites (one more flight)`, d.last.flights === fl1 + 1, `flights +${d.last.flights - fl1}`);
+  await d.step(10);
+
+  // Landing after a flight: gentle, no stomp.
+  const st = d.last.stomps;
+  let worst = 0;
+  for (let i = 0; i < 700 && !d.last.grounded; i++) {
+    await d.step(1);
+    worst = Math.min(worst, d.last.vy);
+  }
+  await d.step(20);
+  check(`${tag}: landing after a flight is gentle: grounded, no stomp, impact < 8 m/s`, d.last.grounded && d.last.stomps === st && worst >= -7.1, `fastest ${worst.toFixed(2)}, stomps ${st}->${d.last.stomps}`);
+  check(`${tag}: the first ignition from the ground is unchanged (flights counted only for real flights)`, d.last.flights >= f0 + 3, `+${d.last.flights - f0}`);
+}
+
+async function flightfixDesktopScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const d = makeSkillsDriver(page);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.step(30);
+  await d.tap('e', 20);
+  check('flightfix: E switches the test area to Superglen', d.last.mode === 'superglen' || (await d.snap()).mode === 'superglen');
+  // Normal jumps never flew: unchanged.
+  {
+    const y0 = (await d.step(1)).y;
+    const f0 = d.last.flights;
+    await d.tap('Space');
+    let peak = 0;
+    for (let i = 0; i < 200; i++) {
+      await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 4) break;
+    }
+    check('flightfix: tap jump is unchanged (level 0 apex 1.52-1.68 m), no flight', peak > 1.52 && peak < 1.68 && d.last.flights === f0 && !d.last.flying, `${peak.toFixed(2)} m`);
+    await d.step(10);
+    const dj0 = d.last.dj;
+    await d.tap('Space');
+    peak = 0;
+    for (let i = 0; i < 200; i++) {
+      if (i === 22) await d.tap('Space');
+      else await d.step(1);
+      peak = Math.max(peak, d.last.y - y0);
+      if (d.last.grounded && i > 30) break;
+    }
+    check('flightfix: double jump on a normal jump still works (apex 3.0-3.5 m, no flight)', peak > 3.0 && peak < 3.5 && d.last.dj === dj0 + 1 && d.last.flights === f0, `${peak.toFixed(2)} m, dj +${d.last.dj - dj0}`);
+    await d.step(30);
+  }
+  await flightfixChecks(page, check, d, { hold: () => d.down('Space'), release: () => d.up('Space') }, 'desktop');
+}
+
+async function flightfixTouchScenario(page, check) {
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  await d.mode('superglen');
+  await d.step(20);
+  const jp = await page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  await flightfixChecks(page, check, d, { hold: () => fingers.down(2, jp.x, jp.y), release: () => fingers.up(2) }, 'touch 844x281');
+}
+
+// ============================ Transform button in the story levels (touch layout) ============================
+
+async function check_glen(check, page) {
+  check('bab1 lab 844x281: screenshot taken as Glen with the star visible', await page.evaluate(() => window.__superglen.mode === 'glen' && !!document.querySelector('.tc-button[data-action=transform]')));
+}
+
+async function transformTouchScenario(page, check) {
+  await sleep(1500);
+  await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.save.setLastMode('superglen'); });
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(2000);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+  const mode = () => page.evaluate(() => window.__superglen.mode);
+  const tapStar = async () => {
+    const c = await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=transform]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.touchscreen.tap(c.x, c.y);
+    await adv(4);
+  };
+  await adv(30);
+  for (const h of [281, 390]) {
+    await page.setViewportSize({ width: 844, height: h });
+    await sleep(500);
+    for (const want of ['superglen', 'glen']) {
+      if ((await mode()) !== want) await tapStar();
+      for (const sk of [false, true]) {
+        await page.evaluate((on) => window.__superglen.game.setSkills({ laser: on, shield: on }), sk);
+        await adv(2);
+        const l = await page.evaluate(layoutInfo);
+        const exp = want === 'superglen' ? (sk ? 'jump,interact,laser,shield,transform' : 'jump,interact,transform') : 'jump,interact,transform';
+        check(`bab1 lab 844x${h} ${want} skills=${+sk}: buttons ${exp}`, l.actions.join() === exp, l.actions.join());
+        check(`bab1 lab 844x${h} ${want} skills=${+sk}: star >= 80 px, inside, no overlap with the other controls`, l.transformOk && l.inside && !l.overlap && l.minBtn >= 79.5, JSON.stringify({ t: l.transformOk, i: l.inside, o: l.overlap, m: l.minBtn }));
+      }
+    }
+    await page.evaluate(() => window.__superglen.game.setSkills({ laser: false, shield: false }));
+    if (h === 281) {
+      await tapStar();
+      const m1 = await mode();
+      await tapStar();
+      check('bab1 lab: the star toggles Glen <-> Superglen both ways', m1 !== (await mode()), `${m1} -> ${await mode()}`);
+      if ((await mode()) !== 'glen') await tapStar();
+      await page.evaluate(() => window.__superglen.advance(4, true));
+      await check_glen(check, page);
+      await shot(page, 'transform-back-281');
+    }
+  }
+  // Chapter 2 story: the star stays hidden (Superglen is required).
+  await page.setViewportSize({ width: 844, height: 281 });
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.evaluate(() => window.__superglen.save.reset());
+  await page.evaluate(() => window.__superglen.loadLevel('bab2'));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
+  await sleep(800);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await adv(30);
+  const l2 = await page.evaluate(layoutInfo);
+  check('bab2 story 844x281: no star, inside and no overlap', !l2.actions.includes('transform') && l2.inside && !l2.overlap, l2.actions.join());
+  await page.evaluate(() => window.__superglen.save.reset());
+}
+
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -4693,10 +4961,15 @@ async function main() {
 
     results.push(await runScenario(browser, 'desktop-jump', { viewport: { width: 1280, height: 720 } }, jumpScenario));
 
+    results.push(await runScenario(browser, 'flightfix-desktop', { viewport: { width: 1280, height: 720 } }, flightfixDesktopScenario, '?level=test&fps=0'));
+    results.push(await runScenario(browser, 'flightfix-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, flightfixTouchScenario, '?level=test&fps=0'));
+
     results.push(await runScenario(browser, 'bab1', { viewport: { width: 1280, height: 720 } }, bab1DesktopScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'bab1-transform-ui', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, transformTouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));

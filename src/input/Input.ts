@@ -17,8 +17,7 @@
  */
 
 /**
- * 'transform' is the touch-only Glen <-> Superglen button of the test area (PC uses E = 'interact').
- * Remove together with ModeController when the lab transformation exists.
+ * 'transform' is the Glen <-> Superglen switch: the touch star button and PC key Q (see player/ModeController.ts).
  */
 export type Action = 'jump' | 'laser' | 'shield' | 'interact' | 'transform';
 

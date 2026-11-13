@@ -77,6 +77,7 @@ export class Story {
     this.free = true;
     this.step = 'free';
     ctx.game.debugInfo.chapterDone = true;
+    ctx.game.setTransformAllowed(true); // free play: the child may switch Glen <-> Superglen
     nino.placeAt(NINO_SPOT.start.x, NINO_SPOT.start.z);
     const player = ctx.player;
     ctx.interactions.add({
@@ -103,9 +104,13 @@ export class Story {
           const id = ++this.runId;
           this.current?.stop();
           this.current = ex;
+          // The exercises need Superglen: switch to him and hide the switch while one runs.
+          if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen');
+          ctx.game.setTransformAllowed(false);
           ctx.seq.run(async () => {
             await ex.run({ voice: false });
             if (id !== this.runId) return;
+            ctx.game.setTransformAllowed(true);
             this.cheer();
             await ctx.seq.wait(1.2);
             if (id !== this.runId) return;
