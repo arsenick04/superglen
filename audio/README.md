@@ -59,3 +59,17 @@ a) Rekaman gratis CC0 (Freesound dengan filter lisensi CC0, atau Pixabay). Simpa
 | sfx_hewan_singa.mp3 | singa mengaum |
 
 b) API sound effects ElevenLabs, nanti, hanya setelah disetujui pemilik proyek (memakai kuota).
+
+### Status suara hewan (diisi 2026-11-13) dan alternatif
+Sumber: Wikimedia Commons, hanya CC0 atau Domain Publik. Detail lisensi di `CREDITS.md`. Pemilihan dilakukan tanpa mendengar (agen tidak bisa mendengar audio): tolong dengarkan dulu. Untuk mengganti, simpan file baru dengan nama yang sama.
+
+Sudah ada: kucing, ayam, kuda, singa. Alternatif bila kurang cocok (semua halaman di commons.wikimedia.org/wiki/File:...):
+- kucing: `Meow of a Siamese cat - freemaster2.wav` (CC0, hanya 1.5 s, satu miauw bersih).
+- ayam: `Small rooster crowing.ogg` (Domain Publik, alys, dua kokok pendek).
+- kuda: tidak ada alternatif yang layak (hasil lain hanya orang mengucapkan kata "whinny").
+- singa: `Lion sound effect.wav` (CC0, Zagzav12, berkas 56 MB, belum diperiksa isinya). Pilihan saat ini: singa kebun binatang, auman pendek (1 kali).
+
+BELUM ADA (menunggu keputusan pemilik proyek):
+- anjing: tidak ada CC0/Domain Publik. Kandidat terbaik: `Barking of a dog.ogg` (CC BY-SA 3.0, 83 KB), `Barking.ogg` (CC BY-SA 4.0, 13 KB), `Perro ladrando.ogg` (CC BY-SA 4.0). Semua mewajibkan atribusi dan berbagi serupa.
+- sapi: satu-satunya Domain Publik (`Sound Ideas, COW - SINGLE MOO`) ternyata salah label: milik pustaka komersial Sound Ideas dan sudah diajukan untuk dihapus di Commons (Juli 2026). Jangan dipakai. Kandidat: `Single Cow Moo.ogg` (CC BY-SA 4.0, MichaeltheFox8621, 54 KB).
+- bebek: tidak ada rekaman kwek bebek asli berlisensi bebas yang ditemukan (hasil hanya orang mengucapkan kata "quack"/"duck"). Tidak ada kandidat. Pilihan: ElevenLabs sound effects (memakai kuota), atau sumber lain di luar Commons.
