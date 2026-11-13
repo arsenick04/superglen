@@ -1,0 +1,282 @@
+[
+  {
+    "id": "hewan_001",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_001",
+    "display": { "kind": "sound", "item": "kucing", "sound_id": "sfx_hewan_kucing" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_002",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_002",
+    "display": { "kind": "sound", "item": "anjing", "sound_id": "sfx_hewan_anjing" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "anjing" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_003",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_003",
+    "display": { "kind": "sound", "item": "sapi", "sound_id": "sfx_hewan_sapi" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_004",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_004",
+    "display": { "kind": "sound", "item": "ayam", "sound_id": "sfx_hewan_ayam" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "bebek" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_005",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_005",
+    "display": { "kind": "sound", "item": "bebek", "sound_id": "sfx_hewan_bebek" },
+    "choices": [
+      { "id": "a", "item": "kuda" },
+      { "id": "b", "item": "bebek" },
+      { "id": "c", "item": "anjing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_006",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_006",
+    "display": { "kind": "sound", "item": "kuda", "sound_id": "sfx_hewan_kuda" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "ayam" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_007",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Dengarkan suaranya. Siapa itu?",
+    "audio_id": "quiz_hewan_007",
+    "display": { "kind": "sound", "item": "singa", "sound_id": "sfx_hewan_singa" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "anjing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_008",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_008",
+    "display": { "kind": "silhouette", "item": "gajah" },
+    "choices": [
+      { "id": "a", "item": "kelinci" },
+      { "id": "b", "item": "gajah" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_009",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_009",
+    "display": { "kind": "silhouette", "item": "kelinci" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "katak" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_010",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_010",
+    "display": { "kind": "silhouette", "item": "katak" },
+    "choices": [
+      { "id": "a", "item": "katak" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "harimau" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_011",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_011",
+    "display": { "kind": "silhouette", "item": "monyet" },
+    "choices": [
+      { "id": "a", "item": "harimau" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_012",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_012",
+    "display": { "kind": "silhouette", "item": "harimau" },
+    "choices": [
+      { "id": "a", "item": "gajah" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "harimau" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_013",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_013",
+    "display": { "kind": "silhouette", "item": "burung" },
+    "choices": [
+      { "id": "a", "item": "burung" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_014",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Ini bayangan siapa, ya?",
+    "audio_id": "quiz_hewan_014",
+    "display": { "kind": "silhouette", "item": "ikan" },
+    "choices": [
+      { "id": "a", "item": "bebek" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "burung" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_015",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku punya belalai panjang. Siapa aku?",
+    "audio_id": "quiz_hewan_015",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "gajah" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_016",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku punya telinga panjang. Siapa aku?",
+    "audio_id": "quiz_hewan_016",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kelinci" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_017",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku berenang dan punya sirip. Siapa aku?",
+    "audio_id": "quiz_hewan_017",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "burung" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_018",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku suka bergelantungan di pohon. Siapa aku?",
+    "audio_id": "quiz_hewan_018",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kelinci" },
+      { "id": "b", "item": "katak" },
+      { "id": "c", "item": "monyet" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_019",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku berkokok setiap pagi. Siapa aku?",
+    "audio_id": "quiz_hewan_019",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "bebek" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_020",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku berbelang dan mengaum. Siapa aku?",
+    "audio_id": "quiz_hewan_020",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "harimau" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "b"
+  }
+]

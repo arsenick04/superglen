@@ -1,0 +1,306 @@
+[
+  {
+    "id": "hitung_001",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa apel?",
+    "audio_id": "quiz_hitung_001",
+    "display": { "kind": "count", "item": "apel", "count": 1 },
+    "choices": [
+      { "id": "a", "text": "1" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_002",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa bintang?",
+    "audio_id": "quiz_hitung_002",
+    "display": { "kind": "count", "item": "bintang", "count": 2 },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "2" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_003",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa kucing?",
+    "audio_id": "quiz_hitung_003",
+    "display": { "kind": "count", "item": "kucing", "count": 3 },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_004",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa ikan?",
+    "audio_id": "quiz_hitung_004",
+    "display": { "kind": "count", "item": "ikan", "count": 4 },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "2" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_005",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa bola?",
+    "audio_id": "quiz_hitung_005",
+    "display": { "kind": "count", "item": "bola", "count": 5 },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_006",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa balon?",
+    "audio_id": "quiz_hitung_006",
+    "display": { "kind": "count", "item": "balon", "count": 6 },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_007",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa bintang?",
+    "audio_id": "quiz_hitung_007",
+    "display": { "kind": "count", "item": "bintang", "count": 7 },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_008",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa pisang?",
+    "audio_id": "quiz_hitung_008",
+    "display": { "kind": "count", "item": "pisang", "count": 8 },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_009",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa bakpao semuanya?",
+    "audio_id": "quiz_hitung_009",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "bakpao", "count": 2 },
+      "b": { "item": "bakpao", "count": 1 }
+    },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_010",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa kucing semuanya?",
+    "audio_id": "quiz_hitung_010",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "kucing", "count": 3 },
+      "b": { "item": "kucing", "count": 2 }
+    },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_011",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa ikan semuanya?",
+    "audio_id": "quiz_hitung_011",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "ikan", "count": 2 },
+      "b": { "item": "ikan", "count": 2 }
+    },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_012",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa bola semuanya?",
+    "audio_id": "quiz_hitung_012",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "bola", "count": 4 },
+      "b": { "item": "bola", "count": 1 }
+    },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_013",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa balon semuanya?",
+    "audio_id": "quiz_hitung_013",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "balon", "count": 5 },
+      "b": { "item": "balon", "count": 1 }
+    },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_014",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa bintang semuanya?",
+    "audio_id": "quiz_hitung_014",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "bintang", "count": 4 },
+      "b": { "item": "bintang", "count": 2 }
+    },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_015",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_015",
+    "display": { "kind": "equation", "text": "3 + 4" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_016",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_016",
+    "display": { "kind": "equation", "text": "6 + 2" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "9" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_017",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_017",
+    "display": { "kind": "equation", "text": "4 + 5" },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_018",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_018",
+    "display": { "kind": "equation", "text": "7 + 1" },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "7" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_019",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_019",
+    "display": { "kind": "equation", "text": "6 + 3" },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_020",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_020",
+    "display": { "kind": "equation", "text": "5 + 5" },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "10" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
+  }
+]
