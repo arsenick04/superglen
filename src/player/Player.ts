@@ -481,8 +481,10 @@ export class Player {
       } else if (wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = -C.groundStickSpeed;
       } else {
-        const g = this.verticalVelocity > 0 ? Parkour.gravityUp : Parkour.gravityUp * Parkour.fallMultiplier;
-        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, -Parkour.maxFallSpeed);
+        const soft = F.afterFlight && this.verticalVelocity <= 0;
+        const g = this.verticalVelocity > 0 ? Parkour.gravityUp : Parkour.gravityUp * Parkour.fallMultiplier * (soft ? FlightConfig.afterFlightGravityFactor : 1);
+        const floor = soft ? Math.min(this.verticalVelocity, -FlightConfig.afterFlightMaxFall) : -Parkour.maxFallSpeed;
+        this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, floor);
       }
     }
 
@@ -561,6 +563,7 @@ export class Player {
         this.velocity.set(0, 0, 0);
         this.verticalVelocity = 0;
         this.jumpBufferTimer = 0;
+        this.flight.clearAfterFlight();
         this.squash = -0.12;
         this.squashVel = 0;
         const ang = Math.atan2(hx, hz);
@@ -593,7 +596,7 @@ export class Player {
 
   /** Seconds until the feet touch the ground, from the height and vertical speed (Infinity when unknown/flying). */
   private updateLandEta(): void {
-    if (this.grounded || !this.hasGround || this.flight.isFlying || this.airHeight >= SHADOW_PROBE_RANGE - 0.01) {
+    if (this.grounded || !this.hasGround || this.flight.isFlying || this.flight.afterFlight || this.airHeight >= SHADOW_PROBE_RANGE - 0.01) {
       this.landEta = Infinity;
       return;
     }
@@ -701,6 +704,7 @@ export class Player {
     this.idleTimer = 0;
     this.landedFromFlight = this.flewThisAir;
     this.flewThisAir = false;
+    this.flight.clearAfterFlight();
     if (impact > Parkour.squashMinImpact) {
       this.squash = -Math.min(0.32, 0.08 + impact * 0.018);
       this.squashVel = 0;
