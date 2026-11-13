@@ -566,7 +566,10 @@ Orkestrator (Fable) hanya mendelegasikan dan meninjau. Pipeline dan aset oleh `a
 | `npm run build` | Lulus |
 | Skenario suara (dijalankan orkestrator) | Lulus 84 dari 84 |
 | Pemeriksaan memori (dijalankan orkestrator, 2 kali) | Lulus, sekitar 3 KB per frame dari batas 16 KB |
-| Smoke test penuh oleh `qa-tester` | Belum selesai saat catatan ini ditulis; hasilnya menyusul di commit berikutnya |
+| Smoke test penuh oleh `qa-tester`, sekali jalan | Lulus: 1.229 pemeriksaan, 0 gagal, 0 error console |
+| `check:quiz`, `check:reach`, `check:reach --strict`, `typecheck` | Lulus |
+| Kunci atau panggilan ElevenLabs di kode game dan hasil build | Tidak ada |
+| 174 id di manifest punya file, 7 suara hewan ada | Lulus |
 
 Pemeriksaan memori yang sempat tidak stabil di P1 dan B4 sudah diperbaiki: pengukurannya sekarang memakai pemanasan dan median tiga jendela. Batasnya tidak dilonggarkan. Agen menjalankannya 8 kali berturut-turut, semuanya lulus.
 
