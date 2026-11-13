@@ -40,11 +40,11 @@
     "note": "sementara, pilihan otomatis"
   },
   "mandarin": {
-    "voice_id": "SAz9YHcvj6GT2YYXdXww",
+    "voice_id": "APSIkVZudNbPAwyPoeVO",
     "stability": 0.7,
     "similarity_boost": 0.8,
     "style": 0,
-    "name": "River - Relaxed, Neutral, Informative",
-    "note": "sementara, pilihan otomatis"
+    "name": "Sage - Soothing & Gentle",
+    "note": "sementara, dipilih dari Voice Library; cek nada oleh penutur asli"
   }
 }

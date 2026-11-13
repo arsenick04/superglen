@@ -30,6 +30,12 @@ File yang sudah ada dilewati. Teks atau suara yang berubah terdeteksi lewat hash
 Ubah `voice_id` (atau pengaturan stability, similarity_boost, style) di `audio/voices.json`, lalu jalankan `npm run audio` (atau `--category=...` dulu). Baris dengan suara lama dibuat ulang otomatis. Kalau API tidak bisa dijangkau, cari suara di ElevenLabs Voice Library, salin Voice ID, tempel manual ke `voices.json`. Semua suara harus mendukung model multilingual untuk Bahasa Indonesia.
 
 ## Mandarin
+Suara aktif: Sage - Soothing & Gentle (perempuan, aksen standar daratan, lembut seperti guru). Dipilih dari metadata (bahasa zh, aksen standar), BELUM didengar penutur asli: cek nada dulu. Alternatif (sudah ada di akun, sampel uji di `audio/voice-tests/`, 4 nada + "nihao" + "xiexie"):
+- `4VZIsMPtgggwNg7OXbPY` James Gao (laki-laki, tenang, hangat, aksen standar) : `mandarin_jamesgao.mp3`
+- `MI36FIkp9wRP7cpWKPTl` Evan Zhao (laki-laki muda, hangat, aksen Beijing) : `mandarin_evanzhao.mp3`
+- `APSIkVZudNbPAwyPoeVO` Sage (terpilih) : `mandarin_sage.mp3`
+Untuk ganti: ubah `mandarin.voice_id` di `audio/voices.json`, lalu `npm run audio -- --category=quiz_mandarin,speak_zh`.
+
 Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Minta penutur asli mengecek nada sebelum dipakai anak.
 
 ## Aturan hemat kredit
