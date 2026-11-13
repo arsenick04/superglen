@@ -108,6 +108,8 @@ export class AudioManager {
   private voiceResolve: (() => void) | null = null;
   lastVoiceId = '';
   voicesPlayed = 0;
+  /** The last voice ids that started (tests). */
+  private readonly voiceLog: string[] = [];
 
   // ---- Sfx ----
   private readonly sfxSrcs = new Set<AudioBufferSourceNode>();
@@ -187,6 +189,8 @@ export class AudioManager {
       }
       this.syncRunning();
       void this.pump();
+      // The first tap starts the music: the level's scene when it asked for one, else the title music.
+      if (this.wanted === null) this.wanted = 'awal';
       this.applyScene();
     } catch {
       // Audio must never break the game.
@@ -377,6 +381,8 @@ export class AudioManager {
       this.voiceId = id;
       this.lastVoiceId = id;
       this.voicesPlayed++;
+      this.voiceLog.push(id);
+      if (this.voiceLog.length > 12) this.voiceLog.shift();
       src.onended = (): void => {
         if (this.voiceSrc !== src) return;
         this.endVoiceSource();
@@ -715,6 +721,9 @@ export class AudioManager {
       get available() {
         return self.available.size;
       },
+      get voiceLog() {
+        return [...self.voiceLog];
+      },
       get voicesPlayed() {
         return self.voicesPlayed;
       },
@@ -756,6 +765,20 @@ export class AudioManager {
         }
         self.injected.set(id, buf);
         return true;
+      },
+      /** Pretend this file does not exist (drops it from the manifest, the clips and the cache). */
+      hide(id: string): void {
+        self.available.delete(id);
+        self.injected.delete(id);
+        const buf = self.cache.get(id);
+        if (buf) {
+          self.cache.delete(id);
+          self.cacheSecs -= buf.duration;
+        }
+      },
+      /** What a level does at build: choose the music scene ('' = none). */
+      setScene(scene: string): void {
+        self.setScene((MUSIC_SCENES as readonly string[]).includes(scene) ? (scene as MusicScene) : null);
       },
       /** Replace the scene -> file map (as if tracks.json said so) and re-apply the current scene. */
       setTracks(map: Record<string, string>): void {

@@ -116,6 +116,8 @@ export interface DebugHandle {
   camera: { x: number; y: number; z: number };
   /** Fixed steps run by the most recent frame. */
   lastSteps: number;
+  /** Test-only: show a dialog line (a table id or literal text, optionally with an id). */
+  say: (line: string | { speaker: string; text: string; id?: string }) => void;
   /**
    * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
    * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
@@ -353,6 +355,9 @@ export class Game {
     },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
+    say: (line) => {
+      void this.dialog.say(line);
+    },
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
     smoothing: (on: boolean) => {
       this.clock.enabled = on;
