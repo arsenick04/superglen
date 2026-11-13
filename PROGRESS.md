@@ -455,7 +455,7 @@ Orkestrator untuk paket ini adalah Opus, atas permintaan pemilik proyek, sampai 
 | Rute bangunan (rumah tingkat 0 sampai 1, ruko tingkat 2 dan tidak di 0 sampai 1, landmark tingkat 4 dan tidak di 3) | Lulus 20 dari 20 desktop, 3 dari 3 sentuh (dijalankan orkestrator) |
 | Terbang lebih lembut dan tekan ulang | Lulus 23 dari 23 (dijalankan orkestrator) |
 | Tombol Berubah di layar sentuh | Lulus 19 dari 19 (dijalankan orkestrator) |
-| Smoke test penuh | Belum selesai saat catatan ini ditulis; hasilnya menyusul di commit berikutnya |
+| Smoke test penuh oleh `qa-tester` (36 skenario) | Lulus 971 dari 971, 0 error console, sekali jalan |
 
 Draw call dan segitiga di jalan Chapter 1: paling banyak 68 dan 53,4 ribu, dalam batas 150 dan 60 ribu. Sisa ruang segitiga sekitar 6,6 ribu, jadi dekorasi tambahan di jalan perlu hati-hati. **Fps di perangkat asli belum diukur.**
 
