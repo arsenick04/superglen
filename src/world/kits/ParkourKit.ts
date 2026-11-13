@@ -48,6 +48,9 @@ export interface BlockOptions {
   edge?: boolean;
 }
 
+/** Horizontal unit vector (x, z) a piece looks toward (grille, rail, stripes). */
+export type Face = readonly [number, number];
+
 export const EDGE_COLOR = 0xfff3a0;
 
 export class ParkourKit {
@@ -94,10 +97,14 @@ export class ParkourKit {
     return this.block({ id, group, kind: 'crate', x, z, w: wide, d: wide, top, color: 0xd9a05b, capColor: 0xe8bb7a });
   }
 
-  /** Outdoor AC unit hanging on a wall: a slab `thick` thick. */
-  acUnit(id: string, group: string, x: number, z: number, top: number, w = 1.2, d = 0.9, thick = 0.8): Foothold {
+  /**
+   * Outdoor AC unit hanging on a wall: a slab `thick` thick. `face` is the horizontal unit vector the grille looks
+   * toward (default +z; the street houses face along x).
+   */
+  acUnit(id: string, group: string, x: number, z: number, top: number, w = 1.2, d = 0.9, thick = 0.8, face: Face = [0, 1]): Foothold {
     const fh = this.block({ id, group, kind: 'ac', x, z, w, d, top, thickness: thick, color: 0xd8e0ea, capColor: 0xf3f6fa });
-    this.kit.deco.box([w * 0.8, thick * 0.5, 0.04], [x, top - thick / 2, z + d / 2 + 0.02], 0x6f8296); // grille facing +z
+    if (face[0] !== 0) this.kit.deco.box([0.04, thick * 0.5, d * 0.8], [x + face[0] * (w / 2 + 0.02), top - thick / 2, z], 0x6f8296);
+    else this.kit.deco.box([w * 0.8, thick * 0.5, 0.04], [x, top - thick / 2, z + face[1] * (d / 2 + 0.02)], 0x6f8296);
     return fh;
   }
 
@@ -111,10 +118,14 @@ export class ParkourKit {
    * it always meets a wall to climb (a cantilever slab can be run under, bonking the head: not for a 5-year-old). Painted
    * like a balcony: a red band under a gold edge and a row of rail posts (decoration only).
    */
-  balcony(id: string, group: string, x: number, z: number, top: number, w = 2.4, d = 1.8): Foothold {
-    const fh = this.block({ id, group, kind: 'balcony', x, z, w, d, top, color: 0xffb4a2, capColor: C.GOLD });
+  balcony(id: string, group: string, x: number, z: number, top: number, w = 2.4, d = 1.8, face: Face = [0, 1], color = 0xffb4a2): Foothold {
+    const fh = this.block({ id, group, kind: 'balcony', x, z, w, d, top, color, capColor: C.GOLD });
     this.kit.deco.box([w + 0.04, 0.5, d + 0.04], [x, top - 0.45, z], C.RED);
-    for (let i = 0; i < 6; i++) this.kit.deco.cyl(0.04, 0.5, [x - w / 2 + 0.2 + i * ((w - 0.4) / 5), top + 0.27, z + d / 2 - 0.1], C.GOLD);
+    for (let i = 0; i < 6; i++) {
+      // Rail posts along the open front edge.
+      if (face[0] !== 0) this.kit.deco.cyl(0.04, 0.5, [x + face[0] * (w / 2 - 0.1), top + 0.27, z - d / 2 + 0.2 + i * ((d - 0.4) / 5)], C.GOLD);
+      else this.kit.deco.cyl(0.04, 0.5, [x - w / 2 + 0.2 + i * ((w - 0.4) / 5), top + 0.27, z + face[1] * (d / 2 - 0.1)], C.GOLD);
+    }
     return fh;
   }
 
@@ -124,9 +135,28 @@ export class ParkourKit {
   }
 
   /** A shop awning: a flat slab with a striped front. */
-  awning(id: string, group: string, x: number, z: number, top: number, w = 2.4, d = 1.4, thick = 0.25): Foothold {
+  awning(id: string, group: string, x: number, z: number, top: number, w = 2.4, d = 1.4, thick = 0.25, face: Face = [0, 1]): Foothold {
     const fh = this.block({ id, group, kind: 'awning', x, z, w, d, top, thickness: thick, color: C.RED, capColor: C.CREAM });
-    for (let i = 0; i < 6; i++) this.kit.deco.box([w / 6, thick * 0.8, 0.06], [x - w / 2 + (i + 0.5) * (w / 6), top - thick * 0.5, z + d / 2 + 0.03], i % 2 ? C.RED : C.CREAM);
+    for (let i = 0; i < 6; i++) {
+      if (face[0] !== 0) this.kit.deco.box([0.06, thick * 0.8, d / 6], [x + face[0] * (w / 2 + 0.03), top - thick * 0.5, z - d / 2 + (i + 0.5) * (d / 6)], i % 2 ? C.RED : C.CREAM);
+      else this.kit.deco.box([w / 6, thick * 0.8, 0.06], [x - w / 2 + (i + 0.5) * (w / 6), top - thick * 0.5, z + face[1] * (d / 2 + 0.03)], i % 2 ? C.RED : C.CREAM);
+    }
+    return fh;
+  }
+
+  /**
+   * A roof water tank: a round drum on a short stand, standable on top (a roof step). Solid down to `base` (the roof
+   * surface it stands on), so its collider is a cylinder 10 cm wider than what is drawn.
+   */
+  tank(id: string, group: string, x: number, z: number, base: number, h: number, radius: number): Foothold {
+    const f = Parkour.world.friendly;
+    this.kit.lit.cyl(radius, h, [x, base + h / 2, z], 0x6fc3e8);
+    this.kit.lit.cyl(radius + 0.04, 0.1, [x, base + h * 0.5, z], C.WHITE);
+    this.kit.deco.cyl(radius - 0.1, 0.05, [x, base + h + 0.02, z], C.WHITE);
+    this.kit.glow.cyl(radius + 0.02, 0.03, [x, base + h + 0.005, z], EDGE_COLOR);
+    this.kit.physics.addFixedCylinder(h / 2, radius + f, { x, y: base + h / 2, z });
+    const fh: Foothold = { id, group, kind: 'tank', x, z, w: radius * 2, d: radius * 2, top: base + h };
+    this.footholds.push(fh);
     return fh;
   }
 

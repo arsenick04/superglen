@@ -75,7 +75,7 @@ export interface ArenaLayout {
   drumLedge: Slab;
   floors: (Slab & { n: number })[];
   house: { crateA: Slab; crateB: Slab; awning: Slab; wall: number; roofH: number; roofW: number; roofD: number };
-  ruko: { crateA: Slab; crateB: Slab; balcony: Slab; sign: Slab; signThick: number; wall: number; roofH: number; roofW: number; roofD: number };
+  ruko: { crateA: Slab; balcony: Slab; sign: Slab; signThick: number; wall: number; roofH: number; roofW: number; roofD: number };
 }
 
 const CRATE = 0.9;
@@ -116,18 +116,19 @@ function computeLayout(): ArenaLayout {
     roofD: H.d + 0.6,
   };
 
-  // Mini ruko: the balcony bay is a pier like a tower floor: its top is 4.65 m above the crates, between what level 0 (4.4)
-  // and level 1 (4.9) can reach with the air jump and the mantle; without the air jump it takes level 3 (plain 5.0, level 2 4.3).
+  // Mini ruko (class ruko: levels 2-3): ONE crate (0.9 m) is the only footing, and the balcony bay is a pier like a tower floor
+  // whose top is gateRise(2) = 5.2 m above it: between what level 1 (4.9) and level 2 (5.5) can reach with the air jump and
+  // the mantle. From the ground alone it needs level 3 (6.1 m <= 6.2 m); without the air jump it needs level 4 (plain 5.8 m).
+  // (A second crate or any other footing next to the bay would lower the hop: the route level is the lowest over all ways up.)
   const R = ARENA.ruko;
   const rzf = R.z + R.d / 2;
-  const crateTop = 2 * CRATE;
-  const balconyTop = round2(crateTop + reach.full(0) + 0.5 * (reach.full(1) - reach.full(0)));
+  const crateTop = 1 * CRATE;
+  const balconyTop = round2(crateTop + 0.5 * (reach.full(1) + reach.full(2)));
   const signTop = balconyTop + 0.75;
   const bw = 2.4;
   const bx = R.x - 0.4 + bw / 2 - 0.0;
   const ruko = {
-    crateA: { id: 'rukoCrateA', x: R.x - 3.0, z: rzf + 0.7, top: 1 * CRATE, w: CRATE_W, d: CRATE_W },
-    crateB: { id: 'rukoCrateB', x: R.x - 1.6, z: rzf + 0.7, top: 2 * CRATE, w: CRATE_W, d: CRATE_W },
+    crateA: { id: 'rukoCrateA', x: R.x - 1.6, z: rzf + 0.7, top: crateTop, w: CRATE_W, d: CRATE_W },
     balcony: { id: 'rukoBalcony', x: bx, z: rzf + 0.9, top: balconyTop, w: bw, d: 1.8 },
     // The sign juts out past the roof edge (which overhangs 0.4 m) so there is room to stand on it.
     sign: { id: 'rukoSign', x: bx + bw / 2 + 0.5, z: rzf + 0.9, top: signTop, w: 1.0, d: 1.2 },
@@ -166,22 +167,13 @@ function computeReachData(): LevelReachData {
   slab(A.house.awning, 'awning', { building: 'house', thickness: 0.25 });
   footholds.push(hipRoof('houseRoof', 'house', ARENA.house.x, ARENA.house.z, A.house.roofW, A.house.roofD, A.house.wall, A.house.roofH, plateau));
   slab(A.ruko.crateA, 'crate', { building: 'ruko' });
-  slab(A.ruko.crateB, 'crate', { building: 'ruko' });
   slab(A.ruko.balcony, 'balcony', { building: 'ruko' });
   slab(A.ruko.sign, 'sign', { building: 'ruko', thickness: A.ruko.signThick });
   footholds.push(hipRoof('rukoRoof', 'ruko', ARENA.ruko.x, ARENA.ruko.z, A.ruko.roofW, A.ruko.roofD, A.ruko.wall, A.ruko.roofH, plateau));
 
   const buildings: Building[] = [
     { id: 'house', class: 'house', roofIds: ['houseRoof'], wall: A.house.wall, level: 1 },
-    {
-      id: 'ruko',
-      class: 'ruko',
-      roofIds: ['rukoRoof'],
-      wall: A.ruko.wall,
-      level: 3,
-      waiver:
-        'Known finding: the mini ruko balcony bay is designed for level 1 WITH the air jump (level 3 without it); the smoke test asserts exactly that, so the route stays. Street ruko must satisfy levels 2-3 with the air jump.',
-    },
+    { id: 'ruko', class: 'ruko', roofIds: ['rukoRoof'], wall: A.ruko.wall, level: 3 },
   ];
   const R = ARENA_REWARDS;
   const coins: Coin[] = [

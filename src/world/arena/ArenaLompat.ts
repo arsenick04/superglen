@@ -258,7 +258,6 @@ export class ArenaLompat {
     for (const fy of [Math.round(wall / 3), Math.round((2 * wall) / 3)]) this.kit.deco.box([R.w + 0.2, 0.18, 0.2], [R.x, fy, zf + 0.05], C.CREAM); // floor bands
     this.windowsAndDoor(R.x, zf, R.w, wall, 3);
     const crateA = this.pk.crateStack(RL.crateA.id, 'ruko', RL.crateA.x, RL.crateA.z, 1);
-    const crateB = this.pk.crateStack(RL.crateB.id, 'ruko', RL.crateB.x, RL.crateB.z, 2);
     const bal = this.pk.balcony(RL.balcony.id, 'ruko', RL.balcony.x, RL.balcony.z, RL.balcony.top, RL.balcony.w, RL.balcony.d);
     const sign = this.pk.signBoard(RL.sign.id, 'ruko', RL.sign.x, RL.sign.z, RL.sign.top, RL.sign.w, RL.sign.d, RL.signThick);
     this.buildings.ruko = { x: R.x, z: R.z, w: R.w, d: R.d, wall };
@@ -266,12 +265,11 @@ export class ArenaLompat {
     addHipRoof(this.kit, { id: 'rukoRoof', cx: R.x, cz: R.z, baseY: wall, w: RL.roofW, d: RL.roofD, h: rh, color: C.DEEP_RED });
     this.routes.ruko = [
       { id: crateA.id, needs: 0 },
-      { id: crateB.id, needs: 0 },
-      { id: bal.id, needs: 1 },
+      { id: bal.id, needs: 2 },
       { id: sign.id, needs: 0 },
       { id: 'rukoRoof', needs: 0 },
     ];
-    for (const f of [crateA, crateB, bal, sign]) this.trail(f.x, f.top, f.z);
+    for (const f of [crateA, bal, sign]) this.trail(f.x, f.top, f.z);
     this.trail(R.x, wall + rh * 0.9, R.z);
     this.addReward('ruko', ARENA_REWARDS.ruko.x, ARENA_REWARDS.ruko.y, ARENA_REWARDS.ruko.z, ARENA_REWARDS.ruko.size);
   }

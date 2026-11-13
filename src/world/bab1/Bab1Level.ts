@@ -14,6 +14,8 @@ import { Atmosphere, Flashlight, type Zone } from './Lighting';
 import { FunnyFx } from './FunnyFx';
 import { LabDoor } from './LabDoor';
 import { Story } from './Story';
+import { StreetFx } from './StreetFx';
+import { STREET_REACH, STREET_BUILDINGS, streetRoutes } from './StreetData';
 
 /**
  * Bab 1: Komputer Kuno Barongsai. One continuous level along -Z: street, old Barongsai building, dim hall, laboratory.
@@ -34,6 +36,7 @@ export class Bab1Level implements Level {
   private funny!: FunnyFx;
   private door!: LabDoor;
   private story!: Story;
+  private streetFx!: StreetFx;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -71,13 +74,28 @@ export class Bab1Level implements Level {
     const labKit = new Kit(physics, mats, false);
     for (const k of [street, building, hallKit, labKit]) k.roofs = this.roofs;
 
-    buildStreet(street);
+    const pk = buildStreet(street);
     this.jump = new JumpTutorial(ctx, street, this.sparkles);
     this.exterior = new BuildingExterior(building, root, this.sparkles);
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
     this.door = new LabDoor(ctx, labKit, this.sparkles);
-    if (this.testInfo) ctx.game.debugInfo.roofs = this.roofs.json();
+    this.streetFx = new StreetFx(ctx, this.sparkles);
+    if (this.testInfo) {
+      ctx.game.debugInfo.roofs = this.roofs.json();
+      // Layout data for the smoke test: the climbable footholds (drawn size, top), the route of each building, the coins.
+      ctx.game.debugInfo.street = JSON.stringify({
+        footholds: STREET_REACH.footholds.map((f) => ({ id: f.id, x: f.center[0], z: f.center[2], w: f.size[0], d: f.size[2], top: f.center[1] + f.size[1] / 2 })),
+        built: pk.footholds.map((f) => f.id),
+        routes: streetRoutes(),
+        buildings: [
+          ...STREET_BUILDINGS.map((b) => ({ id: b.id, cls: b.cls, level: b.level, wall: b.wall, x: b.roof.cx, z: b.z, w: b.roof.w - 0.6, d: b.roof.d - 0.6, roof: b.roof.id })),
+          { id: 'school', cls: 'ruko', level: 2, wall: 7, x: 0, z: 11.4, w: 28, d: 12.2, roof: 'schoolRoof' },
+          { id: 'barongsai', cls: 'landmark', level: 4, wall: 11.9, x: 0, z: -49, w: 9, d: 9, roof: 'barongsaiRoof2' },
+        ],
+        coins: this.streetFx.coinPositions(),
+      });
+    }
     street.build(root);
     building.build(root);
     hallKit.build(root);
@@ -121,6 +139,7 @@ export class Bab1Level implements Level {
     this.door.update(dt);
     this.jump.update(dt);
     this.funny.update(dt);
+    this.streetFx.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

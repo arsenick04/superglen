@@ -30,11 +30,14 @@ import { Parkour, launchSpeed } from '../src/config/parkour';
 import { PlayerConfig, ModeTunings } from '../src/player/PlayerConfig';
 import { topOf, type Foothold, type LevelReachData } from '../src/world/kits/ParkourData';
 import { ARENA_REACH } from '../src/world/arena/ArenaData';
+import { STREET_REACH } from '../src/world/bab1/StreetData';
 
 const R = Parkour.reachModel;
 const MAX = Parkour.levels.length - 1;
 const STRICT = process.argv.includes('--strict');
 const QUIET = process.argv.includes('--quiet');
+/** `--why=id1,id2`: print the cheapest route (every hop with its gap) to these footholds. */
+const WHY = (process.argv.find((a) => a.startsWith('--why='))?.slice(6) ?? '').split(',').filter(Boolean);
 const GROUND = 'ground';
 const RUN = ModeTunings.superglen.runSpeed;
 const HEAD = PlayerConfig.height;
@@ -136,7 +139,7 @@ function hop(hA: number, B: Foothold, gap: number, m: Mode): Hop {
 
 interface Result {
   /** Footholds reached (id -> path of ids from the start, and whether a hop on it is tight). */
-  reached: Map<string, { path: string[]; tight: string[] }>;
+  reached: Map<string, { path: string[]; tight: string[]; hops: string[] }>;
 }
 
 function analyse(data: LevelReachData, m: Mode): Result {
@@ -152,17 +155,17 @@ function analyse(data: LevelReachData, m: Mode): Result {
   };
   // Dijkstra on (number of tight hops * 1000 + number of hops): solid routes win over tight ones.
   const cost = new Map<string, number>();
-  const reached = new Map<string, { path: string[]; tight: string[] }>();
+  const reached = new Map<string, { path: string[]; tight: string[]; hops: string[] }>();
   const queue: string[] = [];
   for (const s of data.starts) {
     cost.set(s, 0);
-    reached.set(s, { path: [s], tight: [] });
+    reached.set(s, { path: [s], tight: [], hops: [] });
     queue.push(s);
   }
   while (queue.length) {
     queue.sort((a, b) => (cost.get(a) as number) - (cost.get(b) as number));
     const a = queue.shift() as string;
-    const ra = reached.get(a) as { path: string[]; tight: string[] };
+    const ra = reached.get(a) as { path: string[]; tight: string[]; hops: string[] };
     for (const B of data.footholds) {
       if (B.id === a) continue;
       if ((B.slopeDeg ?? 0) > Parkour.world.roofMaxSlopeDeg) continue;
@@ -171,7 +174,11 @@ function analyse(data: LevelReachData, m: Mode): Result {
       const c = (cost.get(a) as number) + 1 + (h.verdict === 'tight' ? 1000 : 0);
       if (c < (cost.get(B.id) ?? Infinity)) {
         cost.set(B.id, c);
-        reached.set(B.id, { path: [...ra.path, B.id], tight: h.verdict === 'tight' ? [...ra.tight, `${a}->${B.id}`] : ra.tight });
+        reached.set(B.id, {
+          path: [...ra.path, B.id],
+          tight: h.verdict === 'tight' ? [...ra.tight, `${a}->${B.id}`] : ra.tight,
+          hops: [...ra.hops, `${a}(${top(a).toFixed(2)}) -> ${B.id}(${topOf(B).toFixed(2)}) gap ${h.gap.toFixed(2)} m ${h.verdict}`],
+        });
         if (!queue.includes(B.id)) queue.push(B.id);
       }
     }
@@ -271,6 +278,12 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
       }
       onId = best?.id;
     }
+    if (onId === GROUND) {
+      // A guide coin on the street: always reachable (the ground can be walked), but it must lie at normal coin height.
+      if (c.pos[1] > 3) err(`koin "${c.id}" di tanah terlalu tinggi / ground coin too high: ${c.pos[1].toFixed(2)} m`);
+      rows.push({ name: `coin ${c.id}`, id: GROUND, level: 0, kind: 'coin' });
+      continue;
+    }
     const f = onId ? byId.get(onId) : undefined;
     if (!f) {
       err(`koin "${c.id}" tidak berada di atas pijakan mana pun / coin is not over any foothold (pos ${c.pos.map((v) => v.toFixed(2)).join(', ')})`);
@@ -321,6 +334,14 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
     if (dh > R.greenMaxHeightDiff) err(`rute hijau ${a} - ${b}: selisih tinggi ${dh.toFixed(2)} m > ${R.greenMaxHeightDiff} m / height difference too big`);
   }
 
+  if (WHY) {
+    for (const id of WHY) {
+      const m = minLevel(A.air, id);
+      if (m < 0) continue;
+      console.log(`  why ${id}: level ${m}`);
+      for (const h of A.air[m].reached.get(id)?.hops ?? []) console.log(`     ${h}`);
+    }
+  }
   if (!QUIET) printTable(data, A, rows);
 }
 
@@ -371,12 +392,13 @@ function selfTest(): Problem[] {
   // Mini house: levels 0 and 1, even without the air jump.
   expect(reaches(A.air, 0, 'houseRoof') && reaches(A.air, 1, 'houseRoof') && reaches(A.noAir, 0, 'houseRoof'), 'houseRoof: reachable at level 0 and 1, also without the air jump');
   expect(Math.abs(topOf(byId.get('houseAwning') as Foothold) - 2.6) < 0.01, 'houseAwning top must be 2.6');
-  // Mini ruko: not at 0, cap 1 with the air jump, cap 3 (not 2) without it.
-  expect(Math.abs(topOf(byId.get('rukoBalcony') as Foothold) - 6.45) < 0.01, 'rukoBalcony top must be 6.45');
-  expect(Math.abs(topOf(byId.get('rukoRoof') as Foothold) - 7.9) < 0.01, 'rukoRoof eave must be 7.9');
-  expect(!reaches(A.air, 0, 'rukoRoof'), 'rukoRoof: NOT reachable at level 0');
-  expect(reaches(A.air, 1, 'rukoRoof'), 'rukoRoof: reachable at level 1 with the air jump');
-  expect(!reaches(A.noAir, 2, 'rukoRoof') && reaches(A.noAir, 3, 'rukoRoof'), 'rukoRoof: without the air jump level 2 fails and level 3 works');
+  // Mini ruko (class ruko): one 0.9 m crate, balcony 5.2 m above it. Not at 0 or 1, level 2 with the air jump; without it
+  // level 3 fails (plain 5.0 m) and level 4 works (plain 5.8 m).
+  expect(Math.abs(topOf(byId.get('rukoBalcony') as Foothold) - 6.1) < 0.01, 'rukoBalcony top must be 6.1');
+  expect(Math.abs(topOf(byId.get('rukoRoof') as Foothold) - 7.55) < 0.01, 'rukoRoof eave must be 7.55');
+  expect(!reaches(A.air, 0, 'rukoRoof') && !reaches(A.air, 1, 'rukoRoof'), 'rukoRoof: NOT reachable at level 0 or 1');
+  expect(reaches(A.air, 2, 'rukoRoof'), 'rukoRoof: reachable at level 2 with the air jump');
+  expect(!reaches(A.noAir, 3, 'rukoRoof') && reaches(A.noAir, 4, 'rukoRoof'), 'rukoRoof: without the air jump level 3 fails and level 4 works');
   // Model sanity: tight jumps must not appear in the calibrated arena.
   for (const f of ARENA_REACH.footholds) for (let l = 0; l <= MAX; l++) {
     const t = A.air[l].reached.get(f.id)?.tight ?? [];
@@ -407,8 +429,8 @@ function selfTest(): Problem[] {
 // ---- Main -------------------------------------------------------------------------------------------------------------------------
 
 /** Registered levels. Add the Chapter 1 street here once it has a *Data.ts. */
-const LEVELS: LevelReachData[] = [ARENA_REACH];
-const PENDING = ['bab1'];
+const LEVELS: LevelReachData[] = [ARENA_REACH, STREET_REACH];
+const PENDING: string[] = [];
 
 function main(): void {
   const problems: Problem[] = [];
