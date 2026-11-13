@@ -24,7 +24,7 @@ const FACES: Readonly<Record<string, FaceStyle>> = {
 };
 const DEFAULT_FACE: FaceStyle = { bg: '#7bc96f', ring: '#ffffff' };
 
-function faceSvg(speaker: string): string {
+export function faceSvg(speaker: string): string {
   const f = FACES[speaker] ?? DEFAULT_FACE;
   return (
     '<svg viewBox="0 0 64 64" aria-hidden="true">' +

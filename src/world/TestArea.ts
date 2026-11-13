@@ -11,6 +11,10 @@ import { PracticeTarget } from '../gameplay/props/PracticeTarget';
 import { FlyRing } from '../gameplay/props/FlyRing';
 import { BallThrower } from '../gameplay/props/BallThrower';
 import { ArenaLompat } from './arena/ArenaLompat';
+import { NinoTerminal } from '../gameplay/props/NinoTerminal';
+
+/** Nino's quiz terminal in the test area (tests open challenges from here). */
+export const TERMINAL_TEST = { x: 6, z: 4 } as const;
 
 const SKY_COLOR = 0x8fd3ff; // cheerful morning sky
 /** The field is 60 m wide; it runs from z = +30 (south edge) to z = -100 (north edge). The Arena Lompat lies north of z = -30. */
@@ -35,6 +39,7 @@ export class TestArea implements Level {
   private readonly rings: FlyRing[] = [];
   private thrower: BallThrower | null = null;
   private arena: ArenaLompat | null = null;
+  private terminal: NinoTerminal | null = null;
   private info: Record<string, number | string | boolean> | null = null;
 
   build(ctx: LevelContext): void {
@@ -48,6 +53,7 @@ export class TestArea implements Level {
     this.buildProps(ctx.props);
     this.buildSkillsCorner(ctx);
     this.arena = new ArenaLompat(ctx);
+    this.terminal = new NinoTerminal(ctx, { x: TERMINAL_TEST.x, y: 0, z: TERMINAL_TEST.z, yaw: -0.6, category: 'mix', radius: 2.2 });
     this.info = ctx.game.debugInfo;
 
     // The test area owns the TEMPORARY Glen <-> Superglen toggle (E / star) and the full button sets.
@@ -85,6 +91,7 @@ export class TestArea implements Level {
   update(dt: number): void {
     this.follower.follow(this.player.visualPosition);
     this.arena?.update(dt);
+    this.terminal?.update(dt);
   }
 
   dispose(): void {

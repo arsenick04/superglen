@@ -1,5 +1,9 @@
 import { startGate } from '../core/StartGate';
 import { touchMode } from '../core/TouchMode';
+import { QuizIcons } from './QuizIcons';
+
+/** Long-press on the start-screen logo (touch) opens the parents' page after this long. */
+const PARENTS_HOLD_MS = 3000;
 
 const TAP_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="14" r="8" fill="none" stroke="#fff" stroke-width="3" opacity="0.8"/><circle cx="32" cy="14" r="13" fill="none" stroke="#fff" stroke-width="2" opacity="0.4"/><rect x="26" y="10" width="12" height="32" rx="6" fill="#fff"/><rect x="16" y="34" width="32" height="24" rx="10" fill="#fff"/></svg>';
@@ -21,6 +25,11 @@ export class Hud {
   private transformHelp = false;
   private skillLines: string[] = [];
   private dismissed = false;
+  /** The parents' page (set by the game). Opened by the logo long-press and the small gear on the PC help card. */
+  onParents: (() => void) | null = null;
+  private holdTimer = 0;
+  private holdStart = 0;
+  private suppressTap = false;
 
   constructor(
     private readonly root: HTMLElement,
@@ -41,6 +50,16 @@ export class Hud {
     this.list = el('ul', 'hud-controls');
     this.setStoryHelp(false);
     card.appendChild(this.list);
+    // Discreet gear for the parents' page (PC: the card is only visible while the mouse is free).
+    const gear = el('button', 'hud-gear');
+    gear.innerHTML = QuizIcons.gear;
+    gear.setAttribute('aria-label', 'Untuk orang tua');
+    gear.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onParents?.();
+    });
+    card.appendChild(gear);
     root.appendChild(card);
     this.card = card;
     this.buildStartScreen();
@@ -145,8 +164,32 @@ export class Hud {
     const stage = el('div', 'start-stage');
     stage.append(img, fallback);
     o.append(bg, stage, hint);
+    // Long-press on the logo (3 s): the parents' page. The release of such a press must not start the game.
+    for (const target of [img, fallback]) {
+      target.addEventListener('pointerdown', () => {
+        if (!touchMode.active) return;
+        this.holdStart = performance.now();
+        window.clearTimeout(this.holdTimer);
+        this.holdTimer = window.setTimeout(() => {
+          this.suppressTap = true;
+          this.onParents?.();
+        }, PARENTS_HOLD_MS);
+      });
+      const cancel = (): void => {
+        window.clearTimeout(this.holdTimer);
+        if (this.holdStart > 0 && performance.now() - this.holdStart > 800) this.suppressTap = true;
+        this.holdStart = 0;
+      };
+      target.addEventListener('pointerup', cancel);
+      target.addEventListener('pointercancel', cancel);
+      target.addEventListener('pointerleave', cancel);
+    }
     // pointerup (a real user gesture on iOS) rather than pointerdown: audio/fullscreen need it.
     o.addEventListener('pointerup', () => {
+      if (this.suppressTap) {
+        this.suppressTap = false;
+        return;
+      }
       if (touchMode.active) this.onStartTap();
     });
     this.root.appendChild(o);

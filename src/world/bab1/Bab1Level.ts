@@ -15,7 +15,11 @@ import { FunnyFx } from './FunnyFx';
 import { LabDoor } from './LabDoor';
 import { Story } from './Story';
 import { StreetFx } from './StreetFx';
+import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
+
+/** Where Nino's quiz terminal stands in the lab (left of the entrance path). */
+export const TERMINAL_LAB = { x: -2.8, z: -64.6 } as const;
 
 /**
  * Bab 1: Komputer Kuno Barongsai. One continuous level along -Z: street, old Barongsai building, dim hall, laboratory.
@@ -37,6 +41,7 @@ export class Bab1Level implements Level {
   private door!: LabDoor;
   private story!: Story;
   private streetFx!: StreetFx;
+  private terminal!: NinoTerminal;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -102,6 +107,8 @@ export class Bab1Level implements Level {
     hallKit.build(root);
     labKit.build(root);
 
+    // Nino's terminal in the lab: appears once Chapter 1 is done ("mix" of all categories).
+    this.terminal = new NinoTerminal(ctx, { x: TERMINAL_LAB.x, y: LAB_FLOOR, z: TERMINAL_LAB.z, category: 'mix', enabled: () => ctx.save.isChapterDone('bab1') });
     this.funny = new FunnyFx(root, ctx.player, this.sparkles);
     this.story = new Story({
       ctx,
@@ -143,6 +150,7 @@ export class Bab1Level implements Level {
     this.jump.update(dt);
     this.funny.update(dt);
     this.streetFx.update(dt);
+    this.terminal.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

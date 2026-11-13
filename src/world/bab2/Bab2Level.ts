@@ -13,12 +13,16 @@ import { Lunch } from './Lunch';
 import { Story } from './Story';
 import { FLY_MAX, HALL, NINO_SPOT } from './Layout';
 import type { Env } from './Env';
+import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 
 /**
  * Chapter 2: Latihan Pagi Bersama Nino. One big bright training hall with four floor stations (flying, laser, shield,
  * lunch) and a wall screen. First visit: the story (Story.ts). Once the chapter is done the hall is free play with all
  * skills, the exercises restart when the player steps on their icon, and a door leads back to the lab.
  */
+/** Nino's quiz terminal in the hall (free play only): the child picks a category. */
+export const TERMINAL_HALL = { x: -3.8, z: -3.4 } as const;
+
 export class Bab2Level implements Level {
   readonly id = 'bab2';
   readonly spawn = { x: 0, y: 0, z: 0, yaw: Math.PI };
@@ -30,6 +34,7 @@ export class Bab2Level implements Level {
   private shield!: ShieldExercise;
   private lunch!: Lunch;
   private story!: Story;
+  private terminal!: NinoTerminal;
   private readonly goal = { x: 0, y: 0, z: 0 };
 
   build(ctx: LevelContext): void {
@@ -66,6 +71,7 @@ export class Bab2Level implements Level {
     this.shield = new ShieldExercise(this.env);
     this.lunch = new Lunch(this.env);
     this.story = new Story({ env: this.env, rings: this.rings, laser: this.laser, shield: this.shield, lunch: this.lunch });
+    this.terminal = new NinoTerminal(ctx, { x: TERMINAL_HALL.x, y: 0, z: TERMINAL_HALL.z, yaw: 0.5, category: 'pick', enabled: () => this.story.free });
     ctx.onDispose(() => hold.set(false));
 
     if (done) this.story.setupFree();
@@ -83,6 +89,7 @@ export class Bab2Level implements Level {
     const { hangar, nino, row } = this.env;
     hangar.update(dt);
     nino.update(dt);
+    this.terminal.update(dt);
     row.setLowered(this.ctx.dialog.active);
     const info = this.ctx.game.debugInfo;
     info.step = this.story.step;
