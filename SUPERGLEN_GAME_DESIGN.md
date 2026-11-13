@@ -82,10 +82,10 @@ Kemampuan: jalan, lari, lompat kecil, naik sepeda, ngobrol.
 **Superglen (mode pahlawan)**
 Wajah Glen yang sama, memakai kepala Barongsai merah-emas (mata besar bergaris, permata teal di dahi, bulu krem), baju merah dengan emblem G emas, sabuk emas, sisik naga di depan, cape merah berbulu krem, sepatu merah-emas.
 Kemampuan inti (4 skill):
-- **Lompat Barongsai:** lompatan tinggi dengan gaya Barongsai, kepala singa mengangguk dan cape berkibar saat di udara. Tekan lagi di udara untuk lompatan kedua (double jump) dengan putaran. Saat mendarat ada hentakan kecil yang membuat minion di dekatnya pusing berbintang. Bisa dipakai untuk naik ke atap dan tiang tinggi, seperti atraksi Barongsai di atas tiang.
+- **Lompat Barongsai:** lompatan tinggi dengan gaya Barongsai, kepala singa mengangguk dan cape berkibar saat di udara. Tekan tepat saat mendarat untuk naik satu tingkat irama (5 tingkat, 1,6 m sampai 4,2 m). Tekan lagi di udara untuk lompatan kedua (double jump) dengan putaran. Saat mendarat ada hentakan kecil yang membuat minion di dekatnya pusing berbintang. Bisa dipakai untuk naik ke atap dan tiang tinggi, seperti atraksi Barongsai di atas tiang.
 - **Perisai cahaya:** kubah cahaya emas di depan Superglen, memantulkan lemparan musuh. Di level boss bisa berubah menjadi jaring cahaya.
 - **Laser tangan:** sinar dari pergelangan tangan, dengan bidikan otomatis ke musuh terdekat.
-- **Terbang:** jet booster, tahan tombol Lompat di udara lebih lama. Bisa terbang bebas di atas kota.
+- **Terbang:** jet booster, tahan tombol Lompat di udara untuk menyalakan jet. Lepas untuk turun dengan kecepatan sedang, tekan lagi di udara untuk langsung terbang lagi. Bisa terbang bebas di atas kota.
 
 **Nino (AI penjaga laboratorium)**
 AI berbentuk anak laki-laki, sedikit lebih tinggi dari Glen. Kulit medium tan, rambut belah samping, titik lampu biru di pelipis dengan garis sirkuit. Kostum biru-silver dengan emblem N, bulu putih, cape biru bermotif awan silver, permata biru di dada dan sabuk.
@@ -104,23 +104,29 @@ Berjubah gelap dengan lambang teknologi asing. Belum bisa dilawan, hanya muncul 
 
 ## 4. Kontrol (layar sentuh)
 
+Detail lengkap: lihat PAKET_P1_PARKOUR.md (berlaku di atas teks ini).
+
 - Kiri bawah: joystick virtual untuk bergerak
 - Kanan bawah: maksimal 2 tombol besar
   - Mode Glen: Lompat, Bicara/Ambil
   - Mode Superglen: Lompat Barongsai, Laser, Perisai (tiga tombol, susun melengkung di kanan bawah)
-- Lompat Barongsai: ketuk sekali untuk lompat, ketuk lagi di udara untuk double jump
-- Terbang: tahan tombol Lompat lebih dari 1 detik di udara, lepas untuk turun pelan
-- Tombol Berubah: muncul otomatis saat alarm berbunyi atau di lab
+- Lompat Irama Barongsai: tekan lompat tepat saat mendarat untuk naik satu tingkat. Ada 5 tingkat, tinggi lompatan 1,6 m sampai 4,2 m. Kalau terlewat, turun satu tingkat.
+  - Mode mudah (aktif dari awal, bisa dimatikan di halaman orang tua): tahan tombol lompat untuk lompat berulang otomatis sampai tingkat 3. Tingkat 4 hanya dengan menekan sendiri tepat waktu.
+- Double jump: tekan lagi di udara, menambah sekitar 1,2 m.
+- Mantle otomatis: kalau tangan hampir mencapai tepi platform, Superglen menarik diri naik. Tepi yang dipanjat maksimal 0,5 m di atas kepala.
+- Terbang: tahan tombol Lompat di udara untuk menyalakan jet. Lepas untuk turun dengan kecepatan sedang. Tekan lagi di udara untuk langsung terbang lagi.
+- Tombol Berubah (ikon bintang, kanan atas): setelah Chapter 1 selesai, bisa bolak-balik antara Glen dan Superglen.
 - Kamera mengikuti otomatis, bisa diputar dengan geser jari di area kosong
 - Tombol minimal 80 x 80 pt, ikon jelas, tanpa tulisan
 
 **Kontrol di PC (otomatis aktif kalau tidak ada layar sentuh)**
 - WASD atau panah: bergerak
 - Mouse: putar kamera (klik di layar untuk mengunci kursor, Esc untuk melepas)
-- Spasi: Lompat Barongsai (tekan lagi di udara untuk double jump, tahan untuk terbang)
+- Spasi: Lompat Irama Barongsai (tekan tepat saat mendarat untuk naik tingkat, tahan untuk lompat berulang otomatis sampai tingkat 3, tekan lagi di udara untuk double jump, tahan di udara untuk terbang)
 - Klik kiri atau J: Laser
 - Klik kanan atau K: Perisai
-- E: bicara, ambil, berubah jadi Superglen
+- E: bicara, ambil
+- Q: Tombol Berubah, bolak-balik Glen dan Superglen (setelah Chapter 1 selesai)
 - Angka 1, 2, 3: pilih jawaban Tantangan Pintar (bisa juga klik)
 - Gamepad (opsional): didukung lewat Gamepad API
 
@@ -197,6 +203,8 @@ Raja Tikus Rakus memakai mahkota makanan dan duduk di singgasana dari tumpukan b
 
 ## 6. Dunia: Kota Botanica
 
+Detail lengkap: lihat PAKET_P1_PARKOUR.md (berlaku di atas teks ini).
+
 Kecil tapi padat, bisa dijelajahi bebas setelah Bab 1.
 - Sekolah Glen dan Aara (halaman, lapangan, pohon besar)
 - Jalan kota dan rumah-rumah
@@ -212,6 +220,28 @@ Aktivitas bebas di open world:
 - Terbang di atas kota (mode Superglen)
 - Kumpulkan koin emas berbentuk kepala Barongsai
 - Bantu warga: kucing di atas pohon, balon terbang, barang jatuh
+
+### Parkour dan undakan
+
+- Pemain bebas melompat ke mana saja: tanah, genteng, atap, balkon, tiang, pohon. Tidak ada dinding rata tanpa jalan naik.
+- Setiap bangunan punya minimal satu rute naik dari tanah ke atap, lewat pijakan seperti kanopi, AC luar ruangan, kusen jendela, balkon, pipa, tumpukan peti, papan reklame, tangga genteng, lentera, tiang bendera, dahan pohon, dan bak air.
+- Tinggi bangunan menentukan tingkat irama yang dibutuhkan:
+
+| Bangunan | Tinggi | Tingkat irama |
+|---|---|---|
+| Rumah 1 lantai | 3 sampai 4 m | 0 sampai 1 |
+| Ruko 2 sampai 3 lantai | 6 sampai 8 m | 2 sampai 3 |
+| Gedung landmark | 10 sampai 12 m | 4 (rantai pijakan, hadiah berupa stiker dan pemandangan kota) |
+
+- Antar atap bertetangga: jarak mendatar maksimal 3 m dan beda tinggi maksimal 1,5 m untuk rute hijau.
+- Collider pijakan diperlebar sekitar 10 cm dari tampilan visual, supaya anak tidak kecewa karena "hampir".
+- Pijakan yang bisa dipakai diberi tepi berkilau atau warna kontras.
+- Jalur koin membimbing rute lompatan. Koin tidak ditaruh di tempat yang tidak terjangkau.
+- Genteng miring bisa dipijak tanpa tergelincir.
+- Tambur pantul selalu dihitung tepat dan menaikkan satu tingkat irama.
+- Jatuh tidak merusak apa pun. Mendarat dari tempat tinggi terdengar "boing" empuk. Jatuh keluar peta kembali ke platform aman terakhir.
+- Bangunan dibangun dari kit modul (dinding, atap, pijakan) yang di-instance, supaya ringan di iPhone.
+- `npm run check:reach` memeriksa bahwa semua atap dan koin bisa dijangkau pada tingkat irama yang ditetapkan.
 
 ## 7. Tantangan Pintar Nino (quiz persiapan SD)
 
