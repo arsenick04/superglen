@@ -1832,8 +1832,10 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
       if (id && id !== lastId) hits[id] = (hits[id] || 0) + 1;
       lastId = id;
       if (id && d.seen[d.seen.length - 1] !== id) d.seen.push(id);
+      if (d.autoQuiz !== false) await quizBotStep(page, tag);
     }
   };
+  d.quizTag = tag;
   const programs0 = (await page.evaluate(countsOf)).programs;
   const areas = [];
   const area = async (name) => {
@@ -1877,6 +1879,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: walked to the flying pad`, Math.hypot(s.player.x, s.player.z + 9) < 3.3, `(${s.player.x.toFixed(1)}, ${s.player.z.toFixed(1)})`);
   s = await d.until(() => d.seen.includes('bab2_nino_terbang'), 400, 10);
   check(`${tag}: terbang line at the pad`, !!s);
+  await passGate(page, check, d, tag, 'fly', 'berhitung');
   s = await d.until((s) => s.skills.unlocked.fly, 400, 10);
   check(`${tag}: flying unlocks after the line`, !!s);
   s = await d.st();
@@ -1960,6 +1963,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   await d.adv(3);
   await inp.laser(false);
   check(`${tag}: pressing laser before the unlock shoots nothing`, (await d.st()).skills.laserShots === 0);
+  await passGate(page, check, d, tag, 'laser', 'inggris');
   s = await d.until((s) => s.skills.unlocked.laser, 400, 10);
   check(`${tag}: laser unlocks after the line (saved)`, !!s && s.save.data.skills.laser === true);
   if (tag === 'touch') {
@@ -2000,6 +2004,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   s = await d.walk(6, -27, 1800);
   s = await d.until(() => d.seen.includes('bab2_nino_perisai'), 300, 10);
   check(`${tag}: perisai line at the station`, !!s);
+  await passGate(page, check, d, tag, 'shield', 'mandarin');
   s = await d.until((s) => s.skills.unlocked.shield, 400, 10);
   check(`${tag}: shield unlocks after the line (saved)`, !!s && s.save.data.skills.shield === true);
   if (tag === 'touch') {
@@ -5369,6 +5374,730 @@ async function transformTouchScenario(page, check) {
 }
 
 
+// ---------------------------------------------------------------------------------------------------------------
+// Tantangan Pintar (quiz) scenarios. Deterministic through ?quizseed=1; the game loop is paused and stepped.
+// ---------------------------------------------------------------------------------------------------------------
+const quizSt = (page) =>
+  page.evaluate(() => {
+    const z = window.__superglen.quiz;
+    return {
+      open: z.open, view: z.view, state: z.state, index: z.index, total: z.total, qid: z.questionId, cat: z.category, kind: z.kind,
+      prompt: z.prompt, key: z.correctKey, visible: z.visibleKeys, wrong: z.wrong, bubble: z.bubble, coins: z.coins,
+      challenges: z.challenges, fragments: z.fragments, stickers: z.stickers, levels: z.levels, spoken: z.spoken,
+      result: z.lastResult, picked: z.picked, bankSource: z.bankSource, bankSize: z.bankSize,
+    };
+  });
+
+/** Answer a card: a real tap on touch, the number key on PC. */
+async function quizAnswer(page, key, tap) {
+  if (tap) {
+    const c = await page.evaluate((k) => {
+      const r = document.querySelector(`.qp-card[data-slot="${k}"]`).getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, key);
+    await page.touchscreen.tap(c.x, c.y);
+  } else await page.keyboard.press(String(key));
+}
+
+/** One bot step for story scripts: answer the right card, or press Enter to go on. */
+async function quizBotStep(page, tag) {
+  const q = await page.evaluate(() => {
+    const z = window.__superglen.quiz;
+    return { open: z.open, view: z.view, state: z.state, key: z.correctKey };
+  });
+  if (!q.open) return false;
+  if (q.view === 'question' && q.state === 'answering') await quizAnswer(page, q.key, tag === 'touch');
+  else if ((q.view === 'question' && q.state === 'solved') || q.view === 'end') await page.keyboard.press('Enter');
+  return true;
+}
+
+/** Chapter 2: the challenge in front of a skill. Checks that the skill stays locked until the 3 questions are done. */
+async function passGate(page, check, d, tag, name, cat) {
+  d.autoQuiz = false;
+  let s = await d.until((s) => s.quiz.open, 1200, 6);
+  check(`${tag}: ${name}: Nino says the kunci line, then a Tantangan Pintar opens`, !!s && d.seen.includes('quiz_nino_kunci'), d.seen.slice(-4).join());
+  if (!s) {
+    d.autoQuiz = true;
+    return;
+  }
+  check(`${tag}: ${name}: the challenge is the ${cat} category, 3 questions; the skill is still locked; controls locked`, s.quiz.category === cat && s.quiz.total === 3 && !s.skills.unlocked[name] && s.controlsEnabled === false, `${s.quiz.category} total ${s.quiz.total}`);
+  await page.keyboard.press('Escape');
+  await d.adv(4);
+  check(`${tag}: ${name}: Esc does not close a story-gate challenge`, (await quizSt(page)).open);
+  let lockedAll = true;
+  for (let i = 0; i < 3; i++) {
+    s = await d.until((s) => s.quiz.view === 'question' && s.quiz.state === 'answering' && s.quiz.index === i, 400, 4);
+    if (!s) break;
+    await quizAnswer(page, s.quiz.correctKey, tag === 'touch');
+    await d.adv(6);
+    const t = await d.st();
+    if (t.skills.unlocked[name]) lockedAll = false;
+    for (let k = 0; k < 40; k++) {
+      const z = await quizSt(page);
+      if (z.index !== i || z.view !== 'question') break;
+      await d.adv(12);
+      await page.keyboard.press('Enter');
+    }
+  }
+  s = await d.until((s) => s.quiz.view === 'end', 200, 6);
+  check(`${tag}: ${name}: the end screen shows after 3 answers and the skill is still locked until then`, !!s && lockedAll && !s.skills.unlocked[name]);
+  await d.adv(20);
+  await page.keyboard.press('Enter');
+  s = await d.until((s) => !s.quiz.open, 200, 6);
+  check(`${tag}: ${name}: the challenge closes after the end screen`, !!s);
+  d.autoQuiz = true;
+  s = await d.until((s) => s.skills.unlocked[name], 900, 10);
+  check(`${tag}: ${name}: unlocks only after the challenge (saved)`, !!s && s.save.data.skills[name] === true, s ? '' : 'never unlocked');
+}
+
+/** Play `wrongs.length` questions; wrongs[i] = wrong picks before the right one. Leaves the end screen up. Returns the asked ids. */
+async function quizPlay(page, adv, { wrongs = [0, 0, 0], tap = false } = {}) {
+  const asked = [];
+  for (let i = 0; i < wrongs.length; i++) {
+    let z = await quizSt(page);
+    for (let k = 0; k < 40 && !(z.view === 'question' && z.state === 'answering' && z.index === i); k++) {
+      await adv(6);
+      z = await quizSt(page);
+    }
+    asked.push({ id: z.qid, cat: z.cat, kind: z.kind });
+    for (let w = 0; w < wrongs[i]; w++) {
+      z = await quizSt(page);
+      await quizAnswer(page, z.visible.find((k) => k !== z.key), tap);
+      await adv(80);
+    }
+    z = await quizSt(page);
+    await quizAnswer(page, z.key, tap);
+    await adv(50);
+    await page.keyboard.press('Enter');
+    await adv(6);
+  }
+  return asked;
+}
+
+/** Layout numbers of the quiz overlay (cards, display, buttons): problems are listed in `bad`. */
+const quizLayout = () => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const R = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
+  const q = (sel) => [...document.querySelectorAll(sel)];
+  const bad = [];
+  const inside = (n, a, box, tol) => { if (a.l < box.l - tol || a.t < box.t - tol || a.r > box.r + tol || a.b > box.b + tol) bad.push(`${n}-outside`); };
+  const full = { l: 0, t: 0, r: vw, b: vh };
+  const cards = q('.qp-card');
+  const items = [];
+  cards.forEach((c, i) => {
+    const r = R(c);
+    if (r.w < 109.5 || r.h < 109.5) bad.push(`card${i}-small ${Math.round(r.w)}x${Math.round(r.h)}`);
+    inside(`card${i}`, r, full, 0.5);
+    const inner = c.querySelector('.qp-card-in');
+    if (inner) {
+      inside(`card${i}-content`, R(inner), r, 1.5);
+      for (const leaf of inner.querySelectorAll('*')) if (!leaf.children.length && leaf.getBoundingClientRect().width > 0) inside(`card${i}-leaf`, R(leaf), r, 1.5);
+    }
+    items.push([`card${i}`, r]);
+  });
+  const disp = q('.qp-display')[0];
+  const dr = R(disp);
+  inside('display', dr, full, 0.5);
+  const din = q('.qp-display-in')[0];
+  if (din && din.childNodes.length) {
+    inside('display-content', R(din), dr, 1.5);
+    for (const leaf of din.querySelectorAll('*')) if (!leaf.children.length && leaf.getBoundingClientRect().width > 0) inside('display-leaf', R(leaf), dr, 1.5);
+  }
+  items.push(['display', dr]);
+  for (const sel of ['.qp-say', '.qp-next', '.qp-top']) {
+    const e = q(sel)[0];
+    if (e) { const r = R(e); inside(sel, r, full, 0.5); items.push([sel, r]); }
+  }
+  const say = R(q('.qp-say')[0]);
+  if (say.w < 79.5 || say.h < 79.5) bad.push('say-small');
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+    const a = items[i][1], c = items[j][1];
+    if (a.l < c.r - 0.5 && c.l < a.r - 0.5 && a.t < c.b - 0.5 && c.t < a.b - 0.5) bad.push(`${items[i][0]}/${items[j][0]}`);
+  }
+  const root = q('.qp')[0];
+  if (document.documentElement.scrollWidth > vw + 1 || document.documentElement.scrollHeight > vh + 1 || root.scrollHeight > root.clientHeight + 1 || root.scrollWidth > root.clientWidth + 1) bad.push('scroll');
+  const bt = q('.qp-bubble-text')[0];
+  if (bt.scrollHeight > bt.clientHeight + 1) bad.push('bubble-clipped');
+  return { bad, minCard: Math.round(Math.min(...cards.map((c) => Math.min(R(c).w, R(c).h)))) };
+};
+
+async function quizDesktopScenario(page, check) {
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => { window.__superglen.save.resetProgress(); window.__superglen.pause(true); });
+  let z = await quizSt(page);
+  const src = z.bankSource;
+  const real = Object.values(src).every((v) => v === 'file');
+  console.log(`   quiz bank: ${real ? 'real bank present' : 'fallback sample used for: ' + Object.keys(src).filter((k) => src[k] !== 'file').join(',')} sizes ${JSON.stringify(z.bankSize)}`);
+  check('quiz: every category has at least 3 usable questions (real bank or built-in sample)', Object.values(z.bankSize).every((n) => n >= 3), JSON.stringify(z.bankSize));
+  check('quiz: the real question bank is loaded for all 5 categories', real, JSON.stringify(src));
+
+  // ---- validator ----
+  {
+    const { spawnSync } = require('child_process');
+    const r = spawnSync('node', ['scripts/validate-quiz.mjs', '--quiet'], { cwd: ROOT, encoding: 'utf8' });
+    const out = (r.stdout || '').trim().split('\n');
+    for (const l of out) if (/^(ERROR|WARNING)/.test(l)) console.log(`   validate-quiz: ${l}`);
+    check('quiz: scripts/validate-quiz.mjs passes on the bank (no errors)', r.status === 0, out.slice(-2).join(' | '));
+  }
+
+  // ---- A. three right answers via the keys 1/2/3 (first try) ----
+  const allIds = [];
+  const g0 = await page.evaluate(state);
+  await page.evaluate(() => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz: a challenge opens: question 1 of 3, three cards, controls and interactions locked', z.open && z.view === 'question' && z.index === 0 && z.total === 3 && z.visible.length === 3 && (await page.evaluate(() => !window.__superglen.controlsEnabled)), JSON.stringify({ v: z.view, i: z.index }));
+  check('quiz: Nino reads the question (audio hook called with the audio id)', z.spoken.length >= 1 && /^quiz_/.test(z.spoken[z.spoken.length - 1]), z.spoken.join());
+  {
+    await page.keyboard.down('w');
+    await adv(60);
+    await page.keyboard.up('w');
+    const g1 = await page.evaluate(state);
+    check('quiz: W does not move the player while the quiz is open', Math.hypot(g1.player.x - g0.player.x, g1.player.z - g0.player.z) < 0.05, `${Math.hypot(g1.player.x - g0.player.x, g1.player.z - g0.player.z).toFixed(3)} m`);
+    await page.keyboard.press('Space');
+    await adv(20);
+    check('quiz: Space does not jump while the quiz is open (and does not answer)', (await page.evaluate(state)).jumps === g0.jumps && (await quizSt(page)).state === 'answering');
+  }
+  const cat0 = z.cat;
+  const prompts = [];
+  for (let i = 0; i < 3; i++) {
+    z = await quizSt(page);
+    allIds.push(z.qid);
+    prompts.push(z.prompt);
+    const c0 = z.coins;
+    if (i === 0) {
+      await page.evaluate(() => window.__superglen.advance(2, true));
+      await sleep(700);
+      await shot(page, 'quiz-count');
+    }
+    await page.keyboard.press(String(z.key));
+    await adv(8);
+    z = await quizSt(page);
+    check(`quiz: question ${i + 1} right via key ${i === 0 ? z.key : 'n'}: solved, +3 coins, Nino says Hebat, Glen!`, z.state === 'solved' && z.coins === c0 + 3 && z.bubble === 'Hebat, Glen!', `${z.state} coins ${c0}->${z.coins} "${z.bubble}"`);
+    await adv(10);
+    await page.keyboard.press('Enter');
+    await adv(4);
+    z = await quizSt(page);
+    check(`quiz: Enter before the guard time (0.6 s) does not skip the Hebat moment`, i === 2 ? true : z.index === i, `index ${z.index}`);
+    await adv(40);
+    await page.keyboard.press('Enter');
+    await adv(6);
+  }
+  z = await quizSt(page);
+  check('quiz: after the third answer the end screen shows (coins, sticker)', z.view === 'end' && z.state === 'idle', z.view);
+  await adv(70);
+  await sleep(1000);
+  await shot(page, 'quiz-end');
+  const endUi = await page.evaluate(() => ({ coin: document.querySelector('.qp-end-coin')?.textContent, sticker: !!document.querySelector('.qp-end-sticker.reveal'), ok: (() => { const r = document.querySelector('.qp-ok').getBoundingClientRect(); return Math.min(r.width, r.height); })() }));
+  check('quiz: the end screen shows +9 coins, the revealed sticker and a big OK button', endUi.coin === '+9' && endUi.sticker && endUi.ok >= 80, JSON.stringify(endUi));
+  await page.keyboard.press('Enter');
+  await adv(10);
+  z = await quizSt(page);
+  check('quiz: Enter closes the end screen and gives the controls back', !z.open && (await page.evaluate(() => window.__superglen.controlsEnabled)));
+  check('quiz: result: completed, 3 first-try answers, 9 coins, 1 sticker', !!z.result && z.result.completed && z.result.answers.length === 3 && z.result.answers.every((a) => a.firstTry) && z.result.coins === 9 && !!z.result.sticker && z.result.stickerNew, JSON.stringify(z.result && { c: z.result.completed, coins: z.result.coins, st: z.result.sticker }));
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).quiz);
+  check('quiz: coins, sticker, statistics and recent ids are saved in localStorage', stored.coins === 9 && stored.stickers.length === 1 && stored.cats[cat0].asked === 3 && stored.cats[cat0].firstTry === 3 && stored.recent.length === 3 && stored.challenges === 1, JSON.stringify({ coins: stored.coins, st: stored.stickers.length, asked: stored.cats[cat0].asked }));
+  check('quiz: adaptive level: three first-try answers in a row raised the level (1 -> 2)', z.levels[cat0] === 2, JSON.stringify(z.levels));
+  check('quiz: the 3 questions of a challenge are all different', new Set(allIds).size === 3, allIds.join());
+
+  // ---- B. wrong picks, mouse clicks ----
+  await page.evaluate(() => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await adv(8);
+  await sleep(500);
+  z = await quizSt(page);
+  const q1 = z.qid;
+  allIds.push(q1);
+  const c0 = z.coins;
+  const w1 = [1, 2, 3].find((k) => k !== z.key);
+  await page.click(`.qp-card[data-slot="${w1}"]`);
+  await adv(8);
+  await sleep(120);
+  await shot(page, 'quiz-wrong');
+  z = await quizSt(page);
+  const wob = await page.evaluate((k) => document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('wobble'), w1);
+  check('quiz: a wrong pick wobbles the card and Nino says "Hampir! Coba lagi."', wob && z.bubble === 'Hampir! Coba lagi.' && z.wrong === 1, `wobble ${wob} "${z.bubble}"`);
+  check('quiz: ... no coin is lost and the question stays', z.coins === c0 && z.index === 0 && z.qid === q1);
+  check('quiz: ... the wrong pick is blocked while the card wobbles (no double count)', await (async () => { await page.keyboard.press(String(w1)); await adv(2); return (await quizSt(page)).wrong === 1; })());
+  await adv(70);
+  z = await quizSt(page);
+  const gone = await page.evaluate((k) => document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('gone'), w1);
+  check('quiz: ... then the wrong card disappears; two cards remain; the question is the same; answering again', gone && z.visible.length === 2 && !z.visible.includes(w1) && z.state === 'answering' && z.qid === q1, JSON.stringify(z.visible));
+  const w2 = z.visible.find((k) => k !== z.key);
+  await page.keyboard.press(String(w2));
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz: a second wrong pick: Nino points to the right card', z.wrong === 2 && z.bubble === 'Ini dia! Ketuk yang ini ya.', z.bubble);
+  await adv(80);
+  z = await quizSt(page);
+  const hint = await page.evaluate((k) => document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('hint'), z.key);
+  check('quiz: after two wrong picks only the right card remains (it glows)', z.visible.length === 1 && z.visible[0] === z.key && hint, JSON.stringify(z.visible));
+  await page.keyboard.press(String(w1)); // a gone card cannot be picked
+  await adv(4);
+  check('quiz: a card that is gone cannot be picked', (await quizSt(page)).state === 'answering');
+  {
+    // (the glowing hint card never "settles" for page.click: click its centre with the mouse)
+    const c = await page.evaluate((k) => { const r = document.querySelector(`.qp-card[data-slot="${k}"]`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, z.key);
+    await page.mouse.click(c.x, c.y);
+  }
+  await adv(8);
+  await sleep(350);
+  await shot(page, 'quiz-right');
+  z = await quizSt(page);
+  check('quiz: the right pick after two wrongs: solved, only +1 coin (no first-try bonus)', z.state === 'solved' && z.coins === c0 + 1, `${c0} -> ${z.coins}`);
+  const sparks = await page.evaluate(() => document.querySelectorAll('.qp-spark').length);
+  check('quiz: the right pick shows fireworks (sparks) and plays the drum', sparks >= 20, `${sparks} sparks`);
+  await adv(60);
+  await page.keyboard.press('Enter');
+  await adv(6);
+  allIds.push(...(await quizPlay(page, adv, { wrongs: [0, 0] })).map((a) => a.id));
+  await adv(60);
+  await page.keyboard.press('Enter');
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz: result of challenge B: question 1 not first try (2 wrong), others first try', !!z.result && z.result.answers[0].firstTry === false && z.result.answers[0].wrong === 2 && z.result.answers[1].firstTry && z.result.coins === 7, JSON.stringify(z.result && z.result.answers));
+  check('quiz: no question repeats within 6 asked in a row', new Set(allIds).size === allIds.length, allIds.join());
+  const stB = await page.evaluate(() => window.__superglen.save.data.quiz.cats.berhitung);
+  check('quiz: statistics: asked 6, first try 5, wrong 2', stB.asked === 6 && stB.firstTry === 5 && stB.wrong === 2, JSON.stringify({ a: stB.asked, f: stB.firstTry, w: stB.wrong }));
+
+  // ---- C. level goes down after repeated misses ----
+  const lvBefore = (await quizSt(page)).levels.berhitung;
+  await page.evaluate(() => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await adv(8);
+  await quizPlay(page, adv, { wrongs: [1, 1, 0] });
+  await adv(40);
+  await page.keyboard.press('Enter');
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz: adaptive level: repeated misses (3 of the last 5) lowered the level again', lvBefore === 2 && z.levels.berhitung === 1, `${lvBefore} -> ${z.levels.berhitung}`);
+
+  // ---- D. mix: three different categories; coins by challenge ----
+  await page.evaluate(() => window.__superglen.quiz.start('mix', 3, 'story'));
+  await adv(8);
+  const mixAsked = await quizPlay(page, adv, { wrongs: [0, 0, 0] });
+  await adv(40);
+  await page.keyboard.press('Enter');
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz: "mix" asks three different categories', new Set(mixAsked.map((a) => a.cat)).size === 3 && z.result && z.result.completed, mixAsked.map((a) => a.cat).join());
+  const cats = await page.evaluate(() => Object.fromEntries(Object.entries(window.__superglen.save.data.quiz.cats).map(([k, v]) => [k, v.asked])));
+  check('quiz: per-category statistics are updated for each question of a mix', mixAsked.every((a) => cats[a.cat] >= 1), JSON.stringify(cats));
+
+  // ---- E. 5 challenges -> a memory fragment ----
+  const f0 = (await quizSt(page)).fragments;
+  const ch0 = (await quizSt(page)).challenges;
+  const need = 5 - (ch0 % 5);
+  let gotFragment = false;
+  for (let i = 0; i < need; i++) {
+    await page.evaluate(() => window.__superglen.quiz.start('hewan', 3, 'terminal'));
+    await adv(8);
+    await quizPlay(page, adv, { wrongs: [0, 0, 0] });
+    await adv(60);
+    if (i === need - 1) gotFragment = await page.evaluate(() => !!document.querySelector('.qp-end-frag'));
+    await page.keyboard.press('Enter');
+    await adv(8);
+  }
+  z = await quizSt(page);
+  check('quiz: every 5th completed challenge gives a memory fragment (counted, puzzle piece shown)', z.fragments === f0 + 1 && gotFragment && z.challenges % 5 === 0, `fragments ${f0} -> ${z.fragments}, icon ${gotFragment}, challenges ${z.challenges}`);
+
+  // ---- F. album ----
+  await page.evaluate(() => window.__superglen.quiz.showAlbum());
+  await adv(4);
+  await sleep(600);
+  z = await quizSt(page);
+  const alb = await page.evaluate(() => ({ view: window.__superglen.quiz.view, tabs: document.querySelectorAll('.qp-tab').length, slots: document.querySelectorAll('.qp-slot').length, own: document.querySelectorAll('.qp-slot.own').length, minSlot: Math.min(...[...document.querySelectorAll('.qp-slot')].map((e) => e.getBoundingClientRect().width)) }));
+  await shot(page, 'quiz-album');
+  check('quiz: the album shows 5 category tabs and a grid; owned stickers are coloured, missing ones outlined', alb.view === 'album' && alb.tabs === 5 && alb.slots >= 6 && alb.own >= 1 && alb.own < alb.slots, JSON.stringify(alb));
+  const saved = await page.evaluate(() => window.__superglen.save.data.quiz.stickers);
+  await page.keyboard.press('2');
+  await adv(2);
+  const tab2 = await page.evaluate(() => document.querySelector('.qp-tab.on').dataset.category);
+  check('quiz: key 2 switches the album page to the second category', tab2 === 'inggris', tab2);
+  const ownedHere = await page.evaluate(() => document.querySelectorAll('.qp-slot.own').length);
+  check('quiz: owned stickers in the album match the save per category', ownedHere === saved.filter((x) => x.startsWith('inggris:')).length, `${ownedHere}`);
+  await page.keyboard.press('Escape');
+  await adv(4);
+  check('quiz: Esc closes the album', !(await quizSt(page)).open);
+
+  // ---- G. close button (terminal challenge): long-press 1 s ----
+  await page.evaluate(() => window.__superglen.quiz.start('inggris', 3, 'terminal'));
+  await adv(8);
+  const cb = await page.evaluate(() => { const r = document.querySelector('.qp-close').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, vis: getComputedStyle(document.querySelector('.qp-close')).display !== 'none' }; });
+  await page.mouse.move(cb.x, cb.y);
+  await page.mouse.down();
+  await adv(30);
+  const stillOpen = (await quizSt(page)).open;
+  await page.mouse.up();
+  await adv(80);
+  const afterShort = (await quizSt(page)).open;
+  await page.mouse.down();
+  await adv(75);
+  await page.mouse.up();
+  await adv(6);
+  z = await quizSt(page);
+  check('quiz: a terminal challenge has a small close button: a short press does nothing, a 1 s long-press closes', cb.vis && stillOpen && afterShort && !z.open, JSON.stringify({ stillOpen, afterShort, open: z.open }));
+  check('quiz: closing early gives no sticker and the controls come back', !!z.result && z.result.completed === false && z.result.sticker === null && (await page.evaluate(() => window.__superglen.controlsEnabled)));
+
+  // ---- H. the overlay costs nothing while closed ----
+  const rec = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.pause(true);
+    g.resetTiming();
+    const mo = new MutationObserver(() => {});
+    mo.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+    let T = 9000;
+    for (let i = 0; i < 180; i++) { T += 1000 / 60; g.simFrame(T, false); }
+    const n = mo.takeRecords().length;
+    mo.disconnect();
+    return n;
+  });
+  check('quiz: with the overlay closed there are no DOM writes per frame (180 frames)', rec === 0, `${rec} mutations`);
+  const hudCoins = await page.evaluate(() => ({ shown: document.querySelector('.coin-hud').classList.contains('show') }));
+  check('quiz: the small HUD coin counter is hidden when the coins have not just changed', hudCoins.shown === false);
+}
+
+/** Taps on a phone-sized screen: a whole challenge by finger, no overlap, buttons >= 80, the PC key badges are hidden. */
+async function quizTouchScenario(page, check) {
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  await sleep(1500);
+  await page.touchscreen.tap(400, 140);
+  await sleep(600);
+  await page.evaluate(() => { window.__superglen.save.resetProgress(); window.__superglen.pause(true); });
+  await page.evaluate(() => window.__superglen.quiz.start('mix', 3, 'terminal'));
+  await adv(8);
+  await sleep(600);
+  let z = await quizSt(page);
+  const lay = await page.evaluate(quizLayout);
+  check('quiz-touch 844x281: the question screen fits (cards >= 110 px, no overlap, nothing outside, no scroll)', lay.bad.length === 0 && lay.minCard >= 110, JSON.stringify(lay));
+  const keys = await page.evaluate(() => getComputedStyle(document.querySelector('.qp-key')).display);
+  check('quiz-touch: the PC key badges (1 2 3) are hidden on touch', keys === 'none', keys);
+  await shot(page, 'quiz-touch-281');
+  // wrong tap, then right taps for all three questions
+  const w = z.visible.find((k) => k !== z.key);
+  await quizAnswer(page, w, true);
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz-touch: a tap on a wrong card wobbles it ("Hampir")', z.wrong === 1 && z.bubble === 'Hampir! Coba lagi.');
+  await adv(80);
+  // The first question is still open (it had the wrong tap): finish it and two more by tapping.
+  await quizPlay(page, adv, { wrongs: [0, 0, 0], tap: true });
+  z = await quizSt(page);
+  check('quiz-touch: a 3-question challenge can be completed by taps only', z.view === 'end' || z.result !== null, `${z.view} ${z.index}`);
+  await adv(60);
+  const ok = await page.evaluate(() => { const r = document.querySelector('.qp-ok').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; });
+  check('quiz-touch: the OK button is >= 80 pt and inside the screen', ok.w >= 80 && ok.x < 844, `${ok.w}`);
+  await page.touchscreen.tap(ok.x, ok.y);
+  await adv(8);
+  z = await quizSt(page);
+  check('quiz-touch: tapping OK closes the challenge with its reward', !z.open && z.result && z.result.completed && z.coins >= 7, `coins ${z.coins}`);
+}
+
+/** Every display kind, at every listed viewport; then every question of the bank on the smallest ones. */
+async function quizRenderScenario(page, check, touch = false) {
+  const tag = touch ? 'quiz-render-touch' : 'quiz-render';
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  await sleep(1500);
+  // (touch: no start tap, it would go fullscreen and block the viewport changes below; the quiz does not need the start)
+  if (!touch) await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => { window.__superglen.save.resetProgress(); window.__superglen.pause(true); });
+  const samples = await page.evaluate(() => window.__superglen.quiz.samples());
+  const kinds = new Set(samples.map((s) => s.kind));
+  check(`${tag}: the bank has samples of all 9 display kinds`, kinds.size === 9, [...kinds].join());
+  const sizes = [[1280, 720], [1024, 768], [844, 390], [667, 375], [844, 281]];
+  // Animations off for the numbers (a pop-in scales the box for 0.4 s); the screenshots below keep them.
+  const noAnim = await page.addStyleTag({ content: '.qp *, .qp { animation: none !important; transition: none !important; }' });
+  for (const [w, h] of sizes) {
+    await page.setViewportSize({ width: w, height: h });
+    await sleep(500);
+    const problems = [];
+    let minCard = 999;
+    for (const s of samples) {
+      await page.evaluate((id) => window.__superglen.quiz.preview(id), s.id);
+      const lay = await page.evaluate(quizLayout);
+      minCard = Math.min(minCard, lay.minCard);
+      if (lay.bad.length) problems.push(`${s.id}(${s.kind}): ${lay.bad.join(',')}`);
+      await page.evaluate(() => window.__superglen.quiz.close());
+    }
+    check(`${tag} ${w}x${h}: one question of each display kind per category (${samples.length}) fits: cards >= 110, no overlap, nothing outside, no scrollbars`, problems.length === 0 && minCard >= 110, problems.slice(0, 4).join(' | ') || `min card ${minCard}`);
+  }
+  // All questions on the two tightest screens.
+  const ids = await page.evaluate(() => { const z = window.__superglen.quiz; return z.allIds(); });
+  for (const [w, h] of [[844, 281], [667, 375]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await sleep(400);
+    const problems = [];
+    for (const id of ids) {
+      await page.evaluate((id) => window.__superglen.quiz.preview(id), id);
+      const lay = await page.evaluate(quizLayout);
+      if (lay.bad.length) problems.push(`${id}: ${lay.bad.join(',')}`);
+      await page.evaluate(() => window.__superglen.quiz.close());
+    }
+    check(`${tag} ${w}x${h}: all ${ids.length} questions of the bank fit`, problems.length === 0, problems.slice(0, 5).join(' | '));
+  }
+  await noAnim.evaluate((e) => e.remove());
+  if (touch) return;
+  // Screenshots (1280x720, animations on).
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await sleep(500);
+  const want = [['berhitung', 'sum', 'quiz-sum'], ['inggris', 'picture', 'quiz-english'], ['mandarin', 'speak', 'quiz-mandarin'], ['hewan', 'silhouette', 'quiz-silhouette'], ['membaca', 'text', 'quiz-reading']];
+  for (const [cat, kind, name] of want) {
+    const s = samples.find((x) => x.category === cat && x.kind === kind) || samples.find((x) => x.category === cat);
+    await page.evaluate((id) => window.__superglen.quiz.preview(id), s.id);
+    await adv(2);
+    await sleep(800);
+    await shot(page, name);
+    await page.evaluate(() => window.__superglen.quiz.close());
+  }
+  // The reading category uses the reading font with generous letter spacing.
+  const rs = samples.find((x) => x.category === 'membaca');
+  await page.evaluate((id) => window.__superglen.quiz.preview(id), rs.id);
+  await sleep(300);
+  const ls = await page.evaluate(() => { const t = document.querySelector('.qp-ctext-t') || document.querySelector('.qp-bigtext'); const cs = getComputedStyle(t); return { ls: parseFloat(cs.letterSpacing) / parseFloat(cs.fontSize), fs: parseFloat(cs.fontSize) }; });
+  check('quiz-render: reading category: big letters with generous letter spacing (>= 0.1 em)', ls.ls >= 0.1 && ls.fs >= 30, JSON.stringify(ls));
+  await page.evaluate(() => window.__superglen.quiz.close());
+  // reduced motion: the overlay still works
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate((id) => window.__superglen.quiz.preview(id), samples[0].id);
+  await adv(2);
+  const lay = await page.evaluate(quizLayout);
+  check('quiz-render: prefers-reduced-motion: the question still lays out correctly', lay.bad.length === 0, lay.bad.join());
+  await page.evaluate(() => window.__superglen.quiz.close());
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
+/** Terminals in the lab and the hall: prompt, challenge, category picker; parents page opened by a long-press. */
+async function quizTerminalScenario(page, check) {
+  const d = makeStoryDriver(page, check);
+  const load = async (query) => {
+    await page.goto(URL + query);
+    await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+    await sleep(1400);
+    await page.mouse.click(640, 360);
+    await sleep(500);
+  };
+  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.persist(); }, [chapters, skills]);
+  const ALL = { laser: true, shield: true, fly: true };
+  const NONE = { laser: false, shield: false, fly: false };
+  const adv = (n) => d.adv(n);
+  // ---- Lab, Chapter 1 done: a "mix" terminal ----
+  await sleep(1500);
+  await setSave(['bab1'], NONE);
+  await load('?fps=0&quizseed=1');
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(30);
+  let s = await d.st();
+  check('terminal: bab1 done -> starts in the lab', s.level === 'bab1' && s.player.z < -62, `${s.level} z ${s.player.z.toFixed(1)}`);
+  await d.walk(-2.8, -62.9, 900);
+  await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // the lab camera faces the entrance at first: turn towards the terminal
+  await d.adv(12);
+  s = await d.st();
+  check('terminal (lab): next to the terminal the talk prompt appears', s.prompt.visible && s.prompt.icon === 'talk' && s.prompt.inRange, JSON.stringify(s.prompt));
+  await d.adv(2, true);
+  await shot(page, 'quiz-lab-terminal');
+  await d.tap('e');
+  await d.adv(8);
+  let z = await quizSt(page);
+  check('terminal (lab): E opens a Tantangan Pintar of mixed categories (3 questions)', z.open && z.view === 'question' && z.total === 3, `${z.view} ${z.total}`);
+  const asked = await quizPlay(page, adv, { wrongs: [0, 0, 0] });
+  await d.adv(40);
+  z = await quizSt(page);
+  check('terminal (lab): the end screen offers the sticker album button', z.view === 'end' && (await page.evaluate(() => !!document.querySelector('.qp-albumbtn'))), z.view);
+  check('terminal (lab): a mix challenge asks 3 different categories', new Set(asked.map((a) => a.cat)).size === 3, asked.map((a) => a.cat).join());
+  await page.evaluate(() => document.querySelector('.qp-albumbtn').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await d.adv(4);
+  z = await quizSt(page);
+  check('terminal (lab): the album button opens the album; Esc returns to the end screen', z.view === 'album', z.view);
+  await page.keyboard.press('Escape');
+  await d.adv(4);
+  z = await quizSt(page);
+  check('terminal (lab): ... back on the end screen', z.view === 'end', z.view);
+  await page.keyboard.press('Enter');
+  await d.adv(10);
+  z = await quizSt(page);
+  check('terminal (lab): closed; coins and sticker earned', !z.open && z.coins === 9 && z.stickers === 1, `coins ${z.coins} stickers ${z.stickers}`);
+  s = await d.st();
+  check('terminal (lab): the player is free again and can use the terminal once more', s.controlsEnabled && s.prompt.inRange);
+
+  // ---- Chapter 1 not done: no terminal ----
+  await setSave([], NONE);
+  await load('?fps=0&reset=1&quizseed=1&level=bab1');
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => window.__superglen.placePlayer(-2.8, -62.9));
+  await d.adv(20);
+  s = await d.st();
+  check('terminal (lab): before Chapter 1 is finished the terminal is hidden (no prompt)', !s.prompt.inRange, JSON.stringify(s.prompt));
+
+  // ---- Hall, free play: picker ----
+  await setSave(['bab1', 'bab2'], ALL);
+  await load('?fps=0&quizseed=1');
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(30);
+  s = await d.st();
+  check('terminal: bab2 done -> starts in the hall (free play)', s.level === 'bab2' && s.levelInfo.free === true, s.level);
+  await d.walk(-3.8, -1.2, 900);
+  await d.adv(12);
+  s = await d.st();
+  check('terminal (hall): the talk prompt appears at the terminal', s.prompt.visible && s.prompt.icon === 'talk' && s.prompt.inRange, JSON.stringify(s.prompt));
+  await d.adv(2, true);
+  await shot(page, 'quiz-hall-terminal');
+  await d.tap('e');
+  await d.adv(8);
+  z = await quizSt(page);
+  check('terminal (hall): E opens the category picker (5 big icons)', z.open && z.view === 'picker' && (await page.evaluate(() => document.querySelectorAll('.qp-cat').length)) === 5, z.view);
+  await sleep(600);
+  await shot(page, 'quiz-picker');
+  const pk = await page.evaluate(() => {
+    const vw = innerWidth, vh = innerHeight;
+    const r = [...document.querySelectorAll('.qp-cat')].map((e) => e.getBoundingClientRect());
+    return { minW: Math.min(...r.map((x) => x.width)), minH: Math.min(...r.map((x) => x.height)), inside: r.every((x) => x.left >= 0 && x.right <= vw && x.bottom <= vh && x.top >= 0) };
+  });
+  check('terminal (hall): the picker icons are >= 110 px and inside the screen', pk.minW >= 110 && pk.minH >= 110 && pk.inside, JSON.stringify(pk));
+  await page.keyboard.press('4');
+  await d.adv(8);
+  z = await quizSt(page);
+  check('terminal (hall): key 4 (paw) starts a hewan challenge', z.view === 'question' && z.cat === 'hewan', `${z.view} ${z.cat}`);
+  const ch0 = z.challenges;
+  await quizPlay(page, adv, { wrongs: [0, 0, 0] });
+  await d.adv(40);
+  await page.keyboard.press('Enter');
+  await d.adv(10);
+  z = await quizSt(page);
+  check('terminal (hall): the picker challenge finished and closed (one more completed challenge, 9 coins)', !z.open && z.challenges === ch0 + 1 && z.coins >= 9, `challenges ${ch0} -> ${z.challenges}, coins ${z.coins}`);
+  // picker: tap a different icon; close it without playing
+  await d.tap('e');
+  await d.adv(8);
+  await page.click('.qp-cat[data-category="mandarin"]');
+  await d.adv(8);
+  z = await quizSt(page);
+  check('terminal (hall): clicking the lantern icon starts a mandarin challenge', z.view === 'question' && z.cat === 'mandarin', `${z.view} ${z.cat}`);
+  await page.evaluate(() => window.__superglen.quiz.close());
+  await d.adv(6);
+  await d.tap('e');
+  await d.adv(8);
+  await page.keyboard.press('Escape');
+  await d.adv(4);
+  z = await quizSt(page);
+  check('terminal (hall): Esc closes the category picker', !z.open);
+  // leaving a level while a quiz is open closes it
+  await d.tap('e');
+  await d.adv(6);
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 30000 });
+  z = await quizSt(page);
+  check('terminal: loading another level closes an open quiz and unlocks the controls', !z.open && (await page.evaluate(() => window.__superglen.controlsEnabled)));
+  // the test-area terminal
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(20);
+  await d.walk(6, 2.6, 900);
+  await d.adv(12);
+  s = await d.st();
+  check('terminal (test area): the terminal exists and shows its prompt', s.prompt.visible && s.prompt.icon === 'talk', JSON.stringify(s.prompt));
+}
+
+async function quizParentsScenario(page, check) {
+  const fingers = await makeFingers(page);
+  await sleep(1500);
+  // some statistics to show
+  await page.evaluate(() => {
+    const g = window.__superglen;
+    const q = g.save.data.quiz;
+    q.cats.berhitung = { level: 2, asked: 10, firstTry: 8, wrong: 3, streak: 1, recent: [0, 0], last: 1 };
+    q.cats.hewan = { level: 1, asked: 6, firstTry: 2, wrong: 9, streak: 0, recent: [1, 1], last: 1 };
+    q.cats.inggris = { level: 1, asked: 1, firstTry: 1, wrong: 0, streak: 1, recent: [0], last: 1 };
+    q.coins = 31;
+    q.stickers = ['berhitung:apel', 'hewan:kucing'];
+    q.fragments = 1;
+    q.challenges = 6;
+    g.save.persist();
+  });
+  const startedBefore = await page.evaluate(() => window.__superglen.started);
+  const logo = await page.evaluate(() => { const r = document.querySelector('.start-logo').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  // a 1.5 s hold does nothing
+  await fingers.down(1, logo.x, logo.y);
+  await sleep(1500);
+  const early = await page.evaluate(() => window.__superglen.parents.open);
+  await fingers.up(1);
+  await sleep(300);
+  check('parents: a short press on the logo does not open the parents page', !early);
+  // the long press: 3 s
+  await page.evaluate(() => window.__superglen.save.persist());
+  const startedMid = await page.evaluate(() => window.__superglen.started);
+  await fingers.down(2, logo.x, logo.y);
+  await sleep(2400);
+  const at24 = await page.evaluate(() => window.__superglen.parents.open);
+  await sleep(1000);
+  const open = await page.evaluate(() => window.__superglen.parents.open);
+  await fingers.up(2);
+  await sleep(400);
+  const after = await page.evaluate(() => ({ open: window.__superglen.parents.open, started: window.__superglen.started }));
+  check('parents: nothing happens before 3 s, then the page opens', !at24 && open, `2.4 s: ${at24}, 3.4 s: ${open}`);
+  check('parents: releasing the long-press does not start the game; the page stays', after.open && !after.started && !startedBefore && !startedMid, JSON.stringify(after));
+  await sleep(300);
+  await shot(page, 'quiz-parents');
+  const txt = await page.evaluate(() => document.querySelector('.parents').innerText);
+  check('parents: the page shows the categories with level, answered, first-try rate and a lancar / perlu latihan label', /Berhitung/.test(txt) && /Hewan/.test(txt) && /lancar/.test(txt) && /perlu latihan/.test(txt) && /80%/.test(txt) && /33%/.test(txt), txt.replace(/\s+/g, ' ').slice(0, 160));
+  check('parents: coins, stickers and fragments are listed', /Koin: 31/.test(txt) && /Stiker: 2/.test(txt) && /Kepingan memori: 1/.test(txt), txt.replace(/\s+/g, ' ').slice(-180));
+  const rows = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.parents tbody tr')].map((r) => [r.dataset.category, r.querySelector('.pill').textContent])));
+  check('parents: labels: berhitung lancar, hewan perlu latihan, inggris not enough data yet', rows.berhitung === 'lancar' && rows.hewan === 'perlu latihan' && rows.inggris === 'baru mulai', JSON.stringify(rows));
+  // Fits at 844x390 and 844x281
+  for (const [w, h] of [[844, 390], [844, 281]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await sleep(400);
+    const fit = await page.evaluate(() => {
+      const p = document.querySelector('.parents');
+      const vw = innerWidth, vh = innerHeight;
+      const out = [...p.querySelectorAll('button, table, .parents-sum, .toggle')].filter((e) => { const r = e.getBoundingClientRect(); return r.right > vw + 1 || r.bottom > vh + 1 || r.left < -1 || r.top < -1; }).map((e) => e.className || e.tagName);
+      return { out, scroll: p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1 };
+    });
+    check(`parents ${w}x${h}: everything fits without scrolling`, fit.out.length === 0 && !fit.scroll, JSON.stringify(fit));
+  }
+  await page.setViewportSize({ width: 844, height: 390 });
+  await sleep(300);
+  // toggles persist
+  const tog = async (id) => {
+    const c = await page.evaluate((id) => { const r = document.querySelector(`.toggle[data-setting=${id}] .switch`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, id);
+    await page.touchscreen.tap(c.x, c.y);
+    await sleep(200);
+  };
+  const before = await page.evaluate(() => ({ ...window.__superglen.save.data.settings }));
+  await tog('easy');
+  await tog('sound');
+  const mid = await page.evaluate(() => ({ s: { ...window.__superglen.save.data.settings }, ls: JSON.parse(localStorage.getItem('superglen.save.v1')).settings, easy: window.__superglen.rhythm.easy }));
+  check('parents: the easy-jump and sound switches flip, apply and persist in localStorage', mid.s.easyJump === !before.easyJump && mid.s.sound === !before.sound && mid.ls.easyJump === mid.s.easyJump && mid.ls.sound === mid.s.sound && mid.easy === mid.s.easyJump, JSON.stringify({ before, mid }));
+  await tog('easy');
+  await tog('sound');
+  // album
+  const ab = await page.evaluate(() => { const r = document.querySelector('.parents-album').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.touchscreen.tap(ab.x, ab.y);
+  await sleep(500);
+  check('parents: the album button opens the sticker album', (await quizSt(page)).view === 'album');
+  await page.keyboard.press('Escape');
+  await sleep(300);
+  check('parents: closing the album returns to the parents page', await page.evaluate(() => window.__superglen.parents.open && !window.__superglen.quiz.open));
+  // reset with a confirm step
+  const click = async (sel) => {
+    const c = await page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
+    await page.touchscreen.tap(c.x, c.y);
+    await sleep(250);
+  };
+  await click('.parents-reset');
+  check('parents: "Reset progres" first asks for confirmation (nothing deleted yet)', await page.evaluate(() => !!document.querySelector('.parents-reset-yes') && window.__superglen.save.data.quiz.coins === 31));
+  await click('.parents-reset-no');
+  check('parents: "Batal" keeps everything', await page.evaluate(() => !document.querySelector('.parents-reset-yes') && window.__superglen.save.data.quiz.coins === 31));
+  await click('.parents-reset');
+  await Promise.all([page.waitForNavigation({ timeout: 20000 }).catch(() => null), click('.parents-reset-yes')]);
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  const afterReset = await page.evaluate(() => ({ q: window.__superglen.save.data.quiz.coins, ch: window.__superglen.save.data.chaptersDone.length, ls: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}'), easy: window.__superglen.save.data.settings.easyJump }));
+  check('parents: "Ya, hapus" clears the quiz progress and the page reloads (settings are kept)', afterReset.q === 0 && afterReset.ch === 0 && (!afterReset.ls.quiz || afterReset.ls.quiz.coins === 0), JSON.stringify({ q: afterReset.q, ch: afterReset.ch }));
+  const gear = await page.evaluate(() => !!document.querySelector('.hud-card .hud-gear'));
+  check('parents: a discreet gear button exists in the PC help card', gear);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -5516,6 +6245,15 @@ async function main() {
     results.push(await runScenario(browser, 'bab1-roofs', { viewport: { width: 1280, height: 720 } }, bab1RoofScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-routes', { viewport: { width: 1280, height: 720 } }, bab1RoutesScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-routes-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1RoutesTouchScenario, '?fps=0&reset=1'));
+
+    // Tantangan Pintar (quiz)
+    const phone281 = { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
+    results.push(await runScenario(browser, 'quiz', { viewport: { width: 1280, height: 720 } }, quizDesktopScenario, '?level=test&fps=0&quizseed=1&reset=1'));
+    results.push(await runScenario(browser, 'quiz-touch', phone281, quizTouchScenario, '?level=test&fps=0&quizseed=1&reset=1'));
+    results.push(await runScenario(browser, 'quiz-render', { viewport: { width: 1280, height: 720 } }, (p, c) => quizRenderScenario(p, c, false), '?level=test&fps=0&quizseed=1&reset=1'));
+    results.push(await runScenario(browser, 'quiz-render-touch', phone281, (p, c) => quizRenderScenario(p, c, true), '?level=test&fps=0&quizseed=1&reset=1'));
+    results.push(await runScenario(browser, 'quiz-terminals', { viewport: { width: 1280, height: 720 } }, quizTerminalScenario, '?fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'quiz-parentspage', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, quizParentsScenario, '?fps=0&quizseed=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 

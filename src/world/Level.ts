@@ -17,6 +17,7 @@ import type { BillboardRings } from '../fx/BillboardRings';
 import type { DizzyStars } from '../fx/DizzyStars';
 import type { Sparkles } from './bab1/Fx';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { QuizEngine } from '../quiz/QuizEngine';
 
 /**
  * A level (story chapter or test area). The LevelManager owns its whole life cycle:
@@ -106,6 +107,8 @@ export interface LevelContext {
   readonly game: LevelGame;
   /** The drum / cheer / boing synthesizer (no files; silent until the first tap or when muted). */
   readonly synth: DrumSynth;
+  /** Tantangan Pintar: `await ctx.quiz.run({ category, reason })` shows 3 questions over the game (controls locked meanwhile). */
+  readonly quiz: QuizEngine;
   /** Register a cleanup that runs when the level unloads (after Level.dispose, in reverse order). */
   onDispose(fn: () => void): void;
 }

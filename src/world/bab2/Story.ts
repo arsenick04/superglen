@@ -3,6 +3,8 @@ import { startGate } from '../../core/StartGate';
 import type { SkillName } from '../../core/Save';
 import { Celebration } from '../Celebration';
 import { HALL_DOOR_TARGET } from '../progress';
+import { SKILL_GATES } from '../../quiz/gates';
+import { QuizLines } from '../../quiz/lines';
 import { FLY_MAX, HALL, NINO_SPOT, PADS } from './Layout';
 import { popButton } from './Hints';
 import type { Env, Exercise } from './Env';
@@ -21,7 +23,7 @@ export interface StoryParts {
 
 /**
  * Chapter 2 as one linear script: flying (comic first try, 5 rings), laser (5 targets), shield (5 balls), lunch, alarm.
- * Each skill unlock is ONE marked step ("[B3 QUIZ] gate here") where a "Tantangan Pintar" can be inserted later.
+ * Each skill unlock is preceded by a "Tantangan Pintar" gate (`gate()`, categories in quiz/gates.ts).
  * Afterwards (or when the chapter was already done) the hall is free play: the station icons restart their exercise.
  */
 export class Story {
@@ -62,6 +64,23 @@ export class Story {
         off();
       });
     }
+  }
+
+  /**
+   * "Kunci ini butuh jawaban pintar!": Nino asks for a Tantangan Pintar (3 questions) before a skill is granted. The challenge
+   * cannot be failed. Skills already earned in an earlier visit (saved) are not asked again.
+   */
+  private async gate(name: SkillName): Promise<void> {
+    const { ctx } = this.p.env;
+    if (ctx.save.data.skills[name]) return;
+    const before = this.step;
+    this.step = 'quiz';
+    ctx.game.debugInfo.quizGate = name;
+    await ctx.dialog.say(QuizLines.kunci, { lockControls: true });
+    await ctx.quiz.run({ category: SKILL_GATES[name], count: 3, reason: 'unlock' });
+    await ctx.dialog.say(QuizLines.energi, { lockControls: true });
+    ctx.game.debugInfo.quizGate = '';
+    this.step = before;
   }
 
   /** Confetti around the player and the tune of a finished exercise. */
@@ -142,7 +161,7 @@ export class Story {
     void nino.glideTo(NINO_SPOT.fly.x, NINO_SPOT.fly.z, 2.4);
     await this.goTo(PADS.fly.x, PADS.fly.z, 3.2);
     await dialog.say('bab2_nino_terbang');
-    // [B3 QUIZ] gate here: a "Tantangan Pintar" can be inserted before the jet booster is granted.
+    await this.gate('fly');
     this.unlock('fly');
     await this.comicBonk();
     // The rings start once Glen is back on the floor (the gentle glide down must not "pass" the first ring by accident).
@@ -160,7 +179,7 @@ export class Story {
     void nino.glideTo(NINO_SPOT.laser.x, NINO_SPOT.laser.z, 2.2);
     await this.goTo(PADS.laser.x, PADS.laser.z, 2.2);
     await dialog.say('bab2_nino_laser');
-    // [B3 QUIZ] gate here: a "Tantangan Pintar" can be inserted before the laser is granted.
+    await this.gate('laser');
     this.unlock('laser');
     await this.p.laser.run({ voice: true });
     this.cheer();
@@ -173,7 +192,7 @@ export class Story {
     void nino.glideTo(NINO_SPOT.shield.x, NINO_SPOT.shield.z, 2.4);
     await this.goTo(PADS.shield.x, PADS.shield.z, PADS.shield.r - 1.5);
     await dialog.say('bab2_nino_perisai');
-    // [B3 QUIZ] gate here: a "Tantangan Pintar" can be inserted before the shield is granted.
+    await this.gate('shield');
     this.unlock('shield');
     await this.p.shield.run({ voice: true });
     this.cheer();

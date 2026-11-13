@@ -37,6 +37,8 @@ import { touchMode } from './TouchMode';
 import { FrameClock } from './FrameClock';
 import { ShadowFollower } from './ShadowSnap';
 import { PerfOverlay, type PerfStats } from '../ui/PerfOverlay';
+import { QuizEngine } from '../quiz/QuizEngine';
+import { ParentsPage } from '../ui/ParentsPage';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -137,6 +139,10 @@ export interface DebugHandle {
   shadowPhase: () => number[] | null;
   /** Switch the shadow-camera texel snapping on/off (test comparison). */
   shadowSnap: (on: boolean) => void;
+  /** Tantangan Pintar: live values and test helpers (see QuizEngine.debugHandle). */
+  quiz: Record<string, unknown>;
+  /** The parents' page (long-press on the start logo). */
+  parents: { open: boolean; show: () => void; close: () => void };
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
   adaptReset: () => void;
   /** Adaptive resolution state: step index and number of ratio changes so far. */
@@ -264,6 +270,11 @@ export class Game {
   readonly shield: Shield;
   private jetsShown = false;
   readonly synth: DrumSynth;
+  readonly quiz: QuizEngine;
+  readonly parents: ParentsPage;
+  /** The quiz overlay is open: controls and interactions are locked. */
+  private quizLocked = false;
+  private quizReleasedLock = false;
   private readonly rhythmFx: RhythmFx;
   private drumIcons: DrumIcons | null = null;
   private readonly muteUrl: boolean;
@@ -318,6 +329,8 @@ export class Game {
     objective: { active: false, offscreen: false, arrow: false, x: 0, z: 0 },
     levelInfo: {},
     skills: undefined as unknown as DebugHandle['skills'],
+    quiz: {},
+    parents: undefined as unknown as DebugHandle['parents'],
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
@@ -436,6 +449,51 @@ export class Game {
 
     const uiRoot = ui ?? document.body;
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
+    this.quiz = new QuizEngine({
+      save: this.save,
+      synth: this.synth,
+      ui: uiRoot,
+      onOpenChange: (open) => {
+        this.quizLocked = open;
+        this.updateControls();
+        // The mouse must be free to click the cards; it is captured again when the quiz closes (a key press / click is the gesture).
+        if (open) {
+          this.quizReleasedLock = !!document.pointerLockElement && typeof document.exitPointerLock === 'function';
+          if (this.quizReleasedLock) document.exitPointerLock();
+        } else if (this.quizReleasedLock) {
+          this.quizReleasedLock = false;
+          try {
+            const r = this.renderer.canvas.requestPointerLock() as unknown;
+            if (r instanceof Promise) r.catch(() => undefined);
+          } catch {
+            // no gesture / unsupported: the next click captures the mouse
+          }
+        }
+      },
+    });
+    this.parents = new ParentsPage(uiRoot, {
+      save: this.save,
+      quiz: this.quiz,
+      setEasyJump: (on) => this.setEasyJump(on),
+      setSound: (on) => this.setSound(on),
+      afterReset: () => {
+        try {
+          window.location.reload();
+        } catch {
+          // ignore
+        }
+      },
+    });
+    if (this.hud) this.hud.onParents = () => this.parents.show();
+    this.debug.quiz = this.quiz.debugHandle();
+    const parentsPage = this.parents;
+    this.debug.parents = {
+      get open() {
+        return parentsPage.open;
+      },
+      show: () => parentsPage.show(),
+      close: () => parentsPage.close(),
+    };
     this.drumIcons = new DrumIcons(uiRoot);
     this.debug.rhythm = this.makeRhythmDebug();
     if (new URLSearchParams(window.location.search).get('perf') === '1') {
@@ -458,7 +516,7 @@ export class Game {
       this.input,
       this.dialog,
       this.cameraRig.camera,
-      () => this.levelControls && !this.fading,
+      () => this.levelControls && !this.fading && !this.quizLocked,
     );
     this.interactions.onNearChange((near) => this.touch?.controls.setPulse('interact', near));
     this.objectives = new Objectives(this.scene, uiRoot, this.cameraRig.camera, this.player);
@@ -508,6 +566,7 @@ export class Game {
         ui: uiRoot,
         game: this.api,
         synth: this.synth,
+        quiz: this.quiz,
       },
       player: this.player,
       cameraRig: this.cameraRig,
@@ -540,6 +599,7 @@ export class Game {
         this.updateControls();
       },
       onBeforeUnload: () => {
+        this.quiz.cancel();
         // Targets, balls, rings and subscribers belong to the level that is going away.
         this.targets.clear();
         this.projectiles.clear();
@@ -680,6 +740,7 @@ export class Game {
   }
 
   private fixedStep(dt: number): void {
+    this.quiz.tick(dt); // quiz overlay timers (free while closed)
     this.levels.fixedUpdate(dt); // sequences first, then the level (e.g. the test area's mode toggle)
     this.modeCtl.fixedUpdate();
     this.dialog.fixedUpdate(dt);
@@ -868,7 +929,7 @@ export class Game {
 
   /** Controls are live unless a level, a fade or a locked dialog says otherwise. */
   get controlsEnabled(): boolean {
-    return this.levelControls && !this.fading && !this.dialogLocked;
+    return this.levelControls && !this.fading && !this.dialogLocked && !this.quizLocked;
   }
 
   private updateControls(): void {

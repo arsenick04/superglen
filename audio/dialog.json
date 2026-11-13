@@ -208,5 +208,65 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Superglen siap!"
+  },
+  {
+    "id": "quiz_nino_kunci",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kunci ini butuh jawaban pintar!"
+  },
+  {
+    "id": "quiz_nino_hampir",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hampir! Coba lagi."
+  },
+  {
+    "id": "quiz_nino_tinggal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini dia! Ketuk yang ini ya."
+  },
+  {
+    "id": "quiz_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!"
+  },
+  {
+    "id": "quiz_nino_selesai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tantangan selesai! Ini koin dan stikermu."
+  },
+  {
+    "id": "quiz_nino_kepingan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Wah, kamu dapat kepingan memori ilmuwan!"
+  },
+  {
+    "id": "quiz_nino_pilih",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mau tantangan apa? Pilih satu ya."
+  },
+  {
+    "id": "quiz_nino_album",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini album stikermu!"
+  },
+  {
+    "id": "quiz_nino_energi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Energi Pintar menyala! Kostummu makin kuat."
+  },
+  {
+    "id": "quiz_nino_terminal",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Layar Nino menyala! Ayo main Tantangan Pintar."
   }
 ]

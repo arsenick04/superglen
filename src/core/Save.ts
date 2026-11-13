@@ -1,5 +1,6 @@
 import type { PlayerMode } from '../player/PlayerConfig';
 import { Parkour } from '../config/parkour';
+import { CATEGORIES, isCategory, type Category } from '../quiz/types';
 
 /**
  * Progress storage. One versioned JSON blob in localStorage under `superglen.save.v1`.
@@ -27,12 +28,87 @@ export interface SaveData {
     /** Synthesized sound on/off. */
     sound: boolean;
   };
+  quiz: QuizSave;
 }
 
 export type SkillName = keyof SaveData['skills'];
 
+/** Per-category quiz statistics (Tantangan Pintar). */
+export interface QuizCategorySave {
+  /** Difficulty 1..3 (rises with first-try answers, falls when the child is often wrong). */
+  level: number;
+  asked: number;
+  firstTry: number;
+  /** Wrong picks in total. */
+  wrong: number;
+  /** First-try answers in a row at the current level. */
+  streak: number;
+  /** Outcomes of the last 5 questions: 1 = not first try, 0 = first try. */
+  recent: number[];
+  /** Date.now() of the last question (0 = never). */
+  last: number;
+}
+
+export interface QuizSave {
+  cats: Record<Category, QuizCategorySave>;
+  coins: number;
+  /** Owned stickers as "<category>:<item key>". */
+  stickers: string[];
+  /** Completed challenges. */
+  challenges: number;
+  /** "Kepingan memori ilmuwan" (one per 5 challenges). */
+  fragments: number;
+  /** Ids of the last ~40 questions asked (no repeats soon). */
+  recent: string[];
+}
+
+function defaultCategory(): QuizCategorySave {
+  return { level: 1, asked: 0, firstTry: 0, wrong: 0, streak: 0, recent: [], last: 0 };
+}
+
+function defaultQuiz(): QuizSave {
+  const cats = {} as Record<Category, QuizCategorySave>;
+  for (const c of CATEGORIES) cats[c] = defaultCategory();
+  return { cats, coins: 0, stickers: [], challenges: 0, fragments: 0, recent: [] };
+}
+
 function defaults(): SaveData {
-  return { version: SAVE_VERSION, chaptersDone: [], skills: { laser: false, shield: false, fly: false }, lastMode: 'glen', settings: { easyJump: Parkour.easy.defaultOn, sound: true } };
+  return {
+    version: SAVE_VERSION,
+    chaptersDone: [],
+    skills: { laser: false, shield: false, fly: false },
+    lastMode: 'glen',
+    settings: { easyJump: Parkour.easy.defaultOn, sound: true },
+    quiz: defaultQuiz(),
+  };
+}
+
+const nat = (v: unknown, max = 1e9): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(max, Math.floor(v))) : 0);
+
+function sanitizeQuiz(raw: unknown): QuizSave {
+  const out = defaultQuiz();
+  if (typeof raw !== 'object' || raw === null) return out;
+  const r = raw as Record<string, unknown>;
+  out.coins = nat(r.coins);
+  out.challenges = nat(r.challenges);
+  out.fragments = nat(r.fragments);
+  if (Array.isArray(r.stickers)) out.stickers = [...new Set(r.stickers.filter((x): x is string => typeof x === 'string'))].slice(0, 500);
+  if (Array.isArray(r.recent)) out.recent = r.recent.filter((x): x is string => typeof x === 'string').slice(-40);
+  if (typeof r.cats === 'object' && r.cats !== null) {
+    for (const [k, v] of Object.entries(r.cats as Record<string, unknown>)) {
+      if (!isCategory(k) || typeof v !== 'object' || v === null) continue;
+      const c = v as Record<string, unknown>;
+      const t = out.cats[k];
+      t.level = Math.max(1, Math.min(3, nat(c.level) || 1));
+      t.asked = nat(c.asked);
+      t.firstTry = Math.min(t.asked, nat(c.firstTry));
+      t.wrong = nat(c.wrong);
+      t.streak = nat(c.streak, 99);
+      t.last = nat(c.last, 1e15);
+      if (Array.isArray(c.recent)) t.recent = c.recent.filter((x): x is number => x === 0 || x === 1).slice(-5);
+    }
+  }
+  return out;
 }
 
 /** Merge untrusted parsed JSON into a valid SaveData (unknown or malformed fields fall back to defaults). */
@@ -48,6 +124,7 @@ function sanitize(raw: unknown): SaveData {
     out.skills.fly = s.fly === true;
   }
   if (r.lastMode === 'glen' || r.lastMode === 'superglen') out.lastMode = r.lastMode;
+  out.quiz = sanitizeQuiz(r.quiz);
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
@@ -91,6 +168,14 @@ export class SaveStore {
     } catch {
       // ignore
     }
+  }
+
+  /** Parents' page: forget the story and quiz progress but keep the settings (easy jump, sound). */
+  resetProgress(): void {
+    const settings = { ...this.data.settings };
+    this.data = defaults();
+    this.data.settings = settings;
+    this.persist();
   }
 
   isChapterDone(id: string): boolean {

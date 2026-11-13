@@ -1,0 +1,282 @@
+[
+  {
+    "id": "inggris_001",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya kucing?",
+    "audio_id": "quiz_inggris_001",
+    "display": { "kind": "picture", "item": "kucing" },
+    "choices": [
+      { "id": "a", "text": "dog", "lang": "en" },
+      { "id": "b", "text": "cat", "lang": "en" },
+      { "id": "c", "text": "bird", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_002",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya anjing?",
+    "audio_id": "quiz_inggris_002",
+    "display": { "kind": "picture", "item": "anjing" },
+    "choices": [
+      { "id": "a", "text": "cat", "lang": "en" },
+      { "id": "b", "text": "fish", "lang": "en" },
+      { "id": "c", "text": "dog", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_003",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya burung?",
+    "audio_id": "quiz_inggris_003",
+    "display": { "kind": "picture", "item": "burung" },
+    "choices": [
+      { "id": "a", "text": "bird", "lang": "en" },
+      { "id": "b", "text": "cat", "lang": "en" },
+      { "id": "c", "text": "dog", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_004",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya ikan?",
+    "audio_id": "quiz_inggris_004",
+    "display": { "kind": "picture", "item": "ikan" },
+    "choices": [
+      { "id": "a", "text": "cat", "lang": "en" },
+      { "id": "b", "text": "fish", "lang": "en" },
+      { "id": "c", "text": "bird", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_005",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya apel?",
+    "audio_id": "quiz_inggris_005",
+    "display": { "kind": "picture", "item": "apel" },
+    "choices": [
+      { "id": "a", "text": "banana", "lang": "en" },
+      { "id": "b", "text": "orange", "lang": "en" },
+      { "id": "c", "text": "apple", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_006",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya jeruk?",
+    "audio_id": "quiz_inggris_006",
+    "display": { "kind": "picture", "item": "jeruk" },
+    "choices": [
+      { "id": "a", "text": "orange", "lang": "en" },
+      { "id": "b", "text": "apple", "lang": "en" },
+      { "id": "c", "text": "cat", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_007",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya bola?",
+    "audio_id": "quiz_inggris_007",
+    "display": { "kind": "picture", "item": "bola" },
+    "choices": [
+      { "id": "a", "text": "book", "lang": "en" },
+      { "id": "b", "text": "ball", "lang": "en" },
+      { "id": "c", "text": "fish", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_008",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya buku?",
+    "audio_id": "quiz_inggris_008",
+    "display": { "kind": "picture", "item": "buku" },
+    "choices": [
+      { "id": "a", "text": "ball", "lang": "en" },
+      { "id": "b", "text": "dog", "lang": "en" },
+      { "id": "c", "text": "book", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_009",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_009",
+    "display": { "kind": "speak", "text": "Dog!", "lang": "en", "speak_audio_id": "quiz_inggris_009_kata" },
+    "choices": [
+      { "id": "a", "item": "ikan" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "anjing" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_010",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_010",
+    "display": { "kind": "speak", "text": "Apple!", "lang": "en", "speak_audio_id": "quiz_inggris_010_kata" },
+    "choices": [
+      { "id": "a", "item": "apel" },
+      { "id": "b", "item": "pisang" },
+      { "id": "c", "item": "jeruk" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_011",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_011",
+    "display": { "kind": "speak", "text": "Fish!", "lang": "en", "speak_audio_id": "quiz_inggris_011_kata" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "burung" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_012",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_012",
+    "display": { "kind": "speak", "text": "Bird!", "lang": "en", "speak_audio_id": "quiz_inggris_012_kata" },
+    "choices": [
+      { "id": "a", "item": "bola" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "burung" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_013",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_013",
+    "display": { "kind": "speak", "text": "Ball!", "lang": "en", "speak_audio_id": "quiz_inggris_013_kata" },
+    "choices": [
+      { "id": "a", "item": "bola" },
+      { "id": "b", "item": "buku" },
+      { "id": "c", "item": "topi" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_014",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_014",
+    "display": { "kind": "speak", "text": "Banana!", "lang": "en", "speak_audio_id": "quiz_inggris_014_kata" },
+    "choices": [
+      { "id": "a", "item": "jeruk" },
+      { "id": "b", "item": "pisang" },
+      { "id": "c", "item": "balon" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_015",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_015",
+    "display": { "kind": "speak", "text": "Red!", "lang": "en", "speak_audio_id": "quiz_inggris_015_kata" },
+    "choices": [
+      { "id": "a", "item": "biru" },
+      { "id": "b", "item": "kuning" },
+      { "id": "c", "item": "merah" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_016",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya ayah?",
+    "audio_id": "quiz_inggris_016",
+    "display": { "kind": "picture", "item": "ayah" },
+    "choices": [
+      { "id": "a", "text": "father", "lang": "en" },
+      { "id": "b", "text": "brother", "lang": "en" },
+      { "id": "c", "text": "mother", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_017",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_017",
+    "display": { "kind": "speak", "text": "Mother!", "lang": "en", "speak_audio_id": "quiz_inggris_017_kata" },
+    "choices": [
+      { "id": "a", "item": "nenek" },
+      { "id": "b", "item": "ibu" },
+      { "id": "c", "item": "kakak" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_018",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya sekolah?",
+    "audio_id": "quiz_inggris_018",
+    "display": { "kind": "picture", "item": "sekolah" },
+    "choices": [
+      { "id": "a", "text": "house", "lang": "en" },
+      { "id": "b", "text": "bank", "lang": "en" },
+      { "id": "c", "text": "school", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_019",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya pensil?",
+    "audio_id": "quiz_inggris_019",
+    "display": { "kind": "picture", "item": "pensil" },
+    "choices": [
+      { "id": "a", "text": "pencil", "lang": "en" },
+      { "id": "b", "text": "chair", "lang": "en" },
+      { "id": "c", "text": "table", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_020",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_020",
+    "display": { "kind": "speak", "text": "Table!", "lang": "en", "speak_audio_id": "quiz_inggris_020_kata" },
+    "choices": [
+      { "id": "a", "item": "kursi" },
+      { "id": "b", "item": "meja" },
+      { "id": "c", "item": "tas" }
+    ],
+    "answer": "b"
+  }
+]
