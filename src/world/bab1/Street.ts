@@ -44,10 +44,10 @@ function building(kit: Kit, pk: ParkourKit, b: StreetBuilding): void {
       const n = 5;
       const step = a.d / n;
       for (let i = 0; i < n; i++) {
-        kit.deco.box([1.1, 0.14, step], [face - side * 0.55, 2.55, zc - a.d / 2 + (i + 0.5) * step], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
+        kit.deco.box([a.w, 0.14, step], [face - side * (a.w / 2), 2.55, zc - a.d / 2 + (i + 0.5) * step], i % 2 === 0 ? C.RED : C.CREAM, [0, 0, side * 0.25]);
       }
       // One collider for the whole striped awning (14 degrees: walkable, no sliding), drawn above.
-      addRoofBox(kit, { id: a.id, size: [1.1, 0.14, a.d], pos: [face - side * 0.55, 2.55, zc], rot: [0, 0, side * 0.25] });
+      addRoofBox(kit, { id: a.id, size: [a.w, 0.14, a.d], pos: [face - side * (a.w / 2), 2.55, zc], rot: [0, 0, side * 0.25] });
       kit.deco.box([0.1, 0.6, 2.2], [fx, 2.95, zc], C.GOLD); // sign
     }
   } else {
@@ -84,7 +84,7 @@ function building(kit: Kit, pk: ParkourKit, b: StreetBuilding): void {
         pk.windowLedge(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.5);
         break;
       case 'bay':
-        pk.balcony(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.face, C[b.wallColor === 'PEACH' ? 'PINK' : 'PEACH']);
+        pk.balcony(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.face, b.wallColor === 'YELLOW' ? C.ORANGE : C.YELLOW);
         break;
       case 'sign':
         pk.signBoard(p.id, b.id, p.x, p.z, p.top, p.w, p.d, p.thick ?? 0.5);
@@ -134,7 +134,7 @@ function bike(kit: Kit, x: number, z: number, color: number): void {
  * mouths blocked by hedges and planters, trees, lamps. All static.
  */
 export function buildStreet(kit: Kit): ParkourKit {
-  const pk = new ParkourKit(kit);
+  const pk = new ParkourKit(kit, true);
   // --- Ground, road, sidewalks, markings (visual only; the one big slab is added by the level) ---
   // The meadow ends where the floor collider ends (see Bab1Level): anything beyond is a deep ravine that returns you to the last safe spot.
   kit.deco.box([40, 0.2, 51.6], [0, -0.1, -16.8], 0x86d16a);
@@ -164,10 +164,12 @@ export function buildStreet(kit: Kit): ParkourKit {
   // The school is a ruko-class building (7 m): its way up is the wall cap (5.15 m, a level-2 hop, bright edge) and then the
   // flat roof. Nothing low stands against the wall (no gate-leaf or arch collider: a footing there would make the cap too easy).
   const sz = SCHOOL.wallZ;
-  kit.solid([BOUNDARY * 2, SCHOOL.wallTop, 0.6], [0, SCHOOL.wallTop / 2, sz + 0.3], 0xffd9a8);
-  addRoofBox(kit, { id: 'schoolWallCap', size: [BOUNDARY * 2, 0.5, 0.8], pos: [0, SCHOOL.wallTop + 0.1, sz + 0.3], color: C.RED, noSamples: true });
-  kit.roofs?.add({ id: 'schoolWallCap', kind: 'flat', samples: [{ x: -6, y: SCHOOL.capTop, z: sz + 0.3 }, { x: -5, y: SCHOOL.capTop, z: sz + 0.3 }] });
-  pk.edge(0, sz + 0.3, BOUNDARY * 2, 0.8, SCHOOL.capTop);
+  const wd = SCHOOL.wallDepth;
+  kit.solid([BOUNDARY * 2, SCHOOL.wallTop, wd], [0, SCHOOL.wallTop / 2, sz + wd / 2], 0xffd9a8);
+  // The cap is flush with the wall face (no lip in front: a lip would stop a jumping child's head under it) and 1.9 m deep.
+  addRoofBox(kit, { id: 'schoolWallCap', size: [BOUNDARY * 2, 0.5, wd - 0.2], pos: [0, SCHOOL.wallTop + 0.1, sz + wd / 2], color: C.RED, noSamples: true });
+  kit.roofs?.add({ id: 'schoolWallCap', kind: 'flat', samples: [{ x: -6, y: SCHOOL.capTop, z: sz + wd / 2 }, { x: -5, y: SCHOOL.capTop, z: sz + wd / 2 }] });
+  pk.edge(0, sz + wd / 2, BOUNDARY * 2, wd - 0.2, SCHOOL.capTop);
   kit.lit.box([BOUNDARY * 2, 0.3, 0.7], [0, 0.15, sz - 0.02], C.CREAM);
   kit.lit.box([5.2, 2.6, 0.5], [0, 1.3, sz - 0.05], C.TEAL); // gate leaves (painted on, no collider)
   for (let i = -8; i <= 8; i++) kit.deco.cyl(0.05, 2.5, [i * 0.3, 1.3, sz - 0.4], C.YELLOW);
@@ -181,10 +183,10 @@ export function buildStreet(kit: Kit): ParkourKit {
   kit.deco.sph(0.15, [3.9, 4.5, sz - 0.5], C.GOLD);
   // The school itself, behind the wall: a real flat-roofed building as wide as the walled street (no pockets behind
   // the wall), walkable on top. Beyond its back edge there is only the ravine: a fall returns you to the last safe spot.
-  addRoofBox(kit, { id: 'schoolRoof', size: [SCHOOL.roofW, SCHOOL.roofTop, SCHOOL.roofD], pos: [0, SCHOOL.roofTop / 2, SCHOOL.roofZ], color: 0xfff0c4, noSamples: true });
+  addRoofBox(kit, { id: 'schoolRoof', size: [SCHOOL.roofW, SCHOOL.roofTop, SCHOOL.roofD - 0.2], pos: [0, SCHOOL.roofTop / 2, SCHOOL.roofZ], color: 0xfff0c4, noSamples: true });
   kit.roofs?.add({ id: 'schoolRoof', kind: 'flat', samples: [{ x: -5, y: SCHOOL.roofTop, z: sz + 8 }, { x: -3.5, y: SCHOOL.roofTop, z: sz + 8 }, { x: 8, y: SCHOOL.roofTop, z: sz + 10 }] });
-  pk.edge(0, SCHOOL.roofZ, SCHOOL.roofW - 1, SCHOOL.roofD - 0.4, SCHOOL.roofTop);
-  for (let i = -3; i <= 3; i++) kit.deco.box([1.4, 1.2, 0.1], [i * 2.6, 3.2, sz + 0.78], C.SKY);
+  pk.edge(0, SCHOOL.roofZ, SCHOOL.roofW - 1, SCHOOL.roofD - 0.6, SCHOOL.roofTop);
+  for (let i = -3; i <= 3; i++) kit.deco.box([1.4, 1.2, 0.1], [i * 2.6, 6.0, SCHOOL.roofFront + 0.0], C.SKY);
 
   // --- Houses and rukos (data: StreetData.ts) ---
   for (const b of STREET_BUILDINGS) building(kit, pk, b);

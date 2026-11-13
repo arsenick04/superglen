@@ -97,7 +97,8 @@ export class BuildingExterior {
     const th = TW.eave - LANDMARK.terraceTop;
     kit.solid([TW.w, th, TW.d], [TW.cx, LANDMARK.terraceTop + th / 2, TW.cz], 0xa83a2a);
     kit.lit.box([TW.w + 0.2, 0.25, TW.d + 0.2], [TW.cx, LANDMARK.terraceTop + 0.13, TW.cz], C.GOLD);
-    kit.lit.box([TW.w + 0.2, 0.25, TW.d + 0.2], [TW.cx, TW.eave - 0.14, TW.cz], C.GOLD);
+    kit.lit.box([TW.w + 0.2, 0.25, TW.d + 0.2], [TW.cx, TW.eave - 0.4, TW.cz], C.GOLD); // gold band under the deck edge
+    pk.edge(TW.cx, TW.cz, TW.w, TW.d, TW.eave);
     const tf = TW.cz + TW.d / 2 + 0.05; // tower front face
     for (const wx of [-2.6, 0, 2.6]) {
       kit.lit.box([1.5, 1.9, 0.12], [wx, 8.6, tf], C.GOLD);
@@ -105,12 +106,19 @@ export class BuildingExterior {
       kit.lit.box([0.06, 1.9, 0.2], [wx, 8.6, tf + 0.04], 0x6b2a20);
       kit.glow.box([1.2, 1.55, 0.05], [wx, 8.6, tf + 0.08], 0xffc766);
     }
-    kit.lit.cyl(0.8, 0.14, [0, 10.4, tf + 0.1], C.GOLD, [Math.PI / 2, 0, 0]);
-    kit.lit.cyl(0.58, 0.16, [0, 10.4, tf + 0.12], C.RED, [Math.PI / 2, 0, 0]);
-    addHipRoof(kit, { id: 'barongsaiRoof2', cx: TW.cx, cz: TW.cz, baseY: TW.eave, w: TW.w, d: TW.d, h: TW.roofH, color: 0xb5382b });
-    for (let i = -3; i <= 3; i++) kit.lit.box([0.12, 0.08, 3.0], [i * 1.15, TW.eave + 0.62, TW.cz + 3.2], C.GOLD, [0.42, 0, 0]);
+    kit.lit.cyl(0.8, 0.14, [0, 10.2, tf + 0.1], C.GOLD, [Math.PI / 2, 0, 0]);
+    kit.lit.cyl(0.58, 0.16, [0, 10.2, tf + 0.12], C.RED, [Math.PI / 2, 0, 0]);
+    // The deck (flat ring, drawn by the tower body top) and the walkable hip roof on it, inset so there is room to stand.
+    const rw = TW.w - 2 * TW.roofInset;
+    addHipRoof(kit, { id: 'barongsaiRoof2', cx: TW.cx, cz: TW.cz, baseY: TW.eave, w: rw, d: rw, h: TW.roofH, color: 0xb5382b });
+    kit.roofs?.add({ id: 'towerDeck', kind: 'flat', samples: [{ x: TW.w / 2 - TW.roofInset / 2, y: TW.eave, z: TW.cz }, { x: TW.w / 2 - TW.roofInset / 2, y: TW.eave, z: TW.cz + 1.2 }] });
+    kit.lit.box([rw + 0.2, 0.18, rw + 0.2], [TW.cx, TW.eave + 0.09, TW.cz], C.GOLD); // gold plinth under the roof edge (decoration inside the hull)
+    for (let i = -2; i <= 2; i++) kit.lit.box([0.12, 0.08, 2.5], [i * 1.2, TW.eave + 0.55, TW.cz + rw / 2 - 0.9], C.GOLD, [0.5, 0, 0]);
     for (const sx of [-1, 1])
-      for (const sz of [-1, 1]) kit.deco.add('cone', [sx * (TW.w / 2 + 0.1), TW.eave + 0.5, TW.cz + sz * (TW.d / 2 + 0.1)], [0.22, 1.1, 0.22], C.GOLD, [sz * 0.7, 0, -sx * 0.7]);
+      for (const sz of [-1, 1]) {
+        kit.deco.add('cone', [sx * (TW.w / 2 - 0.3), TW.eave + 0.55, TW.cz + sz * (TW.d / 2 - 0.3)], [0.22, 1.1, 0.22], C.GOLD, [sz * 0.5, 0, -sx * 0.5]);
+        kit.deco.sph(0.2, [sx * (TW.w / 2 - 0.2), TW.eave + 1.2, TW.cz + sz * (TW.d / 2 - 0.2)], C.CREAM);
+      }
     kit.deco.cyl(0.06, 1.6, [-3.5, TW.eave + 1.4, TW.cz - 3.5], C.GOLD); // small flag pole in the back corner (no collider)
     kit.deco.box([0.9, 0.5, 0.05], [-3.05, TW.eave + 2.0, TW.cz - 3.5], C.RED);
 

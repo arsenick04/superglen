@@ -15,7 +15,7 @@ import { FunnyFx } from './FunnyFx';
 import { LabDoor } from './LabDoor';
 import { Story } from './Story';
 import { StreetFx } from './StreetFx';
-import { STREET_REACH, STREET_BUILDINGS, streetRoutes } from './StreetData';
+import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
 
 /**
  * Bab 1: Komputer Kuno Barongsai. One continuous level along -Z: street, old Barongsai building, dim hall, laboratory.
@@ -89,11 +89,12 @@ export class Bab1Level implements Level {
         built: pk.footholds.map((f) => f.id),
         routes: streetRoutes(),
         buildings: [
-          ...STREET_BUILDINGS.map((b) => ({ id: b.id, cls: b.cls, level: b.level, wall: b.wall, x: b.roof.cx, z: b.z, w: b.roof.w - 0.6, d: b.roof.d - 0.6, roof: b.roof.id })),
-          { id: 'school', cls: 'ruko', level: 2, wall: 7, x: 0, z: 11.4, w: 28, d: 12.2, roof: 'schoolRoof' },
+          ...STREET_BUILDINGS.map((b) => ({ id: b.id, cls: b.cls, level: b.level, wall: b.wall, x: b.roof.cx, z: b.z, w: BODY[b.cls].w, d: BODY[b.cls].d, roof: b.roof.id })),
+          { id: 'school', cls: 'ruko', level: 2, wall: SCHOOL.roofTop, x: 0, z: SCHOOL.roofZ, w: SCHOOL.roofW, d: SCHOOL.roofD, roof: 'schoolRoof' },
           { id: 'barongsai', cls: 'landmark', level: 4, wall: 11.9, x: 0, z: -49, w: 9, d: 9, roof: 'barongsaiRoof2' },
         ],
         coins: this.streetFx.coinPositions(),
+        coinOn: Object.fromEntries(STREET_REACH.coins.map((c) => [c.id, c.on])),
       });
     }
     street.build(root);
@@ -129,6 +130,8 @@ export class Bab1Level implements Level {
     let zone: Zone = 0;
     if (p.z < Z.hallBack - 0.6) zone = 2;
     else if (p.z < Z.facade - 0.3) zone = 1;
+    // On the roofs (above the hall and the lab) it is daylight again: the dim zones are only the rooms underneath.
+    if (p.y > 5.6) zone = 0;
     this.atmosphere.setZone(zone);
     this.atmosphere.update(dt, p, this.ctx.cameraRig.yaw);
     this.flashlight.update(dt, this.ctx.player, this.atmosphere.hallAmount);

@@ -56,7 +56,14 @@ export const EDGE_COLOR = 0xfff3a0;
 export class ParkourKit {
   readonly footholds: Foothold[] = [];
 
-  constructor(readonly kit: Kit) {}
+  /**
+   * @param sampleTops register two sample points on the top of every block in `kit.roofs`: the smoke test drops the player
+   * onto them (the street does this for its crates, bays, signs and awnings; the arena keeps its own list).
+   */
+  constructor(
+    readonly kit: Kit,
+    private readonly sampleTops = false,
+  ) {}
 
   /** A box foothold. */
   block(o: BlockOptions): Foothold {
@@ -72,6 +79,11 @@ export class ParkourKit {
     if (o.edge !== false) this.edge(o.x, o.z, o.w, o.d, o.top);
     const fh: Foothold = { id: o.id, group: o.group, kind: o.kind, x: o.x, z: o.z, w: o.w, d: o.d, top: o.top };
     this.footholds.push(fh);
+    if (this.sampleTops) {
+      // The second point is a short step toward the street axis (x = 0): the open side of a facade piece.
+      const step = Math.min(0.3, o.w / 4);
+      this.kit.roofs?.add({ id: o.id, kind: 'flat', samples: [{ x: o.x, y: o.top, z: o.z }, { x: o.x - Math.sign(o.x) * step, y: o.top, z: o.z }] });
+    }
     return fh;
   }
 

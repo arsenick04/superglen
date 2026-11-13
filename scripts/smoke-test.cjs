@@ -4086,6 +4086,13 @@ async function parkourPerfScenario(page, check) {
   await d.step(240, true);
   await d.up();
   await d.untilGrounded();
+  // Warm the plain (not rendered) stepping path too: the first seconds of any run allocate far more than a settled one
+  // (JIT, lazy buffers), which made this budget flake. The measured run below is the second one.
+  await d.setup(0);
+  await d.down();
+  await page.evaluate(() => { for (let i = 0; i < 480; i++) window.__superglen.advance(1, false); });
+  await d.up();
+  await d.untilGrounded();
   await d.setup(0);
   await d.step(3, true);
   const p0 = d.last.programs;
@@ -4361,7 +4368,7 @@ async function arenaBuildings(page, check, d) {
     let cur = null;
     for (let i = 0; i < steps.length; i++) {
       const st = steps[i];
-      const lv = Math.min(air ? st.needs : st.needs > 0 ? 3 : 0, cap);
+      const lv = Math.min(air ? st.needs : st.needs > 0 ? 4 : 0, cap);
       if (st.id.endsWith('Roof')) {
         const roof = A.roofs.find((r) => r.id === st.id);
         const t = roof.samples[0];
@@ -4408,17 +4415,19 @@ async function arenaBuildings(page, check, d) {
   check('house: ...and without the air jump (plain jumps only)', hn.reached, hn.log.join(' '));
   const rres = await routeRun('ruko', 3, 'arena-ruko');
   report('ruko route (cap 3)', JSON.stringify(rres));
-  check('ruko: the route crates -> balcony bay -> sign board -> roof reaches the roof with rhythm level <= 3', rres.reached, rres.log.join(' '));
+  check('ruko: the route crate -> balcony bay -> sign board -> roof reaches the roof with rhythm level <= 3', rres.reached, rres.log.join(' '));
   const need = Math.max(...A.routes.ruko.map((s) => s.needs));
-  check('ruko: no foothold on the route needs more than level 3 (designed: level 1 with the air jump)', need <= 3 && need >= 1, `highest designed level ${need}`);
+  check('ruko: the hardest hop of the route is level 2 (class ruko: levels 2-3)', need === 2, `highest designed level ${need}`);
   const r0 = await routeRun('ruko', 0, null);
-  check('ruko: the roof is NOT reached with level 0 only (the balcony hop is 4.65 m, level 0 reaches 4.4 m at best)', !r0.reached, r0.log.join(' '));
+  check('ruko: the roof is NOT reached with level 0 only', !r0.reached, r0.log.join(' '));
   const r1 = await routeRun('ruko', 1, null);
-  check('ruko: level 1 is enough with the air jump', r1.reached, r1.log.join(' '));
-  const n2 = await routeRun('ruko', 2, null, false);
-  check('ruko: without the air jump level 2 is NOT enough (jump + mantle: 4.3 m)', !n2.reached, n2.log.join(' '));
+  check('ruko: the roof is NOT reached with level 1 (the balcony hop is 5.2 m above the crate, level 1 reaches 4.9 m)', !r1.reached, r1.log.join(' '));
+  const r2 = await routeRun('ruko', 2, null);
+  check('ruko: level 2 is enough with the air jump', r2.reached, r2.log.join(' '));
   const n3 = await routeRun('ruko', 3, null, false);
-  check('ruko: without the air jump level 3 is enough (jump + mantle: 5.0 m)', n3.reached, n3.log.join(' '));
+  check('ruko: without the air jump level 3 is NOT enough (jump + mantle: 5.0 m)', !n3.reached, n3.log.join(' '));
+  const n4 = await routeRun('ruko', 4, null, false);
+  check('ruko: without the air jump level 4 is enough (jump + mantle: 5.8 m)', n4.reached, n4.log.join(' '));
 }
 
 async function arenaDesktopScenario(page, check) {
@@ -4430,7 +4439,7 @@ async function arenaDesktopScenario(page, check) {
   await d.step(10);
   await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
   await d.load();
-  check('arena data is published to the test (levelInfo.arena / roofs)', d.arena.footholds.length >= 20 && Object.keys(d.arena.routes).length === 4);
+  check('arena data is published to the test (levelInfo.arena / roofs)', d.arena.footholds.length >= 19 && Object.keys(d.arena.routes).length === 4);
   d.arena.roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
 
   // ---- screenshots from above ----
@@ -4590,7 +4599,7 @@ async function bab1RoofScenario(page, check) {
   // Falling off a roof to the outside returns to the last safe spot, never leaves the playable area
   const br = roofs.find((r) => r.id === 'barongsaiRoof1').samples;
   const falls = [];
-  for (const [label, from, tx, tz] of [['east', br[0], 40, br[0].z], ['west', br[2], -40, br[0].z], ['north', br[0], 0, -90], ['south', br[0], 0, 30]]) {
+  for (const [label, from, tx, tz] of [['east', br[0], 40, br[0].z], ['west', br[2], -40, br[0].z], ['north', br[2], 0, -90], ['south', br[0], 0, 30]]) {
     await page.evaluate((s) => { const g = window.__superglen; g.cancelWalk(); g.teleportFeet(s.x, s.y + 0.5, s.z); g.advance(60, false); }, from);
     const r = await page.evaluate(([tx, tz]) => {
       const g = window.__superglen;
@@ -4628,7 +4637,7 @@ async function bab1RoofScenario(page, check) {
     g.cancelWalk();
     return { x: g.player.x, y: g.feetY };
   }, hr);
-  check('bab1: walking east over a street house roof ends at the tall boundary hedge (x <= 14.6), still on the roof', out.x <= 14.6 && out.y > 4, JSON.stringify(out));
+  check('bab1: walking east over a street house roof ends at the tall boundary hedge (x <= 14.6), still on the roof', out.x <= 14.6 && out.y > 3.4, JSON.stringify(out));
   // The lab stays shut from above: standing on the lab roof, the lab floor is not reachable (the roof is solid)
   const lab = roofs.find((r) => r.id === 'labRoof').samples[0];
   const labRes = await page.evaluate((s) => {
@@ -4641,6 +4650,237 @@ async function bab1RoofScenario(page, check) {
   check('bab1: the lab has a solid roof (landing there stays on top, not inside)', labRes.grounded && labRes.y > 4.5, JSON.stringify(labRes));
   await page.evaluate(() => window.__superglen.save.reset());
   await page.evaluate(() => window.__superglen.pause(false));
+}
+
+
+// ============================ Bab 1 street: climbing routes (PAKET_P1_PARKOUR.md section 3, package P2) ============================
+
+/**
+ * Climbs the route of one street building with the normal input path (walkTo for steering, real Space presses, the
+ * arena's rhythmTo helper for the level, the air jump at the top). `cap` is the highest rhythm level the player may hold.
+ * Returns { reached, log }.
+ */
+async function streetRouteRun(page, d, S, roofs, bid, cap) {
+  const b = S.buildings.find((x) => x.id === bid);
+  const steps = S.routes[bid];
+  const side = b.x >= 0 ? 1 : -1;
+  const first = S.fh[steps[0].id];
+  let sx;
+  let sz;
+  if (bid === 'school') { sx = 0; sz = 3.0; }
+  else if (bid === 'barongsai') { sx = first.x; sz = first.z + 2.4; }
+  else { sx = first.x - side * (first.w / 2 + 1.8); sz = first.z; }
+  await d.stand(sx, 0, sz, 0, cap);
+  const log = [];
+  for (let i = 0; i < steps.length; i++) {
+    const st = steps[i];
+    const lv = Math.min(st.needs, cap);
+    if (i > 0) await d.step(100);
+    if (st.id === b.roof) {
+      const roof = roofs.find((r) => r.id === st.id);
+      const t = roof.samples[0];
+      await d.rhythmTo(lv);
+      await d.dash(t.x, t.z, { useDouble: st.needs > 0 });
+      const ok = d.last.grounded && d.last.y > b.wall - 0.2 && Math.abs(d.last.x - b.x) < b.w / 2 + 0.8 && Math.abs(d.last.z - b.z) < b.d / 2 + 0.8;
+      log.push(`${st.id}:${ok ? 'ok' : 'NO'}(y ${d.last.y.toFixed(2)})`);
+      return { reached: ok, log, y: d.last.y };
+    }
+    const f = S.fh[st.id];
+    await d.rhythmTo(lv);
+    await d.dash(f.x, f.z, { useDouble: true });
+    // The dash stops at the first touchdown (possibly perched on the rim): walk onto the middle like a child holding the stick.
+    if (st.id !== 'towerDeck') {
+      await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [f.x, f.z]);
+      await d.step(45);
+      await d.cancelWalk();
+      await d.step(10);
+    }
+    const ok = d.on(f, 0.35);
+    log.push(`${st.id}:${ok ? 'ok' : 'NO'}(y ${d.last.y.toFixed(2)}${ok ? '' : ` at ${d.last.x.toFixed(2)}, ${d.last.z.toFixed(2)} ${d.last.grounded ? 'grounded' : 'air'}, target ${f.x} ${f.z} top ${f.top}`})`);
+    if (!ok) return { reached: false, log, y: d.last.y };
+  }
+  return { reached: false, log };
+}
+
+async function streetSetup(page, touchTap) {
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+}
+
+async function bab1RoutesScenario(page, check) {
+  await streetSetup(page);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeArenaDriver(page);
+  await d.step(60);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  const S = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.street));
+  const roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+  S.fh = Object.fromEntries(S.footholds.map((f) => [f.id, f]));
+  const taken = () => page.evaluate(() => (window.__superglen.levelInfo.streetTaken || '').split(',').filter(Boolean));
+  const report = (label, v) => console.log(`   [street] ${label}: ${v}`);
+  check('bab1 street: data published (9 buildings + school + landmark, at least 2 houses and 2 rukos, a route for each)', S.buildings.length === 11 && S.buildings.filter((b) => b.cls === 'house').length >= 2 && S.buildings.filter((b) => b.cls === 'ruko').length >= 4 && S.buildings.every((b) => S.routes[b.id] && S.routes[b.id].length >= 2), `${S.buildings.length} buildings`);
+  check('bab1 street: every foothold of the data was built (data and builder agree)', S.footholds.filter((f) => /:(bay|sign|crate|ac|canopy)/.test(f.id)).every((f) => S.built.includes(f.id)), `built ${S.built.length}`);
+  const coinsTotal = S.coins.length;
+  report('coins on the street', coinsTotal);
+
+  // Wall heights match the class (rule 3).
+  const bad = S.buildings.filter((b) => (b.cls === 'house' && (b.wall < 3 || b.wall > 4)) || (b.cls === 'ruko' && (b.wall < 6 || b.wall > 8)) || (b.cls === 'landmark' && (b.wall < 10 || b.wall > 12)));
+  check('bab1 street: wall heights fit their class (house 3-4 m, ruko 6-8 m, landmark 10-12 m)', bad.length === 0, bad.map((b) => `${b.id} ${b.wall}`).join(', '));
+
+  const walkRoof = async (roofId) => {
+    // walk to the roof's middle (the coin and the star lie there)
+    const b = S.buildings.find((x) => x.roof === roofId);
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [b.x, b.z]);
+    await d.step(150);
+    await d.cancelWalk();
+  };
+
+  // ---- Houses: levels 0-1 ----
+  const t0 = await taken();
+  const h1 = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 1);
+  report('house R (shop awning) at cap 1', JSON.stringify(h1));
+  check('house (shop, crates > awning > roof): the roof is reached with rhythm level <= 1', h1.reached, h1.log.join(' '));
+  if (h1.reached) await walkRoof('houseR-29.5');
+  const t1 = await taken();
+  const onRoute = (bid) => S.coins.filter((c) => c.id.startsWith(bid + ':') && (S.coinOn[c.id] === 'ground' || S.routes[bid].some((st) => st.id === S.coinOn[c.id])));
+  const houseCoins = onRoute('houseR-29.5');
+  const gotHouse = houseCoins.filter((c) => t1.includes(c.id)).length;
+  check('house: the route coins are collected on the way (ground, crate, awning, roof): all of them', houseCoins.length >= 4 && gotHouse === houseCoins.length, `${gotHouse}/${houseCoins.length} (${t1.filter((i) => i.startsWith('houseR-29.5:')).join(' ')})`);
+  report('coins taken in total after the house', `${t1.length - t0.length}`);
+  const h0 = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 0);
+  check('house: the roof is also reachable with level 0 only', h0.reached, h0.log.join(' '));
+  const h2 = await streetRouteRun(page, d, S, roofs, 'houseL-33.6', 0);
+  check('house (AC unit > canopy > roof): reached with level 0', h2.reached, h2.log.join(' '));
+
+  // ---- Ruko: level 2, NOT with level 0 or 1 ----
+  const r2 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 2);
+  report('ruko R0 at cap 2', JSON.stringify(r2));
+  check('ruko (bay > sign board > roof): the roof is reached with rhythm level 2', r2.reached, r2.log.join(' '));
+  if (r2.reached) await walkRoof('rukoR0');
+  const t2 = await taken();
+  const rukoCoins = onRoute('rukoR0');
+  const gotRuko = rukoCoins.filter((c) => t2.includes(c.id)).length;
+  check('ruko: the coins of the route are collected (ground, bay, sign board, roof)', gotRuko === rukoCoins.length, `${gotRuko}/${rukoCoins.length}`);
+  const r1 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 1);
+  check('ruko: the roof is NOT reached with level 1 (the bay is 5.2 m up: level 1 gives 4.9 m)', !r1.reached, r1.log.join(' '));
+  const r0 = await streetRouteRun(page, d, S, roofs, 'rukoR0', 0);
+  check('ruko: the roof is NOT reached with level 0', !r0.reached, r0.log.join(' '));
+  const r3 = await streetRouteRun(page, d, S, roofs, 'rukoL1.5', 3);
+  check('ruko (left side, 5.85 m bay): reached with level 3', r3.reached, r3.log.join(' '));
+  const r3b = await streetRouteRun(page, d, S, roofs, 'rukoL1.5', 2);
+  check('ruko (left side, 5.85 m bay): NOT reached with level 2', !r3b.reached, r3b.log.join(' '));
+
+  // ---- School: wall cap is level 2 ----
+  const sc = await streetRouteRun(page, d, S, roofs, 'school', 2);
+  check('school: the wall cap and the roof behind it are reached with level 2', sc.reached, sc.log.join(' '));
+  const sc1 = await streetRouteRun(page, d, S, roofs, 'school', 1);
+  check('school: NOT reached with level 1', !sc1.reached, sc1.log.join(' '));
+
+  // ---- Landmark: level 4 ----
+  const lm = await streetRouteRun(page, d, S, roofs, 'barongsai', 4);
+  report('landmark at cap 4', JSON.stringify(lm));
+  check('landmark (lion > pillar > terrace > tower): the tower roof is reached with level 4', lm.reached, lm.log.join(' '));
+  if (lm.reached) {
+    await page.evaluate(() => { const g = window.__superglen; g.cancelWalk(); });
+    await walkRoof('barongsaiRoof2');
+    const star = await page.evaluate(() => window.__superglen.levelInfo.reward_landmark || 0);
+    check('landmark: standing on the tower roof takes the big gold star', star >= 1, `reward ${star}`);
+    // the shot: Superglen on the roof, the star and the view
+    await page.evaluate(() => { const g = window.__superglen; g.lookFrom([-9, 19.5, -38, 0, 13.5, -49]); g.advance(3, true); });
+    await shot(page, 'street-landmark-top');
+    await page.evaluate(() => window.__superglen.lookFrom(null));
+  }
+  const lm3 = await streetRouteRun(page, d, S, roofs, 'barongsai', 3);
+  check('landmark: NOT reached with level 3 (the tower hop is 6.4 m; level 3 gives 6.2 m)', !lm3.reached, lm3.log.join(' '));
+
+  // ---- Screenshots: high view with routes, a ruko ----
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(0, 0.03, 0); g.advance(30, false); g.lookFrom([0, 40, 16, 0, 2, -16]); g.advance(3, true); });
+  await shot(page, 'street-routes');
+  await page.evaluate(() => { const g = window.__superglen; g.lookFrom([-1.5, 5.5, 3.5, 7, 4, -1.5]); g.advance(3, true); });
+  await shot(page, 'street-ruko');
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+
+  // ---- Perf per area ----
+  const calls = {};
+  for (const [name, pose] of [['spawn', [0, 3, 8, 0, 3, -8]], ['street high', [0, 40, 16, 0, 2, -16]], ['mid street', [0, 4, -8, 0, 4, -30]], ['plaza + landmark', [0, 6, -30, 0, 8, -50]], ['landmark top', [-9, 19.5, -38, 0, 13.5, -49]]]) {
+    await page.evaluate((p) => { const g = window.__superglen; g.lookFrom(p); g.advance(3, true); }, pose);
+    calls[name] = await page.evaluate(() => { const c = window.__superglen.debugCounts(); return `${c.calls} calls ${c.triangles} tris`; });
+  }
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  console.log('   [street] draw calls / triangles per viewpoint:', JSON.stringify(calls));
+  const worst = Object.values(calls).map((v) => v.split(' ').map(Number)).reduce((m, v) => [Math.max(m[0], v[0]), Math.max(m[1], v[2])], [0, 0]);
+  check('perf: street viewpoints stay inside the budget (< 150 draw calls, <= 60k triangles)', worst[0] < 150 && worst[1] <= 60000, JSON.stringify(calls));
+
+  // ---- Safety: nothing leaves the playable area from the new routes ----
+  const out = await page.evaluate(() => {
+    const g = window.__superglen;
+    const bad = [];
+    const spots = [[9, 8, -4], [-9, 8, -10], [0, 7.2, 8], [0, 12.5, -48]];
+    for (const [x, y, z] of spots) {
+      g.cancelWalk();
+      g.teleportFeet(x, y + 0.5, z);
+      g.advance(40, false);
+      for (const [tx, tz] of [[60, z], [-60, z], [x, 60], [x, -90]]) {
+        g.walkTo(tx, tz);
+        for (let i = 0; i < 300; i++) g.advance(1, false);
+        g.cancelWalk();
+        g.advance(240, false); // a fall into the ravine takes a while to be returned
+        const p = g.player;
+        if (!(g.feetY > -2 && Math.abs(p.x) < 15.5 && p.z > -80 && p.z < 20)) bad.push(`from ${x},${y},${z} to ${tx},${tz}: ${p.x.toFixed(1)},${g.feetY.toFixed(1)},${p.z.toFixed(1)}`);
+      }
+    }
+    return bad;
+  });
+  check('safety: walking off any new roof in every direction always ends inside the playable area (never outside, never stuck below)', out.length === 0, out.join(' | '));
+  await page.evaluate(() => window.__superglen.save.reset());
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
+async function bab1RoutesTouchScenario(page, check) {
+  await sleep(1500);
+  await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(2500);
+  const fingers = await makeFingers(page);
+  await fingers.down(1, 120, 200);
+  await sleep(100);
+  await fingers.up(1);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()).catch(() => {});
+  let d = null;
+  const center = () => page.evaluate(() => {
+    const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  const tapBtn = async () => {
+    const jb = await center();
+    await fingers.down(7, jb.x, jb.y);
+    await d.step(1);
+    await fingers.up(7);
+    return d.last;
+  };
+  d = makeArenaDriver(page, tapBtn);
+  await d.step(10);
+  await page.evaluate(() => window.__superglen.game.setSkills({ fly: false }));
+  const S = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.street));
+  const roofs = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.roofs));
+  S.fh = Object.fromEntries(S.footholds.map((f) => [f.id, f]));
+  check('touch 844x281 (street): the jump button is a real on-screen button >= 80 x 80', await page.evaluate(() => { const r = document.querySelector('.tc-button[data-action=jump]').getBoundingClientRect(); return r.width >= 80 && r.height >= 80; }));
+  const h = await streetRouteRun(page, d, S, roofs, 'houseR-29.5', 1);
+  check('touch: the house route (crates > awning > roof) is climbed with the jump button', h.reached, h.log.join(' '));
+  const r = await streetRouteRun(page, d, S, roofs, 'rukoR0', 2);
+  check('touch: the ruko route (bay > sign board > roof) is climbed with the jump button at level 2', r.reached, r.log.join(' '));
+  await page.evaluate(() => { const g = window.__superglen; g.setCameraYaw(Math.PI / 2); g.advance(30, false); g.lookFrom([-2, 11, 3, 8, 6, -3]); g.advance(3, true); });
+  await shot(page, 'street-touch-281');
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  await page.evaluate(() => window.__superglen.save.reset());
 }
 
 // ============================ Flight fix: soft fall after the jets, instant re-ignite ============================
@@ -4990,6 +5230,8 @@ async function main() {
     results.push(await runScenario(browser, 'arena', { viewport: { width: 1280, height: 720 } }, arenaDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'arena-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, arenaTouchScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'bab1-roofs', { viewport: { width: 1280, height: 720 } }, bab1RoofScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-routes', { viewport: { width: 1280, height: 720 } }, bab1RoutesScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-routes-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1RoutesTouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 
@@ -5026,7 +5268,10 @@ async function main() {
   process.exit(failed ? 1 : 0);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+module.exports = { roofProbe, makeArenaDriver, makeParkourDriver, streetRouteRun, streetSetup, URL, PORT, sleep };

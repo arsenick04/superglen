@@ -32,6 +32,9 @@ export class StreetFx {
   private readonly gone: Uint8Array;
   private readonly ids: string[] = [];
   private t = 0;
+  /** Ids of the coins taken so far (tests). */
+  private readonly takenIds: string[] = [];
+  private published = 0;
   private streak = 0;
   private streakT = 0;
   private readonly rewards: Reward[] = [];
@@ -144,6 +147,7 @@ export class StreetFx {
       if (dx * dx + dz * dz > TAKE_R * TAKE_R) continue;
       this.gone[i] = 1;
       this.taken++;
+      this.takenIds.push(this.ids[i]);
       this.sparkles.burst(this.px[i], this.py[i], this.pz[i], 8, 2.4, 0xffd23f, { gravity: 2, life: 0.6, up: 0.8 });
       this.ctx.synth.drum(Math.min(4, this.streak), false);
       this.streak++;
@@ -166,6 +170,10 @@ export class StreetFx {
     }
     const info = this.ctx.game.debugInfo;
     info.streetCoins = this.taken;
+    if (this.takenIds.length !== this.published) {
+      this.published = this.takenIds.length;
+      info.streetTaken = this.takenIds.join(',');
+    }
     for (const r of this.rewards) info[`reward_${r.id}`] = r.count;
   }
 }

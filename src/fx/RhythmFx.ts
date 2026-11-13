@@ -19,6 +19,11 @@ const SPARK_GOLD = 0xffd23f;
  * Pooled and allocation free per frame; the ring's material is the same plain MeshBasicMaterial program as the other
  * rings, so no shader compiles in play (it is shown once for the pre-warm).
  */
+/** Option objects of the bursts, made once (a literal at the call site would allocate on every jump). */
+const AUTO_BURST = { gravity: 3, life: 0.6 };
+const GOOD_BURST = { gravity: 3, life: 0.9, up: 0.9 };
+const LION_BURST = { gravity: 1.5, life: 1.2, up: 0.5 };
+
 export class RhythmFx {
   private readonly ring: THREE.Mesh;
   private readonly ringMat: THREE.MeshBasicMaterial;
@@ -78,15 +83,15 @@ export class RhythmFx {
     const F = Parkour.fx;
     const top = level >= Parkour.levels.length - 1;
     if (quality === 'auto') {
-      this.sparkles.burst(x, y + 0.1, z, 5, 1.8, SPARK_GOLD, { gravity: 3, life: 0.6 });
+      this.sparkles.burst(x, y + 0.1, z, 5, 1.8, SPARK_GOLD, AUTO_BURST);
       return;
     }
     const perfect = quality === 'perfect';
     this.groundRings.spawn(x, y, z, perfect ? 2.2 : 1.5, perfect ? 0.45 : 0.35, perfect ? GOLD : 0xfff2a8, perfect ? 1 : 0.8);
-    this.sparkles.burst(x, y + 0.15, z, perfect ? F.burstPerfect : F.burstGood, perfect ? 4.2 : 3, perfect ? -1 : SPARK_GOLD, { gravity: 3, life: 0.9, up: 0.9 });
+    this.sparkles.burst(x, y + 0.15, z, perfect ? F.burstPerfect : F.burstGood, perfect ? 4.2 : 3, perfect ? -1 : SPARK_GOLD, GOOD_BURST);
     if (top) {
       // "Lompat Singa": a roar of sparkles, a big flash and a tiny camera dip.
-      this.sparkles.burst(x, y + 0.6, z, F.burstLion, 6, -1, { gravity: 1.5, life: 1.2, up: 0.5 });
+      this.sparkles.burst(x, y + 0.6, z, F.burstLion, 6, -1, LION_BURST);
       this.flashes.spawn(x, y + 0.7, z, 2.6, 0.5, SPARK_GOLD, 0.95);
       this.bump();
     }

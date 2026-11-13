@@ -19,10 +19,10 @@ import type { C } from './Kit';
  *  behind the spawn: the school wall (gate) and the school (z +5.5 ...), a ruko-class building
  *
  * CLASSES (Parkour.reachModel.classes):
- *   house    wall 3.4 - 3.8 m    levels 0-1: crates / AC unit / window ledge / shop awning up to the eave
+ *   house    wall 3.4 - 3.8 m    levels 0-1: crates / AC unit / door canopy / shop awning up to the eave
  *   ruko     wall 6.65 - 7.9 m   levels 2-3: ONE big hop from the street (or from a 0.45 - 0.6 m kerb obstacle) onto a solid
  *                                "shop-front bay" with a balcony, then a sign board and the roof.
- *   landmark 11.9 m              level 4: lion > name plate > pillar > roof terrace (all easy), then one 6.4 m hop
+ *   landmark 11.9 m              level 4: lion > pillar (name plate beside it) > roof terrace (all easy), then one 6.4 m hop
  *                                onto the tower (needs level 4); the star waits on the tower roof.
  *
  * WHY THERE ARE NO EASY STEPS NEXT TO A RUKO: the route level of a roof is the lowest level over ALL ways up, so any
@@ -101,14 +101,15 @@ export interface StreetBuilding {
 
 /** Body footprint (x, z) of a building: houses are shallower so the side streets stay wide (the reach checker needs the gap). */
 export const BODY = { ruko: { w: 6, d: 7.2 }, house: { w: 6, d: 5.6 } } as const;
-const ROOF_OVER = 0.3;
-const ROOF_H = 2.0;
+/** Roof overhang past the wall (m). Small on purpose: the collider lip (overhang + 10 cm) is a ceiling for a child jumping from a step under the eave. */
+const ROOF_OVER = 0.1;
+const ROOF_H = 1.6;
 
 const faceOf = (side: number): readonly [number, number] => [-side, 0];
 /** Centre x of a piece that sticks out `p` m from the wall of the given side. */
 const stickX = (side: number, p: number): number => side * (STREET_HALF - p / 2);
 
-type Spec = [id: string, cls: 'house' | 'ruko', side: -1 | 1, z: number, wallColor: ColorKey, roofColor: ColorKey, shop: boolean, floors: number, level: number, pad: number, variant: 'bay' | 'shopCrates' | 'acLedge', wall?: number];
+type Spec = [id: string, cls: 'house' | 'ruko', side: -1 | 1, z: number, wallColor: ColorKey, roofColor: ColorKey, shop: boolean, floors: number, level: number, pad: number, variant: 'bay' | 'shopCrates' | 'acCanopy', wall?: number];
 
 const SPECS: Spec[] = [
   // Left: three rukos near the school, then two houses behind the side street.
@@ -116,7 +117,7 @@ const SPECS: Spec[] = [
   ['rukoL-5.5', 'ruko', -1, -5.5, 'SKY', 'DEEP_RED', true, 3, 2, BARRIER_H, 'bay'],
   ['rukoL-12.5', 'ruko', -1, -12.5, 'YELLOW', 'TEAL', false, 3, 3, LOW, 'bay'],
   ['houseL-28', 'house', -1, -28, 'MINT', 'RED', true, 1, 1, 0, 'shopCrates', 3.6],
-  ['houseL-33.6', 'house', -1, -33.6, 'LILAC', 'DEEP_RED', false, 1, 0, 0, 'acLedge', 3.4],
+  ['houseL-33.6', 'house', -1, -33.6, 'LILAC', 'DEEP_RED', false, 1, 0, 0, 'acCanopy', 3.4],
   // Right: three rukos, then one house.
   ['rukoR0', 'ruko', 1, 0, 'MINT', 'DEEP_RED', false, 2, 2, 0, 'bay'],
   ['rukoR-7', 'ruko', 1, -7, 'PINK', 'TEAL', true, 3, 3, BARRIER_H, 'bay'],
@@ -141,18 +142,19 @@ function makeBuilding(s: Spec): StreetBuilding {
     wall = Math.round((bay + EAVE_UP) * 100) / 100;
     const bayZ = z + 1.1;
     P({ id: `${id}:bay`, type: 'bay', x: stickX(side, 1.8), z: bayZ, w: 1.8, d: 2.4, top: bay });
-    P({ id: `${id}:sign`, type: 'sign', x: stickX(side, 1.2), z: bayZ - 1.7, w: 1.2, d: 1.0, top: Math.round((bay + SIGN_UP) * 100) / 100, thick: 0.5 });
-    route.push({ id: `${id}:bay`, needs: level }, { id: `${id}:sign`, needs: 0 });
+    P({ id: `${id}:sign`, type: 'sign', x: stickX(side, 1.8), z: bayZ - 1.7, w: 1.8, d: 1.0, top: Math.round((bay + SIGN_UP) * 100) / 100, thick: 0.5 });
+    // `needs` = the level of the hop from the street (a kerb obstacle next to the bay lowers it by one for a child who finds it).
+    route.push({ id: `${id}:bay`, needs: pad > 0 ? level + 1 : level }, { id: `${id}:sign`, needs: 0 });
   } else if (variant === 'shopCrates') {
     // The striped shop awning (built by Street.ts, registered below) is reached from a crate stack at one end.
     P({ id: `${id}:crateB`, type: 'crate', x: stickX(side, 1.2), z: z - 2.3, w: 1.2, d: 1.2, top: 1.8, n: 2 });
     P({ id: `${id}:crateA`, type: 'crate', x: stickX(side, 1.2), z: z + 2.3, w: 1.2, d: 1.2, top: 0.9, n: 1 });
-    route.push({ id: `${id}:crateB`, needs: 0 });
+    route.push({ id: `${id}:crateB`, needs: 0 }, { id: `awning${side > 0 ? 'R' : 'L'}${z}`, needs: 0 });
   } else {
-    P({ id: `${id}:crateA`, type: 'crate', x: stickX(side, 1.2), z: z + 2.3, w: 1.2, d: 1.2, top: 0.9, n: 1 });
-    P({ id: `${id}:ac`, type: 'ac', x: stickX(side, 0.9), z: z - 2.0, w: 0.9, d: 1.2, top: 1.9, thick: 0.8 });
-    P({ id: `${id}:ledge`, type: 'ledge', x: stickX(side, 0.7), z: z + 0.6, w: 0.7, d: 2.4, top: 2.8, thick: 0.5 });
-    route.push({ id: `${id}:ac`, needs: 0 }, { id: `${id}:ledge`, needs: 0 });
+    P({ id: `${id}:ac`, type: 'ac', x: stickX(side, 1.4), z: z - 2.0, w: 1.4, d: 1.2, top: 1.9, thick: 0.8 });
+    // A flat canopy over the door (1.7 m out: room to stand beyond the roof's eave, like the arena house).
+    P({ id: `${id}:canopy`, type: 'awning', x: stickX(side, 1.7), z: z + 0.6, w: 1.7, d: 2.4, top: 2.6, thick: 0.25 });
+    route.push({ id: `${id}:ac`, needs: 0 }, { id: `${id}:canopy`, needs: 0 });
   }
   const roof = { id: `${cls}${side > 0 ? 'R' : 'L'}${z}`, cx: side * (STREET_HALF + 3), cz: z, w: BODY[cls].w + 2 * ROOF_OVER, d: BODY[cls].d + 2 * ROOF_OVER, h: ROOF_H };
   route.push({ id: roof.id, needs: 0 });
@@ -164,7 +166,7 @@ export const STREET_BUILDINGS: StreetBuilding[] = SPECS.map(makeBuilding);
 /** The striped shop awning over the door of a shop house (a 14 degree tilted box, built by Street.ts). */
 export function shopAwning(b: StreetBuilding): { id: string; x: number; z: number; w: number; d: number; top: number } {
   const side = b.side;
-  return { id: `awning${side > 0 ? 'R' : 'L'}${b.z}`, x: side * (STREET_HALF - 0.55), z: b.z, w: 1.1, d: 3.1, top: 2.62 };
+  return { id: `awning${side > 0 ? 'R' : 'L'}${b.z}`, x: side * (STREET_HALF - 0.85), z: b.z, w: 1.7, d: 3.1, top: 2.62 };
 }
 
 // ---- Scenery that has a collider (and therefore is a foothold) -------------------------------------------------------------------
@@ -176,8 +178,8 @@ export const TREES: readonly (readonly [number, number, number, boolean])[] = [
   [-5.9, -9.8, 0.9, false],
   [5.9, -11, 1, false],
   [-5.9, -23, 1.1, true],
-  [5.9, -27.5, 1, true],
-  [-5.9, -30, 1, true],
+  [5.0, -27.5, 1, true],
+  [-5.0, -30, 1, true],
   [-10.5, -39.5, 1.2, true],
   [11, -40, 1.2, true],
   [9.2, -34.5, 1.0, true],
@@ -217,14 +219,22 @@ export const BENCHES = [-9, 9] as const;
 
 // ---- School ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * The school wall is a thick terrace (1.9 m deep, top 5.15 m) in front of the school, so there is room to stand on it before
+ * the 1.85 m step up to the flat school roof (a mantle needs standing room behind the ledge).
+ */
 export const SCHOOL = {
   wallZ: Z.schoolWall,
+  wallDepth: 1.9,
   wallTop: 4.8,
   capTop: 5.15,
   roofTop: 7.0,
   roofW: BOUNDARY * 2 + 1,
-  roofD: 12.2,
-  roofZ: Z.schoolWall + 6.6,
+  /** Front face of the school building (= back of the wall terrace) and its back edge. */
+  roofFront: Z.schoolWall + 1.9,
+  roofBack: Z.schoolWall + 12.7,
+  roofD: 12.7 - 1.9,
+  roofZ: Z.schoolWall + (1.9 + 12.7) / 2,
 } as const;
 
 // ---- The old Barongsai building (landmark) ---------------------------------------------------------------------------------------
@@ -236,8 +246,11 @@ export const LANDMARK = {
   terrace: { cx: 0, cz: -50.7, w: 19.5, d: 17.7 },
   /** The wing caps beside the door are at the terrace level. */
   wingTop: 5.5,
-  /** Tower: a solid block from the terrace up to the roof eave; the walkable hip roof sits on it. */
-  tower: { cx: 0, cz: -49.0, w: 9, d: 9, eave: 11.9, roofH: 2.0 },
+  /**
+   * Tower: a solid block from the terrace up to the deck (top at `eave`). A flat deck ring `roofInset` wide runs round the hip
+   * roof, so the mantle from the terrace has standing room (the capsule would not fit on the sloping roof edge).
+   */
+  tower: { cx: 0, cz: -49.0, w: 9, d: 9, eave: 11.9, roofH: 1.7, roofInset: 1.2 },
   lion: { x: 4.4, z: Z.facade + 1.0, r: 0.62, top: 2.1 },
   nameplate: { x: 0, z: Z.facade + 0.2, w: 5.2, d: 0.5, top: 3.8, thick: 0.5 },
   pillar: { x: 2.45, z: Z.facade + 0.5, r: 0.55, top: 5.4 },
@@ -279,22 +292,26 @@ function computeReachData(): LevelReachData {
     }
   }
 
-  // Coin trails: ground > pieces > roof, always over a foothold the building's level can reach.
+  // Coin trails: ground > pieces (and the shop awning) > roof, always over a foothold the building's level can reach.
   for (const b of STREET_BUILDINGS) {
     const gp = b.pieces[0];
     coin(`${b.id}:c0`, gp.x - b.side * 1.9, lift, gp.z, 'ground');
     b.pieces.forEach((p, i) => coin(`${b.id}:c${i + 1}`, p.x, p.top + lift, p.z, p.id));
+    if (b.shop && b.cls === 'house') {
+      const a = shopAwning(b);
+      coin(`${b.id}:cAwning`, a.x, a.top + lift, a.z, a.id);
+    }
     coin(`${b.id}:cRoof`, b.roof.cx, b.wall + b.roof.h * (1 - plateau) + lift, b.roof.cz, b.roof.id);
   }
 
   // School: the wall cap (a ruko-class gate: nothing low next to it) and the flat roof behind.
   const S = SCHOOL;
-  footholds.push(box('schoolWallCap', 'other', 0, S.wallZ + 0.3, BOUNDARY * 2, 0.8, S.capTop, { building: 'school' }));
-  footholds.push({ ...box('schoolRoof', 'roof', 0, S.roofZ, S.roofW, S.roofD, S.roofTop, { building: 'school' }), isRoof: true });
+  footholds.push(box('schoolWallCap', 'other', 0, S.wallZ + S.wallDepth / 2, BOUNDARY * 2, S.wallDepth - 0.2, S.capTop, { building: 'school' }));
+  footholds.push({ ...box('schoolRoof', 'roof', 0, S.roofZ, S.roofW, S.roofD - 0.2, S.roofTop, { building: 'school' }), isRoof: true });
   buildings.push({ id: 'school', class: 'ruko', roofIds: ['schoolRoof'], wall: S.roofTop, level: 2 });
   coin('school:c0', 0, lift, S.wallZ - 2.5, 'ground');
-  coin('school:c1', -3, S.capTop + lift, S.wallZ + 0.3, 'schoolWallCap');
-  coin('school:c2', 3, S.capTop + lift, S.wallZ + 0.3, 'schoolWallCap');
+  coin('school:c1', -3, S.capTop + lift, S.wallZ + 0.95, 'schoolWallCap');
+  coin('school:c2', 3, S.capTop + lift, S.wallZ + 0.95, 'schoolWallCap');
   coin('school:star', 0, S.roofTop, S.roofZ + 1, 'schoolRoof', 2);
 
   // Landmark.
@@ -313,13 +330,15 @@ function computeReachData(): LevelReachData {
     footholds.push(box(`wingCap${s > 0 ? 'R' : 'L'}`, 'other', s * (x0 + x1) / 2, Z.facade - 0.3, x1 - x0, 0.8, L.wingTop, { building: L.id }));
   }
   const T = L.tower;
-  footholds.push(hipRoof('barongsaiRoof2', L.id, T.cx, T.cz, T.w, T.d, T.eave, T.roofH, plateau));
-  buildings.push({ id: L.id, class: 'landmark', roofIds: ['barongsaiRoof2'], wall: T.eave, level: 4 });
+  footholds.push({ ...box('towerDeck', 'roof', T.cx, T.cz, T.w, T.d, T.eave, { building: L.id }), isRoof: true });
+  footholds.push(hipRoof('barongsaiRoof2', L.id, T.cx, T.cz, T.w - 2 * T.roofInset, T.d - 2 * T.roofInset, T.eave, T.roofH, plateau));
+  buildings.push({ id: L.id, class: 'landmark', roofIds: ['towerDeck', 'barongsaiRoof2'], wall: T.eave, level: 4 });
   coin('lm:c0', L.lion.x, lift, L.lion.z + 2.2, 'ground');
   coin('lm:c1', L.lion.x, L.lion.top + lift, L.lion.z, 'lionR');
   coin('lm:c2', 1.2, np.top + lift, np.z, 'nameplate');
   coin('lm:c3', L.pillar.x, L.pillar.top + lift, L.pillar.z, 'pillarR');
   coin('lm:c4', 0, L.terraceTop + lift, Z.facade - 3, 'terrace');
+  coin('lm:c5', T.w / 2 - T.roofInset / 2, T.eave + lift, T.cz + 1.5, 'towerDeck', 4);
   coin('lm:star', T.cx, T.eave + T.roofH * (1 - plateau), T.cz, 'barongsaiRoof2', 4);
 
   // Everything else with a collider is a foothold too (the checker must see the shortcuts a child could find).
@@ -351,10 +370,10 @@ export function streetRoutes(): Record<string, RouteStep[]> {
   ];
   r[LANDMARK.id] = [
     { id: 'lionR', needs: 0 },
-    { id: 'nameplate', needs: 0 },
     { id: 'pillarR', needs: 0 },
     { id: 'terrace', needs: 0 },
-    { id: 'barongsaiRoof2', needs: 4 },
+    { id: 'towerDeck', needs: 4 },
+    { id: 'barongsaiRoof2', needs: 0 },
   ];
   return r;
 }
