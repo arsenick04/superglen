@@ -12,7 +12,8 @@
     "check:reach": "tsx scripts/reachability.ts",
     "check:quiz": "node scripts/validate-quiz.mjs",
     "audio": "node scripts/generate-audio.mjs",
-    "audio:voices": "node scripts/pick-voices.mjs"
+    "audio:voices": "node scripts/pick-voices.mjs",
+    "audio:sfx": "node scripts/generate-sfx.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
