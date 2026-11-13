@@ -38,6 +38,8 @@ import { FrameClock } from './FrameClock';
 import { ShadowFollower } from './ShadowSnap';
 import { PerfOverlay, type PerfStats } from '../ui/PerfOverlay';
 import { QuizEngine } from '../quiz/QuizEngine';
+import { AudioManager, AudioConfig } from '../audio/AudioManager';
+import { wireQuizVoice } from '../audio/QuizVoice';
 import { ParentsPage } from '../ui/ParentsPage';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -114,6 +116,8 @@ export interface DebugHandle {
   camera: { x: number; y: number; z: number };
   /** Fixed steps run by the most recent frame. */
   lastSteps: number;
+  /** Test-only: show a dialog line (a table id or literal text, optionally with an id). */
+  say: (line: string | { speaker: string; text: string; id?: string }) => void;
   /**
    * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
    * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
@@ -141,6 +145,8 @@ export interface DebugHandle {
   shadowSnap: (on: boolean) => void;
   /** Tantangan Pintar: live values and test helpers (see QuizEngine.debugHandle). */
   quiz: Record<string, unknown>;
+  /** Voice / sfx / music state and the test hooks (see audio/AudioManager.ts). */
+  audio: Record<string, unknown>;
   /** The parents' page (long-press on the start logo). */
   parents: { open: boolean; show: () => void; close: () => void };
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
@@ -270,6 +276,7 @@ export class Game {
   readonly shield: Shield;
   private jetsShown = false;
   readonly synth: DrumSynth;
+  readonly audio: AudioManager;
   readonly quiz: QuizEngine;
   readonly parents: ParentsPage;
   /** The quiz overlay is open: controls and interactions are locked. */
@@ -330,6 +337,7 @@ export class Game {
     levelInfo: {},
     skills: undefined as unknown as DebugHandle['skills'],
     quiz: {},
+    audio: {},
     parents: undefined as unknown as DebugHandle['parents'],
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
@@ -347,6 +355,9 @@ export class Game {
     },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
+    say: (line) => {
+      void this.dialog.say(line);
+    },
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
     smoothing: (on: boolean) => {
       this.clock.enabled = on;
@@ -421,6 +432,15 @@ export class Game {
     this.synth = new DrumSynth(() => this.muteUrl || !this.save.data.settings.sound);
     // The AudioContext may only be created inside the first tap (iOS): StartGate runs this from the gesture.
     startGate.onStart(() => this.synth.unlock());
+    // The file-based audio shares that context: voice, sfx and music lanes (silent when files are missing).
+    this.audio = new AudioManager({
+      getContext: () => this.synth.audioContext,
+      soundOn: () => this.save.data.settings.sound,
+      musicOn: () => this.save.data.settings.music,
+      muteUrl: this.muteUrl,
+    });
+    startGate.onStart(() => this.audio.unlock());
+    this.debug.audio = this.audio.debugHandle();
     this.rings = new GroundRings(this.scene);
     this.player.onStomp((e) => {
       this.rings.spawn(e.x, e.y, e.z, e.radius, 0.4, 0xffc400);
@@ -452,6 +472,7 @@ export class Game {
     this.quiz = new QuizEngine({
       save: this.save,
       synth: this.synth,
+      audio: this.audio,
       ui: uiRoot,
       onOpenChange: (open) => {
         this.quizLocked = open;
@@ -476,6 +497,7 @@ export class Game {
       quiz: this.quiz,
       setEasyJump: (on) => this.setEasyJump(on),
       setSound: (on) => this.setSound(on),
+      setMusic: (on) => this.setMusic(on),
       afterReset: () => {
         try {
           window.location.reload();
@@ -510,6 +532,16 @@ export class Game {
         this.updateControls();
       },
     );
+    // Voice lines: the clip starts with the line and the bubble waits for it; advancing a line stops it.
+    this.dialog.onLineStart((id) => {
+      if (!id) return;
+      void this.audio.playVoice(id).then((r) => {
+        // The clip has just started: keep the bubble for its whole length (plus a tail) from now.
+        if (r.played) this.dialog.setLineDuration(this.dialog.lineElapsed + r.duration + AudioConfig.tail);
+      });
+    });
+    this.dialog.onLineEnd(() => this.audio.stopVoice());
+    wireQuizVoice(this.quiz, this.audio);
     this.interactions = new Interactions(
       uiRoot,
       this.player,
@@ -566,6 +598,7 @@ export class Game {
         ui: uiRoot,
         game: this.api,
         synth: this.synth,
+        audio: this.audio,
         quiz: this.quiz,
       },
       player: this.player,
@@ -806,9 +839,16 @@ export class Game {
     this.save.setEasyJump(on);
   }
 
-  /** Parents' page hook: synthesized sound on/off (saved). */
+  /** Parents' page hook: sound on/off (saved). Off silences voice, effects, drum and music. */
   setSound(on: boolean): void {
     this.save.setSound(on);
+    this.audio.refresh();
+  }
+
+  /** Parents' page hook: background music on/off (saved). */
+  setMusic(on: boolean): void {
+    this.save.setMusic(on);
+    this.audio.refresh();
   }
 
   private makeRhythmDebug(): DebugHandle['rhythm'] {
@@ -951,6 +991,7 @@ export class Game {
 
   private setPaused(on: boolean): void {
     this.paused = on;
+    this.audio.setGamePaused(on);
     if (!on) {
       this.accumulator = 0;
       this.clock.reset();

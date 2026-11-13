@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
+import { audioIndexPlugin } from './vite.audio-index.mjs';
 
 export default defineConfig({
   // Relative base works both for local dev and for GitHub Pages (/superglen/).
   base: './',
+  plugins: [audioIndexPlugin()],
   server: { host: true },
   preview: { host: true },
   build: {

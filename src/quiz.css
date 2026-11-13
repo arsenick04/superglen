@@ -1106,3 +1106,29 @@ html.touch-ui .qp-key {
     transform: translateX(34px);
   }
 }
+
+/* Animal sound as a word (only when the sound file is missing): speech bubble beside the speaker icon. */
+.qp-soundword {
+  position: relative;
+  display: block;
+  margin-left: 0.18em;
+  padding: 0.12em 0.32em;
+  font-size: 0.34em;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: #2b3a67;
+  background: #fff;
+  border: 0.08em solid #4dabf7;
+  border-radius: 0.55em;
+}
+.qp-soundword::before {
+  content: '';
+  position: absolute;
+  left: -0.34em;
+  top: 50%;
+  margin-top: -0.14em;
+  border: 0.18em solid transparent;
+  border-right-color: #4dabf7;
+  border-left-width: 0;
+}

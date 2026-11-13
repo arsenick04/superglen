@@ -14,6 +14,7 @@ import { Story } from './Story';
 import { FLY_MAX, HALL, NINO_SPOT } from './Layout';
 import type { Env } from './Env';
 import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
+import { QuizLines } from '../../quiz/lines';
 
 /**
  * Chapter 2: Latihan Pagi Bersama Nino. One big bright training hall with four floor stations (flying, laser, shield,
@@ -41,6 +42,9 @@ export class Bab2Level implements Level {
     this.ctx = ctx;
     const done = ctx.save.isChapterDone('bab2');
     const { root, physics, scene, game } = ctx;
+    // Voice files (the chapter's lines and Nino's quiz lines) load in the background; the music starts with the first tap.
+    ctx.audio.preload([...ctx.dialog.idsWithPrefix('bab2_'), ...Object.values(QuizLines).map((l) => l.id)]);
+    ctx.audio.music.setScene('latihan');
 
     // Story: Superglen is required (not saved as the last mode) and the switch stays hidden until the chapter is done.
     game.setTransformAllowed(false);

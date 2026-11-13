@@ -2627,20 +2627,34 @@ async function perfScenario(page, check) {
     const HEAP_LIMIT = { test: 16000, bab1: 16000 }; // bytes per frame; before the fixes: ~22000 and ~38000, after ~6000-12000
     for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?fps=0&reset=1', [0, -7.5]]]) {
       await loadFresh(page, q);
+      // Robust measurement: a fresh page is still warming up (JIT tier-up, lazy compilation, heap growth steps), so run 480
+      // steps first (as parkour-perf does), then take the MEDIAN of 3 windows of 600 frames, each starting from a forced gc().
       const bpf = await page.evaluate(({ dest }) => {
         const g = window.__superglen;
         g.pause(true);
         g.advance(5, true);
-        g.walkTo(dest[0], dest[1]);
-        g.advance(30, false);
-        window.gc();
+        const x0 = g.player.x;
+        const z0 = g.player.z;
         const heap = () => performance.memory.usedJSHeapSize;
-        let prev = heap();
-        let acc = 0;
-        const n = 400;
-        for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+        const window1 = () => {
+          g.placePlayer(x0, z0);
+          g.walkTo(dest[0], dest[1]);
+          g.advance(30, false);
+          window.gc();
+          let prev = heap();
+          let acc = 0;
+          const n = 600;
+          for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+          g.cancelWalk();
+          window.gc();
+          return acc / n;
+        };
+        g.walkTo(dest[0], dest[1]);
+        for (let i = 0; i < 480; i++) g.advance(1, false);
         g.cancelWalk();
-        return acc / n;
+        window.gc();
+        const w = [window1(), window1(), window1()].sort((a, b) => a - b);
+        return w[1];
       }, { dest });
       report(`heap ${lname}`, `${Math.round(bpf)} bytes per frame`);
       check(`heap (${lname}): < ${HEAP_LIMIT[lname]} bytes allocated per walking frame`, bpf < HEAP_LIMIT[lname], `${Math.round(bpf)} B/frame`);
@@ -6098,6 +6112,442 @@ async function quizParentsScenario(page, check) {
   check('parents: a discreet gear button exists in the PC help card', gear);
 }
 
+// =====================================================================================================================
+// Audio (package B4): voice lines, sfx, music lane. No real mp3 is needed: clips are injected in the page.
+// =====================================================================================================================
+
+const SOUND_WORDS = ['Meong!', 'Guk guk!', 'Moo!', 'Kukuruyuk!', 'Kwek kwek!', 'Hiiik!', 'Auum!'];
+
+const audioSt = (page) =>
+  page.evaluate(() => {
+    const a = window.__superglen.audio;
+    return {
+      unlocked: a.unlocked, voicePlaying: a.voicePlaying, lastVoiceId: a.lastVoiceId, missing: a.missing, musicScene: a.musicScene,
+      musicPlaying: a.musicPlaying, musicFile: a.musicFile, fading: a.fading, crossfades: a.crossfades, ducked: a.ducked,
+      available: a.available, voicesPlayed: a.voicesPlayed, sfxPlayed: a.sfxPlayed, lastSfxId: a.lastSfxId, lanes: a.lanes, state: a.state,
+    };
+  });
+
+/** Wait (real time) until the JS expression `expr` (with `a` = __superglen.audio) is true. */
+async function audioUntil(page, expr, timeout = 5000) {
+  try {
+    await page.waitForFunction((e) => { const a = window.__superglen.audio; return !!new Function('a', `return ${e}`)(a); }, expr, { timeout, polling: 30 });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Tap start, then pause the game loop (audio keeps its own real-time clock: followPause off). */
+async function audioBoot(page, touch) {
+  await sleep(1500);
+  if (touch) await page.touchscreen.tap(420, 140);
+  else await page.mouse.click(640, 360);
+  await sleep(700);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.pause(true); });
+}
+
+const audioAdv = (page, n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+const audioDialog = (page) => page.evaluate(() => { const d = window.__superglen.dialog; return { open: d.open, id: d.id, text: d.text }; });
+
+async function audioHit(page, sel, touch) {
+  const c = await page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
+  if (touch) await page.touchscreen.tap(c.x, c.y);
+  else {
+    // With the pointer locked, mouse events go to the canvas (PC players advance with E): let go first.
+    await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
+    await sleep(150);
+    await page.mouse.click(c.x, c.y);
+  }
+}
+
+/** The ids a quiz question announces (prompt, then the word / sound id when it has one). */
+const quizVoiceIds = (page, qid) =>
+  page.evaluate((qid) => {
+    const z = window.__superglen.quiz;
+    z.close();
+    z.preview(qid);
+    const out = { kind: z.kind, ids: z.spoken.slice(-2) };
+    z.close();
+    return out;
+  }, qid);
+
+/** Everything the game requested and logged on the console, to check "own origin only", "no 404", "log once". */
+function audioWatch(page) {
+  const w = { reqs: [], bad: [], infos: [] };
+  page.on('request', (r) => w.reqs.push(r.url()));
+  page.on('response', (r) => { if (r.status() >= 400) w.bad.push(`${r.status()} ${r.url()}`); });
+  page.on('console', (m) => { if (m.text().startsWith('[audio]')) w.infos.push(m.text()); });
+  return w;
+}
+
+const loggedOnce = (w, missing) => missing.every((id) => w.infos.filter((t) => t.includes(`"${id}"`)).length === 1);
+
+/** No audio file at all (the shipped state): the game behaves as before, text only, every missing id logged once. */
+async function audioNoFilesScenario(page, check, touch) {
+  const w = audioWatch(page);
+  const tag = touch ? 'touch' : 'desktop';
+  await sleep(1500);
+  let a = await audioSt(page);
+  check(`audio ${tag}: before the first tap there is no AudioContext and nothing plays`, !a.unlocked && a.state === 'none' && !a.voicePlaying);
+  await audioBoot(page, touch);
+  a = await audioSt(page);
+  const idx = await page.evaluate(async () => { const r = await fetch('audio/index.json'); const j = await r.json(); return { ok: r.ok, arr: Array.isArray(j) && j.every((x) => typeof x === 'string'), n: j.length }; });
+  check(`audio ${tag}: the first tap unlocks the shared AudioContext; audio/index.json is a plain array of ids`, a.unlocked && a.state !== 'none' && idx.ok && idx.arr && a.available === idx.n, JSON.stringify({ unlocked: a.unlocked, state: a.state, idx, avail: a.available }));
+  await page.evaluate(() => window.__superglen.audio.setTracks({}));
+  a = await audioSt(page);
+  check(`audio ${tag}: without a level scene the title music scene is chosen; with no track mapped it stays silent`, a.musicScene === 'awal' && !a.musicPlaying);
+
+  // ---- A dialog line without a voice file: the old text-length timing, one info log ----
+  const text = 'Ini kalimat uji yang tidak punya berkas suara sama sekali.';
+  const expectFrames = Math.ceil(Math.max(2.2, 0.09 * text.length) * 60);
+  await page.evaluate((t) => window.__superglen.say({ speaker: 'nino', text: t, id: 'zz_nofile_1' }), text);
+  await audioAdv(page, 4);
+  const d1 = await audioDialog(page);
+  await audioAdv(page, expectFrames - 20);
+  const d2 = await audioDialog(page);
+  await audioAdv(page, 40);
+  const d3 = await audioDialog(page);
+  check(`audio ${tag}: a line without a file shows its text and keeps the default text-length duration`, d1.open && d1.id === 'zz_nofile_1' && d2.open && !d3.open, JSON.stringify({ expectFrames, d1: d1.open, d2: d2.open, d3: d3.open }));
+  await page.evaluate((t) => { const g = window.__superglen; g.say({ speaker: 'nino', text: t, id: 'zz_nofile_1' }); }, text);
+  await audioAdv(page, 4);
+  await audioAdv(page, expectFrames + 30);
+  a = await audioSt(page);
+  check(`audio ${tag}: the missing id is recorded and logged once (even after the line was said twice)`, a.missing.filter((x) => x === 'zz_nofile_1').length === 1 && w.infos.filter((t) => t.includes('"zz_nofile_1"')).length === 1 && a.lastVoiceId === '' && !a.voicePlaying, JSON.stringify({ m: a.missing, logs: w.infos.length }));
+
+  // ---- Quiz: animal sound without its sound file: the sound as a word next to the speaker ----
+  const found = await page.evaluate(() => {
+    const z = window.__superglen.quiz;
+    const out = [];
+    for (const id of z.allIds()) {
+      if (!id.includes('hewan')) continue;
+      z.preview(id);
+      if (z.kind === 'sound') out.push({ id, ids: z.spoken.slice(-2) });
+      z.close();
+      if (out.length >= 1) break;
+    }
+    return out;
+  });
+  check(`audio ${tag}: the hewan bank has a sound question`, found.length === 1, JSON.stringify(found));
+  if (found.length === 1) {
+    await page.evaluate((ids) => { const a = window.__superglen.audio; ids.forEach((i) => a.hide(i)); }, found[0].ids);
+    await sleep(500); // the discovery pass above may still have a word queued; it runs into the hidden ids
+    const base = await audioSt(page);
+    const noAnim = await page.addStyleTag({ content: '.qp *, .qp { animation: none !important; transition: none !important; }' });
+    await page.evaluate((id) => window.__superglen.quiz.preview(id), found[0].id);
+    await audioAdv(page, 6);
+    await sleep(700); // the sound id is asked for after the prompt (real-time chain)
+    const word = await page.evaluate(() => { const e = document.querySelector('.qp-display .qp-soundword'); return e ? e.textContent : null; });
+    check(`audio ${tag}: sound question with a missing sound file shows the animal word in a bubble`, word !== null && SOUND_WORDS.includes(word), String(word));
+    if (touch) {
+      const lay = await page.evaluate(quizLayout);
+      check(`audio ${tag}: the sound-word bubble fits (no overlap, nothing outside the display)`, lay.bad.length === 0, lay.bad.join());
+    }
+    a = await audioSt(page);
+    check(`audio ${tag}: the prompt and the sound ids were reported missing once each, nothing played, no error`, found[0].ids.every((i) => a.missing.includes(i)) && loggedOnce(w, a.missing) && a.sfxPlayed === base.sfxPlayed && a.voicesPlayed === base.voicesPlayed, JSON.stringify(a.missing));
+    await page.evaluate(() => window.__superglen.quiz.close());
+    await noAnim.evaluate((e) => e.remove());
+  }
+  const origin = new globalThis.URL(page.url()).origin;
+  check(`audio ${tag}: every request went to the page's own origin and none failed`, w.reqs.every((u) => u.startsWith('data:') || u.startsWith('blob:') || new globalThis.URL(u).origin === origin) && w.bad.length === 0, w.bad.join(' | '));
+}
+
+/** Injected clips: voice, bubble timing, ducking, crossfade, toggles, quiz sequence. */
+async function audioClipsScenario(page, check, touch) {
+  const tag = touch ? 'touch' : 'desktop';
+  await audioBoot(page, touch);
+  await page.evaluate(() => {
+    const a = window.__superglen.audio;
+    a.inject('music/t1.mp3', 20, true);
+    a.inject('music/t2.mp3', 20, true);
+    a.inject('music/t3.mp3', 2.5, false);
+    a.inject('clip_long', 6, true);
+    a.inject('clip_short', 1, true);
+    a.setTracks({ awal: 't1.mp3', jelajah: 't2.mp3', berubah: 't3.mp3', latihan: '', pertarungan: '' });
+  });
+  let ok = await audioUntil(page, "a.musicPlaying && a.musicFile === 'music/t1.mp3'");
+  let a = await audioSt(page);
+  const m0 = a.lanes.music;
+  check(`audio ${tag}: music starts for the scene (tracks.json mapping) on the music lane, voice lane open`, ok && a.musicScene === 'awal' && m0 > 0.2 && a.lanes.voice > 0.5 && !a.ducked, JSON.stringify(a.lanes));
+
+  // ---- a line with a clip: bubble waits for the clip (6 s), music ducks, then returns ----
+  const line = { speaker: 'nino', text: 'Halo, ini uji suara.', id: 'clip_long' };
+  await page.evaluate((l) => window.__superglen.say(l), line);
+  ok = await audioUntil(page, "a.voicePlaying && a.lastVoiceId === 'clip_long' && a.ducked");
+  a = await audioSt(page);
+  check(`audio ${tag}: a dialog line plays its clip and the music ducks to ~30%`, ok && Math.abs(a.lanes.music - m0 * 0.3) < 0.01, JSON.stringify({ ok, lanes: a.lanes, m0 }));
+  await audioAdv(page, 200); // 3.3 s: the default 2.2 s would be over
+  const d1 = await audioDialog(page);
+  await audioAdv(page, 200); // 6.7 s in total: clip 6 s + tail
+  const d2 = await audioDialog(page);
+  a = await audioSt(page);
+  check(`audio ${tag}: the bubble stays for the clip length instead of the text estimate, then closes`, d1.open && !d2.open, JSON.stringify({ at3: d1.open, at6: d2.open }));
+  check(`audio ${tag}: when the line is over the clip is stopped and the music comes back`, !a.voicePlaying && !a.ducked && Math.abs(a.lanes.music - m0) < 0.001, JSON.stringify({ vp: a.voicePlaying, ducked: a.ducked, lanes: a.lanes }));
+
+  // ---- tapping the bubble advances and stops the clip ----
+  await page.evaluate((l) => window.__superglen.say(l), line);
+  await audioUntil(page, "a.voicePlaying && a.ducked");
+  await audioAdv(page, 30);
+  await audioHit(page, '.dlg-card', touch);
+  await audioAdv(page, 2);
+  const d3 = await audioDialog(page);
+  a = await audioSt(page);
+  check(`audio ${tag}: tapping the bubble advances the line and stops the clip at once`, !d3.open && !a.voicePlaying && !a.ducked, JSON.stringify({ open: d3.open, vp: a.voicePlaying, ducked: a.ducked }));
+  // two queued lines: the second one's clip replaces the first
+  await page.evaluate(() => { const g = window.__superglen; g.say({ speaker: 'nino', text: 'Satu.', id: 'clip_long' }); g.say({ speaker: 'glen', text: 'Dua.', id: 'clip_short' }); });
+  await audioUntil(page, "a.voicePlaying && a.lastVoiceId === 'clip_long'");
+  await audioAdv(page, 30);
+  await audioHit(page, '.dlg-card', touch);
+  await audioAdv(page, 2);
+  ok = await audioUntil(page, "a.voicePlaying && a.lastVoiceId === 'clip_short'");
+  check(`audio ${tag}: the next line's clip starts when the first is tapped away (one voice at a time)`, ok);
+  await audioAdv(page, 100);
+  await audioHit(page, '.dlg-card', touch);
+  await audioAdv(page, 40);
+  a = await audioSt(page);
+  check(`audio ${tag}: after the last line nothing is left playing`, !a.voicePlaying && !(await audioDialog(page)).open, JSON.stringify({ vp: a.voicePlaying }));
+
+  // ---- music scenes crossfade ----
+  const c0 = a.crossfades;
+  await page.evaluate(() => window.__superglen.audio.setScene('jelajah'));
+  ok = await audioUntil(page, "a.musicFile === 'music/t2.mp3'");
+  a = await audioSt(page);
+  check(`audio ${tag}: a scene change crossfades: the new track plays while the old one fades out`, ok && a.crossfades === c0 + 1 && a.fading >= 1 && a.musicScene === 'jelajah', JSON.stringify({ x: a.crossfades, c0, fading: a.fading }));
+  ok = await audioUntil(page, 'a.fading === 0', 4000);
+  check(`audio ${tag}: the faded-out source is released after about a second`, ok);
+  await page.evaluate(() => window.__superglen.audio.setScene('berubah'));
+  ok = await audioUntil(page, "a.musicFile === 'music/t3.mp3'");
+  const back = await audioUntil(page, "a.musicScene === 'jelajah' && a.musicFile === 'music/t2.mp3' && a.musicPlaying", 8000);
+  a = await audioSt(page);
+  check(`audio ${tag}: the "berubah" sting plays once; when it ends the previous scene's music comes back`, ok && back, JSON.stringify({ ok, back, scene: a.musicScene }));
+  await page.evaluate(() => window.__superglen.audio.setScene('latihan'));
+  await audioAdv(page, 4);
+  a = await audioSt(page);
+  check(`audio ${tag}: a scene with an empty track is silence (no error, no log)`, a.musicScene === 'latihan' && !a.musicPlaying, JSON.stringify({ p: a.musicPlaying }));
+  await page.evaluate(() => window.__superglen.audio.setScene('jelajah'));
+  ok = await audioUntil(page, "a.musicPlaying && a.musicFile === 'music/t2.mp3'");
+  check(`audio ${tag}: back to a looping scene starts its track again`, ok);
+
+  // ---- parents page toggles ----
+  await page.evaluate(() => window.__superglen.parents.show());
+  await sleep(200);
+  await audioHit(page, '.toggle[data-setting=music] .switch', touch);
+  await sleep(200);
+  ok = await audioUntil(page, '!a.musicPlaying');
+  a = await audioSt(page);
+  const saved1 = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).settings);
+  check(`audio ${tag}: the music switch silences only the music lane (voice lane stays) and is saved`, ok && a.lanes.music === 0 && a.lanes.voice > 0.5 && saved1.music === false, JSON.stringify({ lanes: a.lanes, saved1 }));
+  await audioHit(page, '.toggle[data-setting=music] .switch', touch);
+  await sleep(200);
+  ok = await audioUntil(page, 'a.musicPlaying');
+  a = await audioSt(page);
+  check(`audio ${tag}: music back on restarts the scene's track`, ok && a.lanes.music > 0.2);
+  await audioHit(page, '.toggle[data-setting=sound] .switch', touch);
+  await sleep(200);
+  a = await audioSt(page);
+  check(`audio ${tag}: the sound switch silences every lane (voice, effects, music)`, a.lanes.voice === 0 && a.lanes.sfx === 0 && a.lanes.music === 0 && !a.musicPlaying, JSON.stringify(a.lanes));
+  await page.evaluate(() => window.__superglen.parents.close());
+  const v0 = a.voicesPlayed;
+  await page.evaluate((l) => window.__superglen.say(l), line);
+  await audioAdv(page, 4);
+  await sleep(300);
+  await audioAdv(page, 150); // the default 2.2 s (20 characters)
+  const d4 = await audioDialog(page);
+  a = await audioSt(page);
+  check(`audio ${tag}: with sound off a line plays no clip and keeps the old duration`, a.voicesPlayed === v0 && !a.voicePlaying && !d4.open, JSON.stringify({ played: a.voicesPlayed - v0, open: d4.open }));
+  await page.evaluate(() => window.__superglen.parents.show());
+  await sleep(200);
+  await audioHit(page, '.toggle[data-setting=sound] .switch', touch);
+  await sleep(200);
+  await page.evaluate(() => window.__superglen.parents.close());
+  ok = await audioUntil(page, 'a.musicPlaying');
+  a = await audioSt(page);
+  check(`audio ${tag}: sound back on opens the lanes again`, ok && a.lanes.voice > 0.5 && a.lanes.music > 0.2, JSON.stringify(a.lanes));
+
+  const mx = await page.evaluate(() => window.__superglen.audio.maxBufferSeconds);
+  check(`audio ${tag}: music (20 s tracks) is streamed: no AudioBuffer longer than 15 s was ever created (longest ${mx.toFixed(1)} s)`, mx > 0 && mx <= 15, String(mx));
+
+  // ---- quiz: prompt, then the spoken word after the prompt ends; repeat button; Nino feedback ----
+  const sp = await page.evaluate(() => window.__superglen.quiz.samples().find((s) => s.kind === 'speak'));
+  const spk = await quizVoiceIds(page, sp.id);
+  check(`audio ${tag}: a "speak" question announces its prompt id and its word id`, spk.kind === 'speak' && spk.ids.length === 2 && spk.ids[0] !== spk.ids[1], JSON.stringify(spk));
+  const [pid, wid] = spk.ids;
+  await page.evaluate(([p, w]) => { const a = window.__superglen.audio; a.inject(p, 1.2, true); a.inject(w, 0.8, true); a.inject('quiz_nino_hampir', 0.6, true); }, [pid, wid]);
+  const seq1 = await page.evaluate(async ({ id, p, w }) => {
+    const g = window.__superglen;
+    const a = g.audio;
+    g.quiz.preview(id);
+    const t0 = performance.now();
+    const log = [];
+    let last = a.voicesPlayed;
+    while (performance.now() - t0 < 8000 && log.length < 2) {
+      if (a.voicesPlayed !== last) { last = a.voicesPlayed; log.push([a.lastVoiceId, performance.now() - t0]); }
+      await new Promise((r) => setTimeout(r, 12));
+    }
+    return { log, p, w };
+  }, { id: sp.id, p: pid, w: wid });
+  check(`audio ${tag}: the question flow reads the prompt, then the word only after the prompt has ended`, seq1.log.length === 2 && seq1.log[0][0] === pid && seq1.log[1][0] === wid && seq1.log[1][1] - seq1.log[0][1] >= 1150, JSON.stringify(seq1.log));
+  await audioUntil(page, '!a.voicePlaying', 4000);
+  const n0 = (await audioSt(page)).voicesPlayed;
+  await audioHit(page, '.qp-say', touch);
+  ok = await audioUntil(page, `a.voicesPlayed >= ${n0 + 2}`, 6000);
+  const seq2 = await page.evaluate((n) => window.__superglen.audio.voiceLog.slice(-n), 2);
+  check(`audio ${tag}: the repeat button replays the prompt and then the word`, ok && seq2[0] === pid && seq2[1] === wid && (await audioSt(page)).voicesPlayed === n0 + 2, JSON.stringify({ seq2, n0 }));
+  await audioUntil(page, '!a.voicePlaying', 4000);
+  await audioAdv(page, 6);
+  const wrongKey = await page.evaluate(() => { const z = window.__superglen.quiz; return z.visibleKeys.find((k) => k !== z.correctKey); });
+  await quizAnswer(page, wrongKey, touch);
+  ok = await audioUntil(page, "a.voicePlaying && a.lastVoiceId === 'quiz_nino_hampir'", 3000);
+  check(`audio ${tag}: Nino's feedback line ("hampir") plays its voice`, ok);
+  await page.evaluate(() => window.__superglen.quiz.close());
+
+  // ---- animal sounds: file present = plays, no bubble; file missing = bubble ----
+  const sounds = await page.evaluate(() => {
+    const z = window.__superglen.quiz;
+    const out = [];
+    for (const id of z.allIds()) {
+      if (!id.includes('hewan')) continue;
+      z.preview(id);
+      if (z.kind === 'sound') out.push({ id, ids: z.spoken.slice(-2) });
+      z.close();
+      if (out.length >= 2) break;
+    }
+    return out;
+  });
+  check(`audio ${tag}: the hewan bank has two sound questions`, sounds.length === 2);
+  if (sounds.length === 2) {
+    const [A, B] = sounds;
+    await page.evaluate(({ A, B }) => {
+      const a = window.__superglen.audio;
+      a.inject(A.ids[0], 0.4, false);
+      a.inject(A.ids[1], 0.8, true);
+      B.ids.forEach((i) => a.hide(i));
+    }, { A, B });
+    await sleep(500);
+    const s0 = (await audioSt(page)).sfxPlayed;
+    await page.evaluate((id) => window.__superglen.quiz.preview(id), A.id);
+    await audioAdv(page, 6);
+    const wordA = await page.evaluate(() => !!document.querySelector('.qp-display .qp-soundword'));
+    ok = await audioUntil(page, `a.sfxPlayed === ${s0 + 1} && a.lastSfxId === '${A.ids[1]}'`, 5000);
+    check(`audio ${tag}: a sound question with its file plays the sound after the prompt and shows no word bubble`, ok && !wordA, JSON.stringify({ ok, wordA }));
+    await audioUntil(page, '!a.voicePlaying', 3000);
+    const s1 = (await audioSt(page)).sfxPlayed;
+    await audioHit(page, '.qp-say', touch);
+    ok = await audioUntil(page, `a.sfxPlayed === ${s1 + 1}`, 5000);
+    check(`audio ${tag}: the speaker button plays the animal sound again`, ok);
+    await page.evaluate(() => window.__superglen.quiz.close());
+    await page.evaluate((id) => window.__superglen.quiz.preview(id), B.id);
+    await audioAdv(page, 6);
+    const wordB = await page.evaluate(() => { const e = document.querySelector('.qp-display .qp-soundword'); return e ? e.textContent : null; });
+    await sleep(1800);
+    a = await audioSt(page);
+    check(`audio ${tag}: the same question without its file shows the animal word and plays nothing`, wordB !== null && SOUND_WORDS.includes(wordB) && a.sfxPlayed === s1 + 1 && a.missing.includes(B.ids[1]), JSON.stringify({ wordB, sfx: a.sfxPlayed - s1 }));
+    await page.evaluate(() => window.__superglen.quiz.close());
+  }
+}
+
+
+/** createMediaElementSource unavailable: the music still plays and ducks through element.volume. */
+async function audioFallbackScenario(page, check) {
+  await audioBoot(page, false);
+  await page.evaluate(() => {
+    const a = window.__superglen.audio;
+    a.inject('music/t1.mp3', 20, true);
+    a.inject('clip_long', 6, true);
+    a.setTracks({ awal: { file: 't1.mp3', volume: 0.5 }, jelajah: 't1.mp3', berubah: '', latihan: '', pertarungan: '' });
+  });
+  let ok = await audioUntil(page, 'a.musicPlaying && a.musicFallback');
+  await sleep(1400); // the 1 s fade-in runs on a timer in this mode
+  let v = await page.evaluate(() => ({ el: window.__superglen.audio.musicElVolume, lane: window.__superglen.audio.lanes.music }));
+  check('audio fallback: music plays through element.volume (per-track volume 0.5 applied)', ok && Math.abs(v.el - v.lane * 0.5) < 0.02, JSON.stringify(v));
+  await page.evaluate(() => window.__superglen.say({ speaker: 'nino', text: 'Halo, ini uji suara.', id: 'clip_long' }));
+  ok = await audioUntil(page, 'a.voicePlaying && a.ducked');
+  v = await page.evaluate(() => ({ el: window.__superglen.audio.musicElVolume, lane: window.__superglen.audio.lanes.music }));
+  check('audio fallback: ducking lowers the element volume to ~30%', ok && Math.abs(v.el - v.lane * 0.5) < 0.02 && v.el < 0.1, JSON.stringify(v));
+}
+
+/** ?mute=1: every lane stays silent, text and timing stay as before. */
+async function audioMuteScenario(page, check) {
+  await audioBoot(page, false);
+  await page.evaluate(() => {
+    const a = window.__superglen.audio;
+    a.inject('music/t1.mp3', 5, true);
+    a.inject('clip_long', 6, true);
+    a.setTracks({ awal: 't1.mp3', jelajah: 't1.mp3', berubah: '', latihan: '', pertarungan: '' });
+  });
+  await sleep(500);
+  let a = await audioSt(page);
+  check('audio mute: ?mute=1 keeps all lanes at zero and the music off', a.unlocked && a.lanes.voice === 0 && a.lanes.sfx === 0 && a.lanes.music === 0 && !a.musicPlaying, JSON.stringify(a.lanes));
+  await page.evaluate(() => window.__superglen.say({ speaker: 'nino', text: 'Halo, ini uji suara.', id: 'clip_long' }));
+  await audioAdv(page, 4);
+  await sleep(300);
+  const d1 = await audioDialog(page);
+  await audioAdv(page, 150);
+  const d2 = await audioDialog(page);
+  a = await audioSt(page);
+  check('audio mute: a line plays no clip, the bubble keeps the text-length duration', d1.open && !d2.open && a.voicesPlayed === 0 && !a.ducked, JSON.stringify({ d1: d1.open, d2: d2.open }));
+  await page.evaluate(() => window.__superglen.audio.setScene('jelajah'));
+  await sleep(300);
+  a = await audioSt(page);
+  check('audio mute: a scene change stays silent', a.musicScene === 'jelajah' && !a.musicPlaying);
+  const found = await page.evaluate(() => {
+    const z = window.__superglen.quiz;
+    for (const id of z.allIds()) {
+      if (!id.includes('hewan')) continue;
+      z.preview(id);
+      if (z.kind === 'sound') return id;
+      z.close();
+    }
+    return '';
+  });
+  await audioAdv(page, 6);
+  const word = await page.evaluate(() => { const e = document.querySelector('.qp-display .qp-soundword'); return e ? e.textContent : null; });
+  check('audio mute: a muted device still gets the animal word for a sound question', found !== '' && word !== null && SOUND_WORDS.includes(word), String(word));
+}
+
+/** Chapter 1 and a quiz with no files: own origin only, nothing 404s, each missing id logged once, the music scene is the level's. */
+async function audioChapterScenario(page, check) {
+  const w = audioWatch(page);
+  await page.goto(URL + '?fps=0&reset=1');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(700);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.pause(true); });
+  let a = await audioSt(page);
+  check('audio chapter: Chapter 1 asks for the "jelajah" music scene and it starts with the first tap', a.unlocked && a.musicScene === 'jelajah');
+  const seen = new Set();
+  for (let i = 0; i < 30; i++) {
+    await audioAdv(page, 45);
+    const d = await audioDialog(page);
+    if (d.open && d.id) seen.add(d.id);
+  }
+  check('audio chapter: Chapter 1 shows its opening line as text', seen.has('bab1_glen_pulang'), [...seen].join());
+  await page.evaluate(() => window.__superglen.quiz.start('mix', 3, 'terminal'));
+  await audioAdv(page, 8);
+  await quizPlay(page, (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n), { wrongs: [0, 1, 0] });
+  await page.keyboard.press('Enter');
+  await audioAdv(page, 30);
+  a = await audioSt(page);
+  const idx = await page.evaluate(async () => (await (await fetch('audio/index.json')).json()));
+  console.log(`   audio chapter: ${a.missing.length} ids without a file, ${a.voicesPlayed} clips played, ${idx.length} files in the manifest`);
+  check('audio chapter: the quiz and Chapter 1 ran; every id without a file was logged exactly once (files that exist simply play)', loggedOnce(w, a.missing) && w.infos.length === a.missing.length, `${a.missing.length} missing, ${w.infos.length} logs`);
+  const origin = new globalThis.URL(page.url()).origin;
+  const foreign = w.reqs.filter((u) => !(u.startsWith('data:') || u.startsWith('blob:') || new globalThis.URL(u).origin === origin));
+  check('audio chapter: no request went to any host other than the game\'s own origin', foreign.length === 0, foreign.slice(0, 3).join(' | '));
+  const mp3 = w.reqs.filter((u) => /\/audio\/[^/]+\.mp3$/.test(new globalThis.URL(u).pathname)).map((u) => new globalThis.URL(u).pathname.split('/').pop().replace('.mp3', ''));
+  check('audio chapter: the game only requests mp3 files the manifest lists, and nothing returned 4xx/5xx', mp3.every((id) => idx.includes(id)) && w.bad.length === 0, JSON.stringify({ mp3, bad: w.bad }));
+  await page.evaluate(() => window.__superglen.loadLevel('bab2'));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 15000 });
+  await sleep(300);
+  a = await audioSt(page);
+  check('audio chapter: Chapter 2 switches to the "latihan" scene', a.musicScene === 'latihan', a.musicScene);
+  await sleep(2500); // the chapter's preload runs in the background
+  const mem = await page.evaluate(() => ({ cap: 120, secs: window.__superglen.audio.cacheSeconds, max: window.__superglen.audio.maxBufferSeconds }));
+  console.log(`   audio chapter: decoded cache ${mem.secs} s, longest buffer ${mem.max.toFixed(1)} s`);
+  check('audio chapter: after Chapter 1 + quiz + Chapter 2 the decoded cache stays under its cap and no buffer is longer than 15 s', mem.secs <= mem.cap && mem.max <= 15, JSON.stringify(mem));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -6254,6 +6704,15 @@ async function main() {
     results.push(await runScenario(browser, 'quiz-render-touch', phone281, (p, c) => quizRenderScenario(p, c, true), '?level=test&fps=0&quizseed=1&reset=1'));
     results.push(await runScenario(browser, 'quiz-terminals', { viewport: { width: 1280, height: 720 } }, quizTerminalScenario, '?fps=0&reset=1&quizseed=1'));
     results.push(await runScenario(browser, 'quiz-parentspage', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, quizParentsScenario, '?fps=0&quizseed=1'));
+
+    // Audio (voice, sfx, music lane): no files / injected clips / mute / network
+    results.push(await runScenario(browser, 'audio', { viewport: { width: 1280, height: 720 } }, (p, c) => audioNoFilesScenario(p, c, false), '?level=test&fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'audio-touch', phone281, (p, c) => audioNoFilesScenario(p, c, true), '?level=test&fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'audio-clips', { viewport: { width: 1280, height: 720 } }, (p, c) => audioClipsScenario(p, c, false), '?level=test&fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'audio-clips-touch', phone281, (p, c) => audioClipsScenario(p, c, true), '?level=test&fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'audio-fallback', { viewport: { width: 1280, height: 720 }, initScript: () => { const P = window.AudioContext.prototype; P.createMediaElementSource = () => { throw new Error('no MES'); }; } }, audioFallbackScenario, '?level=test&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'audio-mute', { viewport: { width: 1280, height: 720 } }, audioMuteScenario, '?level=test&fps=0&reset=1&quizseed=1&mute=1'));
+    results.push(await runScenario(browser, 'audio-chapter', { viewport: { width: 1280, height: 720 } }, audioChapterScenario, '?level=test&fps=0'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 

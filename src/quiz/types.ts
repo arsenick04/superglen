@@ -95,7 +95,7 @@ export interface QuizResult {
 }
 
 /** Spoken-line hook (audio arrives in package B4): `audioId` may be missing from disk, never break on that. */
-export type SpeakListener = (audioId: string, text: string, kind: 'prompt' | 'word' | 'nino') => void;
+export type SpeakListener = (audioId: string, text: string, kind: 'prompt' | 'word' | 'nino' | 'sound') => void;
 
 /** Everything the panel needs to draw the album. */
 export interface AlbumPage {

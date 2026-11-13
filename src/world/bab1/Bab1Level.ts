@@ -50,6 +50,9 @@ export class Bab1Level implements Level {
     this.ctx = ctx;
     const { root, physics, scene } = ctx;
     this.done = ctx.save.isChapterDone('bab1');
+    // Voice files of the chapter (if any) load in the background; the music starts with the first tap.
+    ctx.audio.preload(ctx.dialog.idsWithPrefix('bab1_'));
+    ctx.audio.music.setScene('jelajah');
     // First visit: no powers yet. Afterwards the unlocked ones (from the save) stay on.
     if (!this.done) ctx.game.setSkills({ laser: false, shield: false, fly: false });
     // The star (touch) / Q (PC) back to Glen exists from the moment of the costume on (Story.transform) and for returning players.

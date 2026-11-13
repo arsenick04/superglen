@@ -3,6 +3,7 @@ import type { DrumSynth } from '../audio/DrumSynth';
 import type { SaveStore } from '../core/Save';
 import type { QuizBank } from '../quiz/QuizBank';
 import { QuizLines, type QuizLine } from '../quiz/lines';
+import { soundWord } from '../quiz/soundWords';
 import { CATEGORIES, type AlbumPage, type Category, type Choice, type Display, type PreparedQuestion, type QuizReason, type StickerRef } from '../quiz/types';
 import { faceSvg } from './DialogBubble';
 import { CATEGORY_COLORS, CATEGORY_NAMES, QuizIcons } from './QuizIcons';
@@ -11,7 +12,9 @@ export interface PanelDeps {
   synth: DrumSynth;
   bank: QuizBank;
   save: SaveStore;
-  speak: (audioId: string, text: string, kind: 'prompt' | 'word' | 'nino') => void;
+  speak: (audioId: string, text: string, kind: 'prompt' | 'word' | 'nino' | 'sound') => void;
+  /** True when this animal-sound file cannot be heard (missing or sound off): the panel then shows the sound as a word. */
+  soundNeedsWord: (soundId: string) => boolean;
   onOpenChange: (open: boolean) => void;
   album: () => AlbumPage[];
 }
@@ -357,7 +360,7 @@ export class QuizPanel {
   private speakQuestion(audioId: string, prompt: string, d: Display): void {
     this.deps.speak(audioId, prompt, 'prompt');
     if (d.kind === 'speak') this.deps.speak(d.speak_audio_id, d.text, 'word');
-    if (d.kind === 'sound') this.deps.speak(d.sound_id, '', 'word');
+    if (d.kind === 'sound') this.deps.speak(d.sound_id, '', 'sound');
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -550,6 +553,9 @@ export class QuizPanel {
         break;
       case 'sound': {
         inner.appendChild(el('span', 'qp-sound', QuizIcons.speaker));
+        // No sound file (or sound off): a pre-reader still needs a clue, so the animal's own word shows in a speech bubble.
+        const word = this.deps.soundNeedsWord(d.sound_id) ? soundWord(d.item) : '';
+        if (word) inner.appendChild(el('span', 'qp-soundword', word));
         if (this.dev) inner.appendChild(el('span', 'qp-dev', d.sound_id));
         break;
       }
