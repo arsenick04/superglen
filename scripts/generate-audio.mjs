@@ -3,10 +3,10 @@
  * Generates speech MP3s with ElevenLabs: `npm run audio -- [options]`.
  *
  *   --dry-run            print the plan (counts, characters, quota share) without calling TTS
- *   --sample             exactly one line per category (the shortest one)
+ *   --sample             one line per category (the shortest); bab* gives one per speaker
  *   --limit=N            at most N files this run
  *   --category=a,b       bab1|bab2|quiz_nino|quiz_hitung|quiz_inggris|quiz_mandarin|quiz_hewan|quiz_baca|speak_en|speak_zh
- *                        (--sample with --category: only those categories)
+ *                        (bab* categories give one glen and one nino line)
  *   --only=id,id         only these ids (regenerates even if the file exists)
  *   --force              regenerate even if up to date
  *
@@ -108,7 +108,9 @@ async function main() {
   if (CATS) jobs = jobs.filter((j) => CATS.includes(j.category));
   if (SAMPLE) {
     const best = new Map();
-    for (const j of jobs) if (!best.has(j.category) || j.text.length < best.get(j.category).text.length) best.set(j.category, j);
+    // story categories (bab*) get one line per speaker (glen and nino), others one per category
+    const key = (j) => (j.category.startsWith('bab') ? `${j.category}:${j.speaker}` : j.category);
+    for (const j of jobs) if (!best.has(key(j)) || j.text.length < best.get(key(j)).text.length) best.set(key(j), j);
     jobs = [...best.values()];
   }
   const force = FORCE || !!ONLY;

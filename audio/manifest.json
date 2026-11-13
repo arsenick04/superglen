@@ -1,1 +1,62 @@
-{}
+{
+  "bab1_glen_siapa": {
+    "id": "bab1_glen_siapa",
+    "speaker": "glen",
+    "voice_id": "c2RkS6PiHQTOV2e57rF5",
+    "lang": "id",
+    "hash": "b01ffc6dcf57416b",
+    "chars": 11,
+    "bytes": 18015,
+    "generated_at": "2026-11-13T15:56:59.341Z"
+  },
+  "bab1_nino_halo": {
+    "id": "bab1_nino_halo",
+    "speaker": "nino",
+    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
+    "lang": "id",
+    "hash": "3541c0bbe92c06d1",
+    "chars": 19,
+    "bytes": 24284,
+    "generated_at": "2026-11-13T15:57:00.225Z"
+  },
+  "quiz_nino_hebat": {
+    "id": "quiz_nino_hebat",
+    "speaker": "nino",
+    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
+    "lang": "id",
+    "hash": "e6c6fd1ade57d96d",
+    "chars": 12,
+    "bytes": 18015,
+    "generated_at": "2026-11-13T15:57:00.996Z"
+  },
+  "quiz_hitung_001": {
+    "id": "quiz_hitung_001",
+    "speaker": "nino",
+    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
+    "lang": "id",
+    "hash": "20f9e74ab5fcb30f",
+    "chars": 16,
+    "bytes": 20941,
+    "generated_at": "2026-11-13T15:57:01.751Z"
+  },
+  "quiz_inggris_009_kata": {
+    "id": "quiz_inggris_009_kata",
+    "speaker": "nino",
+    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
+    "lang": "en",
+    "hash": "b3c369686016bff7",
+    "chars": 4,
+    "bytes": 12163,
+    "generated_at": "2026-11-13T15:57:02.464Z"
+  },
+  "quiz_mandarin_004_kata": {
+    "id": "quiz_mandarin_004_kata",
+    "speaker": "mandarin",
+    "voice_id": "SAz9YHcvj6GT2YYXdXww",
+    "lang": "zh",
+    "hash": "a4c3313deb180960",
+    "chars": 1,
+    "bytes": 13835,
+    "generated_at": "2026-11-13T15:57:03.099Z"
+  }
+}
