@@ -28,8 +28,6 @@ export const AudioConfig = {
   crossfade: 1.0,
   /** Decoded voice / sfx clips are kept up to this many seconds in total (oldest used goes first). */
   cacheSeconds: 120,
-  /** Decoded music tracks kept (each is large: PCM of a whole song). */
-  musicCache: 2,
   /** Sfx that may sound at the same time. */
   maxSfx: 4,
   /** A dialog bubble stays this long after the clip ends (s). */
@@ -63,11 +61,21 @@ export interface AudioOptions {
   muteUrl: boolean;
 }
 
+/** One streamed music track: an HTMLAudioElement (never decoded into memory) routed through its own gain node. */
 interface MusicPlay {
   scene: MusicScene;
   file: string;
-  src: AudioBufferSourceNode;
+  el: HTMLAudioElement;
+  /** null when createMediaElementSource is unavailable: the element's own volume does the ducking and fading. */
+  node: MediaElementAudioSourceNode | null;
   gain: GainNode;
+  /** Per-track volume from tracks.json (0..1). */
+  vol: number;
+  /** Fallback mode only: the fade level 0..1. */
+  level: number;
+  timer: ReturnType<typeof setTimeout> | null;
+  ramp: ReturnType<typeof setInterval> | null;
+  dead: boolean;
 }
 
 type ParamLike = {
@@ -119,12 +127,17 @@ export class AudioManager {
   sfxPlayed = 0;
 
   // ---- Music ----
-  private tracks: Record<string, string> = {};
+  private tracks: Record<string, { file: string; vol: number }> = {};
+  /** Test hook: music keys that play from a blob URL instead of a file. */
+  private readonly injectedMusic = new Map<string, string>();
+  /** The looping scene to go back to when a one-shot scene (berubah) ends. */
+  private returnScene: MusicScene | null = null;
+  /** Longest AudioBuffer this manager ever created or decoded (tests: music must never be one). */
+  maxBufferSeconds = 0;
   private tracksLoaded: Promise<void> | null = null;
   private wanted: MusicScene | null = null;
   private current: MusicPlay | null = null;
-  private readonly fading = new Set<AudioBufferSourceNode>();
-  private readonly musicBufs = new Map<string, AudioBuffer>();
+  private readonly fading = new Set<MusicPlay>();
   private sceneToken = 0;
   crossfades = 0;
 
@@ -149,6 +162,7 @@ export class AudioManager {
         'pointerdown',
         () => {
           if (this.ctx && this.ctx.state !== 'running') this.syncRunning();
+          this.kickMusic(); // a play() the browser refused earlier succeeds inside a gesture
         },
         { capture: true, passive: true },
       );
@@ -235,6 +249,12 @@ export class AudioManager {
       const want = !(this.hidden || (this.gamePaused && this.followPause));
       if (want && ctx.state !== 'running') void ctx.resume().catch(() => undefined);
       else if (!want && ctx.state === 'running') void ctx.suspend().catch(() => undefined);
+      // The streamed music element follows (iOS pauses media in the background; it does not resume by itself).
+      if (want) this.kickMusic();
+      else {
+        this.current?.el.pause();
+        for (const f of this.fading) f.el.pause();
+      }
     } catch {
       // ignore
     }
@@ -306,6 +326,7 @@ export class AudioManager {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+      this.maxBufferSeconds = Math.max(this.maxBufferSeconds, buf.duration);
       this.cache.set(id, buf);
       this.cacheSecs += buf.duration;
       this.evict();
@@ -510,6 +531,8 @@ export class AudioManager {
     this.setParam(this.voiceGain.gain, this.lane.voice, fast);
     this.setParam(this.sfxGain.gain, this.lane.sfx, fast);
     const down = this.voiceActive;
+    if (this.current && !this.current.node) this.fallbackVolume(this.current);
+    for (const f of this.fading) if (!f.node) this.fallbackVolume(f);
     this.setParam(this.musicGain.gain, this.lane.music, instant ? 0.001 : down ? AudioConfig.duckDownTime : AudioConfig.duckUpTime);
   }
 
@@ -528,6 +551,8 @@ export class AudioManager {
    * scene is remembered and starts with the tap.
    */
   setScene(scene: MusicScene | null): void {
+    // Remember the looping scene a one-shot (berubah) interrupts, to return to it when the sting ends.
+    if (scene !== null && !SCENE_LOOPS[scene] && this.wanted !== null && SCENE_LOOPS[this.wanted]) this.returnScene = this.wanted;
     this.wanted = scene;
     this.applyScene();
   }
@@ -542,7 +567,8 @@ export class AudioManager {
   }
 
   get musicPlaying(): boolean {
-    return this.current !== null;
+    const c = this.current;
+    return c !== null && !c.el.paused && !c.el.ended;
   }
 
   private applyScene(): void {
@@ -562,44 +588,133 @@ export class AudioManager {
       await this.ready;
       await this.loadTracks();
       if (token !== this.sceneToken) return;
-      const file = this.tracks[scene] ?? '';
-      const key = `music/${file}`;
+      const entry = this.tracks[scene];
+      const key = entry && entry.file ? `music/${entry.file}` : '';
       if (this.current) this.fadeOutCurrent(AudioConfig.crossfade);
-      if (!file) return; // silence for this scene
-      let buf: AudioBuffer | null = this.injected.get(key) ?? this.musicBufs.get(key) ?? null;
-      if (!buf) {
+      if (!key || !entry) return; // silence for this scene
+      let url = this.injectedMusic.get(key) ?? '';
+      if (!url) {
+        if (this.failed.has(key)) return;
         if (!this.available.has(key)) {
           this.noteMissing(key);
           return;
         }
-        buf = await this.fetchMusic(key);
-        if (token !== this.sceneToken || !buf) return;
+        url = `${this.base}audio/${key}`;
       }
-      const ctx = this.ctx;
-      const dest = this.musicGain;
-      if (!ctx || !dest) return;
-      const src = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      src.buffer = buf;
-      src.loop = SCENE_LOOPS[scene];
-      src.connect(gain);
-      gain.connect(dest);
-      const play: MusicPlay = { scene, file: key, src, gain };
-      src.onended = (): void => {
-        if (this.current === play) this.current = null;
-        try {
-          src.disconnect();
-          gain.disconnect();
-        } catch {
-          // ignore
-        }
-      };
-      this.setRamp(gain, 0, 0);
-      src.start();
-      this.setRamp(gain, 1, AudioConfig.crossfade);
-      this.current = play;
+      this.startMusic(scene, key, url, entry.vol);
     } catch {
       // never break the game for music
+    }
+  }
+
+  /** Start streaming one track. The file is never decoded: the browser streams it through the element. */
+  private startMusic(scene: MusicScene, key: string, url: string, vol: number): void {
+    const ctx = this.ctx;
+    const dest = this.musicGain;
+    if (!ctx || !dest) return;
+    const el = new Audio();
+    el.preload = 'auto';
+    el.loop = SCENE_LOOPS[scene];
+    el.setAttribute('playsinline', '');
+    (el as unknown as { playsInline: boolean }).playsInline = true;
+    const gain = ctx.createGain();
+    let node: MediaElementAudioSourceNode | null = null;
+    try {
+      node = ctx.createMediaElementSource(el);
+      node.connect(gain);
+      gain.connect(dest);
+    } catch {
+      node = null; // fall back to element.volume
+    }
+    const play: MusicPlay = { scene, file: key, el, node, gain, vol, level: 0, timer: null, ramp: null, dead: false };
+    el.addEventListener('ended', () => {
+      if (play.dead || this.current !== play) return;
+      this.current = null;
+      this.releaseMusic(play);
+      // A one-shot (berubah) is over: go back to the scene it interrupted.
+      if (!SCENE_LOOPS[scene] && this.wanted === scene) this.setScene(this.returnScene);
+    });
+    el.addEventListener('error', () => {
+      if (play.dead) return;
+      this.failed.add(key);
+      console.warn(`[audio] could not play "${key}"`);
+      if (this.current === play) this.current = null;
+      this.releaseMusic(play);
+    });
+    this.current = play;
+    el.src = url;
+    this.rampMusic(play, vol, 0, 0);
+    this.rampMusic(play, vol, 1, AudioConfig.crossfade);
+    this.kickMusic();
+  }
+
+  /** (Re)try play() on the current track. iOS refuses it outside a gesture: the next tap retries. */
+  private kickMusic(): void {
+    const c = this.current;
+    if (!c || c.dead || c.el.ended || !c.el.paused) return;
+    if (this.hidden || (this.gamePaused && this.followPause)) return;
+    try {
+      const p = c.el.play();
+      if (p && typeof p.catch === 'function') p.catch(() => undefined);
+    } catch {
+      // retried on the next tap
+    }
+  }
+
+  /** Fade a track's level to `to` (0..1) over `seconds`, through its gain node, or through element.volume in fallback mode. */
+  private rampMusic(play: MusicPlay, vol: number, to: number, seconds: number): void {
+    if (play.node) {
+      this.setRamp(play.gain, to * vol, seconds);
+      return;
+    }
+    if (play.ramp) clearInterval(play.ramp);
+    play.ramp = null;
+    const from = play.level;
+    if (seconds <= 0) {
+      play.level = to;
+      this.fallbackVolume(play);
+      return;
+    }
+    const t0 = performance.now();
+    play.ramp = setInterval(() => {
+      const f = Math.min(1, (performance.now() - t0) / (seconds * 1000));
+      play.level = from + (to - from) * f;
+      this.fallbackVolume(play);
+      if (f >= 1 && play.ramp) {
+        clearInterval(play.ramp);
+        play.ramp = null;
+      }
+    }, 50);
+  }
+
+  private fallbackVolume(play: MusicPlay): void {
+    try {
+      play.el.volume = Math.max(0, Math.min(1, this.lane.music * play.vol * play.level));
+    } catch {
+      // ignore
+    }
+  }
+
+  /** Pause, drop the source and free the element (an element that kept its src would keep streaming / buffering). */
+  private releaseMusic(play: MusicPlay): void {
+    play.dead = true;
+    if (play.timer) clearTimeout(play.timer);
+    if (play.ramp) clearInterval(play.ramp);
+    play.timer = null;
+    play.ramp = null;
+    this.fading.delete(play);
+    try {
+      play.el.pause();
+      play.el.removeAttribute('src');
+      play.el.load();
+    } catch {
+      // ignore
+    }
+    try {
+      play.node?.disconnect();
+      play.gain.disconnect();
+    } catch {
+      // ignore
     }
   }
 
@@ -610,8 +725,7 @@ export class AudioManager {
         try {
           const res = await fetch(`${this.base}audio/music/tracks.json`, { cache: 'no-cache' });
           if (!res.ok) return;
-          const j = (await res.json()) as Record<string, unknown>;
-          for (const s of MUSIC_SCENES) if (typeof j[s] === 'string') this.tracks[s] = j[s] as string;
+          this.setTrackMap((await res.json()) as Record<string, unknown>);
         } catch {
           // silence
         }
@@ -620,25 +734,16 @@ export class AudioManager {
     await this.tracksLoaded;
   }
 
-  private async fetchMusic(key: string): Promise<AudioBuffer | null> {
-    if (this.failed.has(key)) return null;
-    try {
-      const ctx = this.ctx;
-      if (!ctx) return null;
-      const res = await fetch(`${this.base}audio/${key}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buf = await ctx.decodeAudioData(await res.arrayBuffer());
-      this.musicBufs.set(key, buf);
-      while (this.musicBufs.size > AudioConfig.musicCache) {
-        const old = this.musicBufs.keys().next().value as string;
-        if (old === key) break;
-        this.musicBufs.delete(old);
+  /** An entry is a file name, or `{ file, volume? }` (volume 0..1). Empty = silence. */
+  private setTrackMap(j: Record<string, unknown>): void {
+    this.tracks = {};
+    for (const sc of MUSIC_SCENES) {
+      const e = j[sc];
+      if (typeof e === 'string') this.tracks[sc] = { file: e, vol: 1 };
+      else if (e && typeof e === 'object' && typeof (e as { file?: unknown }).file === 'string') {
+        const v = (e as { volume?: unknown }).volume;
+        this.tracks[sc] = { file: (e as { file: string }).file, vol: typeof v === 'number' ? Math.max(0, Math.min(1, v)) : 1 };
       }
-      return buf;
-    } catch (err) {
-      this.failed.add(key);
-      console.warn(`[audio] could not load "${key}":`, err instanceof Error ? err.message : err);
-      return null;
     }
   }
 
@@ -663,26 +768,14 @@ export class AudioManager {
 
   private fadeOutCurrent(seconds: number): void {
     const cur = this.current;
-    const ctx = this.ctx;
-    if (!cur || !ctx) return;
+    if (!cur) return;
     this.current = null;
     this.crossfades++;
-    this.setRamp(cur.gain, 0, seconds);
-    this.fading.add(cur.src);
-    cur.src.onended = (): void => {
-      this.fading.delete(cur.src);
-      try {
-        cur.src.disconnect();
-        cur.gain.disconnect();
-      } catch {
-        // ignore
-      }
-    };
-    try {
-      cur.src.stop(ctx.currentTime + seconds + 0.05);
-    } catch {
-      // ignore
-    }
+    // At most 2 elements alive (the new one and this one): an older fade is cut short.
+    for (const f of [...this.fading]) this.releaseMusic(f);
+    this.rampMusic(cur, cur.vol, 0, seconds);
+    this.fading.add(cur);
+    cur.timer = setTimeout(() => this.releaseMusic(cur), seconds * 1000 + 100);
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -763,8 +856,35 @@ export class AudioManager {
       inject(id: string, seconds: number, beep = false): boolean {
         const ctx = self.ctx;
         if (!ctx) return false;
+        if (id.startsWith('music/')) {
+          // Music is streamed: a tiny generated WAV (8 kHz, 16 bit) behind a blob URL.
+          const sr = 8000;
+          const n = Math.max(1, Math.round(sr * seconds));
+          const buf = new ArrayBuffer(44 + n * 2);
+          const v = new DataView(buf);
+          const str = (o: number, t: string): void => {
+            for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i));
+          };
+          str(0, 'RIFF');
+          v.setUint32(4, 36 + n * 2, true);
+          str(8, 'WAVEfmt ');
+          v.setUint32(16, 16, true);
+          v.setUint16(20, 1, true);
+          v.setUint16(22, 1, true);
+          v.setUint32(24, sr, true);
+          v.setUint32(28, sr * 2, true);
+          v.setUint16(32, 2, true);
+          v.setUint16(34, 16, true);
+          str(36, 'data');
+          v.setUint32(40, n * 2, true);
+          if (beep) for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(1600 * Math.sin((2 * Math.PI * 440 * i) / sr)), true);
+          self.injectedMusic.set(id, URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+          self.hiddenIds.delete(id);
+          return true;
+        }
         const sr = ctx.sampleRate;
         const buf = ctx.createBuffer(1, Math.max(1, Math.round(sr * seconds)), sr);
+        self.maxBufferSeconds = Math.max(self.maxBufferSeconds, buf.duration);
         if (beep) {
           const d = buf.getChannelData(0);
           for (let i = 0; i < d.length; i++) d[i] = 0.05 * Math.sin((2 * Math.PI * 440 * i) / sr);
@@ -772,6 +892,16 @@ export class AudioManager {
         self.hiddenIds.delete(id);
         self.injected.set(id, buf);
         return true;
+      },
+      /** Fallback mode (no MediaElementSource): the element's own volume. */
+      get musicElVolume() {
+        return self.current ? self.current.el.volume : -1;
+      },
+      get musicFallback() {
+        return !!self.current && !self.current.node;
+      },
+      get maxBufferSeconds() {
+        return self.maxBufferSeconds;
       },
       /** Pretend this file does not exist (drops it from the manifest, the clips and the cache). */
       hide(id: string): void {
@@ -789,8 +919,8 @@ export class AudioManager {
         self.setScene((MUSIC_SCENES as readonly string[]).includes(scene) ? (scene as MusicScene) : null);
       },
       /** Replace the scene -> file map (as if tracks.json said so) and re-apply the current scene. */
-      setTracks(map: Record<string, string>): void {
-        self.tracks = { ...map };
+      setTracks(map: Record<string, unknown>): void {
+        self.setTrackMap(map);
         self.tracksLoaded = Promise.resolve();
         if (self.current) self.fadeOutCurrent(0.05);
         self.applyScene();

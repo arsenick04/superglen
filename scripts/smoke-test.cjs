@@ -2627,20 +2627,34 @@ async function perfScenario(page, check) {
     const HEAP_LIMIT = { test: 16000, bab1: 16000 }; // bytes per frame; before the fixes: ~22000 and ~38000, after ~6000-12000
     for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?fps=0&reset=1', [0, -7.5]]]) {
       await loadFresh(page, q);
+      // Robust measurement: a fresh page is still warming up (JIT tier-up, lazy compilation, heap growth steps), so run 480
+      // steps first (as parkour-perf does), then take the MEDIAN of 3 windows of 600 frames, each starting from a forced gc().
       const bpf = await page.evaluate(({ dest }) => {
         const g = window.__superglen;
         g.pause(true);
         g.advance(5, true);
-        g.walkTo(dest[0], dest[1]);
-        g.advance(30, false);
-        window.gc();
+        const x0 = g.player.x;
+        const z0 = g.player.z;
         const heap = () => performance.memory.usedJSHeapSize;
-        let prev = heap();
-        let acc = 0;
-        const n = 400;
-        for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+        const window1 = () => {
+          g.placePlayer(x0, z0);
+          g.walkTo(dest[0], dest[1]);
+          g.advance(30, false);
+          window.gc();
+          let prev = heap();
+          let acc = 0;
+          const n = 600;
+          for (let i = 0; i < n; i++) { g.advance(1, false); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+          g.cancelWalk();
+          window.gc();
+          return acc / n;
+        };
+        g.walkTo(dest[0], dest[1]);
+        for (let i = 0; i < 480; i++) g.advance(1, false);
         g.cancelWalk();
-        return acc / n;
+        window.gc();
+        const w = [window1(), window1(), window1()].sort((a, b) => a - b);
+        return w[1];
       }, { dest });
       report(`heap ${lname}`, `${Math.round(bpf)} bytes per frame`);
       check(`heap (${lname}): < ${HEAP_LIMIT[lname]} bytes allocated per walking frame`, bpf < HEAP_LIMIT[lname], `${Math.round(bpf)} B/frame`);
@@ -6303,9 +6317,9 @@ async function audioClipsScenario(page, check, touch) {
   check(`audio ${tag}: the faded-out source is released after about a second`, ok);
   await page.evaluate(() => window.__superglen.audio.setScene('berubah'));
   ok = await audioUntil(page, "a.musicFile === 'music/t3.mp3'");
-  const ended = await audioUntil(page, '!a.musicPlaying', 6000);
+  const back = await audioUntil(page, "a.musicScene === 'jelajah' && a.musicFile === 'music/t2.mp3' && a.musicPlaying", 8000);
   a = await audioSt(page);
-  check(`audio ${tag}: the "berubah" sting plays once and ends (no loop); the scene name stays`, ok && ended && a.musicScene === 'berubah', JSON.stringify({ ok, ended }));
+  check(`audio ${tag}: the "berubah" sting plays once; when it ends the previous scene's music comes back`, ok && back, JSON.stringify({ ok, back, scene: a.musicScene }));
   await page.evaluate(() => window.__superglen.audio.setScene('latihan'));
   await audioAdv(page, 4);
   a = await audioSt(page);
@@ -6349,6 +6363,9 @@ async function audioClipsScenario(page, check, touch) {
   ok = await audioUntil(page, 'a.musicPlaying');
   a = await audioSt(page);
   check(`audio ${tag}: sound back on opens the lanes again`, ok && a.lanes.voice > 0.5 && a.lanes.music > 0.2, JSON.stringify(a.lanes));
+
+  const mx = await page.evaluate(() => window.__superglen.audio.maxBufferSeconds);
+  check(`audio ${tag}: music (20 s tracks) is streamed: no AudioBuffer longer than 15 s was ever created (longest ${mx.toFixed(1)} s)`, mx > 0 && mx <= 15, String(mx));
 
   // ---- quiz: prompt, then the spoken word after the prompt ends; repeat button; Nino feedback ----
   const sp = await page.evaluate(() => window.__superglen.quiz.samples().find((s) => s.kind === 'speak'));
@@ -6429,6 +6446,26 @@ async function audioClipsScenario(page, check, touch) {
   }
 }
 
+
+/** createMediaElementSource unavailable: the music still plays and ducks through element.volume. */
+async function audioFallbackScenario(page, check) {
+  await audioBoot(page, false);
+  await page.evaluate(() => {
+    const a = window.__superglen.audio;
+    a.inject('music/t1.mp3', 20, true);
+    a.inject('clip_long', 6, true);
+    a.setTracks({ awal: { file: 't1.mp3', volume: 0.5 }, jelajah: 't1.mp3', berubah: '', latihan: '', pertarungan: '' });
+  });
+  let ok = await audioUntil(page, 'a.musicPlaying && a.musicFallback');
+  await sleep(1400); // the 1 s fade-in runs on a timer in this mode
+  let v = await page.evaluate(() => ({ el: window.__superglen.audio.musicElVolume, lane: window.__superglen.audio.lanes.music }));
+  check('audio fallback: music plays through element.volume (per-track volume 0.5 applied)', ok && Math.abs(v.el - v.lane * 0.5) < 0.02, JSON.stringify(v));
+  await page.evaluate(() => window.__superglen.say({ speaker: 'nino', text: 'Halo, ini uji suara.', id: 'clip_long' }));
+  ok = await audioUntil(page, 'a.voicePlaying && a.ducked');
+  v = await page.evaluate(() => ({ el: window.__superglen.audio.musicElVolume, lane: window.__superglen.audio.lanes.music }));
+  check('audio fallback: ducking lowers the element volume to ~30%', ok && Math.abs(v.el - v.lane * 0.5) < 0.02 && v.el < 0.1, JSON.stringify(v));
+}
+
 /** ?mute=1: every lane stays silent, text and timing stay as before. */
 async function audioMuteScenario(page, check) {
   await audioBoot(page, false);
@@ -6505,6 +6542,10 @@ async function audioChapterScenario(page, check) {
   await sleep(300);
   a = await audioSt(page);
   check('audio chapter: Chapter 2 switches to the "latihan" scene', a.musicScene === 'latihan', a.musicScene);
+  await sleep(2500); // the chapter's preload runs in the background
+  const mem = await page.evaluate(() => ({ cap: 120, secs: window.__superglen.audio.cacheSeconds, max: window.__superglen.audio.maxBufferSeconds }));
+  console.log(`   audio chapter: decoded cache ${mem.secs} s, longest buffer ${mem.max.toFixed(1)} s`);
+  check('audio chapter: after Chapter 1 + quiz + Chapter 2 the decoded cache stays under its cap and no buffer is longer than 15 s', mem.secs <= mem.cap && mem.max <= 15, JSON.stringify(mem));
 }
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
@@ -6669,6 +6710,7 @@ async function main() {
     results.push(await runScenario(browser, 'audio-touch', phone281, (p, c) => audioNoFilesScenario(p, c, true), '?level=test&fps=0&reset=1&quizseed=1'));
     results.push(await runScenario(browser, 'audio-clips', { viewport: { width: 1280, height: 720 } }, (p, c) => audioClipsScenario(p, c, false), '?level=test&fps=0&reset=1&quizseed=1'));
     results.push(await runScenario(browser, 'audio-clips-touch', phone281, (p, c) => audioClipsScenario(p, c, true), '?level=test&fps=0&reset=1&quizseed=1'));
+    results.push(await runScenario(browser, 'audio-fallback', { viewport: { width: 1280, height: 720 }, initScript: () => { const P = window.AudioContext.prototype; P.createMediaElementSource = () => { throw new Error('no MES'); }; } }, audioFallbackScenario, '?level=test&fps=0&reset=1'));
     results.push(await runScenario(browser, 'audio-mute', { viewport: { width: 1280, height: 720 } }, audioMuteScenario, '?level=test&fps=0&reset=1&quizseed=1&mute=1'));
     results.push(await runScenario(browser, 'audio-chapter', { viewport: { width: 1280, height: 720 } }, audioChapterScenario, '?level=test&fps=0'));
 
