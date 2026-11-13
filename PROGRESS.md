@@ -476,12 +476,71 @@ Draw call dan segitiga di jalan Chapter 1: paling banyak 68 dan 53,4 ribu, dalam
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
+## Paket malam B3: Tantangan Pintar (13 November 2026): selesai
+
+Orkestrator (Fable) hanya mendelegasikan dan meninjau. Kode oleh `gameplay-dev` (sonnet), bank soal dan dialog oleh `content-writer` (haiku), pemeriksaan oleh `qa-tester` (haiku).
+
+### Yang selesai
+- **Mesin kuis**: satu tantangan berisi 3 soal, selalu 3 kartu besar. Tidak bisa gagal: kartu salah bergoyang lalu hilang, Nino bilang "Hampir! Coba lagi.", dan setelah dua kali salah hanya kartu benar yang tersisa. Jawaban benar memberi kembang api, tambur, dan "Hebat, Glen!".
+- **Bank soal awal: 100 soal**, 20 per kategori di 3 tingkat, di `src/data/quiz/`:
+  | Kategori | Isi |
+  |---|---|
+  | Berhitung | hitung benda 1 sampai 10, tambah dengan gambar, angka sampai 10 |
+  | Bahasa Inggris | hewan, buah, benda, warna, keluarga |
+  | Mandarin | salam, angka, warna, hewan, tempat (rumah, sekolah, bank, rumah sakit) |
+  | Tebak hewan | dari suara, dari bayangan, dari teka-teki |
+  | Membaca | huruf, suku kata, kata pendek dengan gambar |
+- **Kesulitan adaptif** per kategori: tiga jawaban benar di percobaan pertama berturut-turut menaikkan tingkat; tiga kali tidak langsung benar dalam lima soal terakhir menurunkannya. Soal yang baru muncul tidak diulang.
+- **Hadiah**: koin Barongsai (1 per soal, +2 kalau langsung benar), satu stiker per tantangan, album stiker per kategori, kepingan memori ilmuwan tiap 5 tantangan (isinya menyusul).
+- **Chapter 2**: tiap skill terbuka setelah satu tantangan. Terbang: berhitung. Laser: bahasa Inggris. Perisai: Mandarin. Skill yang sudah terbuka tidak ditanya lagi.
+- **Terminal Nino**: di lab (setelah Chapter 1, soal campuran), di aula latihan (pilih salah satu dari 5 kategori lewat ikon), dan di level uji.
+- **Halaman orang tua**: tekan lama logo di layar awal selama 3 detik (di PC: roda gigi kecil di kartu bantuan). Isinya tingkat dan persentase tiap kategori, koin, stiker, saklar "lompat mudah" dan suara, dan tombol reset progres.
+- **`npm run check:quiz`** memvalidasi bank soal: skema, id ganda, kunci jawaban, hasil hitungan, gambar yang tidak terdaftar.
+- 10 kalimat Nino untuk kuis ditambahkan ke `audio/dialog.json` (total 45).
+
+### Yang belum (sesuai rencana)
+- **Suara**: soal belum dibacakan dan suara hewan belum ada. Tombol pengeras suara sudah ada dan terhubung ke id audio; isinya di paket B4. Sampai saat itu kategori "tebak hewan dari suara" belum bisa dimainkan dengan benar: hanya ikon pengeras suara yang berdenyut.
+- **Gambar asli**: semua gambar soal masih emoji sementara. Gambar dari Higgsfield belum dibuat (butuh persetujuan contoh dulu).
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm ci`, `npm run build`, `npm run typecheck` | Lulus |
+| `npm run check:quiz` | Lulus, 0 peringatan |
+| `npm run check:reach` dan `--strict` | Lulus, 0 error, 0 peringatan |
+| Smoke test penuh oleh `qa-tester` (44 skenario) | Lulus 1145 dari 1145, 0 error console |
+| Skenario kuis (dijalankan ulang orkestrator) | Lulus 103 dari 103 |
+| Kunci jawaban 100 soal (diperiksa orkestrator dengan skrip terpisah) | Semua benar |
+
+Semua 100 soal dites muat tanpa meluap di layar 844x281 dan 667x375. **Fps di perangkat asli belum diukur.**
+
+### Masalah yang diketahui
+- Gambar sementara untuk "meja" berupa piring, dan tiga emoji (kursi, pensil, meja) mungkin tidak tampil di iPhone lama.
+- 18 kata Mandarin perlu dicek nadanya oleh penutur asli sebelum suaranya dibuat: 你好, 谢谢, 再见, 三, 五, 八, 十, 红色, 蓝色, 黄色, 绿色, 狮子, 猫, 狗, 家, 学校, 银行, 医院.
+- Di PC, setelah kuis ditutup kursor kadang perlu diklik sekali lagi untuk dikunci.
+- Ukuran unduhan 5,3 MB (1,9 MB terkompresi).
+- Smoke test penuh sekarang sekitar 20 menit.
+
+### Catatan proses
+- Agen mesin kuis terhenti karena batas pemakaian lalu dilanjutkan. Seluruh kodenya ternyata sudah tersimpan di commit bertanda "WIP B3", jadi commit itulah yang berisi B3.
+- Kontainer sesi sempat dimulai ulang saat pemeriksaan akhir; pemeriksaan diulang dari awal dan hasil di atas berasal dari pengulangan itu.
+
+### Yang hanya bisa dinilai di iPhone asli
+- Kenyamanan mengetuk kartu dengan bilah Safari tampil.
+- Tekan lama logo 3 detik di iOS.
+- Tampilan emoji dan aksara Han di iOS.
+
+### Kredit terpakai
+Higgsfield: 0. ElevenLabs: 0.
+
 ## Pengingat untuk pemilik proyek
 
-- **Soundtrack Superglen (paket B4):** siapkan file musik Anda. Unggah ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus) dan tentukan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan. Pengingat ini juga tertulis di `CLAUDE.md` supaya muncul di akhir paket B3 dan di awal paket B4.
+- **Soundtrack Superglen (paket B4, paket berikutnya):** unggah file musik Anda ke folder `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, sebaiknya bisa diulang mulus), lalu sebutkan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, pertarungan.
+- **ID suara ElevenLabs (paket B4):** isi `voice_id` di `audio/voices.json` untuk Glen, Nino, Aara, tikus, warga, dan Mandarin, dari Voice Library di dashboard ElevenLabs.
+- **Nada Mandarin:** minta penutur asli memeriksa 18 kata di bagian B3 di atas.
 
 ## Untuk dicoba besok pagi
 Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/ di Safari iPhone (landscape) atau di PC.
-1. **Terbang**: di Chapter 2 atau `?level=test`, terbang lalu lepas tombol. Superglen harus turun dengan kecepatan sedang. Tekan sekali di udara dan ia langsung terbang lagi.
-2. **Tombol Berubah**: setelah Chapter 1 selesai, ketuk bintang di kanan atas (PC: Q) untuk kembali jadi Glen, lalu ketuk lagi jadi Superglen.
-3. **Naik ke atap**: di Chapter 1 ikuti koin emas (rumah dengan lompatan biasa, ruko tingkat 2, puncak gedung Barongsai tingkat 4). Di `?level=test`, cari Gang Tendang yang bergaris emas-putih dan tendang dinding bolak-balik sampai ke bintang.
+1. **Tantangan Pintar di lab**: setelah Chapter 1, dekati layar biru Nino di lab dan tekan tombol bicara. Biarkan anak menjawab 3 soal sendiri dan lihat koin serta stikernya.
+2. **Chapter 2 dengan kunci kuis**: mulai Chapter 2 (`?reset=1` untuk mengulang). Tiap skill sekarang terbuka setelah 3 soal. Perhatikan soal mana yang terlalu mudah atau terlalu sulit.
+3. **Halaman orang tua**: di layar awal, tekan lama logo 3 detik. Lihat statistik per kategori dan coba saklar "lompat mudah".
