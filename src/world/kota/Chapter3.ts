@@ -4,6 +4,9 @@ import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
 import { MarketRats } from './MarketRats';
+import { personGeo } from './CityPeople';
+import { Celebration } from '../Celebration';
+import { Easings } from '../../gameplay/Sequence';
 
 const BUN_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="25" ry="20" fill="#fff" stroke="#d9c7a8" stroke-width="3"/><circle cx="32" cy="17" r="5" fill="#f3e6d2" stroke="#d9c7a8" stroke-width="2"/></svg>';
 const CAKE_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="30" width="52" height="24" rx="8" fill="#ffa6c9" stroke="#e0709b" stroke-width="3"/><path d="M6 36 Q14 28 22 36 Q30 44 38 36 Q46 28 58 36" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="22" r="7" fill="#e53935"/></svg>';
@@ -61,6 +64,8 @@ export class Chapter3 {
   private hintedSuper = false;
   private saidLucu = false;
   private counting = false;
+  private scene = false;
+  private party: Celebration | null = null;
   private beamTick = 0;
   /** The top-centre counter: bakpao and kue picked up out of what Bu Lina misses. */
   private readonly hud: HTMLDivElement;
@@ -101,6 +106,7 @@ export class Chapter3 {
         step: () => this.step,
         arrived: () => this.arrived,
         advance: (s: Ch3Step) => this.setStep(s),
+        done: () => this.over,
         rats: () => this.rats.list(),
         tame: (i: number) => this.rats.tame(i),
         collect: () => this.rats.collectAll(),
@@ -124,6 +130,12 @@ export class Chapter3 {
     this.hooks.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
     if (this.step === '' || this.step === 'chase') this.pointToMarket();
     if (this.step === 'count') this.runCount();
+    if (this.step === 'rakus' || this.step === 'closing') {
+      // Resumed after the count: the market is calm again (food back at the stalls), the scene plays.
+      this.rats.clearFoods();
+      this.hud.classList.remove('show');
+      this.runRakus(this.step === 'closing');
+    }
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
       if (this.step === '') {
@@ -142,6 +154,7 @@ export class Chapter3 {
     this.ctx.save.setBab3(step, s.tamed);
     this.ctx.game.debugInfo.ch3Step = step;
     if (step === 'count') this.runCount();
+    if (step === 'rakus') this.runRakus(false);
   }
 
   /** A rat was tamed: remember it (saved), and when the last one is gone the chase is won. */
@@ -221,6 +234,99 @@ export class Chapter3 {
   }
 
   /** While counting: the beam shows the nearest fallen food. */
+  /**
+   * Si Tikus Rakus (a scene, no fight): he pops up at the crossing, laughs "Hihihi, semua makanan ini milikku!", runs to a drain
+   * shouting that he will be KING one day. Then the closing: a figure waves in the shade of the pagoda and is gone.
+   */
+  private runRakus(skipRakus: boolean): void {
+    if (this.scene) return;
+    this.scene = true;
+    const { ctx } = this;
+    const { seq, dialog, game, cameraRig } = ctx;
+    seq.run(async () => {
+      await seq.waitUntil(() => startGate.started);
+      const info = game.debugInfo;
+      info.ch3Scene = 'start';
+      game.setControlsEnabled(false);
+      ctx.objectives.clear();
+      this.hooks.setGoal(null);
+      const hub = MARKET.hub;
+      if (!skipRakus) {
+        cameraRig.setFraming(this.tmp.set(hub.x, 1.2, hub.z), { weight: 0.6, distance: 5 });
+        const mesh = this.rats.makeRakus();
+        mesh.position.set(hub.x, 0, hub.z);
+        mesh.visible = true;
+        info.ch3Scene = 'rakus';
+        mesh.scale.setScalar(0.01);
+        ctx.sfx.bling();
+        ctx.fx.sparkles.burst(hub.x, 0.8, hub.z, 30, 4, 0xffe6a8, { gravity: 2, life: 0.9, up: 0.8 });
+        ctx.fx.flashes.spawn(hub.x, 1.0, hub.z, 3, 0.7, 0xffffff);
+        await seq.tween(0.5, (t) => mesh.scale.setScalar(0.01 + 2.2 * t), Easings.easeOutBack);
+        mesh.rotation.y = 0;
+        await dialog.say(L.rakusTawa, { lockControls: true });
+        await dialog.say(L.glenHei, { lockControls: true });
+        // He runs down the street to the north drain, laughing; the line is said while he runs.
+        const d = MARKET.drains[MARKET.rakus.drain];
+        const x0 = mesh.position.x;
+        const z0 = mesh.position.z;
+        mesh.rotation.y = Math.atan2(d.x - x0, d.z - z0);
+        void dialog.say(L.rakusRaja, { lockControls: true });
+        const dur = Math.hypot(d.x - x0, d.z - z0) / 8;
+        await seq.tween(dur, (t) => {
+          mesh.position.set(x0 + (d.x - x0) * t, Math.abs(Math.sin(t * dur * 7)) * 0.22, z0 + (d.z - z0) * t);
+          cameraRig.setFraming(this.tmp.set(mesh.position.x, 1.2, mesh.position.z), { weight: 0.6, distance: 5 });
+        });
+        ctx.fx.sparkles.burst(d.x, 0.4, d.z, 18, 3, 0xdfe6f2, { gravity: 1.5, life: 0.7, up: 0.7 });
+        ctx.sfx.pop();
+        mesh.visible = false;
+        await dialog.say(L.ninoRakus, { lockControls: true });
+        this.setStep('closing');
+      }
+      info.ch3Scene = 'figure';
+      await this.closing();
+      info.ch3Scene = 'end';
+    });
+  }
+
+  /** The figure in the shade: waves, then vanishes in a soft sparkle. Then the chapter is done. */
+  private async closing(): Promise<void> {
+    const { ctx } = this;
+    const { seq, dialog, game, cameraRig } = ctx;
+    const f = MARKET.figure;
+    const geo = personGeo(0x34406a, 0x34406a);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x34406a, transparent: true, opacity: 0, fog: true });
+    const fig = new THREE.Mesh(geo, mat);
+    fig.position.set(f.x, 0, f.z);
+    fig.rotation.y = Math.atan2(MARKET.hub.x - f.x, MARKET.hub.z - f.z);
+    fig.scale.setScalar(1.15);
+    fig.castShadow = false;
+    ctx.root.add(fig);
+    cameraRig.setFraming(this.tmp.set(f.x, 1.3, f.z), { weight: 0.55, distance: 4 });
+    await seq.tween(0.8, (t) => (mat.opacity = 0.8 * t));
+    void dialog.say(L.glenSiapa, { lockControls: true });
+    let t = 0;
+    // A friendly wave: the whole silhouette sways side to side for a few seconds.
+    await seq.waitUntil(() => {
+      t += 1 / 60;
+      fig.rotation.z = Math.sin(t * 7) * 0.12;
+      return t > 3.2;
+    });
+    await seq.tween(0.7, (u) => (mat.opacity = 0.8 * (1 - u)));
+    ctx.fx.sparkles.burst(f.x, 1, f.z, 20, 2.6, 0xbcd0ff, { gravity: 0.5, life: 1.1, up: 0.6 });
+    fig.removeFromParent();
+    geo.dispose();
+    mat.dispose();
+    await dialog.say(L.ninoSiapa, { lockControls: true });
+    cameraRig.setFraming(null);
+    game.setControlsEnabled(true);
+    // The chapter is done: stars and confetti, a few coins, the city is free again.
+    this.complete();
+    ctx.save.finishCityMission('bab3', 5);
+    ctx.quiz.coinsChanged();
+    this.party = new Celebration(ctx, 'Chapter 3 selesai!', ctx.fx.sparkles);
+    await this.party.play();
+  }
+
   private foodBeam(): void {
     if (this.step !== 'count' || !this.counting || this.gotAll) return;
     if (++this.beamTick % 15 !== 0) return;
@@ -256,6 +362,7 @@ export class Chapter3 {
   }
 
   update(dt: number): void {
+    if (this.over) return;
     const info = this.ctx.game.debugInfo;
     info.ch3Step = this.step;
     info.ch3Arrived = this.arrived;
@@ -280,6 +387,8 @@ export class Chapter3 {
   complete(): void {
     if (this.over) return;
     this.over = true;
+    this.ctx.game.pulseButton('transform', false);
+    this.hud.classList.remove('show');
     this.ctx.save.markChapterDone('bab3');
     this.ctx.save.setBab3('', []);
     this.ctx.objectives.clear();

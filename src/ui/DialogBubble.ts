@@ -15,6 +15,13 @@ const FACES: Readonly<Record<string, FaceStyle>> = {
   glen: { bg: '#ff9f43', ring: '#ffffff' },
   nino: { bg: '#4dabf7', ring: '#ffffff' },
   aara: { bg: '#ff8fb1', ring: '#ffffff' },
+  // The market vendor and the big greedy rat (grey-violet with round ears).
+  lina: { bg: '#e95b7a', ring: '#ffffff' },
+  rakus: {
+    bg: '#8d7a93',
+    ring: '#ffffff',
+    extra: '<circle cx="10" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="54" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="10" cy="14" r="4" fill="#f5a3b5"/><circle cx="54" cy="14" r="4" fill="#f5a3b5"/>',
+  },
   // Red face, gold ring and a gold star on the forehead.
   superglen: {
     bg: '#e8453c',

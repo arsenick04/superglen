@@ -52,11 +52,11 @@ const FOOD_COLOR: Record<FoodKind, number> = { bakpao: 0xffffff, kue: 0xffa6c9, 
 /** Per-kind shape of the same bun geometry (x z size, y size): a round bakpao, a flat wide kue, a long thin carrot-ish bun. */
 const FOOD_SHAPE: Record<FoodKind, readonly [number, number]> = { bakpao: [1, 1], kue: [1.25, 0.65], sayur: [0.7, 1.3] };
 
-function ratGeo(): THREE.BufferGeometry {
-  const fur = 0xa3a9bd;
+function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
   const pink = 0xf5a3b5;
   const dark = 0x2b1a12;
   return merge([
+    ...(belly ? [{ g: sph(0.3, 8, 6), c: 0xe9d6c4, p: [0, 0.27, 0.12] as const, s: [1.05, 0.95, 1.1] as const }] : []),
     { g: sph(0.26, 8, 6), c: fur, p: [0, 0.27, 0], s: [0.9, 0.8, 1.3] },
     { g: sph(0.19, 8, 6), c: fur, p: [0, 0.36, 0.3] },
     { g: sph(0.07, 6, 4), c: pink, p: [0, 0.33, 0.47] },
@@ -288,6 +288,22 @@ export class MarketRats {
   setVisible(on: boolean): void {
     this.shown = on;
     this.ratMesh.visible = this.foodMesh.visible = this.props.visible = on;
+  }
+
+  /** The big rat of the scene (Si Tikus Rakus): one extra mesh, only drawn while he is around. */
+  makeRakus(): THREE.Mesh {
+    const g = ratGeo(0x8d7a93, true);
+    this.geos.push(g);
+    const m = new THREE.Mesh(g, this.mats[0]);
+    m.castShadow = false;
+    m.visible = false;
+    this.ctx.root.add(m);
+    return m;
+  }
+
+  /** Every food is gone at once (resuming after the count). */
+  clearFoods(): void {
+    this.fs.fill(F_GONE);
   }
 
   /** Test helper: pick up every bakpao and kue that lies on the street (as if walked over). */

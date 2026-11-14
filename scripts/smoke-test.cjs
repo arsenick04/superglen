@@ -8750,6 +8750,51 @@ async function bab3CountScenario(page, check, touch) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+/** Play frames in chunks and record every distinct dialog line, the scene markers and the celebration. */
+async function ch3Watch(page, frames) {
+  const seen = [];
+  let scenes = [];
+  let star = false;
+  let locked = 0;
+  for (let f = 0; f < frames; f += 20) {
+    const r = await page.evaluate(async () => {
+      await window.__superglen.advanceAsync(20, false);
+      const g = window.__superglen;
+      const st = document.querySelector('.chapter-star');
+      return { line: g.dialog.open ? g.dialog.text : '', scene: g.levelInfo.ch3Scene || '', star: !!st && st.classList.contains('show'), ctl: g.controlsEnabled };
+    });
+    if (r.line && seen[seen.length - 1] !== r.line) seen.push(r.line);
+    if (r.scene && scenes[scenes.length - 1] !== r.scene) scenes.push(r.scene);
+    star = star || r.star;
+    if (r.ctl === false) locked++;
+  }
+  return { seen, scenes, star, locked };
+}
+
+async function bab3EndScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch3Save({ bab3: { step: 'rakus', tamed: [0, 1, 2, 3, 4, 5, 6] } }), touch);
+  const w = await ch3Watch(page, 2600);
+  const has = (t) => w.seen.some((l) => l.indexOf(t) >= 0);
+  const order = ['milikku', 'jangan lari', 'RAJA', 'Tikus Rakus', 'bayangan', 'cari tahu'].map((t) => w.seen.findIndex((l) => l.indexOf(t) >= 0));
+  check(`bab3-end ${tag}: Si Tikus Rakus laughs, runs off shouting about being KING, Nino reacts, then the figure line, in that order`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify(order) + JSON.stringify(w.seen));
+  check(`bab3-end ${tag}: scene markers rakus -> figure -> end, controls locked during it`, w.scenes.join('>').indexOf('rakus>figure>end') >= 0 && w.locked > 5, JSON.stringify(w.scenes));
+  const s = await ch3Info(page);
+  const ppl = await page.evaluate(() => window.__d3.people());
+  check(`bab3-end ${tag}: Chapter 3 is done and saved ("bab3" in chaptersDone, step cleared), celebration shown`, s.save.chaptersDone.includes('bab3') && s.save.bab3.step === '' && w.star, JSON.stringify([s.save.chaptersDone, s.save.bab3, w.star]));
+  check(`bab3-end ${tag}: the city is free again: no beam, residents offer missions, controls back`, s.obj === false && ppl.every((p) => p.available) && (await page.evaluate(() => window.__superglen.controlsEnabled !== false)), JSON.stringify(ppl.map((p) => p.available)));
+  // Reload: no chapter any more.
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(700);
+  check(`bab3-end ${tag}: after a reload there is no Chapter 3 scene`, await page.evaluate(() => !window.__ch3), '');
+  // Resume at "closing": only the figure.
+  await ch3Open(page, ch3Save({ bab3: { step: 'closing', tamed: [0, 1, 2, 3, 4, 5, 6] } }), touch);
+  const w2 = await ch3Watch(page, 1500);
+  check(`bab3-end ${tag}: resuming at "closing" plays only the figure, then ends the chapter`, w2.seen.every((l) => l.indexOf('milikku') < 0) && w2.seen.some((l) => l.indexOf('bayangan') >= 0) && (await ch3Info(page)).save.chaptersDone.includes('bab3'), JSON.stringify(w2.seen));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -8910,6 +8955,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab3-rats-resume', { viewport: { width: 1280, height: 720 } }, bab3ResumeScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-count', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3CountScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-count-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3CountScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));
