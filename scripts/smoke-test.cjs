@@ -1320,11 +1320,14 @@ async function celebrationChecks(page, check, d, beat, opts) {
   const tag = opts.tag || (opts.skipPoles ? 'touch' : 'desktop');
   const chapter = opts.chapter || 1;
   let shown = false;
+  // The audio clock keeps running while the loop is stepped, so the effect layer can sound (it skips a suspended context).
+  await page.evaluate(() => { if (window.__superglen.audio) window.__superglen.audio.followPause = false; });
   for (let i = 0; i < 400 && !shown; i += 4) {
     await d.adv(4);
     shown = await page.evaluate(() => document.querySelector('.bab1-star').classList.contains('show'));
   }
   check(`done star (${tag}): appears at the end of the chapter`, shown);
+  check(`done star (${tag}): the chapter-done fanfare plays with it`, await page.evaluate(() => !window.__superglen.audio.unlocked || window.__superglen.sfx.counts.fanfare >= 1), JSON.stringify(await page.evaluate(() => ({ u: window.__superglen.audio.unlocked, st: window.__superglen.audio.state, f: window.__superglen.sfx.counts.fanfare, b: window.__superglen.sfx.blocked }))));
   // Freeze the CSS animation at the middle of its hold phase (the peak), deterministic whatever the machine speed.
   await page.evaluate(() => {
     for (const a of document.querySelector('.bab1-star').getAnimations()) { a.pause(); a.currentTime = 1500; }
@@ -3988,10 +3991,11 @@ const AUDIO_STUB = () => {
   class Gain extends Node { constructor() { super(); this.gain = new Param(); } }
   class Osc extends Node {
     constructor() { super(); this.type = 'sine'; this.frequency = new Param(); }
-    start() { aud.oscs.push({ type: this.type, sets: this.frequency.sets }); }
+    // Effects of the procedural Sfx layer carry `sgSfx`: this stub only counts the drum synth's nodes.
+    start() { if (!this.sgSfx) aud.oscs.push({ type: this.type, sets: this.frequency.sets }); }
     stop() {}
   }
-  class Src extends Node { start() { aud.noises++; } stop() {} }
+  class Src extends Node { start() { if (!this.sgSfx) aud.noises++; } stop() {} }
   class Filt extends Node { constructor() { super(); this.frequency = new Param(); this.Q = { value: 0 }; } }
   window.AudioContext = class {
     constructor() { aud.ctxs++; this.currentTime = 1; this.sampleRate = 8000; this.state = 'running'; this.destination = new Node(); }
@@ -6548,6 +6552,493 @@ async function audioChapterScenario(page, check) {
   check('audio chapter: after Chapter 1 + quiz + Chapter 2 the decoded cache stays under its cap and no buffer is longer than 15 s', mem.secs <= mem.cap && mem.max <= 15, JSON.stringify(mem));
 }
 
+// =====================================================================================================================
+// Procedural sound effects (src/audio/Sfx.ts): every event plays its sound, cooldowns, voice limit, mute, no context.
+// The AudioContext's node creation is wrapped (SFX_NODES) so "a sound played" also means "real nodes were made".
+// =====================================================================================================================
+
+const SFX_NODES = () => {
+  const P = window.AudioContext && window.AudioContext.prototype;
+  const n = { osc: 0, src: 0 };
+  window.__nodes = n;
+  if (!P) return;
+  const co = P.createOscillator;
+  P.createOscillator = function () { n.osc++; return co.apply(this, arguments); };
+  const cs = P.createBufferSource;
+  P.createBufferSource = function () { n.src++; return cs.apply(this, arguments); };
+};
+
+const sfxMark = (page) => page.evaluate(() => window.__superglen.sfx.logCount);
+/** Log entries since mark `m` (oldest first): { id, hz, t }. */
+const sfxSinceFull = (page, m) =>
+  page.evaluate((m) => {
+    const s = window.__superglen.sfx;
+    const l = s.log;
+    return l.slice(Math.max(0, l.length - (s.logCount - m)));
+  }, m);
+const sfxSince = async (page, m) => (await sfxSinceFull(page, m)).map((e) => e.id);
+const sfxNodes = (page) => page.evaluate(() => ({ ...window.__nodes }));
+const sfxInfo = (page) =>
+  page.evaluate(() => {
+    const s = window.__superglen.sfx;
+    return { played: s.played, voices: s.voices, peak: s.peakVoices, stolen: s.stolen, blocked: s.blocked, counts: s.counts, jet: s.jetRunning, jetLive: s.jetSrcLive, jetUpdates: s.jetUpdates, jetGain: s.jetGain, clock: s.clock };
+  });
+
+/** Tap start, keep the audio clock running while the game loop is paused, forget what played so far. */
+async function sfxBoot(page, touch) {
+  await sleep(1500);
+  if (touch) await page.touchscreen.tap(420, 140);
+  else await page.mouse.click(640, 360);
+  await sleep(700);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.pause(true); g.sfx.reset(); });
+}
+
+/** `heard(label, fn, ids)`: run fn, then every id must be in the log and real audio nodes must have been made. */
+function sfxHeard(page, check) {
+  return async (label, fn, ids) => {
+    const m = await sfxMark(page);
+    const n0 = await sfxNodes(page);
+    await fn();
+    const got = await sfxSince(page, m);
+    const n1 = await sfxNodes(page);
+    check(`sfx: ${label} plays ${ids.join(' + ')} (real nodes created)`, ids.every((i) => got.includes(i)) && n1.osc + n1.src > n0.osc + n0.src, got.join(','));
+    return got;
+  };
+}
+
+async function sfxDesktopScenario(page, check) {
+  await sfxBoot(page, false);
+  const d = makeSkillsDriver(page);
+  const heard = sfxHeard(page, check);
+  const st0 = await page.evaluate(() => ({ state: window.__superglen.audio.state, unlocked: window.__superglen.audio.unlocked, lane: window.__superglen.audio.lanes.sfx, ids: window.__superglen.sfx.ids.length }));
+  check('sfx: the first tap unlocks the shared AudioContext (running) and the sfx lane is open', st0.unlocked && st0.state === 'running' && st0.lane > 0.5, JSON.stringify(st0));
+  await d.step(30);
+
+  // ---- Glen: jump, double jump, landing -------------------------------------------------------------------------------
+  await heard('a Glen jump', () => d.tap('Space', 2), ['jump']);
+  await heard('the landing', () => d.land(), ['land']);
+  await d.step(30);
+
+  // ---- transform ---------------------------------------------------------------------------------------------------------------
+  await heard('Glen -> Superglen', async () => { await d.mode('superglen'); await d.step(2); }, ['transformUp']);
+  await d.step(30);
+  await heard('a Superglen jump (bigger "hup")', () => d.tap('Space', 2), ['jumpSuper']);
+  await d.land();
+  await d.step(30);
+  await heard('a double jump in the air (Superglen)', async () => { await d.tap('Space', 2); await d.step(14); await d.tap('Space', 2); }, ['doubleJump']);
+  await d.land();
+  await d.step(30);
+  await heard('Superglen -> Glen', async () => { await d.mode('glen'); await d.step(2); }, ['transformDown']);
+  await d.step(30);
+
+  // ---- mantle (Glen, ledge 0.4 m above the head) ---------------------------------------------------------------------------------
+  await page.evaluate(() => { const g = window.__superglen; g.testBox(-4.7, 1.25, 2, 1.5, 1.25, 1.2); g.setCameraYaw(0); g.teleportFeet(-6.6, 1.0, 2); });
+  await d.step(1);
+  await heard('pulling up onto a ledge (mantle)', async () => {
+    await d.down('d');
+    for (let i = 0; i < 110; i++) {
+      await d.step(1);
+      if ((await sfxSince(page, 0)).length && (await page.evaluate(() => window.__superglen.sfx.counts.mantle)) > 0) break;
+    }
+    await d.up('d');
+    await d.step(10);
+  }, ['mantle']);
+  await d.land();
+  await d.step(30);
+
+  // ---- wall kick (Superglen, tall wall) -----------------------------------------------------------------------------------------
+  await page.evaluate(() => { const g = window.__superglen; g.rhythm.setWallKick(true); g.testBox(-4.7, 4.5, 20, 1.5, 4.5, 1.2, false, true); });
+  await d.mode('superglen');
+  await d.step(30);
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(-6.66, 20); g.setCameraYaw(0); g.rhythm.setLevel(0); });
+  await d.step(8);
+  await heard('kicking off a wall (tok + up-sweep)', async () => {
+    await d.down('d');
+    await d.step(8);
+    await d.tap('Space', 1);
+    for (let i = 0; i < 80 && !(d.last.vy <= 0.6 && !d.last.grounded); i++) await d.step(1);
+    await d.tap('Space', 6);
+    await d.up('d');
+  }, ['wallKick']);
+  await d.land();
+  await d.step(30);
+
+  // ---- laser ------------------------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  await d.addTarget(0, 1.2, -8, 'front');
+  await d.step(10);
+  await heard('a laser shot that hits', () => d.tap('j', 4), ['laserFire', 'laserHit']);
+  await d.clearTargets();
+  await d.step(40);
+  await heard('a laser shot that finds nothing', () => d.tap('j', 4), ['laserFire', 'laserMiss']);
+  await d.step(40);
+  await d.place(17, 4);
+  await d.face('d');
+  await d.step(10);
+  await heard('a practice target that flips', () => d.tap('j', 30), ['laserFire', 'laserHit', 'targetFlip']);
+  await d.step(30);
+
+  // ---- shield -----------------------------------------------------------------------------------------------------------------------
+  await d.place(0, 0);
+  await d.face('w');
+  await heard('raising the shield', async () => { await d.down('k'); await d.step(10); }, ['shieldUp']);
+  await heard('a ball bouncing off the shield', async () => { await d.ball(0, 1.0, -7.5, 7); await d.step(100); }, ['shieldBlock']);
+  await heard('lowering the shield', async () => { await d.up('k'); await d.step(70); }, ['shieldDown']);
+  await d.step(30);
+  await heard('a ball touching Superglen without the shield (harmless bonk)', async () => { await d.ball(0, 1.0, -7.5, 7); await d.step(110); }, ['ballHit']);
+  await d.step(30);
+
+  // ---- flight: ignition, loop that follows the rise speed, stop, nodes ended ---------------------------------------------------------
+  const fly = async () => {
+    await d.place(0, 10);
+    await d.down('Space');
+    for (let i = 0; i < 90 && !d.last.jets; i++) await d.step(1);
+    for (let i = 0; i < 12; i++) await d.step(2);
+    await sleep(350);
+  };
+  {
+    const m = await sfxMark(page);
+    const n0 = await sfxNodes(page);
+    await fly();
+    const a = await sfxInfo(page);
+    const got = await sfxSince(page, m);
+    const n1 = await sfxNodes(page);
+    check('sfx flight: the jets play the ignition puff, then the loop starts (one loop, 2 source nodes)', got.includes('jetStart') && got.includes('jetLoop') && a.jet && a.jetLive === 2 && n1.osc + n1.src > n0.osc + n0.src, `${got.join(',')} live ${a.jetLive}`);
+    check('sfx flight: the loop is audible (gain ramped up) and its parameters follow the frames', a.jetGain > 0.3 && a.jetUpdates > 5, `gain ${a.jetGain.toFixed(2)}, updates ${a.jetUpdates}`);
+    await d.up('Space');
+    await d.step(3);
+    await sleep(500);
+    const b = await sfxInfo(page);
+    check('sfx flight: releasing stops the loop; its source nodes ended and the gain is back to silence', !b.jet && b.jetLive === 0 && b.jetGain < 0.01, `jet ${b.jet} live ${b.jetLive} gain ${b.jetGain}`);
+    await d.land();
+  }
+  // ---- ring pass (a fresh flight through the hover ring in the skills corner) ---------------------------------------------------------
+  await d.step(30);
+  await d.maxFly(5);
+  await d.place(18, 14);
+  await d.camera0();
+  await heard('flying through a hover ring', async () => {
+    await d.down('Space');
+    await d.step(150);
+    await d.down('w');
+    await d.step(70);
+    await d.up('w');
+    await d.step(5);
+  }, ['ringPass']);
+  await d.land();
+  await d.maxFly(12);
+  await d.step(30);
+
+  // ---- cooldowns, rate limit, voice limit -------------------------------------------------------------------------------------------------
+  {
+    await page.evaluate(() => window.__superglen.sfx.reset());
+    const m = await sfxMark(page);
+    await page.evaluate(() => { const s = window.__superglen.sfx; for (let i = 0; i < 40; i++) s.play('coin'); });
+    const one = (await sfxSince(page, m)).filter((i) => i === 'coin').length;
+    check('sfx cooldown: 40 coin pings in the same instant make exactly one sound', one === 1, `${one}`);
+    await d.step(10);
+    await page.evaluate(() => window.__superglen.sfx.reset());
+    const m2 = await sfxMark(page);
+    await page.evaluate(() => { const s = window.__superglen.sfx; for (const id of ['pop', 'blip', 'bling', 'quizTap', 'land', 'mantle', 'wallKick', 'laserHit', 'ringPass', 'sparkle']) s.play(id); });
+    const burst = (await sfxSince(page, m2)).length;
+    check('sfx rate limit: 10 different sounds in the same instant start at most 4 (per 100 ms)', burst >= 1 && burst <= 4, `${burst}`);
+    await d.step(8); // 0.13 s later the window has moved on
+    const m3 = await sfxMark(page);
+    await page.evaluate(() => { const s = window.__superglen.sfx; for (const id of ['pop', 'blip', 'bling', 'quizTap']) s.play(id); });
+    const again = (await sfxSince(page, m3)).length;
+    check('sfx rate limit: after 100 ms sounds may start again', again >= 1 && again <= 4, `${again}`);
+    // Long sounds, forced past the cooldown: the voice limit (8) holds and the oldest are stolen.
+    await page.evaluate(() => { const s = window.__superglen.sfx; for (let i = 0; i < 24; i++) s.play('fanfare', true); });
+    const v = await sfxInfo(page);
+    check('sfx voice limit: 24 long sounds in a row never exceed 8 voices (the oldest are stolen)', v.voices <= 8 && v.peak <= 8 && v.stolen >= 16, `voices ${v.voices} peak ${v.peak} stolen ${v.stolen}`);
+    await sleep(1800);
+    check('sfx voice limit: the voices free themselves when the sounds end', (await sfxInfo(page)).voices <= 1);
+  }
+
+  // ---- no AudioContext: nothing throws, nothing plays --------------------------------------------------------------------------------------
+  {
+    const r = await page.evaluate(() => {
+      const s = window.__superglen.sfx;
+      s.reset();
+      const p0 = s.played;
+      let err = '';
+      s.noContext = true;
+      try { for (const id of s.ids) s.play(id, true, 8); } catch (e) { err = String(e); }
+      s.noContext = false;
+      return { err, played: s.played - p0, blocked: s.blocked.noContext };
+    });
+    check('sfx: with no AudioContext every sound is a quiet no-op (no exception)', r.err === '' && r.played === 0 && r.blocked >= 20, JSON.stringify(r));
+  }
+
+  // ---- Sound switch: nothing starts, a running loop is cut ---------------------------------------------------------------------------------
+  {
+    await fly();
+    check('sfx mute: (setup) the loop is running before the switch', (await sfxInfo(page)).jet);
+    await page.evaluate(() => window.__superglen.parents.show());
+    await sleep(200);
+    await audioHit(page, '.toggle[data-setting=sound] .switch', false);
+    await sleep(500);
+    const a = await sfxInfo(page);
+    const lanes = await page.evaluate(() => window.__superglen.audio.lanes);
+    check('sfx mute: the Sound switch cuts the running jet loop and closes the sfx lane', !a.jet && a.jetLive === 0 && lanes.sfx === 0, JSON.stringify({ jet: a.jet, live: a.jetLive, lanes }));
+    await page.evaluate(() => window.__superglen.parents.close());
+    await d.up('Space');
+    await d.land();
+    await d.step(30);
+    const n0 = await sfxNodes(page);
+    const p0 = (await sfxInfo(page)).played;
+    await page.evaluate(() => { const s = window.__superglen.sfx; s.reset(); for (const id of s.ids) s.play(id, true, 8); });
+    await d.tap('Space', 3);
+    await d.tap('j', 5);
+    const n1 = await sfxNodes(page);
+    const b = await sfxInfo(page);
+    check('sfx mute: with the Sound switch off no effect is started (no nodes, nothing logged)', b.played === p0 && n1.osc === n0.osc && n1.src === n0.src && b.blocked.mute > 0, JSON.stringify({ played: b.played - p0, osc: n1.osc - n0.osc, mute: b.blocked.mute }));
+    await page.evaluate(() => window.__superglen.parents.show());
+    await sleep(200);
+    await audioHit(page, '.toggle[data-setting=sound] .switch', false);
+    await sleep(300);
+    await page.evaluate(() => window.__superglen.parents.close());
+    await d.step(30);
+    await heard('after switching Sound back on', async () => { await page.evaluate(() => window.__superglen.sfx.play('pop', true)); }, ['pop']);
+  }
+
+  // ---- allocation: flying with the loop and sound on stays inside the per-frame budget ---------------------------------------------------------
+  {
+    await fly();
+    const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+    if (heapOk) {
+      // The per-frame jet update must not allocate: 20000 calls, minus the cost of the measuring loop itself.
+      const r = await page.evaluate(() => {
+        const s = window.__superglen.sfx;
+        const heap = () => performance.memory.usedJSHeapSize;
+        const run = (call) => {
+          const w = [];
+          for (let k = 0; k < 3; k++) {
+            window.gc();
+            let prev = heap();
+            let acc = 0;
+            for (let i = 0; i < 20000; i++) { if (call) s.jetUpdate(1 / 60, 2 + (i % 3)); const h = heap(); if (h >= prev) acc += h - prev; prev = h; }
+            w.push(acc / 20000);
+          }
+          return w.sort((a, b) => a - b)[1];
+        };
+        return { base: run(false), upd: run(true), running: s.jetRunning };
+      });
+      const extra = r.upd - r.base;
+      console.log(`   [sfx] jet loop update: ${extra.toFixed(0)} bytes per frame (measuring loop alone ${r.base.toFixed(0)})`);
+      check('sfx perf: the per-frame jet update allocates < 200 bytes per frame (parameters only)', r.running && extra < 200, `${extra.toFixed(0)} B/frame`);
+    }
+    // pause cuts the loop
+    await page.evaluate(() => window.__superglen.pause(true));
+    await sleep(400);
+    const p = await sfxInfo(page);
+    check('sfx: pausing the game stops the jet loop (and its source nodes end)', !p.jet && p.jetLive === 0, JSON.stringify({ jet: p.jet, live: p.jetLive }));
+    await d.up('Space');
+    await d.land();
+  }
+
+  // ---- unload: a loop that is running when the level goes away is stopped -----------------------------------------------------------------------
+  {
+    await fly();
+    check('sfx unload: (setup) flying again, the loop runs', (await sfxInfo(page)).jet);
+    await page.evaluate(() => { window.__superglen.pause(false); window.__superglen.loadLevel('demo'); });
+    await page.waitForFunction(() => window.__superglen.level === 'demo' && !window.__superglen.loading, null, { timeout: 15000 });
+    await sleep(600);
+    const u = await sfxInfo(page);
+    check('sfx unload: loading another level stops the jet loop and ends its nodes', !u.jet && u.jetLive === 0, JSON.stringify({ jet: u.jet, live: u.jetLive }));
+    await d.up('Space');
+    await page.evaluate(() => window.__superglen.pause(true));
+  }
+
+  // ---- UI in the demo level: interact prompt "bling", dialog "blip" ---------------------------------------------------------------------------------
+  {
+    const heard2 = sfxHeard(page, check);
+    await heard2('the talk prompt appearing next to Nino', async () => { await page.evaluate(() => window.__superglen.placePlayer(-3.4, -2)); await d.step(10); }, ['bling']);
+    await d.step(20);
+    await heard2('a dialog line appearing', async () => { await page.evaluate(() => window.__superglen.say('Halo!')); await d.step(4); }, ['blip']);
+  }
+}
+
+/** Touch: button presses pop (not the stick, not the jump button which has its own sound), laser/jump by touch. */
+async function sfxTouchScenario(page, check) {
+  await sfxBoot(page, true);
+  const heard = sfxHeard(page, check);
+  const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+  await adv(30);
+  const fingers = await makeFingers(page);
+  const center = (action) => page.evaluate((a) => { const r = document.querySelector(`.tc-button[data-action="${a}"]`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, action);
+
+  // The stick: no pop, no other sound.
+  {
+    const m = await sfxMark(page);
+    await fingers.down(1, 120, 200);
+    await fingers.move(1, 180, 200);
+    await adv(10);
+    await fingers.up(1);
+    await adv(10);
+    const got = await sfxSince(page, m);
+    check('sfx touch: the joystick makes no pop', !got.includes('pop'), got.join(','));
+  }
+  // Superglen: laser button (pop + pew), jump button (a jump sound but no pop).
+  await page.evaluate(() => { window.__superglen.game.setPlayerMode('superglen'); window.__superglen.game.setSkills({ laser: true }); });
+  await adv(40);
+  await page.evaluate(() => window.__superglen.placePlayer(0, 0));
+  await adv(30);
+  {
+    const c = await center('laser');
+    await heard('tapping the laser button', async () => { await page.touchscreen.tap(c.x, c.y); await adv(6); }, ['pop', 'laserFire']);
+  }
+  await adv(40);
+  {
+    const c = await center('jump');
+    const m = await sfxMark(page);
+    await page.touchscreen.tap(c.x, c.y);
+    await adv(6);
+    const got = await sfxSince(page, m);
+    check('sfx touch: the jump button plays the jump sound and no extra pop', got.includes('jumpSuper') && !got.includes('pop'), got.join(','));
+  }
+  await adv(120);
+  {
+    const c = await center('transform');
+    await adv(30);
+    const m = await sfxMark(page);
+    await page.touchscreen.tap(c.x, c.y);
+    await adv(6);
+    const got = await sfxSince(page, m);
+    check('sfx touch: the star button pops (an action button); a transform sound follows when the level allows it', got.includes('pop'), got.join(','));
+  }
+}
+
+/** Quiz: card taps pop, a wrong pick wobbles, a right pick twinkles (next to the drum), the sticker reveal sparkles. */
+async function sfxQuizScenario(page, check) {
+  await sfxBoot(page, false);
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  await page.evaluate(() => window.__superglen.save.resetProgress());
+  const m = await sfxMark(page);
+  await page.evaluate(() => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await adv(8);
+  await quizPlay(page, adv, { wrongs: [1, 0, 0] });
+  await adv(200);
+  await sleep(300);
+  const got = await sfxSince(page, m);
+  const n = (id) => got.filter((x) => x === id).length;
+  check('sfx quiz: every card tap pops (4 taps: 1 wrong + 3 right)', n('quizTap') === 4, `${n('quizTap')}`);
+  check('sfx quiz: the wrong pick plays the wobbly boing once', n('quizWrong') === 1, `${n('quizWrong')}`);
+  check('sfx quiz: each right pick twinkles (3)', n('quizRight') === 3, `${n('quizRight')}`);
+  check('sfx quiz: the sticker reveal sparkles', n('sparkle') >= 1, `${n('sparkle')}`);
+}
+
+/** Coins on the bab1 street: a ting per coin, the pitch climbs within 1.5 s and starts over, a flourish for the last coin of a route. */
+async function sfxCoinsScenario(page, check) {
+  await streetSetup(page);
+  await page.mouse.click(640, 360);
+  await sleep(900);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.pause(true); g.sfx.reset(); });
+  const adv = (n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+  await adv(30);
+  const S = JSON.parse(await page.evaluate(() => window.__superglen.levelInfo.street));
+  const take = async (c) => {
+    await page.evaluate((c) => window.__superglen.teleportFeet(c.x, c.y - 0.8, c.z), c);
+    await adv(4);
+  };
+  const ground = S.coins.filter((c) => /:c0$/.test(c.id) && !/^(school|lm):/.test(c.id)).slice(0, 4);
+  const m = await sfxMark(page);
+  const c0 = await page.evaluate(() => window.__superglen.levelInfo.streetCoins);
+  for (const c of ground) await take(c);
+  const e = await sfxSinceFull(page, m);
+  const hz = e.filter((x) => x.id === 'coin').map((x) => x.hz);
+  const c1 = await page.evaluate(() => window.__superglen.levelInfo.streetCoins);
+  check('sfx coins: every coin picked up on the street plays a ting', ground.length === 4 && c1 - c0 === 4 && hz.length === 4, `${c1 - c0} taken, ${hz.length} tings`);
+  check('sfx coins: coins taken within 1.5 s of each other rise in pitch', hz.length === 4 && hz.every((h, i) => i === 0 || h > hz[i - 1]), hz.map((h) => Math.round(h)).join(' < '));
+  await adv(150); // 2.5 s of quiet: the streak is over
+  const m2 = await sfxMark(page);
+  const rest = S.coins.filter((c) => /:c0$/.test(c.id) && !/^(school|lm):/.test(c.id))[4];
+  await take(rest);
+  const e2 = (await sfxSinceFull(page, m2)).filter((x) => x.id === 'coin');
+  check('sfx coins: after a pause the pitch starts again at the first note', e2.length === 1 && Math.abs(e2[0].hz - hz[0]) < 0.01, `${e2.map((x) => Math.round(x.hz))} vs ${Math.round(hz[0])}`);
+  // The school route: c0, c1, c2 -> the flourish comes with the last one only.
+  await adv(150);
+  const school = S.coins.filter((c) => /^school:c\d$/.test(c.id));
+  const m3 = await sfxMark(page);
+  for (const c of school.slice(0, -1)) await take(c);
+  const mid = await sfxSince(page, m3);
+  await take(school[school.length - 1]);
+  await adv(4);
+  const all = await sfxSince(page, m3);
+  check('sfx coins: the last coin of a route adds the "all collected" flourish (and not before)', school.length === 3 && !mid.includes('coinDone') && all.filter((i) => i === 'coinDone').length === 1 && all.filter((i) => i === 'coin').length === 3, `mid ${mid.join(',')} all ${all.join(',')}`);
+}
+
+/** ?mute=1: not one effect node is created whatever happens. */
+async function sfxMuteScenario(page, check) {
+  await sfxBoot(page, false);
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  await d.mode('superglen');
+  await d.step(30);
+  const n0 = await sfxNodes(page);
+  await d.tap('Space', 5);
+  await d.land();
+  await d.place(0, 0);
+  await d.face('w');
+  await d.addTarget(0, 1.2, -8, 'm');
+  await d.step(10);
+  await d.tap('j', 5);
+  await d.down('k');
+  await d.step(10);
+  await d.ball(0, 1.0, -7.5, 7);
+  await d.step(100);
+  await d.up('k');
+  await d.place(0, 10);
+  await d.down('Space');
+  await d.step(100);
+  await d.up('Space');
+  await d.land();
+  await page.evaluate(() => { const s = window.__superglen.sfx; for (const id of s.ids) s.play(id, true, 8); });
+  const n1 = await sfxNodes(page);
+  const a = await sfxInfo(page);
+  const lanes = await page.evaluate(() => window.__superglen.audio.lanes);
+  check('sfx ?mute=1: jumps, laser, shield, flight and every forced sound create no audio node', n1.osc === n0.osc && n1.src === n0.src && a.played === 0 && !a.jet && a.blocked.mute > 0, JSON.stringify({ osc: n1.osc - n0.osc, played: a.played, mute: a.blocked.mute }));
+  check('sfx ?mute=1: the sfx lane gain is 0', lanes.sfx === 0, JSON.stringify(lanes));
+}
+
+/** No Web Audio at all: the whole game keeps running and nothing throws (page errors fail the scenario). */
+async function sfxNoAudioScenario(page, check) {
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeSkillsDriver(page);
+  await d.step(30);
+  await d.mode('superglen');
+  await d.step(30);
+  await d.tap('Space', 3);
+  await d.land();
+  await d.place(0, 0);
+  await d.face('w');
+  await d.addTarget(0, 1.2, -8, 'n');
+  await d.step(10);
+  await d.tap('j', 5);
+  await d.down('k');
+  await d.step(10);
+  await d.ball(0, 1.0, -7.5, 7);
+  await d.step(100);
+  await d.up('k');
+  await d.place(0, 10);
+  await d.down('Space');
+  await d.step(100);
+  await d.up('Space');
+  await d.land();
+  const r = await page.evaluate(() => {
+    const s = window.__superglen.sfx;
+    let err = '';
+    try { for (const id of s.ids) s.play(id, true, 8); } catch (e) { err = String(e); }
+    return { err, played: s.played, jet: s.jetRunning, ctx: window.__superglen.audio.state };
+  });
+  check('sfx: without Web Audio the game plays on and every sound is a quiet no-op', r.err === '' && r.played === 0 && !r.jet && r.ctx === 'none', JSON.stringify(r));
+  check('sfx: the skills still worked (the laser fired, the shield blocked)', (await page.evaluate(() => window.__superglen.skills.laserShots > 0 && window.__superglen.skills.shieldBlocks > 0)));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -6713,6 +7204,13 @@ async function main() {
     results.push(await runScenario(browser, 'audio-fallback', { viewport: { width: 1280, height: 720 }, initScript: () => { const P = window.AudioContext.prototype; P.createMediaElementSource = () => { throw new Error('no MES'); }; } }, audioFallbackScenario, '?level=test&fps=0&reset=1'));
     results.push(await runScenario(browser, 'audio-mute', { viewport: { width: 1280, height: 720 } }, audioMuteScenario, '?level=test&fps=0&reset=1&quizseed=1&mute=1'));
     results.push(await runScenario(browser, 'audio-chapter', { viewport: { width: 1280, height: 720 } }, audioChapterScenario, '?level=test&fps=0'));
+    // Procedural sound effects (src/audio/Sfx.ts)
+    results.push(await runScenario(browser, 'sfx', { viewport: { width: 1280, height: 720 }, initScript: SFX_NODES }, sfxDesktopScenario, '?level=test&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'sfx-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3, initScript: SFX_NODES }, sfxTouchScenario, '?level=test&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'sfx-quiz', { viewport: { width: 1280, height: 720 }, initScript: SFX_NODES }, sfxQuizScenario, '?level=test&fps=0&quizseed=1&reset=1'));
+    results.push(await runScenario(browser, 'sfx-coins', { viewport: { width: 1280, height: 720 }, initScript: SFX_NODES }, sfxCoinsScenario, '?fps=0'));
+    results.push(await runScenario(browser, 'sfx-mute', { viewport: { width: 1280, height: 720 }, initScript: SFX_NODES }, sfxMuteScenario, '?level=test&fps=0&reset=1&mute=1'));
+    results.push(await runScenario(browser, 'sfx-noaudio', { viewport: { width: 1280, height: 720 }, initScript: () => { window.AudioContext = undefined; window.webkitAudioContext = undefined; } }, sfxNoAudioScenario, '?level=test&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
 

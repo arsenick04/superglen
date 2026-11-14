@@ -217,6 +217,11 @@ export class AudioManager {
     return this.ctx !== null && this.master !== null;
   }
 
+  /** The sfx lane's gain node: the procedural effects of `Sfx` connect here (null before the first tap). */
+  get sfxOut(): GainNode | null {
+    return this.sfxGain;
+  }
+
   /** ?mute=1 or settings.sound off. */
   get silent(): boolean {
     return this.opts.muteUrl || !this.opts.soundOn();

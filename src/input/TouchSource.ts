@@ -38,6 +38,8 @@ interface Held {
 export class TouchSource implements InputSource {
   readonly move: Vec2 = { x: 0, y: 0 };
   readonly controls: TouchControls;
+  /** A finger landed on an action button (the sound layer pops). Never called for the stick or the look area. */
+  onButtonPress: ((action: Action) => void) | null = null;
 
   private readonly held = new Map<number, Held>();
   /** How many fingers rest on each button (isDown runs every frame: no iterating the map there). */
@@ -214,6 +216,7 @@ export class TouchSource implements InputSource {
       this.hold(e.pointerId, { kind: 'button', x, y, action });
       this.latch.add(action);
       this.syncButton(action);
+      this.onButtonPress?.(action);
     } else if (this.stickId < 0 && x < window.innerWidth * TouchConfig.joystickZone) {
       this.hold(e.pointerId, { kind: 'stick', x, y });
       this.stickId = e.pointerId;

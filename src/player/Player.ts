@@ -733,6 +733,11 @@ export class Player {
       this.jumpEvent.quality = quality;
       R.events.emit('rhythmJump', this.jumpEvent);
     }
+    const je = this.plainJumpEvent;
+    je.air = air;
+    je.superglen = T.superglen;
+    je.level = lvl;
+    R.events.emit('jump', je);
   }
 
   /** The kick itself: fixed apex, push away from the wall, turn away, feedback event. The air jump stays available. */
@@ -780,6 +785,7 @@ export class Player {
 
   private readonly kickEvent = { x: 0, y: 0, z: 0, nx: 0, nz: 0, chain: 0 };
   private readonly jumpEvent: { level: number; quality: RhythmQuality } = { level: 0, quality: 'normal' };
+  private readonly plainJumpEvent = { air: false, superglen: false, level: 0 };
   private readonly landEvent = { impact: 0, x: 0, y: 0, z: 0 };
   private readonly mantleEvent = { x: 0, y: 0, z: 0 };
   private readonly bounceEvent = { level: 0 };

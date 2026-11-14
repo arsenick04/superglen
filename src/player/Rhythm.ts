@@ -55,7 +55,14 @@ export interface WallKickEvent {
  *   land        any touchdown (feet position, impact speed): sound and fx hook here
  *   mantle      the character pulled itself onto a ledge
  *   wallKick    Superglen kicked off a wall (contact point, normal, chain)
+ *   jump        every jump that leaves the ground or the air (Glen and Superglen; `air` = the double jump): sound hook
  */
+export interface JumpEvent {
+  air: boolean;
+  superglen: boolean;
+  level: number;
+}
+
 export interface PlayerEventMap {
   rhythmJump: RhythmJumpEvent;
   rhythmLevel: RhythmLevelEvent;
@@ -64,6 +71,7 @@ export interface PlayerEventMap {
   land: LandEvent;
   mantle: MantleEvent;
   wallKick: WallKickEvent;
+  jump: JumpEvent;
 }
 
 /**
