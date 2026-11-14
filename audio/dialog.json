@@ -607,5 +607,117 @@
     "lang": "id",
     "text": "Sudah semua! Ayo kembali.",
     "delivery": "[proud] Sudah semua! Ayo kembali."
+  },
+  {
+    "id": "bab3_nino_cepat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Cepat, ke pasar, Superglen!",
+    "delivery": "[urgent] Cepat, ke pasar, Superglen!"
+  },
+  {
+    "id": "bab3_nino_ubah",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ubah jadi Superglen dulu, Glen!",
+    "delivery": "[encouraging] Ubah jadi Superglen dulu, Glen!"
+  },
+  {
+    "id": "bab3_nino_tiba",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu mereka! Tembak atau hentakkan, ya!",
+    "delivery": "[excited] Itu mereka! [cheerful] Tembak atau hentakkan, ya!"
+  },
+  {
+    "id": "bab3_glen_lucu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hihi, tikusnya lucu sekali!",
+    "delivery": "[giggles] Hihi, [amused] tikusnya lucu sekali!"
+  },
+  {
+    "id": "bab3_glen_semua",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua tikus kecil sudah kabur!",
+    "delivery": "[excited] Semua tikus kecil sudah kabur!"
+  },
+  {
+    "id": "bab3_lina_hilang",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Bakpaoku hilang 3, kue hilang 2.",
+    "delivery": "[worried] Bakpaoku hilang tiga, kue hilang dua."
+  },
+  {
+    "id": "bab3_lina_tolong",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Tolong kumpulkan, ya, Superglen!",
+    "delivery": "[pleading] Tolong kumpulkan, ya, Superglen!"
+  },
+  {
+    "id": "bab3_lina_total",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih! Totalnya berapa?",
+    "delivery": "[grateful] Terima kasih! [curious] Totalnya berapa?"
+  },
+  {
+    "id": "bab3_lina_hore",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Hore! Semua kembali ke kios. Kamu pintar!",
+    "delivery": "[delighted] Hore! Semua kembali ke kios. [warm] Kamu pintar!"
+  },
+  {
+    "id": "bab3_rakus_tawa",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hihihi, semua makanan ini milikku!",
+    "delivery": "[mischievous giggle] Hihihi, [playful] semua makanan ini milikku!"
+  },
+  {
+    "id": "bab3_glen_hei",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hei, jangan lari!",
+    "delivery": "[surprised] Hei, jangan lari!"
+  },
+  {
+    "id": "bab3_rakus_raja",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Suatu hari aku akan jadi RAJA kota ini!",
+    "delivery": "[dramatic] Suatu hari aku akan jadi [proudly] RAJA kota ini!"
+  },
+  {
+    "id": "bab3_nino_rakus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu Si Tikus Rakus! Kita pasti bertemu lagi.",
+    "delivery": "[amused] Itu Si Tikus Rakus! [confident] Kita pasti bertemu lagi."
+  },
+  {
+    "id": "bab3_glen_siapa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Eh, siapa itu di bayangan?",
+    "delivery": "[curious] Eh, siapa itu di bayangan?"
+  },
+  {
+    "id": "bab3_nino_siapa",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hmm, kita cari tahu nanti. Kerja bagus, Glen!",
+    "delivery": "[thoughtful] Hmm, kita cari tahu nanti. [cheerful] Kerja bagus, Glen!"
+  },
+  {
+    "id": "bab3_lina_terima",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "delivery": "[grateful] Terima kasih, Superglen!"
   }
 ]

@@ -142,5 +142,25 @@
     "pitchSemitones": 0,
     "labels": "id, standard accent, young male, confident, social_media",
     "note": "D3 2026-11-14: Kak Bima, pemuda ceria; pengganti Dakocan (ditolak pemilik)"
+  },
+  "lina": {
+    "voice_id": "U3dExJoUNcmTY5H6GMuG",
+    "name": "Maya - Warm, Calm and Soft",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, middle-aged female, warm, advertisement",
+    "note": "D4 L5 2026-11-14: Bu Lina, penjual kue pasar, ibu hangat (beda dari Serena dan Citra)"
+  },
+  "rakus": {
+    "voice_id": "UafGxvF2q1XMC9Qy4tPR",
+    "name": "Clowny - Funny and Cheerful",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 3,
+    "labels": "id, standard accent, young male, high-pitched clowny",
+    "note": "D4 L5 2026-11-14: Si Tikus Rakus, cempreng dan jenaka, nada +3 semiton"
   }
 }

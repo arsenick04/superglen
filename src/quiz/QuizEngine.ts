@@ -14,6 +14,7 @@ import {
   type PreparedQuestion,
   type Question,
   type QuizAnswerRecord,
+  type QuizReason,
   type QuizResult,
   type QuizRunOptions,
   type SpeakListener,
@@ -154,6 +155,35 @@ export class QuizEngine {
     });
     this.running = p;
     return p;
+  }
+
+  /**
+   * One story question that is not from the bank (Chapter 3's market count). Same panel, same coins and statistics as a
+   * normal question; no sticker or end screen. Resolves with `completed: false` when the overlay was closed.
+   */
+  runQuestion(q: Question, reason: QuizReason = 'story'): Promise<QuizResult> {
+    if (this.running) return this.running;
+    const p = this.runOne(q, reason).finally(() => {
+      this.running = null;
+    });
+    this.running = p;
+    return p;
+  }
+
+  private async runOne(q: Question, reason: QuizReason): Promise<QuizResult> {
+    const result: QuizResult = { category: q.category, reason, completed: false, answers: [], coins: 0, sticker: null, stickerNew: false, fragment: false };
+    this.panel.openChallenge(reason, false);
+    this.deps.audio.preload(Object.values(QuizLines).map((l) => l.id));
+    this.deps.audio.preload(this.audioIds(q));
+    const out = await this.panel.ask(this.prepare(q), 0, 1, (wrong) => {
+      const rec = this.record(q, wrong);
+      result.answers.push(rec.answer);
+      result.coins += rec.coins;
+      return rec.coins;
+    });
+    this.panel.close();
+    result.completed = out !== null;
+    return result;
   }
 
   /** The category picker (hall terminal). Resolves with the chosen category, or null when closed. */
