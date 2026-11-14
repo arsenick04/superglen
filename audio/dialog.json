@@ -4,14 +4,14 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hore, pulang sekolah!",
-    "delivery": "[excited] Hore, pulang sekolah!"
+    "delivery": "[playful] Hore, pulang sekolah!"
   },
   {
     "id": "bab1_glen_lompat",
     "speaker": "glen",
     "lang": "id",
     "text": "Ayo, kita lompat!",
-    "delivery": "[excited] Ayo, kita lompat!"
+    "delivery": "[playful] Ayo, kita lompat!"
   },
   {
     "id": "bab1_glen_gedung",
