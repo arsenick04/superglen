@@ -1,13 +1,13 @@
 {
   "glen": {
-    "voice_id": "plgKUYgnlZ1DCNh54DwJ",
-    "name": "Dakocan - Expressive, Cheerful and Clear",
+    "voice_id": "d15jrIAARvF899pDoC6T",
+    "name": "Kak Ceria",
     "model": "eleven_v4",
     "stability": 0.3,
     "similarity_boost": 0.8,
-    "pitchSemitones": 3,
-    "labels": "id, standard accent, young male, casual, social_media",
-    "note": "v2 2026-11-14: suara pemuda ekspresif, nada dinaikkan 3 semiton lewat ffmpeg rubberband supaya terdengar seperti anak"
+    "pitchSemitones": -1.5,
+    "labels": "id, kids-TV, cheerful",
+    "note": "v3 2026-11-14: pilihan pemilik (Kak Ceria), nada diturunkan 1,5 semiton lewat ffmpeg rubberband"
   },
   "nino": {
     "voice_id": "q8qwd1jY2jS3AWOBeq25",

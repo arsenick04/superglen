@@ -4,16 +4,14 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hore, pulang sekolah!",
-    "delivery": "[amazed] Hore, pulang sekolah!",
-    "pitchSemitones": 1
+    "delivery": "[excited] Hore, pulang sekolah!"
   },
   {
     "id": "bab1_glen_lompat",
     "speaker": "glen",
     "lang": "id",
     "text": "Ayo, kita lompat!",
-    "delivery": "[amazed] Ayo, kita lompat!",
-    "pitchSemitones": 1
+    "delivery": "[excited] Ayo, kita lompat!"
   },
   {
     "id": "bab1_glen_gedung",
@@ -76,8 +74,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Kamu siapa?",
-    "delivery": "[amazed] Kamu siapa?",
-    "pitchSemitones": 1
+    "delivery": "[surprised] Kamu siapa?"
   },
   {
     "id": "bab1_nino_terpilih",
@@ -98,8 +95,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aku jadi Superglen!",
-    "delivery": "[amazed] Aku jadi Superglen!",
-    "pitchSemitones": 1
+    "delivery": "[excited] Aku jadi Superglen!"
   },
   {
     "id": "bab1_nino_semua_nyala",
@@ -113,8 +109,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hahaha, geli!",
-    "delivery": "[laughs] Hahaha, geli! Hihi!",
-    "pitchSemitones": 1
+    "delivery": "[laughs] Hahaha, geli! Hihi!"
   },
   {
     "id": "bab1_nino_lompat_barongsai",
@@ -149,8 +144,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aduh! Kepala kena atap!",
-    "delivery": "[amazed] Aduh! Kepala kena atap!",
-    "pitchSemitones": 1
+    "delivery": "[surprised] Aduh! Kepala kena atap!"
   },
   {
     "id": "bab2_nino_pelan",
@@ -248,8 +242,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Superglen siap!",
-    "delivery": "[amazed] Superglen siap!",
-    "pitchSemitones": 1
+    "delivery": "[excited] Superglen siap!"
   },
   {
     "id": "quiz_nino_kunci",

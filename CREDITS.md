@@ -1,11 +1,11 @@
 # Kredit
 
 ## Suara (voices)
-Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Glen dan Nino dinaikkan (beberapa kalimat pendek Glen +1 semiton, lihat `pitchSemitones` di `audio/dialog.json`) di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
+Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Nino dinaikkan dan nada Glen diturunkan 1,5 semiton di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
 
 | Peran | Suara | ID | Catatan |
 |---|---|---|---|
-| Glen | Dakocan - Expressive, Cheerful and Clear | `plgKUYgnlZ1DCNh54DwJ` | Indonesia, aksen standar, nada +3 semiton |
+| Glen | Kak Ceria | `d15jrIAARvF899pDoC6T` | Indonesia, suara anak ceria, nada -1,5 semiton |
 | Nino | Pratama - Clear, Confident and Warm | `q8qwd1jY2jS3AWOBeq25` | Indonesia, aksen standar, nada +2 semiton |
 | Kata bahasa Inggris | Josh - Teacher for Kids | `nzFihrBIvB34imQBuxub` | Inggris Amerika |
 | Kata Mandarin | Sage - Soothing & Gentle | `APSIkVZudNbPAwyPoeVO` | Mandarin standar (dipilih pemilik proyek) |
