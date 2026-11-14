@@ -1381,6 +1381,8 @@ async function playChapter(page, check, d, beat, opts = {}) {
   check('jump obstacle cannot be walked through', s.player.z > -8.7, `z=${s.player.z.toFixed(2)}`);
   s = await d.until((s) => s.levelInfo.hint === true, 120);
   check('jump hint shown near the barrier', !!s);
+  // The lompat line queues behind the opening line, so its start depends on that clip's length: wait on state.
+  await d.until(() => d.seen.includes('bab1_glen_lompat'), 600);
   check('lompat line shown', d.seen.includes('bab1_glen_lompat'), d.seen.join());
   await d.adv(4, true);
   await beat('jump', d);
