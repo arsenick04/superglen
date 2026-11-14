@@ -5,9 +5,9 @@
     "model": "eleven_v4",
     "stability": 0.3,
     "similarity_boost": 0.8,
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "labels": "id, standard accent, young male, excited",
-    "note": "v4 2026-11-14: pilihan pemilik (Finn, sampel mentah tanpa geser nada) +1,5 semiton"
+    "note": "v4 2026-11-14: pilihan pemilik (Finn, sampel mentah tanpa geser nada) +2 semiton (naik dari +1,5)"
   },
   "nino": {
     "voice_id": "q8qwd1jY2jS3AWOBeq25",

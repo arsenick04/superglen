@@ -9,17 +9,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "4f82cae5b620bb8f",
+    "hash": "5472ce9112bfe71c",
     "tts": "[surprised] Kamu siapa?",
     "chars": 23,
     "bytes": 13837,
     "duration": 1.12,
-    "lufs": -16.7,
-    "peak_dbtp": -4.3,
-    "generated_at": "2026-11-14T07:02:00.267Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "lufs": -16.8,
+    "peak_dbtp": -4.7,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_nino_halo": {
     "id": "bab1_nino_halo",
@@ -141,17 +141,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "37d06176a97559fc",
+    "hash": "4c20cf0de7cb33c7",
     "tts": "[excited] Hore, pulang sekolah!",
     "chars": 31,
     "bytes": 28257,
     "duration": 2.32,
-    "lufs": -16.5,
-    "peak_dbtp": -4.9,
-    "generated_at": "2026-11-14T07:01:45.620Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "lufs": -16.4,
+    "peak_dbtp": -5.5,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_lompat": {
     "id": "bab1_glen_lompat",
@@ -163,17 +163,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "239b5e3a07edde58",
+    "hash": "a67e34653f3d1811",
     "tts": "[excited] Ayo, kita lompat!",
     "chars": 27,
     "bytes": 19166,
     "duration": 1.57,
     "lufs": -16.6,
-    "peak_dbtp": -2.3,
-    "generated_at": "2026-11-14T07:01:46.922Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -1.9,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_gedung": {
     "id": "bab1_glen_gedung",
@@ -185,17 +185,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "f6b2e3f5779021a8",
+    "hash": "05bf4a9153398915",
     "tts": "[amazed] Wah, gedung Barongsai tua. [curious] Ada cahaya di dalam!",
     "chars": 66,
     "bytes": 49886,
     "duration": 4.13,
     "lufs": -16.5,
     "peak_dbtp": -2.6,
-    "generated_at": "2026-11-14T07:01:49.170Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_pagar": {
     "id": "bab1_glen_pagar",
@@ -207,17 +207,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "09f6306a9a226169",
+    "hash": "ea1f0be7d6f8d4c5",
     "tts": "[curious] Ada celah di pagar. [excited] Aku bisa masuk!",
     "chars": 55,
     "bytes": 34213,
     "duration": 2.82,
     "lufs": -16.4,
-    "peak_dbtp": -3.6,
-    "generated_at": "2026-11-14T07:01:50.854Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -3.3,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_gelap": {
     "id": "bab1_glen_gelap",
@@ -229,17 +229,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "2890c6b1cef6235f",
+    "hash": "3152974dc1943629",
     "tts": "[nervous] Gelap, ya. [cheerful] Nyalakan senter dulu.",
     "chars": 53,
     "bytes": 34526,
     "duration": 2.85,
     "lufs": -16.5,
-    "peak_dbtp": -2.5,
-    "generated_at": "2026-11-14T07:01:52.509Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -2.4,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_panel": {
     "id": "bab1_glen_panel",
@@ -251,17 +251,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "9df79d652129370d",
+    "hash": "c273acb6503b1f1f",
     "tts": "[curious] Apa ini? Ada panel yang menyala.",
     "chars": 42,
-    "bytes": 30765,
-    "duration": 2.53,
-    "lufs": -16.4,
-    "peak_dbtp": -4.3,
-    "generated_at": "2026-11-14T07:01:54.042Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "bytes": 30451,
+    "duration": 2.51,
+    "lufs": -16.7,
+    "peak_dbtp": -4.1,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_dinding": {
     "id": "bab1_glen_dinding",
@@ -273,17 +273,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "82f3c0746b659d13",
+    "hash": "937242a422128507",
     "tts": "[amazed] Wow, dindingnya terbuka!",
     "chars": 33,
-    "bytes": 29824,
-    "duration": 2.46,
+    "bytes": 29511,
+    "duration": 2.43,
     "lufs": -16.5,
-    "peak_dbtp": -3.6,
-    "generated_at": "2026-11-14T07:01:55.750Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -2,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_lab": {
     "id": "bab1_glen_lab",
@@ -295,17 +295,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "fc3ca5f3d8189afc",
+    "hash": "8ee78c15921caccf",
     "tts": "[amazed] Wah, lab rahasia!",
     "chars": 26,
     "bytes": 28884,
     "duration": 2.38,
     "lufs": -16.5,
-    "peak_dbtp": -2.8,
-    "generated_at": "2026-11-14T07:01:57.483Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -3,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_glen_tombol": {
     "id": "bab1_glen_tombol",
@@ -317,17 +317,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "54eeddb87316bc41",
+    "hash": "9cc5a184322ba96b",
     "tts": "[playful] Ada tombol besar. Tekan, ah!",
     "chars": 38,
     "bytes": 33272,
     "duration": 2.74,
-    "lufs": -16.7,
+    "lufs": -16.5,
     "peak_dbtp": -2.4,
-    "generated_at": "2026-11-14T07:01:59.047Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_nino_terpilih": {
     "id": "bab1_nino_terpilih",
@@ -383,17 +383,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "191e06aa5802377a",
+    "hash": "7c7d004caf9796c3",
     "tts": "[excited] Aku jadi Superglen!",
     "chars": 29,
     "bytes": 21360,
     "duration": 1.75,
     "lufs": -16.7,
-    "peak_dbtp": -3.7,
-    "generated_at": "2026-11-14T07:02:01.616Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -4.2,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_nino_semua_nyala": {
     "id": "bab1_nino_semua_nyala",
@@ -427,17 +427,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "664e8538b57ba8b6",
+    "hash": "23124de103138394",
     "tts": "[laughs] Hahaha, geli! Hihi!",
     "chars": 28,
-    "bytes": 38601,
-    "duration": 3.19,
+    "bytes": 38915,
+    "duration": 3.21,
     "lufs": -16.5,
-    "peak_dbtp": -2.1,
-    "generated_at": "2026-11-14T07:02:03.482Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -1.9,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab1_nino_lompat_barongsai": {
     "id": "bab1_nino_lompat_barongsai",
@@ -537,17 +537,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "3eb91dfb9310c5b8",
+    "hash": "6ecb11e258f48a8f",
     "tts": "[surprised] Aduh! Kepala kena atap!",
     "chars": 35,
     "bytes": 25122,
     "duration": 2.06,
-    "lufs": -16.5,
-    "peak_dbtp": -1.5,
-    "generated_at": "2026-11-14T07:02:05.017Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "lufs": -16.6,
+    "peak_dbtp": -1.7,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab2_nino_pelan": {
     "id": "bab2_nino_pelan",
@@ -801,17 +801,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "0d7cdd629d9202ca",
+    "hash": "9f0cd2817cdf3234",
     "tts": "[delighted] Nyam, enak!",
     "chars": 23,
-    "bytes": 25122,
-    "duration": 2.06,
+    "bytes": 25436,
+    "duration": 2.09,
     "lufs": -16.6,
-    "peak_dbtp": -4.4,
-    "generated_at": "2026-11-14T07:02:06.523Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "peak_dbtp": -5.1,
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "bab2_nino_alarm": {
     "id": "bab2_nino_alarm",
@@ -845,17 +845,17 @@
       "stability": 0.3,
       "similarity_boost": 0.8
     },
-    "pitchSemitones": 1.5,
+    "pitchSemitones": 2,
     "lang": "id",
-    "hash": "d23feeb429ad0cd5",
+    "hash": "3d5a4db23f174511",
     "tts": "[excited] Superglen siap!",
     "chars": 25,
     "bytes": 20734,
     "duration": 1.7,
     "lufs": -16.7,
     "peak_dbtp": -4.5,
-    "generated_at": "2026-11-14T07:02:07.840Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +1.5 st (rubberband)"
+    "generated_at": "2026-11-14T07:10:47.455Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "quiz_nino_kunci": {
     "id": "quiz_nino_kunci",
