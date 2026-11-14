@@ -1,7 +1,7 @@
 {
-  "awal": "superglen_theme.mp3",
-  "jelajah": "superglen_theme.mp3",
-  "berubah": "",
-  "latihan": "superglen_theme.mp3",
-  "pertarungan": ""
+  "awal": "theme_awal.mp3",
+  "jelajah": { "file": "theme_jelajah.mp3", "volume": 0.8 },
+  "berubah": "theme_berubah.mp3",
+  "latihan": "theme_latihan.mp3",
+  "pertarungan": "theme_latihan.mp3"
 }
