@@ -58,8 +58,8 @@ body {
 /* ---- HUD ---- */
 .hud-fps {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 8px);
-  left: calc(env(safe-area-inset-left) + 8px);
+  top: calc(env(safe-area-inset-top) + 16px);
+  left: calc(env(safe-area-inset-left) + 68px);
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.45);
@@ -978,7 +978,7 @@ html.b2-hold .tc-button[data-action='jump']::after {
 /* ---- Lompat Irama: five drum icons, top-left under the fps pill (stays left of the touch dialog bubble) ---- */
 .drums {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 42px);
+  top: calc(env(safe-area-inset-top) + 64px);
   left: calc(env(safe-area-inset-left) + 8px);
   display: flex;
   gap: 2px;
@@ -1062,4 +1062,342 @@ html.touch-ui .drums {
   border-radius: 50%;
   border: 3px solid #fff;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+
+/* ---- Settings: gear (top-left, left of the fps pill), panel, toast ---- */
+.set-gear {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  width: 52px;
+  height: 52px;
+  padding: 9px;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: rgba(40, 60, 110, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+  z-index: 6;
+  display: none;
+}
+html.game-started .set-gear {
+  display: block;
+}
+.set-gear svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.settings {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(20, 30, 60, 0.55);
+  pointer-events: auto;
+  touch-action: none;
+}
+.settings[hidden],
+.fullmap[hidden],
+.minimap[hidden] {
+  display: none;
+}
+.settings-card {
+  position: relative;
+  width: min(100%, 760px);
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 16px 14px;
+  border-radius: 22px;
+  background: #f7fbff;
+  color: #25324a;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  font-family: system-ui, sans-serif;
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.settings-head h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 18px;
+  background: #3b82f6;
+  color: #fff;
+  font: 800 16px/1.15 system-ui, sans-serif;
+  text-align: left;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  touch-action: none;
+}
+.menu-btn:focus-visible,
+.set-track:focus-visible {
+  outline: 4px solid #ffd23f;
+  outline-offset: 2px;
+}
+.menu-btn:disabled,
+.menu-btn.off {
+  opacity: 0.4;
+  cursor: default;
+}
+.menu-ico {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+.menu-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.settings-close {
+  width: 64px;
+  min-height: 64px;
+  background: #e8453c;
+  padding: 8px;
+}
+.settings-close .menu-label,
+.fullmap-close .menu-label {
+  display: none;
+}
+.settings-sliders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.set-slider {
+  display: grid;
+  grid-template-columns: 40px 1fr 48px;
+  grid-template-areas: 'ico track val' '. name .';
+  align-items: center;
+  column-gap: 8px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background: #e8f0fb;
+}
+.set-slider-ico {
+  grid-area: ico;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3b82f6;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.set-slider:nth-child(2) .set-slider-ico {
+  background: #1fa8b8;
+}
+.set-slider-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.set-track {
+  grid-area: track;
+  position: relative;
+  height: 14px;
+  margin: 20px 20px;
+  border-radius: 7px;
+  background: #c4d2e6;
+  touch-action: none;
+  cursor: pointer;
+}
+.set-track::before {
+  content: '';
+  position: absolute;
+  inset: -20px -20px;
+}
+.set-fill {
+  height: 100%;
+  border-radius: 7px;
+  background: #3b82f6;
+  pointer-events: none;
+}
+.set-thumb {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid #3b82f6;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+.set-slider:nth-child(2) .set-fill {
+  background: #1fa8b8;
+}
+.set-slider:nth-child(2) .set-thumb {
+  border-color: #1fa8b8;
+}
+.set-value {
+  grid-area: val;
+  font-weight: 800;
+  font-size: 15px;
+  text-align: right;
+}
+.set-slider-name {
+  grid-area: name;
+  font-size: 12px;
+  margin-top: -14px;
+  opacity: 0.7;
+  text-align: center;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.settings-grid .menu-btn[hidden] {
+  display: none;
+}
+.menu-btn.warn {
+  background: #f08a24;
+}
+.set-save {
+  background: #2fa84f;
+}
+.set-load {
+  background: #7a5af0;
+}
+.set-home {
+  background: #1fa8b8;
+}
+.settings-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: rgba(247, 251, 255, 0.97);
+}
+.settings-confirm[hidden] {
+  display: none;
+}
+.settings-confirm-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.settings-confirm-q {
+  font-size: 26px;
+  font-weight: 800;
+}
+.settings-confirm-row {
+  display: flex;
+  gap: 24px;
+}
+.settings-confirm-row .menu-btn {
+  min-width: 150px;
+  min-height: 80px;
+  justify-content: center;
+  font-size: 22px;
+}
+.settings-yes {
+  background: #e8453c;
+}
+.settings-no {
+  background: #2fa84f;
+}
+.set-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: 50%;
+  transform: translate(-50%, -10px);
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: #2fa84f;
+  color: #fff;
+  font: 800 20px system-ui, sans-serif;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 80;
+}
+.set-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---- Mini map (kota): top-left under the gear and the drum icons; never takes a touch ---- */
+.minimap {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 108px);
+  left: calc(env(safe-area-inset-left) + 8px);
+  width: 180px;
+  height: 180px;
+  opacity: 0.6;
+  border-radius: 14px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+html.touch-ui .minimap {
+  top: calc(env(safe-area-inset-top) + 94px);
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+}
+.minimap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fullmap {
+  position: fixed;
+  inset: 0;
+  z-index: 71;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 30, 60, 0.7);
+  pointer-events: auto;
+  touch-action: none;
+}
+.fullmap-frame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.fullmap-frame canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.fullmap-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(env(safe-area-inset-right) + 8px);
+  width: 64px;
+  background: #e8453c;
+  padding: 8px;
 }

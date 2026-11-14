@@ -126,6 +126,16 @@ export class LevelManager {
     return this.loadingPromise;
   }
 
+  /** Put the player at a spot in the current level (feet y, facing yaw): colliders there are made ready, the camera snaps behind. */
+  teleport(x: number, feetY: number, z: number, yaw: number): void {
+    const d = this.deps;
+    this.level?.prepareTeleport?.(x, z);
+    d.physics.refreshQueries();
+    d.player.placeAt(x, feetY, z, yaw);
+    d.cameraRig.snapBehind(yaw);
+    d.cameraRig.update(0, d.player.visualPosition, d.player);
+  }
+
   fixedUpdate(dt: number): void {
     if (!this.level) return;
     this.seq?.update(dt);

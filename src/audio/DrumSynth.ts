@@ -22,6 +22,13 @@ export class DrumSynth {
   /** `isMuted` is asked on every sound (URL ?mute=1 or settings.sound off). */
   constructor(private readonly isMuted: () => boolean) {}
 
+  /** Effects volume 0..1 (settings panel); the drums count as effects. */
+  private vol = 1;
+  setVolume(v: number): void {
+    this.vol = Math.max(0, Math.min(1, v));
+    if (this.master) this.master.gain.value = 0.5 * this.vol;
+  }
+
   /** The shared AudioContext (null before the first tap or without Web Audio). */
   get audioContext(): AudioContext | null {
     return this.ctx;
@@ -36,7 +43,7 @@ export class DrumSynth {
         if (!Ctor) return;
         const ctx = new Ctor();
         const master = ctx.createGain();
-        master.gain.value = 0.5;
+        master.gain.value = 0.5 * this.vol;
         master.connect(ctx.destination);
         // One second-ish of white noise shared by every tick/roar.
         const len = Math.max(1, Math.floor(ctx.sampleRate * 0.5));

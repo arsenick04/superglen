@@ -20,6 +20,7 @@ import type { DrumSynth } from '../audio/DrumSynth';
 import type { Sfx } from '../audio/Sfx';
 import type { AudioManager } from '../audio/AudioManager';
 import type { QuizEngine } from '../quiz/QuizEngine';
+import type { MapSource } from './MapSource';
 
 /**
  * A level (story chapter or test area). The LevelManager owns its whole life cycle:
@@ -39,6 +40,10 @@ export interface Level {
   readonly id: string;
   /** Where the player appears: feet position and optional facing yaw (0 = +Z; default faces -Z). */
   readonly spawn: { x: number; y: number; z: number; yaw?: number };
+  /** Map data for the mini map and the full map (set during build). Levels without it have no map. */
+  map?: MapSource;
+  /** The player is about to be put at (x, z) far from here (respawn, load): make sure colliders exist there. */
+  prepareTeleport?(x: number, z: number): void;
   build(ctx: LevelContext): void;
   update(dt: number): void;
   fixedUpdate?(dt: number): void;

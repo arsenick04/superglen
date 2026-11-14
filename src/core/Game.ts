@@ -43,6 +43,9 @@ import { QuizEngine } from '../quiz/QuizEngine';
 import { AudioManager, AudioConfig } from '../audio/AudioManager';
 import { wireQuizVoice } from '../audio/QuizVoice';
 import { ParentsPage } from '../ui/ParentsPage';
+import { SettingsMenu } from '../ui/SettingsMenu';
+import { MapView } from '../ui/MapView';
+import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -153,6 +156,10 @@ export interface DebugHandle {
   sfx: Record<string, unknown>;
   /** The parents' page (long-press on the start logo). */
   parents: { open: boolean; show: () => void; close: () => void };
+  /** Settings panel (gear): state and test helpers. `frames` counts rendered game frames, `frozen` = the loop is paused. */
+  settings: Record<string, unknown>;
+  /** Mini map / full map state (see ui/MapView.ts). */
+  map: Record<string, unknown>;
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
   adaptReset: () => void;
   /** Adaptive resolution state: step index and number of ratio changes so far. */
@@ -284,6 +291,13 @@ export class Game {
   readonly sfx: Sfx;
   readonly quiz: QuizEngine;
   readonly parents: ParentsPage;
+  readonly settings: SettingsMenu;
+  readonly maps: MapView;
+  /** The settings panel is open: the game loop is paused (audio keeps playing so a volume slider can be heard). */
+  private menuOpen = false;
+  private menuReleasedLock = false;
+  private frameCount = 0;
+  private readonly tmpFeet = { x: 0, y: 0, z: 0 };
   /** The quiz overlay is open: controls and interactions are locked. */
   private quizLocked = false;
   private quizReleasedLock = false;
@@ -345,6 +359,8 @@ export class Game {
     audio: {},
     sfx: {},
     parents: undefined as unknown as DebugHandle['parents'],
+    settings: {},
+    map: {},
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
@@ -444,7 +460,10 @@ export class Game {
       soundOn: () => this.save.data.settings.sound,
       musicOn: () => this.save.data.settings.music,
       muteUrl: this.muteUrl,
+      musicVolume: () => this.save.data.settings.musicVol,
+      sfxVolume: () => this.save.data.settings.sfxVol,
     });
+    this.synth.setVolume(this.save.data.settings.sfxVol);
     startGate.onStart(() => this.audio.unlock());
     this.debug.audio = this.audio.debugHandle();
     // Procedural effects: same context, the sfx lane gain, silent when muted.
@@ -527,6 +546,42 @@ export class Game {
       show: () => parentsPage.show(),
       close: () => parentsPage.close(),
     };
+    this.maps = new MapView(uiRoot);
+    this.maps.onFullClose = () => this.settings.mapClosed();
+    this.settings = new SettingsMenu({
+      ui: uiRoot,
+      save: this.save,
+      canOpen: () => startGate.started && !this.quizLocked && !this.fading && !this.parents.open,
+      onOpenChange: (open) => this.setMenuOpen(open),
+      onVolumes: () => {
+        this.audio.applyVolumes();
+        this.synth.setVolume(this.save.data.settings.sfxVol);
+      },
+      hasMap: () => this.maps.hasMap,
+      openMap: () => this.maps.openFull(),
+      closeMap: () => this.maps.closeFull(),
+      inCity: () => this.levels.currentId === 'kota',
+      respawn: () => this.respawnHome(),
+      saveSlot: () => this.saveSlot(),
+      loadSlot: () => this.loadSlot(),
+      restart: () => {
+        void this.levels.load(this.levels.currentId);
+      },
+    });
+    startGate.onStart(() => this.maps.setShown(true));
+    {
+      const menu = this.settings;
+      const maps = this.maps;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const g = this;
+      this.debug.settings = Object.defineProperties(menu.debugHandle(), {
+        frames: { get: () => g.frameCount, enumerable: true },
+        frozen: { get: () => g.paused || g.menuOpen, enumerable: true },
+        slot: { get: () => (g.save.data.slot ? { ...g.save.data.slot } : null), enumerable: true },
+        volumes: { get: () => ({ music: g.save.data.settings.musicVol, sfx: g.save.data.settings.sfxVol }), enumerable: true },
+      });
+      this.debug.map = maps.debugHandle();
+    }
     this.drumIcons = new DrumIcons(uiRoot);
     this.debug.rhythm = this.makeRhythmDebug();
     if (new URLSearchParams(window.location.search).get('perf') === '1') {
@@ -664,6 +719,8 @@ export class Game {
       },
       onAfterBuild: () => {
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
+        this.maps.setSource(this.levels.current?.map ?? null);
+        this.settings.refresh();
         this.applyLayout();
         this.syncDebug();
         // Show every skill effect once so its shader program is compiled now, not in the middle of play.
@@ -702,7 +759,7 @@ export class Game {
   private readonly frame = (now: number): void => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.frame);
-    if (this.paused) return;
+    if (this.paused || this.menuOpen) return;
     const panel = this.perfPanel;
     const t0 = panel ? performance.now() : 0;
     const steps = this.runFrame(now, true);
@@ -722,6 +779,7 @@ export class Game {
    */
   private runFrame(now: number, render: boolean): number {
     const dt = Math.min(this.clock.tick(now), MAX_FRAME_DT);
+    this.frameCount++;
 
     this.input.update();
     this.cameraRig.handleInput();
@@ -786,6 +844,10 @@ export class Game {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
     this.skillFrame(dt);
     this.levels.update(dt);
+    {
+      const mp = this.player.visualPosition;
+      this.maps.update(mp.x, mp.z, this.player.facing);
+    }
     this.interactions.update();
     this.objectives.update(dt);
   }
@@ -1014,6 +1076,70 @@ export class Game {
   }
 
   private readonly feet = new THREE.Vector3();
+
+  // ---- Settings panel actions ----
+
+  /** The panel opened / closed: pause the game loop, free the mouse, drop held input. */
+  private setMenuOpen(open: boolean): void {
+    this.menuOpen = open;
+    if (open) {
+      this.sfx.stopAll();
+      this.input.reset();
+      this.menuReleasedLock = !!document.pointerLockElement && typeof document.exitPointerLock === 'function';
+      if (this.menuReleasedLock) document.exitPointerLock();
+    } else {
+      if (this.player.flight.jetsOn) this.sfx.jetStart(false);
+      this.accumulator = 0;
+      this.clock.reset();
+      if (this.menuReleasedLock) {
+        this.menuReleasedLock = false;
+        try {
+          const r = this.renderer.canvas.requestPointerLock() as unknown;
+          if (r instanceof Promise) r.catch(() => undefined);
+        } catch {
+          // no gesture / unsupported: the next click captures the mouse
+        }
+      }
+    }
+  }
+
+  /** "Kembali ke tengah kota" (the city) or "Kembali ke tempat aman" (every other level). */
+  private respawnHome(): void {
+    const lv = this.levels.current;
+    if (!lv) return;
+    if (lv.id === 'kota') {
+      const sp = lv.spawn;
+      this.levels.teleport(sp.x, sp.y, sp.z, sp.yaw ?? Math.PI);
+    } else {
+      this.player.respawn();
+      this.cameraRig.snapBehind(this.player.facing);
+      this.cameraRig.update(0, this.player.visualPosition, this.player);
+    }
+  }
+
+  /** "Simpan": level, safe ground under the player, facing and mode go into the manual slot. */
+  private saveSlot(): boolean {
+    const lv = this.levels.current;
+    if (!lv || this.levels.loading) return false;
+    this.player.getSafeFeet(this.tmpFeet);
+    const f = this.tmpFeet;
+    this.save.setSlot({ level: lv.id, x: f.x, y: f.y, z: f.z, yaw: this.player.facing, mode: this.player.mode });
+    return true;
+  }
+
+  /** "Muat": back to the saved level and spot (the level is loaded first when it is another one). */
+  private loadSlot(): void {
+    const s = this.save.data.slot;
+    if (!s || !this.levels.has(s.level)) return;
+    void this.applySlot({ ...s });
+  }
+
+  private async applySlot(s: SlotSave): Promise<void> {
+    if (this.levels.currentId !== s.level) await this.levels.load(s.level);
+    if (this.levels.currentId !== s.level) return;
+    this.levels.teleport(s.x, s.y + 0.3, s.z, s.yaw);
+    if (this.transformAllowed) this.setPlayerMode(s.mode);
+  }
 
   private setPaused(on: boolean): void {
     this.paused = on;

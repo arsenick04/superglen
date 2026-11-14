@@ -7,6 +7,8 @@ import { CITY, CITY_LAYOUT, KOTA_REACH, districtAt } from './CityData';
 import { buildCity, type BuiltCity } from './CityBuilder';
 import { ChunkStreamer, STREAM } from './ChunkStreamer';
 import { CityHud } from './CityHud';
+import { CityMap } from './CityMap';
+import type { MapSource } from '../MapSource';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -26,6 +28,9 @@ export class KotaLevel implements Level {
   readonly spawn = { ...CITY_LAYOUT.spawn };
   /** Story hook: the player stands at the door of the hidden old Barongsai building. */
   onLabEntrance: (() => void) | null = null;
+  /** Mini map and full map data (the old building shows only after it was found). */
+  map: MapSource | undefined;
+  private cityMap!: CityMap;
 
   private ctx!: LevelContext;
   private streamer!: ChunkStreamer;
@@ -43,6 +48,8 @@ export class KotaLevel implements Level {
   build(ctx: LevelContext): void {
     this.ctx = ctx;
     const { scene, root, physics, game } = ctx;
+    this.cityMap = new CityMap(() => ctx.save.data.discovered.lab);
+    this.map = this.cityMap;
     ctx.audio.music.setScene('jelajah');
     // Free roam: every power on (not written to the save), the child may switch Glen <-> Superglen.
     game.setTransformAllowed(true);
@@ -98,6 +105,10 @@ export class KotaLevel implements Level {
       once: false,
       onEnter: () => {
         this.labFound = true;
+        if (!ctx.save.data.discovered.lab) {
+          ctx.save.discoverLab();
+          this.cityMap.invalidate();
+        }
         this.hud.show('Gedung Barongsai Tua', 0xc9a46f, true);
         ctx.game.debugInfo.labFound = true;
         this.onLabEntrance?.();
@@ -134,6 +145,11 @@ export class KotaLevel implements Level {
           .map((b) => ({ id: b.id, x: b.x, z: b.z, top: b.base + b.wall }));
       info.roofSamples = JSON.stringify([...pick('house'), ...pick('ruko'), ...pick('landmark')]);
     }
+  }
+
+  prepareTeleport(x: number, z: number): void {
+    this.streamer.ensureNear(x, z, STREAM.colIn);
+    this.streamer.flushVisuals(x, z);
   }
 
   fixedUpdate(): void {

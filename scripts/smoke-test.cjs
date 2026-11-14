@@ -7281,6 +7281,324 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
+// ---- Settings panel (gear) and the maps ---------------------------------------------------------------------------------------
+
+/** Screenshots of the settings / map checks go to $UI_SHOTS when set (else test-results). */
+async function uiShot(page, name) {
+  const dir = process.env.UI_SHOTS || OUT;
+  fs.mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: path.join(dir, `${name}.png`) });
+}
+
+const rectOf = (sel) => document.querySelector(sel) && (() => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })();
+
+async function menuBoot(page, touch) {
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(1200);
+}
+
+/** Press a DOM element at its centre (touch: tap, PC: let go of the pointer lock first, then click). */
+async function menuHit(page, sel, touch, fx = 0.5) {
+  const c = await page.evaluate(([sel, fx]) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
+  if (touch) await page.touchscreen.tap(c.x, c.y);
+  else {
+    await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
+    await sleep(100);
+    await page.mouse.click(c.x, c.y);
+  }
+  await sleep(250);
+}
+
+const menuSt = (page) => page.evaluate(() => {
+  const g = window.__superglen;
+  const s = g.settings;
+  return { open: s.open, frozen: s.frozen, frames: s.frames, confirming: s.confirming, toast: s.toast, slot: s.slot, vol: s.volumes, homeLabel: s.homeLabel, level: g.level, x: g.player.x, y: g.player.y, z: g.player.z, mode: g.mode, loading: g.loading, lanes: g.audio.lanes };
+});
+
+const near = (s, x, z, r) => Math.hypot(s.x - x, s.z - z) <= r;
+
+async function settingsScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
+  await menuBoot(page, touch);
+
+  // Gear: visible, big enough, opens the panel and pauses the loop; X and Esc close it.
+  const gear = await page.evaluate(rectOf, '.set-gear');
+  check(`settings ${tag}: the gear is visible and >= 44 px`, gear && gear.w >= 44 && gear.h >= 44 && gear.x >= 0 && gear.y >= 0, JSON.stringify(gear));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-gear`);
+  await menuHit(page, '.set-gear', touch);
+  let s = await menuSt(page);
+  check(`settings ${tag}: tapping the gear opens the panel and pauses the game`, s.open && s.frozen, JSON.stringify({ open: s.open, frozen: s.frozen }));
+  const visible = await page.evaluate(() => { const p = document.querySelector('.settings'); return !p.hidden && getComputedStyle(p).display !== 'none'; });
+  check(`settings ${tag}: the panel is on screen`, visible);
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-panel`);
+  const f0 = (await menuSt(page)).frames;
+  await page.keyboard.down('w');
+  await sleep(600);
+  await page.keyboard.up('w');
+  const s1 = await menuSt(page);
+  check(`settings ${tag}: no game frames run while the panel is open (W does not move the player)`, s1.frames === f0 && near(s1, s.x, s.z, 0.01), JSON.stringify({ f0, f1: s1.frames }));
+  const wide = await page.evaluate(() => [...document.querySelectorAll('.settings .menu-btn, .settings-close')].filter((b) => b.offsetParent !== null).map((b) => { const r = b.getBoundingClientRect(); return Math.round(Math.min(r.width, r.height)); }));
+  check(`settings ${tag}: every panel button is at least 44 px (touch >= 56)`, wide.every((v) => v >= (touch ? 56 : 44)), JSON.stringify(wide));
+  await menuHit(page, '.settings-close', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: the X closes the panel and the game runs again`, !s.open && !s.frozen);
+  await sleep(500);
+  check(`settings ${tag}: frames advance again after closing`, (await menuSt(page)).frames > s.frames);
+  await menuHit(page, '.set-gear', touch);
+  await page.keyboard.press('Escape');
+  await sleep(250);
+  s = await menuSt(page);
+  check(`settings ${tag}: Esc closes the panel`, !s.open && !s.frozen);
+
+  // Volume sliders: lane gains follow, the save keeps them, a reload applies them, the switches still win.
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0.3);
+  await menuHit(page, '[data-slider=sfx] .set-track', touch, 0.5);
+  s = await menuSt(page);
+  const mv = s.vol.music;
+  const sv = s.vol.sfx;
+  check(`settings ${tag}: sliders set music ~30 % and effects ~50 %`, Math.abs(mv - 0.3) < 0.08 && Math.abs(sv - 0.5) < 0.08, JSON.stringify(s.vol));
+  check(`settings ${tag}: the music lane gain is 0.55 x slider, the sfx lane 0.9 x slider`, Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify(s.lanes));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-sliders`);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).settings);
+  check(`settings ${tag}: the volumes are written to the save`, saved.musicVol === mv && saved.sfxVol === sv, JSON.stringify(saved));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0);
+  s = await menuSt(page);
+  check(`settings ${tag}: slider at 0 % silences its lane`, s.vol.music === 0 && s.lanes.music === 0, JSON.stringify({ v: s.vol, l: s.lanes }));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 1);
+  s = await menuSt(page);
+  check(`settings ${tag}: slider at 100 % gives the full lane gain`, s.vol.music === 1 && Math.abs(s.lanes.music - 0.55) < 0.01, JSON.stringify({ v: s.vol, l: s.lanes }));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0.3);
+  // The Musik / Suara switches of the parents' page keep working together with the sliders.
+  await page.evaluate(() => { window.__superglen.settings.hide(); window.__superglen.parents.show(); });
+  await sleep(200);
+  await menuHit(page, '.toggle[data-setting=music] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Musik off = silent music lane, effects lane unchanged`, s.lanes.music === 0 && s.lanes.sfx > 0, JSON.stringify(s.lanes));
+  await menuHit(page, '.toggle[data-setting=music] .switch', touch);
+  await menuHit(page, '.toggle[data-setting=sound] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Suara off = every lane silent whatever the sliders say`, s.lanes.music === 0 && s.lanes.sfx === 0 && s.lanes.voice === 0, JSON.stringify(s.lanes));
+  await menuHit(page, '.toggle[data-setting=sound] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Suara on again = the slider levels are back`, Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify(s.lanes));
+  await page.evaluate(() => window.__superglen.parents.close());
+  await page.goto(URL + '?level=kota');
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: after a reload the saved volumes apply at startup`, s.vol.music === mv && s.vol.sfx === sv && Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify({ v: s.vol, l: s.lanes }));
+
+  // Respawn in the middle of the city.
+  await page.evaluate(() => window.__superglen.placePlayer(60, -80));
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: (setup) the player stands far from the centre`, near(s, 60, -80, 4), JSON.stringify(s));
+  await menuHit(page, '.set-gear', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: in the city the button says "Kembali ke tengah kota"`, s.homeLabel === 'Kembali ke tengah kota', s.homeLabel);
+  await menuHit(page, '[data-act=home]', touch);
+  await sleep(400);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Kembali ke tengah kota" puts the player on the city spawn and closes the panel`, near(s, 0, 26, 1.5) && !s.open && s.y < 3, JSON.stringify(s));
+
+  // Save / load.
+  await menuHit(page, '.set-gear', touch);
+  const loadOff = await page.evaluate(() => document.querySelector('[data-act=load]').disabled);
+  check(`settings ${tag}: "Muat" is disabled while there is no slot`, loadOff);
+  await menuHit(page, '[data-act=load]', touch);
+  check(`settings ${tag}: pressing the disabled "Muat" does nothing`, (await menuSt(page)).open);
+  await page.evaluate(() => window.__superglen.settings.hide());
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.placePlayer(-50, 30); });
+  await sleep(1200);
+  const at = await menuSt(page);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=save]', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Simpan" shows "Tersimpan" and fills the slot (level, position, mode)`, s.toast === 'Tersimpan' && s.slot && s.slot.level === 'kota' && s.slot.mode === 'superglen' && Math.hypot(s.slot.x + 50, s.slot.z - 30) < 2, JSON.stringify(s.slot));
+  check(`settings ${tag}: "Muat" is enabled once a slot exists`, await page.evaluate(() => !document.querySelector('[data-act=load]').disabled));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-saved`);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).slot);
+  check(`settings ${tag}: the slot is in localStorage`, stored && stored.level === 'kota', JSON.stringify(stored));
+  await page.evaluate(() => window.__superglen.settings.hide());
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen'); g.placePlayer(70, 60); });
+  await sleep(1000);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=load]', touch);
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Muat" brings the player back to the saved spot and mode`, near(s, -50, 30, 2) && s.mode === 'superglen' && !s.open && s.y < 5, JSON.stringify({ x: s.x, z: s.z, mode: s.mode, y: s.y }));
+  // Load from another level: the saved level is loaded first.
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(600);
+  await menuHit(page, '.set-gear', touch);
+  const homeTest = (await menuSt(page)).homeLabel;
+  check(`settings ${tag}: outside the city the button says "Kembali ke tempat aman"`, homeTest === 'Kembali ke tempat aman', homeTest);
+  await menuHit(page, '[data-act=load]', touch);
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Muat" from another level loads the city and puts the player on the slot`, s.level === 'kota' && near(s, -50, 30, 2.5), JSON.stringify({ level: s.level, x: s.x, z: s.z }));
+
+  // Reset level: confirmation, "Tidak" first.
+  await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.levelInfo.probe = 1; g.placePlayer(40, 40); });
+  await sleep(900);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=restart]', touch);
+  s = await menuSt(page);
+  const focus = await page.evaluate(() => document.activeElement && document.activeElement.dataset.act);
+  const q = await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent);
+  check(`settings ${tag}: "Ulang dari awal level" asks "Ulang dari awal?" first and nothing restarted yet`, s.confirming && q === 'Ulang dari awal?' && (await page.evaluate(() => window.__superglen.levelInfo.probe)) === 1, q);
+  check(`settings ${tag}: the focus starts on "Tidak"`, focus === 'no', String(focus));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-confirm`);
+  await menuHit(page, '[data-act=no]', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Tidak" does nothing (panel still open, same level and spot)`, !s.confirming && s.open && s.level === 'kota' && near(s, 40, 40, 2) && (await page.evaluate(() => window.__superglen.levelInfo.probe)) === 1, JSON.stringify(s));
+  await menuHit(page, '[data-act=restart]', touch);
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  s = await menuSt(page);
+  check(`settings ${tag}: Esc on the question means "Tidak"`, !s.confirming && s.open);
+  await menuHit(page, '[data-act=restart]', touch);
+  await menuHit(page, '[data-act=yes]', touch);
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading && window.__superglen.levelInfo.probe === undefined, null, { timeout: 30000 });
+  await sleep(800);
+  s = await menuSt(page);
+  const done = await page.evaluate(() => window.__superglen.save.isChapterDone('bab1'));
+  check(`settings ${tag}: "Ya" restarts the level from its beginning (rebuilt, player on the spawn, panel closed)`, near(s, 0, 26, 2) && !s.open && !s.frozen, JSON.stringify({ x: s.x, z: s.z, open: s.open }));
+  check(`settings ${tag}: the restart keeps the chapter progress of the save`, done);
+}
+
+async function minimapScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
+  await menuBoot(page, touch);
+  const m = await page.evaluate(() => {
+    const e = document.querySelector('.minimap');
+    const r = e.getBoundingClientRect();
+    const cs = getComputedStyle(e);
+    return { w: r.width, h: r.height, op: parseFloat(cs.opacity), pe: cs.pointerEvents, hidden: e.hidden, canvases: e.querySelectorAll('canvas').length, d: window.__superglen.map };
+  });
+  check(`minimap ${tag}: visible in the city, opacity < 1, ignores touches`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'none', JSON.stringify({ op: m.op, pe: m.pe }));
+  check(`minimap ${tag}: size ${touch ? '110-140' : '~180'} px, two canvases (static + marker)`, m.canvases === 2 && (touch ? m.w >= 110 && m.w <= 140 : m.w >= 170 && m.w <= 190), JSON.stringify({ w: m.w, h: m.h }));
+  await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}`);
+  // The marker follows the player; the static layer is not redrawn per frame.
+  const mk = () => page.evaluate(() => { const d = window.__superglen.map; const g = window.__superglen; return { x: d.markerX, y: d.markerY, size: d.size, half: d.half, st: d.staticDraws, md: d.markerDraws, px: g.player.x, pz: g.player.z }; });
+  const a = await mk();
+  await page.evaluate(() => window.__superglen.placePlayer(-60, -70));
+  await sleep(1200);
+  const b = await mk();
+  const k = b.size / (b.half * 2);
+  check(`minimap ${tag}: the marker moves with the player and sits at the projected position`, Math.hypot(b.x - a.x, b.y - a.y) > 20 && Math.abs(b.x - (b.px + b.half) * k) <= 4 && Math.abs(b.y - (b.pz + b.half) * k) <= 4, JSON.stringify({ a, b }));
+  await sleep(800);
+  const c = await mk();
+  check(`minimap ${tag}: the marker is not redrawn while standing still and the static layer stays as drawn`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
+  // Hidden building: not on the map until found.
+  const px0 = await page.evaluate(() => {
+    const g = window.__superglen;
+    const lx = g.levelInfo.labX, lz = g.levelInfo.labZ;
+    const d = g.map;
+    const k = d.size / (d.half * 2);
+    const cv = document.querySelector('.minimap-base');
+    const ctx = cv.getContext('2d');
+    const cx = Math.round((102 + d.half) * k), cy = Math.round((-104.5 + d.half) * k);
+    window.__labPx = [cx, cy];
+    const grab = () => Array.from(ctx.getImageData(cx - 3, cy - 3, 7, 7).data).join(',');
+    window.__grab = grab;
+    return { secret: d.secret, sig: grab(), lab: [lx, lz] };
+  });
+  check(`minimap ${tag}: the old Barongsai building is not on the map before it is found (no marker, nothing drawn at its spot)`, px0.secret === null, JSON.stringify(px0.secret));
+  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 2, z + 1.2); }, [100.5, 6, -100.4]);
+  await sleep(1500);
+  const px1 = await page.evaluate(() => ({ secret: window.__superglen.map.secret, sig: window.__grab(), found: window.__superglen.levelInfo.labFound, saved: JSON.parse(localStorage.getItem('superglen.save.v1')).discovered }));
+  check(`minimap ${tag}: after reaching its door the building is on the map (picture at its spot changed, discovery saved)`, px1.found === true && px1.secret !== null && px1.sig !== px0.sig && px1.saved.lab === true, JSON.stringify({ found: px1.found, secret: px1.secret, same: px1.sig === px0.sig, saved: px1.saved }));
+  await page.evaluate(() => window.__superglen.placePlayer(0, 26));
+  await sleep(900);
+
+  // No overlap with the HUD and the touch controls (Superglen mode: laser, shield and the drum icons are up too).
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+  await sleep(700);
+  if (touch) {
+    await page.touchscreen.tap(30, 200); // the floating stick shows its base where the finger lands: keep a finger down
+  }
+  const boxes = await page.evaluate(() => {
+    const out = [];
+    const add = (name, e) => {
+      if (!e || e.hidden) return;
+      const cs = getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return;
+      const r = e.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return;
+      out.push({ name, x: r.left, y: r.top, r: r.right, b: r.bottom });
+    };
+    add('gear', document.querySelector('.set-gear'));
+    add('minimap', document.querySelector('.minimap'));
+    add('fps', document.querySelector('.hud-fps'));
+    add('drums', document.querySelector('.drums'));
+    add('toast', document.querySelector('.city-toast.show'));
+    add('coin', document.querySelector('.coin-hud'));
+    add('hint', document.querySelector('.tc-hint'));
+    document.querySelectorAll('.tc-button').forEach((e, i) => add(`btn${i}:${e.dataset.action}`, e));
+    return out;
+  });
+  const clashes = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const p = boxes[i], q = boxes[j];
+    if (p.x < q.r && q.x < p.r && p.y < q.b && q.y < p.b) clashes.push(`${p.name}/${q.name}`);
+  }
+  const mine = clashes.filter((c) => /gear|minimap/.test(c));
+  check(`minimap ${tag}: gear and mini map overlap no other HUD element or touch button (${boxes.map((b) => b.name).join(',')})`, boxes.length >= 3 && mine.length === 0, JSON.stringify({ mine, boxes }));
+  await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}-superglen`);
+
+  // Full map.
+  await page.evaluate(() => { window.__superglen.placePlayer(60, -80); });
+  await sleep(900);
+  await menuHit(page, '.set-gear', touch);
+  const mapBtn = await page.evaluate(() => { const b = document.querySelector('[data-act=map]'); return { hidden: b.hidden, dis: b.disabled }; });
+  check(`minimap ${tag}: "Lihat peta" is usable in the city`, !mapBtn.hidden && !mapBtn.dis, JSON.stringify(mapBtn));
+  await menuHit(page, '[data-act=map]', touch);
+  const full = await page.evaluate(() => {
+    const f = document.querySelector('.fullmap');
+    const r = document.querySelector('.fullmap-base').getBoundingClientRect();
+    const p = document.querySelector('.settings');
+    return { open: !f.hidden, w: r.width, h: r.height, inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, panel: !p.hidden, frozen: window.__superglen.settings.frozen };
+  });
+  check(`minimap ${tag}: the full map opens big and inside the screen, the game stays paused`, full.open && full.inside && full.w >= (touch ? 300 : 600) && full.frozen && !full.panel, JSON.stringify(full));
+  await uiShot(page, `fullmap-${touch ? 'touch' : 'desktop'}`);
+  await menuHit(page, '.fullmap-close', touch);
+  const back = await page.evaluate(() => ({ full: !document.querySelector('.fullmap').hidden, panel: !document.querySelector('.settings').hidden, open: window.__superglen.settings.open }));
+  check(`minimap ${tag}: the full map's close button returns to the panel`, !back.full && back.panel && back.open, JSON.stringify(back));
+  await menuHit(page, '[data-act=map]', touch);
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  const back2 = await page.evaluate(() => ({ full: !document.querySelector('.fullmap').hidden, panel: !document.querySelector('.settings').hidden }));
+  check(`minimap ${tag}: Esc closes only the full map`, !back2.full && back2.panel, JSON.stringify(back2));
+  await menuHit(page, '.settings-close', touch);
+
+  // A level without map data: no mini map, no "Lihat peta".
+  await page.evaluate(() => window.__superglen.loadLevel('bab1'));
+  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  const nb = await page.evaluate(() => ({ hidden: document.querySelector('.minimap').hidden, has: window.__superglen.map.hasMap }));
+  check(`minimap ${tag}: in bab1 the mini map is hidden`, nb.hidden && !nb.has, JSON.stringify(nb));
+  await page.evaluate(() => window.__superglen.settings.show());
+  const nb2 = await page.evaluate(() => { const b = document.querySelector('[data-act=map]'); const r = b.getBoundingClientRect(); return { hidden: b.hidden, dis: b.disabled, w: r.width, label: window.__superglen.settings.homeLabel }; });
+  check(`minimap ${tag}: in bab1 "Lihat peta" is hidden and disabled, the respawn says "tempat aman"`, nb2.hidden && nb2.dis && nb2.label === 'Kembali ke tempat aman', JSON.stringify(nb2));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-bab1`);
+  const before = await page.evaluate(() => ({ x: window.__superglen.player.x, z: window.__superglen.player.z }));
+  await page.evaluate(() => window.__superglen.testFall());
+  await menuHit(page, '[data-act=home]', touch);
+  await sleep(700);
+  const after = await menuSt(page);
+  check(`minimap ${tag}: "Kembali ke tempat aman" returns the player to safe ground`, !after.open && after.y > -2 && after.y < 6, JSON.stringify({ before, after: { x: after.x, y: after.y, z: after.z } }));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -7408,6 +7726,11 @@ async function main() {
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-flow', { viewport: { width: 1280, height: 720 } }, bab2FlowScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'settings-desktop', { viewport: { width: 1280, height: 720 } }, (p, c) => settingsScenario(p, c, false), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'settings-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => settingsScenario(p, c, true), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'minimap-desktop', { viewport: { width: 1280, height: 720 } }, (p, c) => minimapScenario(p, c, false), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'minimap-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => minimapScenario(p, c, true), '?level=kota&reset=1'));
 
     results.push(await runScenario(browser, 'kota', { viewport: { width: 1280, height: 720 } }, kotaDesktopScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'kota-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaTouchScenario, '?level=kota&fps=0'));
