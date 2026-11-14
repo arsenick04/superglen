@@ -37,6 +37,8 @@ export interface Chapter3Hooks {
   finished(): void;
   /** Put the player on the ground at (x, z) facing `yaw` (colliders made ready, the camera snaps behind). */
   placePlayer(x: number, z: number, yaw: number): void;
+  /** The chapter, its celebration included, is over: the story goes on (Chapter 4 starts). */
+  afterParty(): void;
 }
 
 /** Chapter 3 steps, in order. '' = not started; the chapter is over when 'bab3' is in `chaptersDone`. */
@@ -330,6 +332,7 @@ export class Chapter3 {
     ctx.quiz.coinsChanged();
     this.party = new Celebration(ctx, 'Chapter 3 selesai!', ctx.fx.sparkles);
     await this.party.play();
+    this.hooks.afterParty();
   }
 
   /** Put the child at a stage spot (street, clear view) when he is further than `maxDist` from it. */

@@ -53,6 +53,11 @@ export interface SaveData {
    * (finished = 'bab3' in `chaptersDone`); `tamed` lists the indices of the little rats already tamed.
    */
   bab3: { step: string; tamed: number[] };
+  /**
+   * Chapter 4 ("Sosok Misterius", detective mode) progress in the city: `step` is '' (not started), 'school', 'aara', 'park',
+   * 'figure' or 'lab' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
+   */
+  bab4: { step: string; clue: number };
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -122,6 +127,7 @@ function defaults(): SaveData {
     quiz: defaultQuiz(),
     city: { coins: [], missions: [] },
     bab3: { step: '', tamed: [] },
+    bab4: { step: '', clue: 0 },
   };
 }
 
@@ -177,6 +183,11 @@ function sanitize(raw: unknown): SaveData {
     const b = r.bab3 as Record<string, unknown>;
     if (typeof b.step === 'string' && ['', 'chase', 'count', 'rakus', 'closing'].includes(b.step)) out.bab3.step = b.step;
     if (Array.isArray(b.tamed)) out.bab3.tamed = [...new Set(b.tamed.filter((x): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < 32))];
+  }
+  if (typeof r.bab4 === 'object' && r.bab4 !== null) {
+    const b = r.bab4 as Record<string, unknown>;
+    if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step;
+    if (typeof b.clue === 'number' && Number.isInteger(b.clue) && b.clue >= 0 && b.clue <= 3) out.bab4.clue = b.clue;
   }
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
@@ -332,6 +343,12 @@ export class SaveStore {
   /** Chapter 3 progress (see `SaveData.bab3`). */
   setBab3(step: string, tamed: readonly number[]): void {
     this.data.bab3 = { step, tamed: [...tamed] };
+    this.persist();
+  }
+
+  /** Chapter 4 progress (see `SaveData.bab4`). */
+  setBab4(step: string, clue: number): void {
+    this.data.bab4 = { step, clue };
     this.persist();
   }
 

@@ -13,6 +13,7 @@ import { Chapter1Walk } from './Chapter1Walk';
 import { flow, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { Chapter3 } from './Chapter3';
+import { Chapter4 } from './Chapter4';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -57,6 +58,8 @@ export class KotaLevel implements Level {
   d3: CityD3 | null = null;
   /** Package D4: Chapter 3 (the market) while it is on: Chapter 2 done, Chapter 3 not (null otherwise). */
   ch3: Chapter3 | null = null;
+  /** Package D5: Chapter 4 (Aara, the park clues, the figure) while it is on: Chapter 3 done, Chapter 4 not (null otherwise). */
+  ch4: Chapter4 | null = null;
 
   private ctx!: LevelContext;
   private streamer!: ChunkStreamer;
@@ -173,7 +176,7 @@ export class KotaLevel implements Level {
     });
 
     // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
-    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false));
+    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false));
 
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
@@ -203,8 +206,11 @@ export class KotaLevel implements Level {
         dropMission: () => this.d3?.people.drop(),
         finished: () => this.d3?.people.onChange?.(),
         placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
+        afterParty: () => this.startCh4(),
       });
       this.ch3.start();
+    } else if (!sandbox && ctx.save.isChapterDone('bab3') && !ctx.save.isChapterDone('bab4')) {
+      this.startCh4();
     }
 
     const info = game.debugInfo;
@@ -234,6 +240,18 @@ export class KotaLevel implements Level {
     }
   }
 
+  /** D5: Chapter 4 follows Chapter 3 (also when it was finished in an earlier session). */
+  private startCh4(): void {
+    if (this.ch4 || this.ctx.save.isChapterDone('bab4')) return;
+    this.ch4 = new Chapter4(this.ctx, {
+      setGoal: (g) => this.setGoal(g),
+      dropMission: () => this.d3?.people.drop(),
+      finished: () => this.d3?.people.onChange?.(),
+      placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
+    });
+    this.ch4.start();
+  }
+
   /** Through the old building's door into the lab (fade). */
   enterLab(): void {
     if (!this.ctx.game.controlsEnabled) return;
@@ -261,6 +279,7 @@ export class KotaLevel implements Level {
   fixedUpdate(dt = 1 / 60): void {
     this.story?.fixedUpdate();
     this.ch3?.fixedUpdate(dt);
+    this.ch4?.fixedUpdate();
     this.d3?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
@@ -285,6 +304,7 @@ export class KotaLevel implements Level {
     this.hud.update(dt, p.x, p.z);
     this.d3?.update(dt);
     this.ch3?.update(dt);
+    this.ch4?.update();
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;
