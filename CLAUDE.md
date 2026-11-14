@@ -97,9 +97,10 @@ Pemilik proyek biasanya memberi instruksi malam hari lalu tidur. Setiap sesi mal
 
 **Paket malam Fase D** (kota open world; dikerjakan sebelum Fase C atas keputusan pemilik proyek)
 - D1: Kerangka Kota Botanica: sekitar 300 x 300 m, 5 sampai 6 distrik, dimuat per potongan (chunk) supaya ringan di iPhone, gedung modular yang semuanya punya rute naik, bisa dijelajahi bebas sebagai Glen dan Superglen. **Gedung tua Barongsai / Lab tidak di tengah kota**: tersembunyi di pinggir kota atau di bukit, terbengkalai.
-- D2: Isi kota: koin, sepeda (mode Glen), warga dan misi kecil, penanda arah.
-- D3: Chapter 3: pasar dan Tikus Kecil.
-- D4: Chapter 4: mode detektif.
+- D2: Sambungkan cerita ke kota: Chapter 1 dimulai di jalan kota (pulang sekolah), jalan setapak ke gedung tua di bukit, pintu gedung membawa ke Lab (ruangan terpisah), Chapter 2 latihan di hangar Lab, keluar lewat pintu gedung ke bukit lalu kota terbuka bebas. Save lama tetap jalan.
+- D3: Isi kota: koin, sepeda (mode Glen), warga dan misi kecil, penanda arah.
+- D4: Chapter 3: pasar dan Tikus Kecil.
+- D5: Chapter 4: mode detektif.
 
 Fase berikutnya dipecah dengan cara yang sama saat fase itu dimulai: satu paket kira-kira 2 sampai 4 jam kerja agen.
 
