@@ -42,3 +42,4 @@ Diisi di Fase C.
 |---|---|---|---|
 | Superglen Theme Song (instrumental) | `public/audio/music/superglen_theme.mp3` | Milik pemilik proyek | layar awal, menjelajah (Chapter 1), latihan (Chapter 2) |
 | Superglen Theme Song, versi adegan (`theme_awal`, `theme_jelajah`, `theme_latihan`, `theme_berubah`) | `public/audio/music/theme_*.mp3` | Dipotong dari Superglen Theme Song (milik pemilik proyek) | layar awal, menjelajah, latihan/pertarungan, berubah |
+| Superglen Theme Song (vokal), milik pemilik proyek; potongan tagline | `public/audio/music/superglen_theme_vocal.mp3`, `theme_berubah_tagline.mp3` | Milik pemilik proyek | berubah jadi Superglen ("sistem aktif, Superglen siap!") |
