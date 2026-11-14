@@ -694,12 +694,37 @@ D2 oleh `architect` (opus), D3 oleh `gameplay-dev` (sonnet), suara warga oleh `a
 ### Kredit
 ElevenLabs: sekitar 1.670 karakter untuk suara warga; akun menunjukkan sekitar 11.100 dari 40.000 (angka akun terlambat). Higgsfield: 0.
 
+## Paket D4: Chapter 3 "Pasar Kacau!" (14 November 2026): selesai
+
+Dikerjakan per langkah (`D4_PLAN.md`) supaya bisa dilanjutkan bila batas pemakaian habis. Kode oleh `gameplay-dev` (sonnet), suara oleh `asset-pipeline` (sonnet), QA oleh `qa-tester` (haiku).
+
+### Yang selesai
+- Chapter 3 menyambung langsung dari alarm akhir Chapter 2: keluar dari Lab, Glen jadi Superglen, Nino "Cepat, ke pasar, Superglen!", petunjuk arah ke Pasar, misi warga ditunda.
+- 7 Tikus Kecil lucu membawa bakpao, kue, dan sayur. Kena laser atau hentakan: pusing, menjatuhkan makanan, kabur ke gorong-gorong. Tidak ada yang terluka.
+- Berhitung: Bu Lina "Bakpaoku hilang 3, kue hilang 2", anak mengumpulkan 5 makanan, lalu menjawab "Totalnya berapa?" (kartu 4, 5, 6).
+- Si Tikus Rakus muncul, tertawa, kabur ke gorong-gorong ("Suatu hari aku akan jadi RAJA kota ini!"), tanpa pertarungan. Siluet sosok misterius melambai lalu hilang. Perayaan "Chapter 3 selesai!" dan koin.
+- Suara 16 kalimat baru. Bu Lina = Maya (hangat), Si Tikus Rakus = Clowny +3 semiton (lucu, cempreng).
+
+### Hasil tes
+- build, typecheck, `check:quiz`, `check:reach`, dry-run audio (0 dari 232): lulus.
+- Smoke test penuh: lulus, 1.748 pemeriksaan, 0 gagal, 0 error console. Skenario Chapter 3 lulus di layar PC dan sentuh.
+- Kinerja pasar (preset HP): 46 draw call, sekitar 59 ribu segitiga (batas 60 dan 65 ribu).
+
+### Masalah yang diketahui
+- Tangkapan layar akhir Chapter 3 (dari tes) memperlihatkan kamera terhalang pohon pinus, sehingga Si Tikus Rakus dan sosok misterius tidak terlihat jelas di gambar itu. Perlu dicek saat bermain; mungkin kamera adegan perlu dipindah.
+- Di HP mungkin ada patah-patah sebentar saat tikus pertama kali muncul.
+- Rasa mengejar dan menghentak tikus perlu dicoba anak.
+- Satu suara cadangan (Lunetta) tidak sengaja ditambahkan ke akun ElevenLabs dan tidak dipakai.
+
+### Kredit
+ElevenLabs: 786 karakter untuk Chapter 3; akun sekitar 12.100 dari 40.000. Higgsfield: 0.
+
 ## Pengingat untuk pemilik proyek
 - **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
 - **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
-Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape. Gunakan `?reset=1` untuk mulai dari awal.
-1. **Mulai dari awal**: buka https://arsenick04.github.io/superglen/?reset=1 lalu ikuti jalan pulang dari sekolah sampai gedung tua di bukit, Lab, dan latihan Chapter 2. Apakah anak bisa menemukan jalannya sendiri?
-2. **Kota setelah cerita**: kumpulkan koin, naik sepeda dari Rumah Glen, dan selesaikan satu misi warga (tanda "!" di peta). Atau langsung buka https://arsenick04.github.io/superglen/?level=kota
-3. **Suara warga**: dengarkan Pak Joko, Kak Bima, Bu Sari, dan Dokter Ani. Cukup ceria dan berbeda?
+Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
+1. **Chapter 3**: lanjutkan save yang sudah menamatkan Chapter 2 (atau mainkan dari https://arsenick04.github.io/superglen/?reset=1). Kejar tikus di pasar dengan laser atau hentakan. Apakah mudah dan lucu untuk anak?
+2. **Berhitung**: kumpulkan bakpao dan kue, lalu jawab "Totalnya berapa?".
+3. **Adegan akhir**: apakah Si Tikus Rakus dan sosok misterius terlihat jelas, dan suara Tikus Rakus lucu (tidak menakutkan)?
