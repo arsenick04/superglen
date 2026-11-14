@@ -134,13 +134,13 @@
     "note": "D3 2026-11-14: suara warga kota, Dokter Ani, dokter lembut"
   },
   "res_bima": {
-    "voice_id": "plgKUYgnlZ1DCNh54DwJ",
-    "name": "Dakocan - Expressive, Cheerful and Clear",
+    "voice_id": "H7dnu83omjrDrtfihMsb",
+    "name": "Aldo - Youth, Friendly, Natural",
     "model": "eleven_v4",
     "stability": 0.3,
     "similarity_boost": 0.8,
     "pitchSemitones": 0,
-    "labels": "id, standard accent, young male, casual",
-    "note": "D3 2026-11-14: suara warga kota, Kak Bima, pemuda ceria"
+    "labels": "id, standard accent, young male, confident, social_media",
+    "note": "D3 2026-11-14: Kak Bima, pemuda ceria; pengganti Dakocan (ditolak pemilik)"
   }
 }
