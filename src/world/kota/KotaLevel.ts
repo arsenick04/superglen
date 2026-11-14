@@ -9,6 +9,8 @@ import { ChunkStreamer, STREAM } from './ChunkStreamer';
 import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
+import { Chapter1Walk } from './Chapter1Walk';
+import { flow, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -20,14 +22,32 @@ let BUILT: BuiltCity | null = null;
  * The world edge is soft: walking or flying toward it eases the child back (Flight.groundBounds / bounds), behind that a forest
  * and a ring of steep hills; the ground goes on under all of it, and a fall still returns to the last safe spot.
  *
- * HOOK for the story (not wired yet): `onLabEntrance` fires when the player reaches the door of the old Barongsai building on
- * the hill (`CITY_LAYOUT.lab.door`).
+ * STORY (world/progress.ts has the flow):
+ *   Chapter 1 not done: Glen only (no powers, no switch), start at the school, Chapter1Walk guides to the hill.
+ *   Chapter 1 done:     the save's powers, the switch allowed; Chapter 2 done: every power.
+ *   The door of the old building (`CITY_LAYOUT.lab.door`): reaching it discovers the building (map) and fires
+ *   `onLabEntrance`; pressing at it fades into the lab (`enterLab`). Coming out of the lab arrives at `HILL_DOOR_SPOT`.
+ *   `?level=kota` (debug, `flow.sandbox`): free roam as before, every power, plaza spawn, no Chapter 1 walk.
+ *
+ * EXTENSION POINTS for D3 (coins, bike, people, missions, signposts): build them in `build()` after the streamer (chunk
+ * colliders near the spawn are ready then), tick them in `fixedUpdate` / `update`; put static placement data into
+ * CityData.ts (a Solid for anything with a collider, then `npm run check:reach`); guide with `ctx.objectives` (the map star
+ * follows `map.goal()` -> `this.goal`, set it with `setGoal`). `this.story` is non-null only during Chapter 1.
  */
 export class KotaLevel implements Level {
   readonly id = 'kota';
-  readonly spawn = { ...CITY_LAYOUT.spawn };
-  /** Story hook: the player stands at the door of the hidden old Barongsai building. */
+  spawn: { x: number; y: number; z: number; yaw: number } = { ...CITY_LAYOUT.spawn };
+  /** "Kembali ke tengah kota": the plaza, whatever the spawn was. */
+  readonly home = { ...CITY_LAYOUT.spawn };
+  /** Story hook: the player reached the door of the hidden old Barongsai building (discovery). */
   onLabEntrance: (() => void) | null = null;
+  /** Chapter 1's walk (null when Chapter 1 is done or in the debug free roam). */
+  story: Chapter1Walk | null = null;
+  /** Map star override (null: the star follows the objective beam). */
+  private goalOverride: { x: number; z: number } | null = null;
+  private storyLight = false;
+  /** Show the beam on the door once the player is this far from it (between Chapter 1 and 2). */
+  private doorBeam = false;
   /** Mini map and full map data (the old building shows only after it was found). */
   map: MapSource | undefined;
   private cityMap!: CityMap;
@@ -49,12 +69,34 @@ export class KotaLevel implements Level {
     this.ctx = ctx;
     const { scene, root, physics, game } = ctx;
     this.cityMap = new CityMap(() => ctx.save.data.discovered.lab);
+    this.cityMap.goal = () => this.goalOverride ?? (ctx.objectives.active ? ctx.objectives.position : null);
     this.map = this.cityMap;
     ctx.audio.music.setScene('jelajah');
-    // Free roam: every power on (not written to the save), the child may switch Glen <-> Superglen.
-    game.setTransformAllowed(true);
-    game.setPlayerMode(ctx.save.data.lastMode, false);
-    game.setSkills({ laser: true, shield: true, fly: true });
+    const sandbox = flow.sandbox;
+    const bab1 = ctx.save.isChapterDone('bab1');
+    const arrival = takeArrival('kota');
+    if (!sandbox) ctx.save.setWhere('kota');
+    if (sandbox || ctx.save.isChapterDone('bab2')) {
+      // Free roam: every power on (not written to the save), the child may switch Glen <-> Superglen.
+      game.setTransformAllowed(true);
+      game.setPlayerMode(ctx.save.data.lastMode, false);
+      game.setSkills({ laser: true, shield: true, fly: true });
+    } else if (bab1) {
+      // Between Chapter 1 and 2: the costume is his (the switch), the powers are what the save has unlocked.
+      game.setTransformAllowed(true);
+      game.setPlayerMode(ctx.save.data.lastMode, false);
+    } else {
+      // Chapter 1: Glen walking home from school, no powers yet.
+      game.setTransformAllowed(false);
+      game.setSkills({ laser: false, shield: false, fly: false });
+      game.setPlayerMode('glen', false);
+    }
+    if (arrival === 'hillDoor') {
+      // Out of the old building: it is known now (the map shows it).
+      this.spawn = { ...HILL_DOOR_SPOT };
+      ctx.save.discoverLab();
+    }
+    else if (!sandbox && !bab1) this.spawn = { ...CITY_LAYOUT.chapter1.start };
     const P = CITY.playHalf;
     const box = { minX: -P, maxX: P, minZ: -P, maxZ: P, margin: CITY.boundsMargin, push: CITY.boundsPush };
     ctx.player.flight.maxFlyHeight = CITY.flyHeight;
@@ -114,11 +156,36 @@ export class KotaLevel implements Level {
         this.onLabEntrance?.();
       },
     });
+    // Going in: press at the door (hand icon). Works whenever the building is known (it is, once the zone above was reached).
+    ctx.interactions.add({
+      position: new THREE.Vector3(door.x, door.y + 0.2, door.z + 0.9),
+      radius: 2.4,
+      icon: 'hand',
+      promptHeight: 1.9,
+      enabled: () => ctx.save.data.discovered.lab || this.labFound,
+      onInteract: () => this.enterLab(),
+    });
 
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
+
+    if (!sandbox && !bab1) {
+      // Chapter 1: guided walk from the school to the hill; the light in the old building shows from far away.
+      this.story = new Chapter1Walk(ctx);
+      this.storyLight = true;
+      this.story.start();
+      // The map star: the old building itself (the destination), not the next waypoint.
+      const d = CITY_LAYOUT.lab.door;
+      this.goalOverride = { x: d.x, z: d.z };
+      ctx.onDispose(() => this.story?.dispose());
+    } else if (!sandbox && arrival === 'hillDoor' && !ctx.save.isChapterDone('bab2')) {
+      // Out of the lab between the chapters: the beam shows the way back in (Nino waits with Chapter 2), once the player
+      // has walked a bit away (right at the door the camera would stand inside the beam).
+      this.doorBeam = true;
+      this.goalOverride = { x: door.x, z: door.z };
+    }
 
     const info = game.debugInfo;
     info.buildings = CITY_LAYOUT.buildings.length;
@@ -147,13 +214,31 @@ export class KotaLevel implements Level {
     }
   }
 
+  /** Through the old building's door into the lab (fade). */
+  enterLab(): void {
+    if (!this.ctx.game.controlsEnabled) return;
+    void travel(this.ctx.game, 'lab', 'labEntrance');
+  }
+
+  /** Map star (null: follow the objective beam). */
+  setGoal(goal: { x: number; z: number } | null): void {
+    this.goalOverride = goal;
+  }
+
   prepareTeleport(x: number, z: number): void {
     this.streamer.ensureNear(x, z, STREAM.colIn);
     this.streamer.flushVisuals(x, z);
   }
 
   fixedUpdate(): void {
+    this.story?.fixedUpdate();
     const p = this.ctx.player.position;
+    if (this.doorBeam) {
+      const d = CITY_LAYOUT.lab.door;
+      const far = Math.hypot(p.x - d.x, p.z - d.z) > 12;
+      if (far && !this.ctx.objectives.active) this.ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      else if (!far && this.ctx.objectives.active && Math.hypot(p.x - d.x, p.z - d.z) < 8) this.ctx.objectives.clear();
+    }
     // Safety net: nothing near the player may be missing its colliders (teleports, respawns, very fast moves).
     if (this.streamer.ensureNear(p.x, p.z)) this.ctx.physics.refreshQueries();
   }
@@ -168,18 +253,32 @@ export class KotaLevel implements Level {
       this.sun.target.position.copy(p);
     }
     this.hud.update(dt, p.x, p.z);
+    const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;
-    const near = Math.abs(p.x - door.x) < 45 && Math.abs(p.z - door.z) < 45;
+    // During Chapter 1 it is "the light in the old building" that calls Glen: bigger and seen from across the town.
+    const far = this.storyLight ? 160 : 45;
+    const near = Math.abs(p.x - door.x) < far && Math.abs(p.z - door.z) < far;
     this.glimmer.visible = near;
     if (near) {
       const k = 0.5 + 0.5 * Math.sin(this.t * 2.2);
       this.glimmerMat.opacity = 0.18 + 0.3 * k;
-      this.glimmer.scale.setScalar(0.8 + 0.35 * k);
+      const d = this.storyLight ? Math.max(1, Math.hypot(p.x - door.x, p.z - door.z) / 25) : 1;
+      this.glimmer.scale.setScalar((0.8 + 0.35 * k) * Math.min(4, d));
+    }
+    if (this.story) {
+      this.story.update(dt);
+      info.storyStep = this.story.step;
+      info.routeNext = this.story.next;
+      info.routeLen = this.story.route.length;
+      info.trail = this.story.trailCount;
+      info.jumpDone = this.story.jumpDone;
+      info.jumpHint = this.story.jump.hinting;
+      info.plank = this.story.jump.plankShown;
+      info.atDoor = this.story.atDoor;
     }
 
     const s = this.streamer.stats;
-    const info = this.ctx.game.debugInfo;
     info.visLoaded = s.visLoaded;
     info.visLoading = s.visLoading;
     info.colChunks = s.colLoaded;

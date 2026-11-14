@@ -42,6 +42,9 @@ export class CityMap implements MapSource {
     return b ? { x: b.x, z: b.z } : { x: CITY_LAYOUT.lab.door.x, z: CITY_LAYOUT.lab.door.z };
   })();
 
+  /** Objective star (set by the level); undefined = follow the objective beam. */
+  goal: (() => { x: number; z: number } | null) | undefined = undefined;
+
   constructor(private readonly found: () => boolean) {}
 
   /** The hidden building was just found: the views redraw the static layer. */

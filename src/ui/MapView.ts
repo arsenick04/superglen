@@ -33,6 +33,26 @@ function drawArrow(g: CanvasRenderingContext2D, x: number, y: number, size: numb
   g.restore();
 }
 
+/** The objective star (gold with a white rim): where the guidance points. */
+function drawGoal(g: CanvasRenderingContext2D, x: number, y: number, size: number): void {
+  g.save();
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i * Math.PI) / 5 - Math.PI / 2;
+    const r = i % 2 === 0 ? size : size * 0.45;
+    if (i === 0) g.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    else g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  g.closePath();
+  g.lineJoin = 'round';
+  g.lineWidth = Math.max(2, size * 0.32);
+  g.strokeStyle = '#fff';
+  g.stroke();
+  g.fillStyle = '#ffb800';
+  g.fill();
+  g.restore();
+}
+
 /**
  * Mini map (a small corner picture during play) and the full map (an overlay from the settings panel). North is up and the
  * arrow turns with the player: a steady picture is easier for a child than a rotating one. The static layer is drawn once per
@@ -61,6 +81,8 @@ export class MapView {
   private lastX = 0;
   private lastZ = 0;
   private lastHeading = 0;
+  private goal: { x: number; z: number } | null = null;
+  private goalDirty = false;
   /** Called when the full map closes (the settings panel comes back). */
   onFullClose: (() => void) | null = null;
   /** Counters for tests. */
@@ -145,6 +167,22 @@ export class MapView {
     this.staticDraws++;
   }
 
+  /**
+   * Objective star on both maps (null = none). Per frame is fine: only a change of more than half a metre redraws.
+   */
+  setGoal(goal: { x: number; z: number } | null): void {
+    const g = this.goal;
+    if (goal === null) {
+      if (g === null) return;
+      this.goal = null;
+    } else {
+      if (g && Math.abs(g.x - goal.x) < 0.5 && Math.abs(g.z - goal.z) < 0.5) return;
+      this.goal = { x: goal.x, z: goal.z };
+    }
+    this.goalDirty = true;
+    if (this.fullOpen) this.drawFullMarks();
+  }
+
   /** Per frame. Cheap: an integer compare unless the arrow moved by a pixel or turned by ~3 degrees. */
   update(x: number, z: number, heading: number): void {
     this.lastX = x;
@@ -163,9 +201,16 @@ export class MapView {
     const k = this.miniPx / (src.half * 2);
     const px = Math.round((x + src.half) * k);
     const py = Math.round((z + src.half) * k);
-    if (!force && px === this.mx && py === this.my && Math.abs(heading - this.mh) < 0.05) return;
-    const r = this.miniPx * ARROW * 1.6;
-    if (this.mx >= 0) g.clearRect(this.mx - r, this.my - r, r * 2, r * 2);
+    if (!force && !this.goalDirty && px === this.mx && py === this.my && Math.abs(heading - this.mh) < 0.05) return;
+    if (this.goal || this.goalDirty) {
+      // With a goal star the whole (small) layer is redrawn: star first, the player arrow on top.
+      g.clearRect(0, 0, this.miniPx, this.miniPx);
+      this.goalDirty = false;
+      if (this.goal) drawGoal(g, (this.goal.x + src.half) * k, (this.goal.z + src.half) * k, this.miniPx * 0.05);
+    } else {
+      const r = this.miniPx * ARROW * 1.6;
+      if (this.mx >= 0) g.clearRect(this.mx - r, this.my - r, r * 2, r * 2);
+    }
     this.mx = px;
     this.my = py;
     this.mh = heading;
@@ -200,12 +245,18 @@ export class MapView {
       src.draw(gb, px, true);
       this.fullVersion = src.version;
     }
+    this.drawFullMarks();
+  }
+
+  private drawFullMarks(): void {
+    const src = this.source;
     const gm = this.fullMark.getContext('2d');
-    if (gm) {
-      gm.clearRect(0, 0, px, px);
-      const k = px / (src.half * 2);
-      drawArrow(gm, (this.lastX + src.half) * k, (this.lastZ + src.half) * k, px * 0.022, this.lastHeading);
-    }
+    if (!src || !gm) return;
+    const px = this.fullPx;
+    gm.clearRect(0, 0, px, px);
+    const k = px / (src.half * 2);
+    if (this.goal) drawGoal(gm, (this.goal.x + src.half) * k, (this.goal.z + src.half) * k, px * 0.03);
+    drawArrow(gm, (this.lastX + src.half) * k, (this.lastZ + src.half) * k, px * 0.022, this.lastHeading);
   }
 
   closeFull(): void {
@@ -248,6 +299,10 @@ export class MapView {
       },
       get half() {
         return self.source ? self.source.half : 0;
+      },
+      /** The objective star (world x / z) shown on the maps, or null. */
+      get goal() {
+        return self.goal ? { ...self.goal } : null;
       },
     };
   }

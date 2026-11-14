@@ -1134,7 +1134,7 @@ async function frameworkDesktopScenario(page, check) {
   check('?reset=1 clears the save', await page.evaluate(() => window.__superglen.save.data.chaptersDone.length === 0 && localStorage.getItem('superglen.save.v1') === null));
   await page.goto(URL + '?level=nope&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
-  check('unknown ?level falls back to the default (bab1)', (await page.evaluate(state)).level === 'bab1');
+  check('unknown ?level falls back to the default (the city)', (await page.evaluate(state)).level === 'kota');
 }
 
 async function frameworkTouchScenario(page, check) {
@@ -1368,58 +1368,84 @@ async function celebrationChecks(page, check, d, beat, opts) {
 }
 
 /** The whole chapter. `beat(name, d)` is called at the interesting moments (screenshots / overlap sampling). */
-async function playChapter(page, check, d, beat, opts = {}) {
+/** The old building's door on the hill (CityData lab.door) and the Chapter 1 route waypoints (CityData chapter1). */
+const LAB_DOOR_CITY = { x: 100.5, y: 6, z: -100.4 };
+const C1_START = { x: -24, z: -95.7 };
+
+/**
+ * Chapter 1 in the city (D2): from the school along the guided route to the old building's door, the jump lesson on the
+ * hill path, then the door into the lab. Ends with the lab loaded (paused).
+ */
+async function playCityWalk(page, check, d, beat, opts = {}) {
   let s = await d.st();
-  // --- A. street ---
+  check('fresh start: Chapter 1 begins in the city near the school, as Glen', s.level === 'kota' && s.mode === 'glen' && Math.hypot(s.player.x - C1_START.x, s.player.z - C1_START.z) < 2.5, `${s.level} ${s.mode} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  check('city Chapter 1: no powers and no transform star (Glen only until the costume)', !s.skills.unlocked.fly && !s.skills.unlocked.laser && !s.skills.unlocked.shield && (await page.evaluate(() => !document.querySelector('.tc-button[data-action=transform]'))), JSON.stringify(s.skills.unlocked));
   await d.adv(20);
   s = await d.st();
   check('first line shown: bab1_glen_pulang', d.seen.includes('bab1_glen_pulang'), d.seen.join());
-  check('objective beam points down the street', s.objective.active && s.objective.z < -30, JSON.stringify(s.objective));
+  check('guidance: the objective beam stands on the first waypoint (school street)', s.objective.active && Math.abs(s.objective.x) < 1 && Math.abs(s.objective.z + 93) < 1, JSON.stringify(s.objective));
+  check('guidance: a glimmer trail lies on the ground ahead', s.levelInfo.trail >= 4, `trail ${s.levelInfo.trail}`);
+  check('guidance: the map shows the goal star at the old building', !!s.map.goal && Math.hypot(s.map.goal.x - LAB_DOOR_CITY.x, s.map.goal.z - LAB_DOOR_CITY.z) < 1, JSON.stringify(s.map.goal));
+  check('city: the mini map is shown', s.map.visible === true);
   await beat('street', d);
-  await d.area('street');
-  s = await d.walk(0, -8.0, 600);
-  check('jump obstacle cannot be walked through', s.player.z > -8.7, `z=${s.player.z.toFixed(2)}`);
-  s = await d.until((s) => s.levelInfo.hint === true, 120);
-  check('jump hint shown near the barrier', !!s);
-  // The lompat line queues behind the opening line, so its start depends on that clip's length: wait on state.
+  await d.area('city start');
+  // Wander off the route (the child may): the guidance waits, nothing pushes back.
+  if (!opts.skipWander) {
+    await d.walk(-24, -93, 300);
+    s = await d.walk(-40, -93, 600);
+    check('wandering the other way is allowed (no wall)', s.player.x < -38, `x ${s.player.x.toFixed(1)}`);
+    s = await d.st();
+    check('wandered off: guidance stays on the same waypoint, edge arrow or beam still shown', s.objective.active && Math.abs(s.objective.z + 93) < 1 && s.levelInfo.routeNext === 1, JSON.stringify({ o: s.objective, n: s.levelInfo.routeNext }));
+  }
+  for (const [x, z] of [[0, -93], [50, -93], [50, -50]]) await d.walk(x, z, 1500);
+  s = await d.st();
+  check('route: walked along the school street and down the avenue', Math.hypot(s.player.x - 50, s.player.z + 50) < 2, `${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  await d.walk(78, -50, 900);
+  s = await d.until(() => d.seen.includes('bab1_glen_gedung'), 600);
+  check('the old building on the hill comes into view: gedung line', !!s, d.seen.join());
+  s = await d.st();
+  check('guidance moves on along the route (beam on the hill path)', s.objective.active && Math.abs(s.objective.x - 78) < 1 && s.objective.z < -55, JSON.stringify(s.objective));
+  await beat('building', d);
+  // --- jump lesson on the hill path ---
+  s = await d.walk(78, -72, 400);
+  check('the striped bar on the path cannot be walked through', s.player.z > -69.6, `z=${s.player.z.toFixed(2)}`);
+  s = await d.until((s) => s.levelInfo.jumpHint === true, 120);
+  check('jump hint shown near the bar', !!s);
   await d.until(() => d.seen.includes('bab1_glen_lompat'), 600);
   check('lompat line shown', d.seen.includes('bab1_glen_lompat'), d.seen.join());
   await d.adv(4, true);
   await beat('jump', d);
-  // Jump over: run at it and press Space as a player would.
-  await page.evaluate(() => window.__superglen.walkTo(0, -14));
+  await page.evaluate(() => window.__superglen.walkTo(78, -76));
   await d.adv(3);
   await d.tap('Space');
-  s = await d.until((s) => s.player.z < -10.5, 200, 3);
-  check('Glen can jump over the barrier', !!s, s ? `z=${s.player.z.toFixed(2)} jumps=${s.jumps}` : '');
+  s = await d.until((s) => s.player.z < -71, 200, 3);
+  check('Glen can jump over the bar', !!s, s ? `z=${s.player.z.toFixed(2)} jumps=${s.jumps}` : '');
   await page.evaluate(() => window.__superglen.cancelWalk());
   await d.adv(10);
   s = await d.st();
-  check('hint off after crossing', s.levelInfo.hint === false);
-  check('no plank needed when the jump was made', s.levelInfo.plank === false);
-  s = await d.walk(0, -35, 900);
-  s = await d.until((s) => d.seen.includes('bab1_glen_gedung'), 400);
-  check('street end: gedung line', !!s, d.seen.join());
+  check('hint off after crossing, lesson done, no plank needed', s.levelInfo.jumpHint === false && s.levelInfo.jumpDone === true && s.levelInfo.plank === false, JSON.stringify({ h: s.levelInfo.jumpHint, d: s.levelInfo.jumpDone, p: s.levelInfo.plank }));
+  for (const [x, z] of [[78, -76], [90, -82], [100, -88]]) await d.walk(x, z, 900);
+  s = await d.until(() => d.seen.includes('bab1_glen_pagar'), 400);
+  check('top of the old path: pagar line', !!s, d.seen.join());
+  s = await d.walk(LAB_DOOR_CITY.x, LAB_DOOR_CITY.z + 2.2, 900);
+  check('up on the hill at the door', s.feetY > 5.5 && Math.hypot(s.player.x - LAB_DOOR_CITY.x, s.player.z - LAB_DOOR_CITY.z) < 3.5, `feet ${s.feetY.toFixed(2)} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  s = await d.until((s) => s.levelInfo.labFound === true && s.levelInfo.atDoor === true, 120);
+  check('door reached: the building is found (map shows it)', !!s && !!s.map.secret, s ? JSON.stringify(s.map.secret) : 'timeout');
+  await beat('door', d);
+  await d.press('hand', 'old building door');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
   s = await d.st();
-  check('objective now points at the fence gap', Math.abs(s.objective.x - 4.8) < 0.3 && Math.abs(s.objective.z + 38.2) < 0.3, JSON.stringify(s.objective));
-  await d.adv(30);
-  await beat('building', d);
-  await d.walk(4.8, -35.5, 400);
-  await d.area('building exterior');
-  // The fence blocks everywhere but the gap.
-  await d.walk(-2, -39.5, 400);
-  s = await d.st();
-  check('fence blocks outside the gap', s.player.z > -38.0, `z=${s.player.z.toFixed(2)}`);
-  await d.walk(4.8, -37.6, 400);
-  await d.walk(4.8, -39.6, 300);
-  s = await d.st();
-  check('gap is passable', s.player.z < -39.2, `z=${s.player.z.toFixed(2)}`);
-  check('pagar line shown', d.seen.includes('bab1_glen_pagar'), d.seen.join());
-  s = await d.st();
-  check('objective points at the door', Math.abs(s.objective.z + 43.6) < 0.3);
+  check('the door fades into the lab: just inside the old building', s.level === 'lab' && s.player.z < -43 && s.player.z > -46 && Math.abs(s.feetY) < 0.1, `${s.level} z ${s.player.z.toFixed(1)}`);
+  check('lab: the mini map is hidden', s.map.visible === false && s.map.hasMap === false);
+  check('save: "where" is the lab (continue starts here)', s.save.data.where === 'lab', s.save.data.where);
+}
+
+async function playChapter(page, check, d, beat, opts = {}) {
+  await playCityWalk(page, check, d, beat, opts);
+  let s;
   // --- C. hall ---
-  await d.walk(0, -39.6, 300);
-  await d.walk(0, -45, 300);
   s = await d.until((s) => d.seen.includes('bab1_glen_gelap'), 300);
   check('gelap line shown on entering', !!s);
   s = await d.until((s) => s.levelInfo.flashlight === true, 200);
@@ -1554,8 +1580,8 @@ async function bab1DesktopScenario(page, check) {
   await page.mouse.click(640, 360);
   await sleep(800);
   const s0 = await page.evaluate(state);
-  check('default level is bab1 (no ?level)', s0.level === 'bab1', s0.level);
-  await expectStanding(page, check, 'bab1 at start (real time)');
+  check('default level is the city (no ?level): Chapter 1 starts there', s0.level === 'kota', s0.level);
+  await expectStanding(page, check, 'Chapter 1 city start (real time)');
   await page.evaluate(() => window.__superglen.pause(true));
   const d = makeStoryDriver(page, check);
   await d.adv(20);
@@ -1590,18 +1616,60 @@ async function bab1DesktopScenario(page, check) {
     await sleep(200);
   };
   await cyc('test');
-  await cyc('bab1');
+  await cyc('lab');
   await sleep(1200);
   const c1 = await page.evaluate(countsOf);
   await cyc('test');
-  await cyc('bab1');
+  await cyc('lab');
   await sleep(1200);
   const c2 = await page.evaluate(countsOf);
   const same = ['geometries', 'textures', 'colliders', 'bodies', 'sceneChildren'].every((k) => c1[k] === c2[k]);
-  check('bab1 -> test -> bab1 does not leak', same, `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
+  check('lab -> test -> lab does not leak', same, `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
+  await labExitChecks(page, check, d, 'desktop');
   await page.evaluate(() => window.__superglen.save.reset());
   const reset = await page.evaluate(() => { const g = window.__superglen; return g.save.data.chaptersDone.length; });
   check('save reset for the next runs', reset === 0);
+}
+
+/**
+ * After Chapter 1 (lab loaded, finished): walk out of the front door -> the city at the hill door (building on the map, the
+ * beam back to the door while Chapter 2 waits), then press at the door -> the lab entrance again.
+ */
+async function labExitChecks(page, check, d, tag) {
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(30);
+  let s = await d.st();
+  check(`${tag}: in the lab the respawn button says "Kembali ke tempat aman"`, await page.evaluate(() => window.__superglen.settings.homeLabel === 'Kembali ke tempat aman'));
+  await d.walk(0, -60, 900);
+  await d.walk(0, -50, 900);
+  await d.walk(0, -43.5, 600);
+  await page.evaluate(() => window.__superglen.walkTo(0, -38));
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => { const g = window.__superglen; g.cancelWalk(); g.pause(true); });
+  await d.adv(30);
+  s = await d.st();
+  check(`${tag}: walking out of the lab's front door -> the city in front of the old building on the hill`, s.level === 'kota' && Math.hypot(s.player.x - LAB_DOOR_CITY.x, s.player.z - (LAB_DOOR_CITY.z + 4.6)) < 2 && s.feetY > 5.5, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} feet ${s.feetY.toFixed(2)}`);
+  await expectStanding(page, check, `${tag}: city at the hill door`, LAB_DOOR_CITY.y);
+  check(`${tag}: the Lab is on the city map, the mini map is shown`, !!s.map.secret && s.map.visible === true, JSON.stringify({ sec: s.map.secret, v: s.map.visible }));
+  check(`${tag}: Chapter 2 not played: the map star marks the door; no beam right at the door (the camera would stand in it)`, !s.objective.active && !!s.map.goal && Math.hypot(s.map.goal.x - LAB_DOOR_CITY.x, s.map.goal.z - LAB_DOOR_CITY.z) < 1, JSON.stringify({ o: s.objective.active, g: s.map.goal }));
+  await d.walk(LAB_DOOR_CITY.x, LAB_DOOR_CITY.z + 18, 600);
+  s = await d.st();
+  check(`${tag}: walked away from the door: the beam points back at it`, s.objective.active && Math.hypot(s.objective.x - LAB_DOOR_CITY.x, s.objective.z - LAB_DOOR_CITY.z) < 1.5, JSON.stringify(s.objective));
+  check(`${tag}: after Chapter 1 the city has the transform switch; save "where" = kota`, s.save.data.where === 'kota' && (await page.evaluate(() => document.querySelector('.hud-controls').textContent.includes('Q: berubah') || !!document.querySelector('.tc-button[data-action=transform]'))), s.save.data.where);
+  check(`${tag}: in the city the respawn button says "Kembali ke tengah kota"`, await page.evaluate(() => window.__superglen.settings.homeLabel === 'Kembali ke tengah kota'));
+  await d.adv(2, true);
+  await shot(page, `lab-exit-city-${tag}`);
+  await d.walk(LAB_DOOR_CITY.x, LAB_DOOR_CITY.z + 2.0, 600);
+  await d.press('hand', `${tag}: the city door`);
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(10);
+  s = await d.st();
+  check(`${tag}: the city door leads into the lab entrance (any time after discovery)`, s.level === 'lab' && s.player.z < -43 && s.player.z > -46, `${s.level} z ${s.player.z.toFixed(1)}`);
+  check(`${tag}: lab: mini map hidden`, s.map.visible === false);
+  await page.evaluate(() => window.__superglen.pause(false));
 }
 
 async function bab1PlankScenario(page, check) {
@@ -1611,25 +1679,30 @@ async function bab1PlankScenario(page, check) {
   await page.evaluate(() => window.__superglen.pause(true));
   const d = makeStoryDriver(page, check);
   await d.adv(20);
-  await d.walk(0, -8.0, 600);
+  // Straight to the hill path below the bar (the guidance skips ahead to the nearest waypoint).
+  await page.evaluate(() => window.__superglen.teleportFeet(78, 0.3, -60));
+  await d.adv(30);
+  await d.walk(78, -67.6, 600);
+  let s = await d.until((s) => s.levelInfo.jumpHint === true, 120);
+  check('city bar: hint shown at the bar', !!s);
   await d.adv(1250);
-  let s = await d.st();
-  check('fallback plank appears after ~20 s without crossing', s.levelInfo.plank === true && s.player.z > -8.7, `plank ${s.levelInfo.plank}`);
-  check('objective leads to the plank', Math.abs(s.objective.x - 3.2) < 0.4 && s.objective.z > -9, JSON.stringify(s.objective));
+  s = await d.st();
+  check('fallback plank appears after ~20 s without crossing', s.levelInfo.plank === true && s.player.z > -69.6, `plank ${s.levelInfo.plank} z ${s.player.z.toFixed(2)}`);
   await d.adv(10, true);
   await shot(page, 'bab1-plank');
   const j0 = s.jumps;
-  await d.walk(3.2, -6.8, 300);
-  await d.walk(3.2, -14, 600);
+  await d.walk(79.6, -66.8, 300);
+  await d.walk(79.6, -74, 600);
   s = await d.st();
-  check('plank lets the player over the barrier without jumping', s.player.z < -11 && s.jumps === j0, `z=${s.player.z.toFixed(2)} jumps ${s.jumps - j0}`);
-  check('hint off and objective back down the street', (await d.st()).levelInfo.hint === false && (await d.st()).objective.z < -30);
+  check('plank lets Glen over the bar without jumping', s.player.z < -72 && s.jumps === j0, `z=${s.player.z.toFixed(2)} jumps ${s.jumps - j0}`);
+  s = await d.st();
+  check('hint off after crossing and the beam leads on up the hill', s.levelInfo.jumpHint === false && s.levelInfo.jumpDone === true && s.objective.z < -72, JSON.stringify(s.objective));
 }
 
 async function bab1ReturnScenario(page, check) {
   // Runs on a page where the save says bab1 is done (set before the reload).
   await sleep(1500);
-  await page.evaluate(() => { window.__superglen.save.markChapterDone('bab1'); window.__superglen.save.setLastMode('superglen'); });
+  await page.evaluate(() => { window.__superglen.save.markChapterDone('bab1'); window.__superglen.save.setLastMode('superglen'); window.__superglen.save.setWhere('lab'); });
   await page.goto(URL + '?fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
@@ -1639,7 +1712,7 @@ async function bab1ReturnScenario(page, check) {
   const d = makeStoryDriver(page, check);
   await d.adv(40, true);
   let s = await d.st();
-  check('returning player starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `mode ${s.mode} z ${s.player.z.toFixed(1)}`);
+  check('returning player starts in the lab as Superglen', s.level === 'lab' && s.mode === 'superglen' && s.player.z < -62, `mode ${s.mode} z ${s.player.z.toFixed(1)}`);
   await expectStanding(page, check, 'returning start in the lab', FLOOR);
   check('returning: wall already open, no flashlight, no objective', s.levelInfo.wallOpen === true && s.levelInfo.flashlight === false);
   await shot(page, 'bab1-return');
@@ -1720,7 +1793,7 @@ async function bab1ReturnScenario(page, check) {
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
   s = await page.evaluate(state);
-  check('?reset=1 starts the story again at the school', s.level === 'bab1' && s.mode === 'glen' && s.player.z > -2 && s.save.data.chaptersDone.length === 0, `z ${s.player.z.toFixed(1)}`);
+  check('?reset=1 starts the story again at the school (in the city)', s.level === 'kota' && s.mode === 'glen' && Math.hypot(s.player.x - C1_START.x, s.player.z - C1_START.z) < 2.5 && s.save.data.chaptersDone.length === 0, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
 }
 
 async function bab1TouchScenario(page, check) {
@@ -1735,7 +1808,7 @@ async function bab1TouchScenario(page, check) {
   const d = makeStoryDriver(page, check);
   const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
   check('touch: Glen buttons are jump + interact only', (await actions()) === 'jump,interact', await actions());
-  check('touch: default level bab1', (await d.st()).level === 'bab1');
+  check('touch: default level is the city (Chapter 1)', (await d.st()).level === 'kota');
   let overlaps = 0;
   const samples = [];
   const sample = async (name) => {
@@ -1780,7 +1853,7 @@ async function bab1TouchScenario(page, check) {
     }
     if (name === 'superglen') {
       await page.evaluate(() => window.__superglen.advance(2, true));
-      await shot(page, 'bab1-touch-281');
+      await shot(page, 'bab1-touch-390');
     }
   }, { skipPoles: true });
   void quiet;
@@ -2176,14 +2249,43 @@ async function bab2DesktopScenario(page, check) {
   const c2 = await page.evaluate(countsOf);
   const keys = ['geometries', 'textures', 'colliders', 'bodies', 'sceneChildren'];
   check('bab2 -> test -> bab2 does not leak', keys.every((k) => c1[k] === c2[k]), `${JSON.stringify(c1)} vs ${JSON.stringify(c2)}`);
-  await cyc('bab1');
+  await cyc('lab');
   await cyc('bab2');
   await sleep(800);
   const c3 = await page.evaluate(countsOf);
-  check('bab2 -> bab1 -> bab2 does not leak', keys.every((k) => c1[k] === c3[k]), `${JSON.stringify(c1)} vs ${JSON.stringify(c3)}`);
+  check('bab2 -> lab -> bab2 does not leak', keys.every((k) => c1[k] === c3[k]), `${JSON.stringify(c1)} vs ${JSON.stringify(c3)}`);
   const free = await page.evaluate(() => { const g = window.__superglen; return g.level === 'bab2' && g.levelInfo.free === true; });
   check('bab2 reloaded after it was done starts in free play', free);
+  await bab2ExitChecks(page, check, d);
   await page.evaluate(() => window.__superglen.save.reset());
+}
+
+/** Chapter 2 done (hangar loaded): hangar door -> lab (next to the glowing door, beam to the exit) -> front door -> city. */
+async function bab2ExitChecks(page, check, d) {
+  // This page started at ?level=bab2 with a fresh save: Chapter 1 is "done" as in the real flow.
+  await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.pause(true); });
+  await d.adv(20);
+  await d.walk(0, 1.5, 900);
+  await d.walk(0, 10.2, 900);
+  await d.adv(10);
+  await d.press('hand', 'exit: the hangar door');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(20);
+  let s = await d.st();
+  check('exit: the hangar door leads into the lab, Chapter 2 done: the beam shows the way out (front door)', s.level === 'lab' && s.player.z < -60 && s.objective.active && s.objective.z > -43 && Math.abs(s.objective.x) < 1, JSON.stringify({ l: s.level, z: s.player.z, o: s.objective }));
+  await d.walk(0, -60, 900);
+  await d.walk(0, -50, 900);
+  await d.walk(0, -43.5, 600);
+  await page.evaluate(() => window.__superglen.walkTo(0, -38));
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => { const g = window.__superglen; g.cancelWalk(); g.pause(true); });
+  await d.adv(20);
+  s = await d.st();
+  check('exit: out of the front door -> the city at the hill door, Lab on the map, every power, the city free (no beam)', s.level === 'kota' && Math.hypot(s.player.x - LAB_DOOR_CITY.x, s.player.z - (LAB_DOOR_CITY.z + 4.6)) < 2 && !!s.map.secret && s.skills.unlocked.fly && s.skills.unlocked.laser && !s.objective.active, JSON.stringify({ l: s.level, x: s.player.x, z: s.player.z, sec: s.map.secret, o: s.objective.active }));
+  await page.evaluate(() => window.__superglen.pause(false));
 }
 
 async function bab2TouchScenario(page, check) {
@@ -2256,7 +2358,7 @@ async function bab2FlowScenario(page, check) {
     if (startClick) await page.mouse.click(640, 360);
     await sleep(500);
   };
-  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.persist(); }, [chapters, skills]);
+  const setSave = (chapters, skills, where = '') => page.evaluate(([c, sk, w]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.data.where = w; g.save.persist(); }, [chapters, skills, where]);
   const ALL = { laser: true, shield: true, fly: true };
   const NONE = { laser: false, shield: false, fly: false };
   const d = makeStoryDriver(page, check);
@@ -2267,14 +2369,14 @@ async function bab2FlowScenario(page, check) {
   await page.evaluate(() => window.__superglen.save.reset());
   await load('?fps=0&reset=1');
   s = await page.evaluate(state);
-  check('flow: fresh save starts Chapter 1 (bab1) as Glen', s.level === 'bab1' && s.mode === 'glen', `${s.level} ${s.mode}`);
+  check('flow: fresh save starts Chapter 1 in the city as Glen', s.level === 'kota' && s.mode === 'glen', `${s.level} ${s.mode}`);
 
   // b) bab1 done, bab2 not -> the lab; the glowing door leads to the hall
   await setSave(['bab1'], NONE);
   await load('?fps=0');
   await page.evaluate(() => window.__superglen.pause(true));
   s = await d.st();
-  check('flow: bab1 done -> starts in the lab as Superglen', s.level === 'bab1' && s.mode === 'superglen' && s.player.z < -62, `${s.level} ${s.mode} z ${s.player.z.toFixed(1)}`);
+  check('flow: bab1 done -> starts in the lab as Superglen', s.level === 'lab' && s.mode === 'superglen' && s.player.z < -62, `${s.level} ${s.mode} z ${s.player.z.toFixed(1)}`);
   await d.adv(30);
   await d.walk(-5.2, -69.25, 900);
   await d.adv(10);
@@ -2287,9 +2389,9 @@ async function bab2FlowScenario(page, check) {
   check('flow: the lab door loads Chapter 2 (story from the start, only jump)', s.level === 'bab2' && !s.skills.unlocked.fly && s.levelInfo.free === false, `${s.level} free ${s.levelInfo.free}`);
   check('flow: the door starts the story at the spawn', Math.abs(s.player.x) < 0.5 && Math.abs(s.player.z) < 0.5);
 
-  // c) bab2 done -> free play in the hall, all skills; restart exercises on their icons
+  // c) bab2 done -> the city at the hill door (flow-saves); the hangar itself: free play, all skills, exercises on their icons
   await setSave(['bab1', 'bab2'], ALL);
-  await load('?fps=0');
+  await load('?level=bab2&fps=0');
   await page.evaluate(() => window.__superglen.pause(true));
   await d.adv(30);
   s = await d.st();
@@ -2345,9 +2447,9 @@ async function bab2FlowScenario(page, check) {
   check('flow: the corridor door shows a hand prompt', s.prompt.visible && s.prompt.icon === 'hand', JSON.stringify(s.prompt));
   await d.tap('e');
   await page.evaluate(() => window.__superglen.pause(false));
-  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
   s = await page.evaluate(state);
-  check('flow: the exit door leads to the lab; all skills stay unlocked there', s.level === 'bab1' && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield && s.mode === 'superglen', JSON.stringify(s.skills.unlocked));
+  check('flow: the exit door leads to the lab; all skills stay unlocked there', s.level === 'lab' && s.skills.unlocked.fly && s.skills.unlocked.laser && s.skills.unlocked.shield && s.mode === 'superglen', JSON.stringify(s.skills.unlocked));
   check('flow: lab flying ceiling is low (harmless)', s.skills.maxFlyHeight <= 5, `${s.skills.maxFlyHeight}`);
   await page.evaluate(() => window.__superglen.pause(true));
   await d.adv(30);
@@ -2356,13 +2458,13 @@ async function bab2FlowScenario(page, check) {
   await d.tap('e');
   check('flow: with both chapters done, Nino in the lab only cheers (no new chapter)', (await d.st()).dialog.id === 'bab2_nino_hebat');
   await d.adv(400);
-  check('flow: ... and the lab stays loaded', (await d.st()).level === 'bab1');
+  check('flow: ... and the lab stays loaded', (await d.st()).level === 'lab');
   await page.evaluate(() => window.__superglen.pause(false));
 
   // d) reduced motion: calm beacons
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setSave(['bab1', 'bab2'], ALL);
-  await load('?fps=0');
+  await load('?level=bab2&fps=0');
   await sleep(300);
   s = await page.evaluate(state);
   check('flow: prefers-reduced-motion: the alarm does not pulse (0 Hz)', s.level === 'bab2' && s.levelInfo.alarmHz === 0, `${s.levelInfo.alarmHz}`);
@@ -2371,8 +2473,62 @@ async function bab2FlowScenario(page, check) {
   // e) ?reset=1 clears everything -> Chapter 1 story
   await load('?fps=0&reset=1', false);
   s = await page.evaluate(state);
-  check('flow: ?reset=1 starts the Chapter 1 story again', s.level === 'bab1' && s.mode === 'glen' && s.player.z > -2 && s.save.data.chaptersDone.length === 0, `${s.level} z ${s.player.z.toFixed(1)}`);
+  check('flow: ?reset=1 starts the Chapter 1 story again (city, at the school)', s.level === 'kota' && s.mode === 'glen' && Math.hypot(s.player.x - C1_START.x, s.player.z - C1_START.z) < 2.5 && s.save.data.chaptersDone.length === 0, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
   await page.evaluate(() => window.__superglen.save.reset());
+}
+
+/**
+ * Continue from the save at every stage of the D2 flow, and saves of the previous live version (standalone 'bab1' street
+ * level, no "where", no slot time stamp): they must land in the new flow without losing chapters or stickers.
+ */
+async function flowSavesScenario(page, check) {
+  await sleep(1200);
+  const NOW = Date.now();
+  const ALL = { laser: true, shield: true, fly: true };
+  const NONE = { laser: false, shield: false, fly: false };
+  const QUIZ = { coins: 42, stickers: ['hewan:kucing', 'berhitung:apel'], challenges: 3, fragments: 0, recent: [], cats: {} };
+  const open = async (data) => {
+    await page.evaluate((d) => localStorage.setItem('superglen.save.v1', JSON.stringify(d)), data);
+    await page.goto(URL + '?fps=0');
+    await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+    await sleep(600);
+    await page.evaluate(() => window.__superglen.advance(30, false));
+    return page.evaluate(state);
+  };
+  const at = (s, x, z, r = 2.5) => Math.hypot(s.player.x - x, s.player.z - z) < r;
+  const HILL = [LAB_DOOR_CITY.x, LAB_DOOR_CITY.z + 4.6];
+  let s;
+
+  s = await open({ version: 1 });
+  check('continue: empty save -> the city at the school (Chapter 1 walk)', s.level === 'kota' && at(s, C1_START.x, C1_START.z) && s.levelInfo.storyStep === 'walk' && s.mode === 'glen', `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} ${s.levelInfo.storyStep}`);
+  s = await open({ version: 1, where: 'kota', chaptersDone: [] });
+  check('continue: Chapter 1 begun in the city -> the city at the school', s.level === 'kota' && at(s, C1_START.x, C1_START.z), `${s.level}`);
+  s = await open({ version: 1, where: 'lab', chaptersDone: [] });
+  check('continue: Chapter 1 begun inside the lab -> the lab entrance, story at the hall, Glen without powers', s.level === 'lab' && s.player.z < -43 && s.player.z > -46 && s.mode === 'glen' && !s.skills.unlocked.fly && s.levelInfo.step !== 'returning', `${s.level} z ${s.player.z.toFixed(1)} step ${s.levelInfo.step}`);
+  s = await open({ version: 1, where: 'lab', chaptersDone: ['bab1'], lastMode: 'superglen' });
+  check('continue: Chapter 1 done, last in the lab -> the finished lab (Nino starts Chapter 2)', s.level === 'lab' && s.player.z < -62 && s.levelInfo.step === 'returning', `${s.level} z ${s.player.z.toFixed(1)}`);
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1'], lastMode: 'superglen', discovered: { lab: true } });
+  check('continue: Chapter 1 done, last in the city -> the city at the hill door, map star on the door, switch allowed, no flying yet', s.level === 'kota' && at(s, HILL[0], HILL[1]) && !!s.map.goal && !s.skills.unlocked.fly && s.levelInfo.storyStep === undefined, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} fly ${s.skills.unlocked.fly}`);
+  s = await open({ version: 1, where: 'bab2', chaptersDone: ['bab1'], lastMode: 'superglen', discovered: { lab: true } });
+  check('continue: Chapter 2 begun (hangar) -> the lab, Nino starts Chapter 2 again', s.level === 'lab', s.level);
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: NOW - 5000 } });
+  check('continue: Chapter 2 done -> the city at the hill door, every power, Lab on the map, no beam', s.level === 'kota' && at(s, HILL[0], HILL[1]) && s.skills.unlocked.fly && !!s.map.secret && !s.objective.active, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, discovered: { lab: true }, doneAt: { bab2: NOW - 5000 }, slot: { level: 'kota', x: -50, y: 0, z: 30, yaw: 0, mode: 'glen', t: NOW } });
+  check('continue: Chapter 2 done and a newer manual save -> that save (level, spot, mode)', s.level === 'kota' && at(s, -50, 30) && s.mode === 'glen', `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} ${s.mode}`);
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, discovered: { lab: true }, doneAt: { bab2: NOW }, slot: { level: 'kota', x: -50, y: 0, z: 30, yaw: 0, mode: 'glen', t: NOW - 60000 } });
+  check('continue: a manual save older than the end of Chapter 2 -> the hill door', s.level === 'kota' && at(s, HILL[0], HILL[1]), `${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+
+  // ---- Saves of the previous version ----
+  s = await open({ version: 1, chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: false }, slot: { level: 'bab1', x: 0, y: -0.9, z: -66, yaw: 3.14, mode: 'superglen' }, quiz: QUIZ });
+  check('old save (both chapters, slot in the old lab): starts in the city at the hill door', s.level === 'kota' && at(s, HILL[0], HILL[1]), `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  check('old save: chapters, skills, coins and stickers kept; the lab is now known; the slot moved to the new lab level', s.save.data.chaptersDone.join() === 'bab1,bab2' && s.save.data.skills.fly && s.save.data.quiz.coins === 42 && s.save.data.quiz.stickers.length === 2 && s.save.data.discovered.lab && s.save.data.slot && s.save.data.slot.level === 'lab' && s.save.data.slot.z === -66, JSON.stringify({ c: s.save.data.chaptersDone, q: s.save.data.quiz.stickers, d: s.save.data.discovered, sl: s.save.data.slot }));
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')));
+  check('old save: the migrated save is written back', stored.slot && stored.slot.level === 'lab' && stored.discovered.lab === true && stored.quiz.stickers.length === 2, JSON.stringify(stored.slot));
+  s = await open({ version: 1, chaptersDone: ['bab1'], skills: NONE, lastMode: 'superglen', slot: { level: 'bab1', x: 2, y: 0, z: -20, yaw: 3.14, mode: 'glen' }, quiz: QUIZ });
+  check('old save (Chapter 1 done, slot on the old street): starts in the lab like before; the slot moved to the city hill door', s.level === 'lab' && s.player.z < -62 && s.save.data.slot.level === 'kota' && Math.abs(s.save.data.slot.x - HILL[0]) < 0.1 && Math.abs(s.save.data.slot.z - HILL[1]) < 0.1, JSON.stringify({ l: s.level, sl: s.save.data.slot }));
+  s = await open({ version: 1, chaptersDone: [], quiz: QUIZ });
+  check('old save in the middle of Chapter 1 (old street): the walk starts in the city, stickers kept', s.level === 'kota' && at(s, C1_START.x, C1_START.z) && s.save.data.quiz.stickers.length === 2, `${s.level}`);
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -2388,7 +2544,7 @@ const PACING_SCENARIOS = {
 };
 const PACING_LEVELS = {
   test: { query: '?level=test&fps=0', route: { x: -17, z0: 24, z1: -24 }, passSec: 8.4, passes: 2, warmMs: 3000 },
-  bab1: { query: '?fps=0&reset=1', route: { x: 1.3, z0: -9.6, z1: -36 }, passSec: 4.6, passes: 4, warmMs: 1800 },
+  bab1: { query: '?level=bab1street&fps=0&reset=1', route: { x: 1.3, z0: -9.6, z1: -36 }, passSec: 4.6, passes: 4, warmMs: 1800 },
 };
 
 /** Walk straight passes with synthetic rAF timestamps; return per-frame camera and player positions. */
@@ -2494,7 +2650,7 @@ async function perfScenario(page, check) {
   }
 
   // ---- 2. Shadow map follows the player in whole texels (no swimming shadows) ----
-  await loadFresh(page, '?fps=0&reset=1');
+  await loadFresh(page, '?level=bab1street&fps=0&reset=1');
   const phase = await page.evaluate(() => {
     const g = window.__superglen;
     g.pause(true);
@@ -2592,7 +2748,7 @@ async function perfScenario(page, check) {
   check('resize events with an unchanged size never touch the canvas size (120 events)', resizes === 0, `${resizes} canvas width writes`);
 
   // ---- 5. DOM writes and layout reads per frame while walking, GC pressure ----
-  for (const [lname, q, dest] of [['test', '?level=test', [0, -20]], ['bab1', '?reset=1', [0, -7.5]]]) {
+  for (const [lname, q, dest] of [['test', '?level=test', [0, -20]], ['bab1', '?level=bab1street&reset=1', [0, -7.5]]]) {
     await loadFresh(page, q);
     const dom = await page.evaluate(({ dest }) => {
       const g = window.__superglen;
@@ -2630,7 +2786,7 @@ async function perfScenario(page, check) {
     report('heap', 'performance.memory/gc unavailable: skipped');
   } else {
     const HEAP_LIMIT = { test: 16000, bab1: 16000 }; // bytes per frame; before the fixes: ~22000 and ~38000, after ~6000-12000
-    for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?fps=0&reset=1', [0, -7.5]]]) {
+    for (const [lname, q, dest] of [['test', '?level=test&fps=0', [0, -20]], ['bab1', '?level=bab1street&fps=0&reset=1', [0, -7.5]]]) {
       await loadFresh(page, q);
       // Robust measurement: a fresh page is still warming up (JIT tier-up, lazy compilation, heap growth steps), so run 480
       // steps first (as parkour-perf does), then take the MEDIAN of 3 windows of 600 frames, each starting from a forced gc().
@@ -2667,7 +2823,7 @@ async function perfScenario(page, check) {
   }
 
   // ---- 6. Shader programs stay constant, triangle budget (story level) ----
-  await loadFresh(page, '?fps=0&reset=1');
+  await loadFresh(page, '?level=bab1street&fps=0&reset=1');
   const prog = await page.evaluate(() => {
     const g = window.__superglen;
     g.pause(true);
@@ -3927,7 +4083,7 @@ async function parkourTouchScenario(page, check) {
   for (const h of [390, 281]) {
     await page.setViewportSize({ width: 844, height: h });
     await sleep(500);
-    await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); return g.loadLevel('bab1'); });
+    await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); return g.loadLevel('lab'); });
     await d.step(60);
     await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
     await d.step(5);
@@ -4548,11 +4704,11 @@ async function arenaDesktopScenario(page, check) {
     await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, id, { timeout: 15000 });
     await sleep(300);
   };
-  await cyc('bab1');
+  await cyc('lab');
   await cyc('test');
   await sleep(800);
   const c1 = await page.evaluate(countsOf);
-  await cyc('bab1');
+  await cyc('lab');
   await cyc('test');
   await sleep(800);
   const c2 = await page.evaluate(countsOf);
@@ -4880,7 +5036,7 @@ async function wallkickTouchScenario(page, check) {
 async function bab1RoofScenario(page, check) {
   await sleep(1500);
   await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
-  await page.goto(URL + '?fps=0');
+  await page.goto(URL + '?level=bab1street&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
   await page.mouse.click(640, 360);
@@ -5012,7 +5168,7 @@ async function streetRouteRun(page, d, S, roofs, bid, cap) {
 async function streetSetup(page, touchTap) {
   await sleep(1500);
   await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
-  await page.goto(URL + '?fps=0');
+  await page.goto(URL + '?level=bab1street&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(1500);
 }
@@ -5151,7 +5307,7 @@ async function bab1RoutesScenario(page, check) {
 async function bab1RoutesTouchScenario(page, check) {
   await sleep(1500);
   await page.evaluate(() => window.__superglen.save.markChapterDone('bab1'));
-  await page.goto(URL + '?fps=0');
+  await page.goto(URL + '?level=bab1street&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(2500);
   const fingers = await makeFingers(page);
@@ -5335,7 +5491,7 @@ async function check_glen(check, page) {
 async function transformTouchScenario(page, check) {
   await sleep(1500);
   await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.save.setLastMode('superglen'); });
-  await page.goto(URL + '?fps=0');
+  await page.goto(URL + '?level=lab&fps=0');
   await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
   await sleep(2000);
   const fingers = await makeFingers(page);
@@ -5899,7 +6055,7 @@ async function quizTerminalScenario(page, check) {
     await page.mouse.click(640, 360);
     await sleep(500);
   };
-  const setSave = (chapters, skills) => page.evaluate(([c, sk]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.persist(); }, [chapters, skills]);
+  const setSave = (chapters, skills, where = '') => page.evaluate(([c, sk, w]) => { const g = window.__superglen; g.save.data.chaptersDone = c; g.save.data.skills = sk; g.save.data.lastMode = 'superglen'; g.save.data.where = w; g.save.persist(); }, [chapters, skills, where]);
   const ALL = { laser: true, shield: true, fly: true };
   const NONE = { laser: false, shield: false, fly: false };
   const adv = (n) => d.adv(n);
@@ -5910,7 +6066,7 @@ async function quizTerminalScenario(page, check) {
   await page.evaluate(() => window.__superglen.pause(true));
   await d.adv(30);
   let s = await d.st();
-  check('terminal: bab1 done -> starts in the lab', s.level === 'bab1' && s.player.z < -62, `${s.level} z ${s.player.z.toFixed(1)}`);
+  check('terminal: bab1 done -> starts in the lab', s.level === 'lab' && s.player.z < -62, `${s.level} z ${s.player.z.toFixed(1)}`);
   await d.walk(-2.8, -62.9, 900);
   await page.evaluate(() => window.__superglen.setCameraYaw(Math.PI)); // the lab camera faces the entrance at first: turn towards the terminal
   await d.adv(12);
@@ -5944,7 +6100,7 @@ async function quizTerminalScenario(page, check) {
 
   // ---- Chapter 1 not done: no terminal ----
   await setSave([], NONE);
-  await load('?fps=0&reset=1&quizseed=1&level=bab1');
+  await load('?fps=0&reset=1&quizseed=1&level=lab');
   await page.evaluate(() => window.__superglen.pause(true));
   await page.evaluate(() => window.__superglen.placePlayer(-2.8, -62.9));
   await d.adv(20);
@@ -5953,11 +6109,11 @@ async function quizTerminalScenario(page, check) {
 
   // ---- Hall, free play: picker ----
   await setSave(['bab1', 'bab2'], ALL);
-  await load('?fps=0&quizseed=1');
+  await load('?level=bab2&fps=0&quizseed=1');
   await page.evaluate(() => window.__superglen.pause(true));
   await d.adv(30);
   s = await d.st();
-  check('terminal: bab2 done -> starts in the hall (free play)', s.level === 'bab2' && s.levelInfo.free === true, s.level);
+  check('terminal: bab2 done -> the hall is in free play', s.level === 'bab2' && s.levelInfo.free === true, s.level);
   await d.walk(-3.8, -1.2, 900);
   await d.adv(12);
   s = await d.st();
@@ -7582,8 +7738,8 @@ async function minimapScenario(page, check, touch) {
   await menuHit(page, '.settings-close', touch);
 
   // A level without map data: no mini map, no "Lihat peta".
-  await page.evaluate(() => window.__superglen.loadLevel('bab1'));
-  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 30000 });
+  await page.evaluate(() => window.__superglen.loadLevel('lab'));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 30000 });
   await sleep(900);
   const nb = await page.evaluate(() => ({ hidden: document.querySelector('.minimap').hidden, has: window.__superglen.map.hasMap }));
   check(`minimap ${tag}: in bab1 the mini map is hidden`, nb.hidden && !nb.has, JSON.stringify(nb));
@@ -8077,13 +8233,14 @@ async function main() {
     results.push(await runScenario(browser, 'bab1', { viewport: { width: 1280, height: 720 } }, bab1DesktopScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-plank', { viewport: { width: 1280, height: 720 } }, bab1PlankScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab1-return', { viewport: { width: 1280, height: 720 } }, bab1ReturnScenario, '?fps=0&reset=1'));
-    results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab1-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab1TouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'bab1-transform-ui', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, transformTouchScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-flow', { viewport: { width: 1280, height: 720 } }, bab2FlowScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'flow-saves', { viewport: { width: 1280, height: 720 } }, flowSavesScenario, '?fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'settings-desktop', { viewport: { width: 1280, height: 720 } }, (p, c) => settingsScenario(p, c, false), '?level=kota&reset=1'));
     results.push(await runScenario(browser, 'settings-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => settingsScenario(p, c, true), '?level=kota&reset=1'));

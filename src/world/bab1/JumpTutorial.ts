@@ -9,6 +9,27 @@ import type { Sparkles } from './Fx';
 export const BARRIER_H = 0.45;
 const BARRIER_D = 0.6;
 
+/**
+ * Where the lesson stands. The bar runs along x, centred on (x, z); the player crosses it walking toward -z. `collider:
+ * false` when the level already has the bar's collider (the city: a Solid in CityData, seen by `npm run check:reach`).
+ */
+export interface JumpSpot {
+  x: number;
+  z: number;
+  /** Half width of the bar (m). */
+  half: number;
+  /** Bar height (m). */
+  h: number;
+  /** x offset of the safety plank from the bar centre. */
+  plankDx: number;
+  collider: boolean;
+  /** Ground height. */
+  y: number;
+}
+
+/** The Chapter 1 street (`?level=bab1street`): the bar across the whole street. */
+export const STREET_JUMP: JumpSpot = { x: 0, z: Z.barrier, half: STREET_HALF, h: BARRIER_H, plankDx: 3.2, collider: true, y: 0 };
+
 function iconTexture(kind: 'space' | 'jump'): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 256;
@@ -77,7 +98,7 @@ export class JumpTutorial {
   private time = 0;
   private plankGroup = new THREE.Group();
   private plankRevealed = false;
-  readonly plankPos = new THREE.Vector3(3.2, 0, Z.barrier + 2.4);
+  readonly plankPos: THREE.Vector3;
   private emitter: ReturnType<Sparkles['addEmitter']> | null = null;
   /** Set when the plank was shown (for tests). */
   get plankShown(): boolean {
@@ -88,24 +109,27 @@ export class JumpTutorial {
     private readonly ctx: LevelContext,
     kit: Kit,
     private readonly sparkles: Sparkles,
+    private readonly spot: JumpSpot = STREET_JUMP,
   ) {
     // Barrier: alternating orange/cream blocks, one continuous collider.
-    const z = Z.barrier;
-    const n = STREET_HALF * 2;
+    const { x: bx, z, half, h: BH, y: gy } = spot;
+    this.plankPos = new THREE.Vector3(bx + spot.plankDx, gy, z + 2.4);
+    const n = Math.round(half * 2);
     for (let i = 0; i < n; i++) {
-      kit.lit.box([1.0, BARRIER_H, BARRIER_D], [-STREET_HALF + 0.5 + i, BARRIER_H / 2, z], i % 2 === 0 ? C.ORANGE : C.CREAM);
-      kit.lit.box([1.0, 0.06, BARRIER_D + 0.02], [-STREET_HALF + 0.5 + i, BARRIER_H + 0.02, z], i % 2 === 0 ? C.RED : C.ORANGE);
+      kit.lit.box([1.0, BH, BARRIER_D], [bx - half + 0.5 + i, gy + BH / 2, z], i % 2 === 0 ? C.ORANGE : C.CREAM);
+      kit.lit.box([1.0, 0.06, BARRIER_D + 0.02], [bx - half + 0.5 + i, gy + BH + 0.02, z], i % 2 === 0 ? C.RED : C.ORANGE);
     }
-    kit.collider([STREET_HALF * 2 + 0.4, BARRIER_H, BARRIER_D], [0, BARRIER_H / 2, z]);
+    if (spot.collider) kit.collider([half * 2 + 0.4, BH, BARRIER_D], [bx, gy + BH / 2, z]);
+    const cx = Math.min(3.9, half + 0.6);
     for (const s of [-1, 1]) {
-      kit.lit.add('cone', [s * 3.9, 0.3, z + 0.9], [0.22, 0.6, 0.22], C.ORANGE);
-      kit.lit.add('cone', [s * 3.9, 0.04, z + 0.9], [0.3, 0.08, 0.3], C.CREAM);
+      kit.lit.add('cone', [bx + s * cx, gy + 0.3, z + 0.9], [0.22, 0.6, 0.22], C.ORANGE);
+      kit.lit.add('cone', [bx + s * cx, gy + 0.04, z + 0.9], [0.3, 0.08, 0.3], C.CREAM);
     }
 
     const mk = (kind: 'space' | 'jump'): THREE.Sprite => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(kind), depthWrite: false, depthTest: false, transparent: true, fog: false }));
       s.scale.set(kind === 'space' ? 2.4 : 1.4, kind === 'space' ? 1.2 : 1.4, 1);
-      s.position.set(0, 2.0, z + 1.4);
+      s.position.set(bx, gy + 2.0, z + 1.4);
       s.visible = false;
       s.renderOrder = 6;
       ctx.root.add(s);
@@ -121,7 +145,7 @@ export class JumpTutorial {
     const box = new THREE.BoxGeometry(1, 1, 1);
     const p = this.plankPos;
     const t = 0.12;
-    const top = BARRIER_H + 0.1;
+    const top = this.spot.h + 0.1;
     const run = 1.9;
     const th = Math.atan2(top, run);
     const pieces: { size: [number, number, number]; pos: [number, number, number]; rot: [number, number, number] }[] = [];
@@ -146,7 +170,7 @@ export class JumpTutorial {
       m.castShadow = true;
       g.add(m);
     }
-    g.position.set(p.x, 0, Z.barrier);
+    g.position.set(p.x, this.spot.y, this.spot.z);
     g.scale.setScalar(0.001);
     g.visible = false;
     this.ctx.root.add(g);
@@ -173,7 +197,7 @@ export class JumpTutorial {
     this.time += dt;
     if (!this.hintOn) return;
     const touch = touchMode.active;
-    const bob = 2.0 + Math.sin(this.time * 4) * 0.12;
+    const bob = this.spot.y + 2.0 + Math.sin(this.time * 4) * 0.12;
     this.sprites.pc.visible = !touch;
     this.sprites.touch.visible = touch;
     this.sprites.pc.position.y = bob;
@@ -193,12 +217,13 @@ export class JumpTutorial {
       q.setFromEuler(e);
       this.ctx.physics.addFixedCuboid(
         { x: pc.size[0] / 2, y: pc.size[1] / 2, z: pc.size[2] / 2 },
-        { x: g.position.x + pc.pos[0], y: pc.pos[1], z: g.position.z + pc.pos[2] },
+        { x: g.position.x + pc.pos[0], y: g.position.y + pc.pos[1], z: g.position.z + pc.pos[2] },
         { x: q.x, y: q.y, z: q.z, w: q.w },
       );
     }
-    this.emitter = this.sparkles.addEmitter(g.position.x, 0.2, Z.barrier + 2.0, 0.9, 14, 0xffe27a);
-    this.sparkles.burst(g.position.x, 0.5, Z.barrier + 1.5, 24, 2.5, 0xffe27a, { gravity: 1 });
+    const y = this.spot.y;
+    this.emitter = this.sparkles.addEmitter(g.position.x, y + 0.2, this.spot.z + 2.0, 0.9, 14, 0xffe27a);
+    this.sparkles.burst(g.position.x, y + 0.5, this.spot.z + 1.5, 24, 2.5, 0xffe27a, { gravity: 1 });
     void this.ctx.seq.tween(0.7, (t) => g.scale.setScalar(Math.max(0.001, t)), Easings.easeOutBack);
   }
 

@@ -15,6 +15,7 @@ import { FLY_MAX, HALL, NINO_SPOT } from './Layout';
 import type { Env } from './Env';
 import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { QuizLines } from '../../quiz/lines';
+import { flow } from '../progress';
 
 /**
  * Chapter 2: Latihan Pagi Bersama Nino. One big bright training hall with four floor stations (flying, laser, shield,
@@ -41,6 +42,7 @@ export class Bab2Level implements Level {
   build(ctx: LevelContext): void {
     this.ctx = ctx;
     const done = ctx.save.isChapterDone('bab2');
+    if (!flow.sandbox) ctx.save.setWhere('bab2');
     const { root, physics, scene, game } = ctx;
     // Voice files (the chapter's lines and Nino's quiz lines) load in the background; the music starts with the first tap.
     ctx.audio.preload([...ctx.dialog.idsWithPrefix('bab2_'), ...Object.values(QuizLines).map((l) => l.id)]);

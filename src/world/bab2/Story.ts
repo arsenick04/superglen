@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { startGate } from '../../core/StartGate';
 import type { SkillName } from '../../core/Save';
 import { Celebration } from '../Celebration';
-import { HALL_DOOR_TARGET } from '../progress';
+import { HALL_DOOR_TARGET, travel } from '../progress';
 import { SKILL_GATES } from '../../quiz/gates';
 import { QuizLines } from '../../quiz/lines';
 import { FLY_MAX, HALL, NINO_SPOT, PADS } from './Layout';
@@ -111,7 +111,7 @@ export class Story {
       radius: 2.6,
       icon: 'hand',
       promptHeight: 1.6,
-      onInteract: () => void ctx.game.loadLevel(HALL_DOOR_TARGET),
+      onInteract: () => void travel(ctx.game, HALL_DOOR_TARGET, 'labFromHangar'),
     });
     const zone = (ex: Exercise, x: number, z: number, r: number): void => {
       ctx.interactions.addZone({
@@ -233,6 +233,8 @@ export class Story {
     await this.party.play();
     hangar.setAlarm(false);
     this.setupFree();
+    // The market needs Superglen: the beam shows the way out (hangar door -> lab -> front door -> the city).
+    ctx.objectives.set(new THREE.Vector3(hangar.doorPos.x, 0, hangar.doorPos.z));
   }
 
   /** The comic first try: the jets throw Glen at the ceiling (controls locked), a soft bonk, stars, a gentle glide down. */

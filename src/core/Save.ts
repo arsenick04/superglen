@@ -38,6 +38,13 @@ export interface SaveData {
   slot: SlotSave | null;
   /** Places the child has found (shown on the map only after that). */
   discovered: { lab: boolean };
+  /**
+   * Last story place the child was in: 'kota' (the city), 'lab' (inside the old building) or 'bab2' (Nino's hangar); '' =
+   * never (older saves). `world/progress.ts` routes "continue" with it.
+   */
+  where: string;
+  /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
+  doneAt: Record<string, number>;
   quiz: QuizSave;
 }
 
@@ -49,6 +56,8 @@ export interface SlotSave {
   z: number;
   yaw: number;
   mode: PlayerMode;
+  /** Date.now() when it was saved (0 = older save). */
+  t: number;
 }
 
 export type SkillName = keyof SaveData['skills'];
@@ -101,6 +110,8 @@ function defaults(): SaveData {
     settings: { easyJump: Parkour.easy.defaultOn, sound: true, music: true, musicVol: 1, sfxVol: 1 },
     slot: null,
     discovered: { lab: false },
+    where: '',
+    doneAt: {},
     quiz: defaultQuiz(),
   };
 }
@@ -159,10 +170,14 @@ function sanitize(raw: unknown): SaveData {
     const sl = r.slot as Record<string, unknown>;
     const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
     if (typeof sl.level === 'string' && fin(sl.x) && fin(sl.y) && fin(sl.z)) {
-      out.slot = { level: sl.level, x: sl.x, y: sl.y, z: sl.z, yaw: fin(sl.yaw) ? sl.yaw : Math.PI, mode: sl.mode === 'superglen' ? 'superglen' : 'glen' };
+      out.slot = { level: sl.level, x: sl.x, y: sl.y, z: sl.z, yaw: fin(sl.yaw) ? sl.yaw : Math.PI, mode: sl.mode === 'superglen' ? 'superglen' : 'glen', t: fin(sl.t) ? sl.t : 0 };
     }
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
+  if (typeof r.where === 'string') out.where = r.where;
+  if (typeof r.doneAt === 'object' && r.doneAt !== null) {
+    for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
+  }
   return out;
 }
 
@@ -216,7 +231,17 @@ export class SaveStore {
   }
 
   markChapterDone(id: string): void {
-    if (!this.data.chaptersDone.includes(id)) this.data.chaptersDone.push(id);
+    if (!this.data.chaptersDone.includes(id)) {
+      this.data.chaptersDone.push(id);
+      this.data.doneAt[id] = Date.now();
+    }
+    this.persist();
+  }
+
+  /** The story place the child is in now ('kota', 'lab', 'bab2'): "continue" starts there. */
+  setWhere(where: string): void {
+    if (this.data.where === where) return;
+    this.data.where = where;
     this.persist();
   }
 

@@ -11,4 +11,9 @@ export interface MapSource {
   draw(g: CanvasRenderingContext2D, px: number, big: boolean): void;
   /** Test helper: world position of the hidden place while the map shows it, else null. */
   shownSecret?(): { x: number; z: number } | null;
+  /**
+   * Where the map's objective star goes (world x / z), or null for none. Without this method the star follows the
+   * objective beam (`ctx.objectives`).
+   */
+  goal?(): { x: number; z: number } | null;
 }

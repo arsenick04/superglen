@@ -40,6 +40,8 @@ export interface Level {
   readonly id: string;
   /** Where the player appears: feet position and optional facing yaw (0 = +Z; default faces -Z). */
   readonly spawn: { x: number; y: number; z: number; yaw?: number };
+  /** "Kembali ke tengah kota" goes here (default: `spawn`). */
+  readonly home?: { x: number; y: number; z: number; yaw?: number };
   /** Map data for the mini map and the full map (set during build). Levels without it have no map. */
   map?: MapSource;
   /** The player is about to be put at (x, z) far from here (respawn, load): make sure colliders exist there. */
