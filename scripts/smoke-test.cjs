@@ -8592,6 +8592,116 @@ async function bab3FlowScenario(page, check) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+const ch3Rats = (page) => page.evaluate(() => window.__ch3.rats());
+const ch3Counts = (page) => page.evaluate(() => window.__ch3.counts());
+/** Draw calls and triangles at the market from four view directions. */
+const ch3Draw = (page) => page.evaluate(() => {
+  const g = window.__superglen;
+  g.placePlayer(93, 14);
+  g.advance(30, false);
+  let calls = 0;
+  let tris = 0;
+  for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+    g.setCameraYaw(yaw);
+    g.advance(2, false);
+    g.advance(1, true);
+    const c = g.debugCounts();
+    calls = Math.max(calls, c.calls);
+    tris = Math.max(tris, c.triangles);
+  }
+  return { calls, tris };
+});
+
+async function bab3RatsScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] } }), touch);
+  const inStreet = (r) => Math.abs(r.z) <= 3.75 || Math.abs(r.x - 93) <= 3.75;
+  let rats = await ch3Rats(page);
+  const kinds = rats.map((r) => r.food).join(',');
+  check(`bab3-rats ${tag}: seven little rats on the market streets with 3 bakpao, 2 kue, 2 vegetables`, rats.length === 7 && rats.filter((r) => r.food === 'bakpao').length === 3 && rats.filter((r) => r.food === 'kue').length === 2 && rats.every(inStreet) && rats.every((r) => r.state === 0 && r.fstate === 0), kinds);
+  const d0 = await ch3Draw(page);
+  console.log(`   [bab3-rats ${tag}] market draw calls ${d0.calls}, triangles ${d0.tris}`);
+  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 65000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  // The rats circle (they move), the ones near the child trot away and never come closer.
+  await d3Go(page, 93, 12, 10);
+  const a = await ch3Rats(page);
+  await d3Adv(page, 60);
+  const b = await ch3Rats(page);
+  check(`bab3-rats ${tag}: a rat that loops moves by itself`, Math.hypot(b[3].x - a[3].x, b[3].z - a[3].z) > 0.4 || Math.hypot(b[1].x - a[1].x, b[1].z - a[1].z) > 0.4, '');
+  // Rat 3 (east, circling at 108,0): stand 4.5 m south-west of it.
+  const r3 = (await ch3Rats(page))[3];
+  await d3Go(page, r3.x - 2, r3.z + 4, 2);
+  const p0 = await d3Player(page);
+  const dist0 = Math.hypot(r3.x - p0.x, r3.z - p0.z);
+  let minD = 1e9;
+  let wasFlee = false;
+  for (let k = 0; k < 6; k++) {
+    await d3Adv(page, 15);
+    const rr = (await ch3Rats(page))[3];
+    wasFlee = wasFlee || rr.state === 1;
+    minD = Math.min(minD, Math.hypot(rr.x - p0.x, rr.z - p0.z));
+  }
+  const rEnd = (await ch3Rats(page))[3];
+  check(`bab3-rats ${tag}: a rat near the child trots away (flee state) and stays on the street`, wasFlee && minD > dist0 - 1.2 && inStreet(rEnd), JSON.stringify({ wasFlee, minD, dist0 }));
+  // ---- Laser: one hit tames (rat 0, west, 73,0) ----
+  await page.evaluate(() => { window.__superglen.setCameraYaw(0); });
+  const r0 = (await ch3Rats(page))[0];
+  await d3Go(page, r0.x, r0.z + 4.2, 3);
+  const sh0 = await page.evaluate(() => window.__superglen.skills.laserShots);
+  if (touch) {
+    const b = await page.evaluate(() => { const e = document.querySelector('[data-action="laser"]'); const r = e && e.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; });
+    if (b) await page.touchscreen.tap(b.x, b.y);
+    await d3Adv(page, 10);
+  } else {
+    await d3Press(page, 'j', 8);
+  }
+  let c = await ch3Counts(page);
+  const sh1 = await page.evaluate(() => window.__superglen.skills.laserShots);
+  rats = await ch3Rats(page);
+  if (c.lasers === 0 && !touch) console.log('   laser did not hit rat 0:', JSON.stringify(rats[0]), 'shots', sh0, sh1);
+  check(`bab3-rats ${tag}: one laser hit tames a rat (dizzy, stars), its food drops`, c.lasers === 1 && c.tamed === 1 && rats[0].state >= 3 && rats[0].fstate >= 1, JSON.stringify({ c, r0: rats[0] }));
+  const info = await d3Info(page);
+  check(`bab3-rats ${tag}: the tamed rat is saved`, JSON.stringify((await ch3Info(page)).save.bab3.tamed) === '[0]', JSON.stringify((await ch3Info(page)).save.bab3));
+  await d3Adv(page, 420);
+  rats = await ch3Rats(page);
+  c = await ch3Counts(page);
+  check(`bab3-rats ${tag}: after the dizzy hop the rat runs down a drain (gone, not hurt), the bakpao lies on the street`, rats[0].state === 5 && rats[0].fstate === 2 && c.dropped === 1, JSON.stringify({ r0: rats[0], c }));
+  // ---- Stomp (Superglen landing next to rat 1, north on the x-street 93,-16) ----
+  if (!touch) {
+    const r1 = (await ch3Rats(page))[1];
+    await d3Go(page, r1.x + 0.2, r1.z + 2.0, 3);
+    await d3Press(page, 'Space', 70);
+    c = await ch3Counts(page);
+    rats = await ch3Rats(page);
+    check(`bab3-rats ${tag}: a landing stomp beside a rat tames it too (boing, food drops)`, c.stomps >= 1 && rats[1].state >= 3 && c.tamed === 2, JSON.stringify({ c, r1: rats[1] }));
+  }
+  // ---- Glen cannot tame: Nino asks to change into Superglen ----
+  const open2 = await page.evaluate(() => window.__superglen.dialog.open);
+  void open2;
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+async function bab3GlenScenario(page, check) {
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] }, lastMode: 'glen' }));
+  const r = (await ch3Rats(page))[2];
+  await d3Go(page, r.x, r.z + 8, 20);
+  await d3Adv(page, 330);
+  const t = await ch3Info(page);
+  check('bab3-rats glen: near the rats Glen hears "Ubah jadi Superglen dulu", the hint is shown once', t.line.indexOf('Superglen') >= 0 && t.li.ch3GlenHint === true && t.li.ch3Tamed === 0, JSON.stringify([t.line, t.li.ch3GlenHint]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+async function bab3ResumeScenario(page, check) {
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [0, 3, 5] } }));
+  const rats = await ch3Rats(page);
+  const c = await ch3Counts(page);
+  check('bab3-rats resume: the rats tamed before are gone, their bakpao and kue lie on the street again, vegetables are gone', rats[0].state === 5 && rats[3].state === 5 && rats[5].state === 5 && rats[0].fstate === 2 && rats[3].fstate === 2 && rats[5].fstate === 4 && rats[1].state === 0 && c.tamed === 3 && c.dropped === 2, JSON.stringify({ r: rats.map((r) => r.state + '/' + r.fstate), c }));
+  // Taking the last four by the test handle ends the chase: step "count" is saved.
+  await page.evaluate(() => { for (const i of [1, 2, 4, 6]) window.__ch3.tame(i); });
+  await d3Adv(page, 400);
+  const s = await ch3Info(page);
+  check('bab3-rats resume: when every rat is tamed the step becomes "count" (saved)', s.ch3.step === 'count' && s.save.bab3.step === 'count' && s.save.bab3.tamed.length === 7, JSON.stringify([s.ch3, s.save.bab3]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -8746,6 +8856,10 @@ async function main() {
     results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
     // Package D4: Chapter 3 (market)
     results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-rats', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3RatsScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-rats-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3RatsScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-rats-glen', { viewport: { width: 1280, height: 720 } }, bab3GlenScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-rats-resume', { viewport: { width: 1280, height: 720 } }, bab3ResumeScenario, '?level=kota&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));

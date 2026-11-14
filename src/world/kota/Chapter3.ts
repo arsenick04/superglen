@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
-import { BAB3_LINES as L, MARKET } from './Bab3Data';
+import { BAB3_LINES as L, MARKET, type FoodKind } from './Bab3Data';
+import { MarketRats } from './MarketRats';
 
 /** What the level gives Chapter 3 (so this file does not need to know the level class). */
 export interface Chapter3Hooks {
@@ -35,6 +36,10 @@ export class Chapter3 {
   private over = false;
   private readonly tmp = new THREE.Vector3();
   private disposed = false;
+  /** The little rats, their food, Bu Lina and the drains. */
+  readonly rats: MarketRats;
+  private hintedSuper = false;
+  private saidLucu = false;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -44,12 +49,23 @@ export class Chapter3 {
     ctx.onDispose(() => {
       this.disposed = true;
     });
+    this.rats = new MarketRats(
+      ctx,
+      {
+        onTamed: (i, food) => this.onTamed(i, food),
+        onCollect: (kind) => this.onCollect(kind),
+      },
+      ctx.save.data.bab3.tamed,
+    );
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
       const w = window as unknown as { __ch3?: unknown };
       w.__ch3 = {
         step: () => this.step,
         arrived: () => this.arrived,
         advance: (s: Ch3Step) => this.setStep(s),
+        rats: () => this.rats.list(),
+        tame: (i: number) => this.rats.tame(i),
+        counts: () => ({ ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
       };
       ctx.onDispose(() => {
         delete w.__ch3;
@@ -86,12 +102,36 @@ export class Chapter3 {
     this.ctx.game.debugInfo.ch3Step = step;
   }
 
+  /** A rat was tamed: remember it (saved), and when the last one is gone the chase is won. */
+  private onTamed(i: number, _food: FoodKind): void {
+    const save = this.ctx.save;
+    const tamed = save.data.bab3.tamed;
+    if (!tamed.includes(i)) save.setBab3(this.step, [...tamed, i]);
+    if (!this.saidLucu) {
+      this.saidLucu = true;
+      void this.ctx.dialog.say(L.glenLucu);
+    }
+    if (this.rats.allTamed && this.step === 'chase') {
+      this.ctx.seq.run(async () => {
+        await this.ctx.seq.wait(2.2);
+        if (this.step !== 'chase') return;
+        this.setStep('count');
+        await this.ctx.dialog.say(L.glenSemua);
+      });
+    }
+  }
+
+  private onCollect(_kind: FoodKind): void {
+    // The count (L3) listens here.
+  }
+
   private pointToMarket(): void {
     this.ctx.objectives.set(this.tmp.set(MARKET.hub.x, 0, MARKET.hub.z));
   }
 
-  fixedUpdate(): void {
+  fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
+    this.rats.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {
       this.arrived = true;
@@ -110,9 +150,24 @@ export class Chapter3 {
     }
   }
 
-  update(_dt: number): void {
-    this.ctx.game.debugInfo.ch3Step = this.step;
-    this.ctx.game.debugInfo.ch3Arrived = this.arrived;
+  update(dt: number): void {
+    const info = this.ctx.game.debugInfo;
+    info.ch3Step = this.step;
+    info.ch3Arrived = this.arrived;
+    this.rats.update(dt);
+    info.ch3Tamed = this.rats.tamedCount;
+    info.ch3Dropped = this.rats.dropped;
+    // Glen cannot tame: near the rats, Nino says to change into Superglen (the star button pulses on touch).
+    const pl = this.ctx.player;
+    const pv = pl.visualPosition;
+    const glen = pl.mode === 'glen';
+    const closeRats = this.step === 'chase' && this.rats.nearestRat(pv.x, pv.z) < 16;
+    if (glen && closeRats && !this.hintedSuper) {
+      this.hintedSuper = true;
+      void this.ctx.dialog.say(L.ninoUbah);
+    }
+    this.ctx.game.pulseButton('transform', glen && closeRats);
+    info.ch3GlenHint = this.hintedSuper;
   }
 
   /** The chapter is over: the save says so and the city is free again. */
