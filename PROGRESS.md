@@ -664,12 +664,42 @@ Atas permintaan pemilik proyek. Kode oleh `gameplay-dev` (sonnet), audio oleh `a
 ### Kredit
 ElevenLabs: sekitar 10.500 dari 40.000 menurut akun (angka akun terlambat; pemakaian nyata sedikit lebih tinggi). Higgsfield: 0.
 
+## Paket D2 dan D3: cerita lewat kota, isi kota (14 November 2026): selesai
+
+D2 oleh `architect` (opus), D3 oleh `gameplay-dev` (sonnet), suara warga oleh `asset-pipeline` (sonnet), QA oleh `qa-tester` (haiku).
+
+### Yang selesai
+- **D2, cerita lewat kota:** game baru mulai di depan sekolah di kota. Glen pulang mengikuti petunjuk lembut (cahaya di tanah, panah, bintang di peta), latihan lompat di palang jalan setapak, lalu pintu gedung tua di bukit membawa ke Lab. Chapter 1 selesai di Lab, Chapter 2 di hangar Lab, keluar lewat pintu Lab ke bukit dan kota terbuka bebas. Pintu Lab bisa dimasuki lagi kapan saja. Save lama dipindahkan otomatis tanpa kehilangan Chapter, koin, atau stiker.
+- **D3, isi kota** (muncul setelah Chapter 1):
+  - 224 koin di jalan, atap, puncak menara, dan jalur terbang; tersimpan.
+  - 3 sepeda untuk mode Glen (lebih cepat, tidak bisa lompat, tombol lompat jadi bel).
+  - 8 warga dengan misi kecil (kucing, apel, balon, lonceng, balapan sepeda, surat, bola, bunga), hadiah koin.
+  - 8 papan penunjuk arah. Tidak ada papan ke gedung tua.
+  - Tanda "!" warga bermisi di mini map dan peta penuh; sepeda di peta penuh.
+- **Suara warga:** 42 klip, 8 suara berbeda berbahasa Indonesia baku, ekspresi per kalimat.
+
+### Hasil tes
+- build, typecheck, `check:quiz`, `check:reach`, dry-run audio (0 dibuat dari 216): lulus.
+- Smoke test penuh: lulus, 1.691 pemeriksaan, 0 gagal, 0 error console. Tes D3 dan audio diulang setelah suara warga: lulus.
+- Kinerja kota (preset HP): draw call 57 dari batas 60, segitiga 63.486 dari batas 65.000 (hampir penuh), memori 6,4 KB per frame dari batas 16 KB.
+
+### Masalah yang diketahui
+- Selama Chapter 1, bintang di peta menunjuk ke gedung tua (itu tujuannya).
+- Keluar dari Lab di tengah Chapter 1 membuat cerita di Lab mulai lagi dari aula.
+- Antara Chapter 1 dan 2, warga belum menawarkan misi.
+- Sepeda sederhana, roda tidak berputar. Turun sambil menghadap tembok bisa memarkir sepeda di dalam tembok.
+- Semua warga memakai wajah yang sama di balon dialog.
+- Anggaran grafis kota hampir habis; isi berikutnya perlu dihemat.
+
+### Kredit
+ElevenLabs: sekitar 1.670 karakter untuk suara warga; akun menunjukkan sekitar 11.100 dari 40.000 (angka akun terlambat). Higgsfield: 0.
+
 ## Pengingat untuk pemilik proyek
 - **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
 - **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
-Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
-1. **Kota dengan setelan dan peta**: buka https://arsenick04.github.io/superglen/?level=kota lalu coba roda gigi (volume, peta, simpan, muat, kembali ke tengah kota) dan mini map. Dengarkan musik baru dan suara Glen di https://arsenick04.github.io/superglen/?reset=1
-2. **Controller di PC atau iPhone**: sambungkan DualSense, tekan tombol apa saja di layar awal, lalu main.
-3. **PS5**: buka https://arsenick04.github.io/superglen/?level=kota&pad=debug dan laporkan isi kotak di kiri bawah (gamepad api, pad, webgl), apakah game jalan, dan apakah ada suara.
+Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape. Gunakan `?reset=1` untuk mulai dari awal.
+1. **Mulai dari awal**: buka https://arsenick04.github.io/superglen/?reset=1 lalu ikuti jalan pulang dari sekolah sampai gedung tua di bukit, Lab, dan latihan Chapter 2. Apakah anak bisa menemukan jalannya sendiri?
+2. **Kota setelah cerita**: kumpulkan koin, naik sepeda dari Rumah Glen, dan selesaikan satu misi warga (tanda "!" di peta). Atau langsung buka https://arsenick04.github.io/superglen/?level=kota
+3. **Suara warga**: dengarkan Pak Joko, Kak Bima, Bu Sari, dan Dokter Ani. Cukup ceria dan berbeda?
