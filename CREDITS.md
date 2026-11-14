@@ -28,3 +28,9 @@ Catatan: akses ke commons.wikimedia.org dan upload.wikimedia.org terbuka (dengan
 
 ## Model 3D (Tripo, CC BY)
 Diisi di Fase C.
+
+## Musik
+
+| Lagu | File | Sumber | Dipakai di |
+|---|---|---|---|
+| Superglen Theme Song (instrumental) | `public/audio/music/superglen_theme.mp3` | Milik pemilik proyek | layar awal, menjelajah (Chapter 1), latihan (Chapter 2) |
