@@ -95,6 +95,12 @@ Pemilik proyek biasanya memberi instruksi malam hari lalu tidur. Setiap sesi mal
 - B4: Pipeline audio ElevenLabs + audio Bab 1 dan 2 + 1 contoh per kategori soal (tunggu persetujuan untuk sisanya).
   - **PENGINGAT UNTUK PEMILIK PROYEK (soundtrack Superglen):** pemilik proyek punya soundtrack sendiri dan minta diingatkan saat B4. Di laporan akhir paket B3 dan di pesan pertama sesi B4, ingatkan: unggah file ke `public/audio/music/` di repo (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB, bisa diulang mulus), lalu sebutkan lagu mana untuk adegan mana (layar awal, menjelajah, berubah jadi Superglen, pertarungan). Di B4 buat jalur musik di `AudioManager`: berulang, otomatis mengecil saat Nino berbicara, dimulai dari ketukan pertama (`StartGate.onStart`). Kalau file belum ada, jangan menunggu: bangun jalurnya, kerjakan sisa B4, dan catat di `PROGRESS.md` bahwa musik menunggu file. Cantumkan di `CREDITS.md`.
 
+**Paket malam Fase D** (kota open world; dikerjakan sebelum Fase C atas keputusan pemilik proyek)
+- D1: Kerangka Kota Botanica: sekitar 300 x 300 m, 5 sampai 6 distrik, dimuat per potongan (chunk) supaya ringan di iPhone, gedung modular yang semuanya punya rute naik, bisa dijelajahi bebas sebagai Glen dan Superglen. **Gedung tua Barongsai / Lab tidak di tengah kota**: tersembunyi di pinggir kota atau di bukit, terbengkalai.
+- D2: Isi kota: koin, sepeda (mode Glen), warga dan misi kecil, penanda arah.
+- D3: Chapter 3: pasar dan Tikus Kecil.
+- D4: Chapter 4: mode detektif.
+
 Fase berikutnya dipecah dengan cara yang sama saat fase itu dimulai: satu paket kira-kira 2 sampai 4 jam kerja agen.
 
 ## Format laporan di setiap checkpoint
