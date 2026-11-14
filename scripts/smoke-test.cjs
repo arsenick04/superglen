@@ -8596,9 +8596,9 @@ async function bab3FlowScenario(page, check) {
 const ch3Rats = (page) => page.evaluate(() => window.__ch3.rats());
 const ch3Counts = (page) => page.evaluate(() => window.__ch3.counts());
 /** Draw calls and triangles at the market from four view directions. */
-const ch3Draw = (page) => page.evaluate(() => {
+const ch3Draw = (page, x = 93, z = 14) => page.evaluate(([x, z]) => {
   const g = window.__superglen;
-  g.placePlayer(93, 14);
+  g.placePlayer(x, z);
   g.advance(30, false);
   let calls = 0;
   let tris = 0;
@@ -8611,7 +8611,7 @@ const ch3Draw = (page) => page.evaluate(() => {
     tris = Math.max(tris, c.triangles);
   }
   return { calls, tris };
-});
+}, [x, z]);
 
 async function bab3RatsScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
@@ -8846,6 +8846,71 @@ async function bab4FlowScenario(page, check) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+/** Answer the quiz question that is open: right card (optionally a wrong one first), then Enter. Returns the prompt. */
+async function ch4Answer(page, wrongFirst = false) {
+  const q = await page.evaluate(() => ({ prompt: window.__superglen.quiz.prompt, key: window.__superglen.quiz.correctKey, id: window.__superglen.quiz.questionId }));
+  if (wrongFirst) {
+    const wk = q.key === 1 ? 2 : 1;
+    await page.keyboard.press(String(wk));
+    await d3Adv(page, 120);
+  }
+  await page.keyboard.press(String(q.key));
+  await d3Adv(page, 120);
+  await page.keyboard.press('Enter');
+  await d3Adv(page, 120);
+  return q;
+}
+const ch4Handle = (page) => page.evaluate(() => ({ step: window.__ch4.step(), aara: window.__ch4.aara(), counts: window.__ch4.counts(), quiz: window.__superglen.quiz.open, scene: window.__superglen.levelInfo.ch4Scene || '' }));
+
+async function bab4AaraScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch4Save({ bab4: { step: 'school', clue: 0 } }), touch);
+  let h = await ch4Handle(page);
+  check(`bab4-aara ${tag}: Aara stands on the school street (step "school", level 0)`, h.aara && Math.abs(h.aara.x + 17) < 0.5 && Math.abs(h.aara.z + 93) < 0.5 && h.aara.level === 0, JSON.stringify(h));
+  // Perf at the school with Aara in view.
+  const d0 = await ch3Draw(page, -23, -93);
+  console.log(`   [bab4-aara ${tag}] school draw calls ${d0.calls}, triangles ${d0.tris}`);
+  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  await d3Go(page, -24, -93, 20);
+  await d3Adv(page, 20);
+  h = await ch4Handle(page);
+  check(`bab4-aara ${tag}: arriving starts the meeting (step "aara", controls locked)`, h.step === 'aara' && (await page.evaluate(() => window.__superglen.controlsEnabled === false)), JSON.stringify(h));
+  await d3Adv(page, 90);
+  await page.evaluate(() => window.__superglen.advance(1, true));
+  fs.mkdirSync(OUT, { recursive: true });
+  await page.screenshot({ path: path.join(OUT, `bab4-aara-meet${touch ? '-touch' : ''}.png`) });
+  const seen = [];
+  const prompts = [];
+  let wrongDone = false;
+  for (let i = 0; i < 160 && !(h.step === 'park'); i++) {
+    await d3Adv(page, 15);
+    h = await ch4Handle(page);
+    const line = await page.evaluate(() => (window.__superglen.dialog.open ? window.__superglen.dialog.text : ''));
+    if (line && seen[seen.length - 1] !== line) seen.push(line);
+    if (h.quiz && (await page.evaluate(() => window.__superglen.quiz.state)) === 'answering') {
+      await d3Adv(page, 40);
+      const lvl = (await ch4Handle(page)).aara.level;
+      const q = await ch4Answer(page, !wrongDone);
+      wrongDone = true;
+      prompts.push(q.prompt + '|' + lvl);
+    }
+  }
+  check(`bab4-aara ${tag}: Aara asks "Apa bahasa Inggrisnya buku / bola / kucing?" (three questions, bank clips)`, prompts.length === 3 && /buku/.test(prompts[0]) && /bola/.test(prompts[1]) && /kucing/.test(prompts[2]), JSON.stringify(prompts));
+  check(`bab4-aara ${tag}: the translator is more advanced after each right answer (level 0, 1, 2 at the asks; 3 at the end)`, prompts.map((p) => p.split('|')[1]).join() === '0,1,2' && h.aara.level === 3, JSON.stringify([prompts, h.aara]));
+  const order = ['alat penerjemah', 'Aku siap', 'mulai menyala', 'makin canggih', 'canggih sekali', 'taman kota', 'taman, kita'].map((t) => seen.findIndex((l) => l.indexOf(t) >= 0));
+  check(`bab4-aara ${tag}: the lines come in order (hello, three praises, signal to the park)`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify([order, seen]));
+  await d3Adv(page, 40);
+  const s = await ch4Info(page);
+  check(`bab4-aara ${tag}: afterwards step "park" is saved, controls are back, the beam leads to the park, Aara waits at its gate`, s.save.bab4.step === 'park' && s.obj === true && Math.abs(s.objXZ[0] + 113.5) < 1 && Math.abs(h.aara.x + 103) < 1 && (await page.evaluate(() => window.__superglen.controlsEnabled !== false)), JSON.stringify([s.save.bab4, s.obj, s.objXZ, h.aara]));
+  const st = await page.evaluate(() => window.__superglen.save.data.quiz.cats.inggris.asked);
+  check(`bab4-aara ${tag}: the three words count in the English statistics`, st >= 3, String(st));
+  // Resume at 'park': no meeting again, Aara at the park.
+  await ch3Open(page, JSON.parse(await page.evaluate(() => localStorage.getItem('superglen.save.v1'))), touch);
+  h = await ch4Handle(page);
+  check(`bab4-aara ${tag}: after a reload at "park" Aara is at the park gate, no new meeting`, h.step === 'park' && h.aara.x < -100 && h.counts.quizRuns === 0, JSON.stringify(h));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -9007,6 +9072,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab3-count', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3CountScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-count-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3CountScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-aara', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4AaraScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-aara-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4AaraScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 

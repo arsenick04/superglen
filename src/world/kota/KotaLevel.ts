@@ -62,6 +62,8 @@ export class KotaLevel implements Level {
   ch4: Chapter4 | null = null;
 
   private ctx!: LevelContext;
+  /** The city's shared lit material (small story models use it: no new shader). */
+  private lit!: THREE.Material;
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
@@ -137,6 +139,7 @@ export class KotaLevel implements Level {
 
     BUILT ??= buildCity(CITY_LAYOUT);
     const mats = makeMaterials();
+    this.lit = mats.lit;
     this.streamer = new ChunkStreamer(BUILT, physics, root, mats.lit, mats.glow);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
@@ -248,7 +251,7 @@ export class KotaLevel implements Level {
       dropMission: () => this.d3?.people.drop(),
       finished: () => this.d3?.people.onChange?.(),
       placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
-    });
+    }, this.lit);
     this.ch4.start();
   }
 
@@ -304,7 +307,7 @@ export class KotaLevel implements Level {
     this.hud.update(dt, p.x, p.z);
     this.d3?.update(dt);
     this.ch3?.update(dt);
-    this.ch4?.update();
+    this.ch4?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;
