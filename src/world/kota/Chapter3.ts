@@ -1,8 +1,28 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
-import { BAB3_LINES as L, MARKET, type FoodKind } from './Bab3Data';
+import type { Question } from '../../quiz/types';
+import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
 import { MarketRats } from './MarketRats';
+
+const BUN_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="25" ry="20" fill="#fff" stroke="#d9c7a8" stroke-width="3"/><circle cx="32" cy="17" r="5" fill="#f3e6d2" stroke="#d9c7a8" stroke-width="2"/></svg>';
+const CAKE_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="30" width="52" height="24" rx="8" fill="#ffa6c9" stroke="#e0709b" stroke-width="3"/><path d="M6 36 Q14 28 22 36 Q30 44 38 36 Q46 28 58 36" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="22" r="7" fill="#e53935"/></svg>';
+
+/** The story question of the count (not from the bank): 3 bakpao + 2 kue. */
+const TOTAL_QUESTION: Question = {
+  id: 'bab3_total',
+  category: 'berhitung',
+  level: 1,
+  prompt: 'Totalnya berapa?',
+  audio_id: 'bab3_lina_total',
+  display: { kind: 'sum', a: { item: 'bakpao', count: MISSING.bakpao }, b: { item: 'kue', count: MISSING.kue } },
+  choices: [
+    { id: 'a', text: String(MISSING.bakpao + MISSING.kue - 1) },
+    { id: 'b', text: String(MISSING.bakpao + MISSING.kue) },
+    { id: 'c', text: String(MISSING.bakpao + MISSING.kue + 1) },
+  ],
+  answer: 'b',
+};
 
 /** What the level gives Chapter 3 (so this file does not need to know the level class). */
 export interface Chapter3Hooks {
@@ -20,7 +40,7 @@ export type Ch3Step = '' | 'chase' | 'count' | 'rakus' | 'closing';
 /**
  * CHAPTER 3 "Pasar Kacau!" in the city (package D4). Built by KotaLevel only when Chapter 2 is done and Chapter 3 is not.
  *
- *   ''        Nino's alarm over the comm (dialog), the beam and the map star point to the market crossing -> 'chase'
+ *   ''        (the alarm already sounded at the end of Chapter 2) a short Nino line, Superglen, the beam and the map star point to the market crossing -> 'chase'
  *   'chase'   the 7 little rats (MarketRats.ts) run around the market; each one tamed drops its food
  *   'count'   Bu Lina: "Bakpaoku hilang 3, kue hilang 2." collect the 5 foods, then "Totalnya berapa?" (quiz card)
  *   'rakus'   Si Tikus Rakus laughs and runs down the drain (a scene, no fight)
@@ -40,6 +60,15 @@ export class Chapter3 {
   readonly rats: MarketRats;
   private hintedSuper = false;
   private saidLucu = false;
+  private counting = false;
+  private beamTick = 0;
+  /** The top-centre counter: bakpao and kue picked up out of what Bu Lina misses. */
+  private readonly hud: HTMLDivElement;
+  private readonly hudNum: Record<'bakpao' | 'kue', HTMLElement>;
+  private readonly hudChip: Record<'bakpao' | 'kue', HTMLElement>;
+  /** Test counters. */
+  quizRuns = 0;
+  countsDone = 0;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -49,6 +78,15 @@ export class Chapter3 {
     ctx.onDispose(() => {
       this.disposed = true;
     });
+    this.hud = document.createElement('div');
+    this.hud.className = 'ch3-count';
+    this.hud.innerHTML =
+      `<div class="ch3-chip" data-k="bakpao">${BUN_SVG}<span>0/${MISSING.bakpao}</span></div>` + `<div class="ch3-chip" data-k="kue">${CAKE_SVG}<span>0/${MISSING.kue}</span></div>`;
+    ctx.ui.appendChild(this.hud);
+    ctx.onDispose(() => this.hud.remove());
+    const chip = (k: string): HTMLElement => this.hud.querySelector(`[data-k="${k}"]`) as HTMLElement;
+    this.hudChip = { bakpao: chip('bakpao'), kue: chip('kue') };
+    this.hudNum = { bakpao: this.hudChip.bakpao.querySelector('span') as HTMLElement, kue: this.hudChip.kue.querySelector('span') as HTMLElement };
     this.rats = new MarketRats(
       ctx,
       {
@@ -65,7 +103,8 @@ export class Chapter3 {
         advance: (s: Ch3Step) => this.setStep(s),
         rats: () => this.rats.list(),
         tame: (i: number) => this.rats.tame(i),
-        counts: () => ({ ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
+        collect: () => this.rats.collectAll(),
+        counts: () => ({ quizRuns: this.quizRuns, countsDone: this.countsDone, ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
       };
       ctx.onDispose(() => {
         delete w.__ch3;
@@ -84,12 +123,14 @@ export class Chapter3 {
     this.hooks.dropMission();
     this.hooks.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
     if (this.step === '' || this.step === 'chase') this.pointToMarket();
+    if (this.step === 'count') this.runCount();
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
       if (this.step === '') {
-        // The alarm of Chapter 2 sounded in the lab: Nino calls over the comm.
+        // Chapter 2 ended with the market alarm: no second alarm, just a short nudge from Nino. The market needs Superglen.
         this.setStep('chase');
-        await ctx.dialog.sequence([L.ninoAlarm, L.glenSiap]);
+        ctx.game.setPlayerMode('superglen', false);
+        await ctx.dialog.say(L.ninoCepat);
       }
     });
   }
@@ -100,6 +141,7 @@ export class Chapter3 {
     const s = this.ctx.save.data.bab3;
     this.ctx.save.setBab3(step, s.tamed);
     this.ctx.game.debugInfo.ch3Step = step;
+    if (step === 'count') this.runCount();
   }
 
   /** A rat was tamed: remember it (saved), and when the last one is gone the chase is won. */
@@ -122,7 +164,69 @@ export class Chapter3 {
   }
 
   private onCollect(_kind: FoodKind): void {
-    // The count (L3) listens here.
+    this.paintHud();
+    this.ctx.game.debugInfo.ch3Collected = this.rats.collected.bakpao + this.rats.collected.kue;
+  }
+
+  private paintHud(): void {
+    const c = this.rats.collected;
+    const shown = this.rats.dropped > 0 || c.bakpao + c.kue > 0 || this.step === 'count';
+    this.hud.classList.toggle('show', shown && this.step !== 'rakus' && this.step !== 'closing');
+    for (const k of ['bakpao', 'kue'] as const) {
+      const n = Math.min(MISSING[k], c[k]);
+      const txt = `${n}/${MISSING[k]}`;
+      if (this.hudNum[k].textContent !== txt) this.hudNum[k].textContent = txt;
+      this.hudChip[k].classList.toggle('full', n >= MISSING[k]);
+    }
+  }
+
+  private get gotAll(): boolean {
+    const c = this.rats.collected;
+    return c.bakpao >= MISSING.bakpao && c.kue >= MISSING.kue;
+  }
+
+  /**
+   * The count: Bu Lina says what is missing, the child picks up the fallen bakpao and kue (the beam leads to the nearest), then
+   * "Totalnya berapa?": three big cards (the quiz panel; the pictures of 3 bakpao + 2 kue are on screen, a wrong card shakes and
+   * after two wrong ones only the right one stays). Right: the food flies back to the stall, hooray, on to Si Tikus Rakus.
+   */
+  private runCount(): void {
+    if (this.counting) return;
+    this.counting = true;
+    const { ctx } = this;
+    const { seq, dialog } = ctx;
+    seq.run(async () => {
+      await dialog.sequence([L.linaHilang, L.linaTolong]);
+      await seq.waitUntil(() => this.gotAll);
+      ctx.objectives.clear();
+      await dialog.say(L.linaTotal, { lockControls: true });
+      let done = false;
+      while (!done) {
+        this.quizRuns++;
+        const res = await ctx.quiz.runQuestion(TOTAL_QUESTION);
+        done = res.completed;
+        if (!done) await seq.wait(0.5);
+      }
+      this.countsDone++;
+      this.rats.returnAll();
+      ctx.sfx.fanfare();
+      const p = ctx.player.visualPosition;
+      for (let i = 0; i < 3; i++) {
+        ctx.fx.sparkles.burst(p.x + (i - 1) * 1.1, p.y + 2.2, p.z, 30, 4.5, -1, { gravity: 3, life: 1.4, up: 1 });
+        await seq.wait(0.2);
+      }
+      await dialog.say(L.linaHore);
+      this.setStep('rakus');
+    });
+  }
+
+  /** While counting: the beam shows the nearest fallen food. */
+  private foodBeam(): void {
+    if (this.step !== 'count' || !this.counting || this.gotAll) return;
+    if (++this.beamTick % 15 !== 0) return;
+    const p = this.ctx.player.position;
+    const f = this.rats.nearestFood(p.x, p.z);
+    if (f) this.ctx.objectives.set(this.tmp.set(f.x, 0, f.z));
   }
 
   private pointToMarket(): void {
@@ -132,6 +236,7 @@ export class Chapter3 {
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
     this.rats.fixedUpdate(dt);
+    this.foodBeam();
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {
       this.arrived = true;
@@ -155,6 +260,7 @@ export class Chapter3 {
     info.ch3Step = this.step;
     info.ch3Arrived = this.arrived;
     this.rats.update(dt);
+    this.paintHud();
     info.ch3Tamed = this.rats.tamedCount;
     info.ch3Dropped = this.rats.dropped;
     // Glen cannot tame: near the rats, Nino says to change into Superglen (the star button pulses on touch).

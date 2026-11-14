@@ -78,8 +78,8 @@ export function clampToStreets(x: number, z: number, out: { x: number; z: number
 
 /** Dialog lines of Chapter 3 (text only for now; the ids are stable so the voice can be added later in audio/dialog.json). */
 export const BAB3_LINES = {
-  ninoAlarm: { id: 'bab3_nino_alarm', speaker: 'nino', text: 'Glen, cepat ke pasar! Tikus-tikus kecil mencuri makanan!' },
-  glenSiap: { id: 'bab3_glen_siap', speaker: 'glen', text: 'Siap! Aku ke pasar sekarang!' },
+  // Chapter 2 already ends with the alarm (bab2_nino_alarm, bab2_glen_siap): this is only a short nudge on arrival in the city.
+  ninoCepat: { id: 'bab3_nino_cepat', speaker: 'nino', text: 'Cepat, ke pasar, Superglen!' },
   ninoUbah: { id: 'bab3_nino_ubah', speaker: 'nino', text: 'Ubah jadi Superglen dulu, Glen!' },
   ninoTiba: { id: 'bab3_nino_tiba', speaker: 'nino', text: 'Itu mereka! Tembak atau hentakkan, ya!' },
   glenLucu: { id: 'bab3_glen_lucu', speaker: 'glen', text: 'Hihi, tikusnya lucu sekali!' },

@@ -290,6 +290,16 @@ export class MarketRats {
     this.ratMesh.visible = this.foodMesh.visible = this.props.visible = on;
   }
 
+  /** Test helper: pick up every bakpao and kue that lies on the street (as if walked over). */
+  collectAll(): void {
+    for (let i = 0; i < this.n; i++) {
+      if (this.fs[i] !== F_GROUND || RATS[i].food === 'sayur') continue;
+      this.fs[i] = F_GONE;
+      this.collected[RATS[i].food]++;
+      this.hooks.onCollect(RATS[i].food);
+    }
+  }
+
   /** The foods go back to the stalls: they fly to Bu Lina and vanish (the happy end of the count). */
   returnAll(): void {
     for (let i = 0; i < this.n; i++) {

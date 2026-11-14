@@ -1579,3 +1579,38 @@ html.pad-ui .pad-focus {
   80% { transform: translate(-50%, -8px) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -22px) scale(0.9); opacity: 0; }
 }
+
+/* ---- Chapter 3: what Bu Lina is missing (top centre, away from the map and the coin counter) ---- */
+.ch3-count {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 8px);
+  transform: translateX(-50%);
+  display: none;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 6;
+}
+.ch3-count.show {
+  display: flex;
+}
+.ch3-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 14px 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+  font-size: 26px;
+  font-weight: 900;
+  color: #8a5a12;
+}
+.ch3-chip svg {
+  width: 40px;
+  height: 40px;
+}
+.ch3-chip.full {
+  background: #c9f2c0;
+  color: #2c7a1f;
+}

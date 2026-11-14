@@ -8560,7 +8560,8 @@ async function bab3FlowScenario(page, check) {
   check('bab3-flow: the beam and the map star lead to the market', s.obj === true, JSON.stringify(s.obj));
   await d3Adv(page, 800);
   s = await ch3Info(page);
-  check('bab3-flow: the alarm lines finish by themselves and the bubble is gone', s.line === '' || !/Siap|pasar/.test(s.line), s.line);
+  check('bab3-flow: the nudge line finishes by itself and the bubble is gone', s.line === '' || !/Cepat/.test(s.line), s.line);
+  check('bab3-flow: the child is Superglen for the market', await page.evaluate(() => window.__superglen.mode === 'superglen'), '');
   // Residents give no missions meanwhile.
   const ppl = await page.evaluate(() => window.__d3.people());
   check('bab3-flow: the residents offer no mission during Chapter 3', ppl.length >= 6 && ppl.every((p) => !p.available), JSON.stringify(ppl.map((p) => p.available)));
@@ -8699,6 +8700,53 @@ async function bab3ResumeScenario(page, check) {
   await d3Adv(page, 400);
   const s = await ch3Info(page);
   check('bab3-rats resume: when every rat is tamed the step becomes "count" (saved)', s.ch3.step === 'count' && s.save.bab3.step === 'count' && s.save.bab3.tamed.length === 7, JSON.stringify([s.ch3, s.save.bab3]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+async function bab3CountScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] } }), touch);
+  await d3Go(page, 93, 12, 10);
+  await d3Adv(page, 400); // the arrival line passes
+  await page.evaluate(() => { for (let i = 0; i < 7; i++) window.__ch3.tame(i); });
+  await d3Adv(page, 60);
+  let hud = await page.evaluate(() => { const e = document.querySelector('.ch3-count'); return { shown: !!e && e.classList.contains('show'), txt: e ? e.textContent : '' }; });
+  check(`bab3-count ${tag}: the counter (bakpao 0/3, kue 0/2) shows once food has fallen`, hud.shown && /0\/3/.test(hud.txt) && /0\/2/.test(hud.txt), JSON.stringify(hud));
+  await d3Adv(page, 400);
+  let s = await ch3Info(page);
+  check(`bab3-count ${tag}: with every rat tamed the step is "count" and Bu Lina says what is missing`, s.ch3.step === 'count' && /hilang|kumpulkan|Semua/.test(s.line), JSON.stringify([s.ch3, s.line]));
+  await d3Adv(page, 500);
+  const rats = await ch3Rats(page);
+  const c0 = await ch3Counts(page);
+  check(`bab3-count ${tag}: exactly 3 bakpao and 2 kue lie on the street (the vegetables went back to the stall)`, c0.dropped === 5 && rats.filter((r) => r.food === 'sayur').every((r) => r.fstate === 4), JSON.stringify({ c0, f: rats.map((r) => r.food + r.fstate) }));
+  check(`bab3-count ${tag}: the beam leads to the food`, (await ch3Info(page)).obj === true, '');
+  // Walk over them one by one.
+  const food = rats.filter((r) => r.food !== 'sayur');
+  for (const f of food.slice(0, 4)) await d3Go(page, f.fx, f.fz, 6);
+  let c1 = await ch3Counts(page);
+  hud = await page.evaluate(() => document.querySelector('.ch3-count').textContent);
+  check(`bab3-count ${tag}: picking up counts (4 of 5), no question yet`, c1.bakpao + c1.kue === 4 && !(await page.evaluate(() => window.__superglen.quiz ? window.__superglen.quiz.open : false)) && !/3\/3.*2\/2/.test(hud), JSON.stringify([c1, hud]));
+  const last = food[4];
+  await d3Go(page, last.fx, last.fz, 6);
+  await d3Adv(page, 400);
+  const q = await page.evaluate(() => ({ open: !!document.querySelector('.quiz-panel, .qp') && document.documentElement.classList.contains('quiz-open'), cards: [...document.querySelectorAll('.qp-card')].map((c) => c.textContent.trim().slice(1)), sum: !!document.querySelector('.kind-sum') }));
+  check(`bab3-count ${tag}: all 5 collected: "Totalnya berapa?" with three cards 4 / 5 / 6 and the pictures`, q.open && q.cards.slice().sort().join() === '4,5,6' && q.sum, JSON.stringify(q));
+  const slot = (n) => page.evaluate((n) => { const c = [...document.querySelectorAll('.qp-card')].find((x) => x.textContent.trim().slice(1) === n); return c ? c.dataset.slot : null; }, n);
+  const wrong = await slot('6');
+  await page.keyboard.press(String(wrong));
+  await d3Adv(page, 80);
+  const wob = await page.evaluate((k) => document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('wobble') || document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('gone'), wrong);
+  check(`bab3-count ${tag}: a wrong card shakes and the child tries again (the question stays)`, wob && (await ch3Info(page)).ch3.step === 'count', '');
+  const right = await slot('5');
+  await page.keyboard.press(String(right));
+  await d3Adv(page, 80);
+  await page.keyboard.press('Enter');
+  await d3Adv(page, 120);
+  await d3Adv(page, 500);
+  s = await ch3Info(page);
+  const c2 = await ch3Counts(page);
+  const st = await page.evaluate(() => window.__superglen.save.data.quiz.cats.berhitung.asked);
+  check(`bab3-count ${tag}: the right answer ends the count: food goes back, step is "rakus", the question counted in the quiz stats`, c2.countsDone === 1 && s.ch3.step === 'rakus' && s.save.bab3.step === 'rakus' && st >= 1, JSON.stringify({ c2, s: s.ch3, st }));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -8860,6 +8908,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab3-rats-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3RatsScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-glen', { viewport: { width: 1280, height: 720 } }, bab3GlenScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-resume', { viewport: { width: 1280, height: 720 } }, bab3ResumeScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-count', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3CountScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-count-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3CountScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));
