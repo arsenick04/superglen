@@ -125,7 +125,7 @@ export function roofTop(b: CityBuilding): number {
   return b.roof === 'hip' ? eave + b.roofH * (1 - Parkour.world.roofPlateau) : eave;
 }
 
-function makeFree(L: CityLayout): (x: number, z: number, m: number) => boolean {
+export function makeFree(L: CityLayout): (x: number, z: number, m: number) => boolean {
   const solids = L.solids.filter((s) => !s.global && s.c[1] + s.s[1] / 2 > 0.25);
   const hills = L.hills.filter((h) => !h.id.startsWith('edgeHill'));
   return (x, z, m) => {

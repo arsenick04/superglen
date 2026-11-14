@@ -48,6 +48,11 @@ export interface SaveData {
   quiz: QuizSave;
   /** Kota Botanica, package D3: ids of the coins taken and of the missions done (both survive reloads). */
   city: { coins: string[]; missions: string[] };
+  /**
+   * Chapter 3 ("Pasar Kacau!") progress in the city: `step` is '' (not started), 'chase', 'count', 'rakus' or 'closing'
+   * (finished = 'bab3' in `chaptersDone`); `tamed` lists the indices of the little rats already tamed.
+   */
+  bab3: { step: string; tamed: number[] };
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -116,6 +121,7 @@ function defaults(): SaveData {
     doneAt: {},
     quiz: defaultQuiz(),
     city: { coins: [], missions: [] },
+    bab3: { step: '', tamed: [] },
   };
 }
 
@@ -166,6 +172,11 @@ function sanitize(raw: unknown): SaveData {
     const ids = (v: unknown, max: number): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.length < 40))].slice(0, max) : []);
     out.city.coins = ids(c.coins, 1000);
     out.city.missions = ids(c.missions, 100);
+  }
+  if (typeof r.bab3 === 'object' && r.bab3 !== null) {
+    const b = r.bab3 as Record<string, unknown>;
+    if (typeof b.step === 'string' && ['', 'chase', 'count', 'rakus', 'closing'].includes(b.step)) out.bab3.step = b.step;
+    if (Array.isArray(b.tamed)) out.bab3.tamed = [...new Set(b.tamed.filter((x): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < 32))];
   }
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
@@ -315,6 +326,12 @@ export class SaveStore {
   finishCityMission(id: string, coins: number): void {
     if (!this.data.city.missions.includes(id)) this.data.city.missions.push(id);
     this.data.quiz.coins += coins;
+    this.persist();
+  }
+
+  /** Chapter 3 progress (see `SaveData.bab3`). */
+  setBab3(step: string, tamed: readonly number[]): void {
+    this.data.bab3 = { step, tamed: [...tamed] };
     this.persist();
   }
 

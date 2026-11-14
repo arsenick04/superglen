@@ -2511,8 +2511,8 @@ async function flowSavesScenario(page, check) {
   check('continue: Chapter 1 done, last in the city -> the city at the hill door, map star on the door, switch allowed, no flying yet', s.level === 'kota' && at(s, HILL[0], HILL[1]) && !!s.map.goal && !s.skills.unlocked.fly && s.levelInfo.storyStep === undefined, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} fly ${s.skills.unlocked.fly}`);
   s = await open({ version: 1, where: 'bab2', chaptersDone: ['bab1'], lastMode: 'superglen', discovered: { lab: true } });
   check('continue: Chapter 2 begun (hangar) -> the lab, Nino starts Chapter 2 again', s.level === 'lab', s.level);
-  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: NOW - 5000 } });
-  check('continue: Chapter 2 done -> the city at the hill door, every power, Lab on the map, no beam', s.level === 'kota' && at(s, HILL[0], HILL[1]) && s.skills.unlocked.fly && !!s.map.secret && !s.objective.active, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: NOW - 5000 } });
+  check('continue: Chapters 2 and 3 done -> the city at the hill door, every power, Lab on the map, no beam', s.level === 'kota' && at(s, HILL[0], HILL[1]) && s.skills.unlocked.fly && !!s.map.secret && !s.objective.active, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
   s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, discovered: { lab: true }, doneAt: { bab2: NOW - 5000 }, slot: { level: 'kota', x: -50, y: 0, z: 30, yaw: 0, mode: 'glen', t: NOW } });
   check('continue: Chapter 2 done and a newer manual save -> that save (level, spot, mode)', s.level === 'kota' && at(s, -50, 30) && s.mode === 'glen', `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} ${s.mode}`);
   s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, discovered: { lab: true }, doneAt: { bab2: NOW }, slot: { level: 'kota', x: -50, y: 0, z: 30, yaw: 0, mode: 'glen', t: NOW - 60000 } });
@@ -8497,8 +8497,8 @@ async function kotaD3StoryScenario(page, check) {
   await d3Adv(page, 6);
   const t = await page.evaluate(() => ({ line: document.querySelector('.dlg-text') ? document.querySelector('.dlg-text').textContent : '', m: window.__superglen.levelInfo.d3Mission, obj: window.__superglen.objective.active }));
   check('kota-d3 story: a resident only waves then ("Halo, Glen!"), no mission, the story beam stays', t.line === 'Halo, Glen!' && t.m === '' , JSON.stringify(t));
-  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } });
-  check('kota-d3 story: after Chapter 2 every resident has a mission to give', s.people.length >= 6 && s.people.every((p) => p.available), JSON.stringify(s.people.map((p) => p.available)));
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } });
+  check('kota-d3 story: after Chapter 3 every resident has a mission to give', s.people.length >= 6 && s.people.every((p) => p.available), JSON.stringify(s.people.map((p) => p.available)));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -8524,6 +8524,72 @@ async function kotaD3ReloadScenario(page, check) {
   await d3Go(page, P[0].x, P[0].z, 6);
   const c = await page.evaluate(() => window.__superglen.levelInfo.d3CoinsNow);
   check('kota-d3 reload: walking over the empty spot takes nothing', c === 0, String(c));
+}
+
+// ---- Chapter 3 "Pasar Kacau!" (package D4, src/world/kota/Chapter3.ts) ---------------------------------------------------------
+
+const CH3_ALL = { laser: true, shield: true, fly: true };
+const ch3Save = (extra = {}) => ({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: CH3_ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 }, ...extra });
+/** Load the game with a save (before the page's scripts run again), tap to start, freeze the loop. */
+async function ch3Open(page, data, touch = false) {
+  await page.evaluate((d) => localStorage.setItem('superglen.save.v1', JSON.stringify(d)), data);
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(900);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 20);
+}
+const ch3Info = (page) => page.evaluate(() => ({ li: { ...window.__superglen.levelInfo, roofSamples: undefined }, ch3: window.__ch3 ? { step: window.__ch3.step(), arrived: window.__ch3.arrived() } : null, obj: window.__superglen.objective.active, save: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}'), line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '', open: window.__superglen.dialog.open }));
+
+async function bab3FlowScenario(page, check) {
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  // Debug free roam: no Chapter 3.
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?level=kota&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(800);
+  check('bab3-flow: the debug free roam (?level=kota) has no Chapter 3', await page.evaluate(() => !window.__ch3));
+  // Chapter 2 done, Chapter 3 not: the alarm, then the chase step.
+  await ch3Open(page, ch3Save());
+  let s = await ch3Info(page);
+  check('bab3-flow: after Chapter 2 the city starts Chapter 3 (the step is saved as "chase" as the alarm begins)', s.ch3 && s.ch3.step === 'chase' && s.save.bab3.step === 'chase', JSON.stringify([s.ch3, s.save.bab3]));
+  check('bab3-flow: Nino\'s alarm is on screen ("... cepat ke pasar ...")', /pasar/.test(s.line), s.line);
+  check('bab3-flow: the beam and the map star lead to the market', s.obj === true, JSON.stringify(s.obj));
+  await d3Adv(page, 800);
+  s = await ch3Info(page);
+  check('bab3-flow: the alarm lines finish by themselves and the bubble is gone', s.line === '' || !/Siap|pasar/.test(s.line), s.line);
+  // Residents give no missions meanwhile.
+  const ppl = await page.evaluate(() => window.__d3.people());
+  check('bab3-flow: the residents offer no mission during Chapter 3', ppl.length >= 6 && ppl.every((p) => !p.available), JSON.stringify(ppl.map((p) => p.available)));
+  await d3Talk(page, ppl[0].id);
+  await d3Adv(page, 6);
+  const t = await ch3Info(page);
+  check('bab3-flow: talking to a resident only says hello (no mission starts)', t.line === 'Halo, Glen!' && t.li.d3Mission === '', JSON.stringify([t.line, t.li.d3Mission]));
+  await d3Adv(page, 300);
+  // Reload: the chapter goes on from "chase", no second alarm.
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 60);
+  s = await ch3Info(page);
+  check('bab3-flow: after a reload the chapter resumes at "chase" without a new alarm', s.ch3 && s.ch3.step === 'chase' && !/pasar/.test(s.line) && s.obj === true, JSON.stringify([s.ch3, s.line, s.obj]));
+  // Arriving at the market: Nino's hint, the beam goes away.
+  await d3Go(page, 93, 12, 20);
+  await d3Adv(page, 20);
+  s = await ch3Info(page);
+  check('bab3-flow: arriving at the market crossing clears the beam and Nino speaks', s.ch3.arrived === true && s.obj === false && /Tembak/.test(s.line), JSON.stringify([s.ch3, s.obj, s.line]));
+  // A save with Chapter 3 done: no chapter, residents offer again.
+  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3'] }));
+  s = await ch3Info(page);
+  const ppl2 = await page.evaluate(() => window.__d3.people());
+  check('bab3-flow: with Chapter 3 done there is no chapter and the residents offer missions again', s.ch3 === null && ppl2.every((p) => p.available), JSON.stringify([s.ch3, ppl2.map((p) => p.available)]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
@@ -8678,6 +8744,8 @@ async function main() {
     results.push(await runScenario(browser, 'kota-d3-pad', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, kotaD3PadScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-d3-story', { viewport: { width: 1280, height: 720 } }, kotaD3StoryScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
+    // Package D4: Chapter 3 (market)
+    results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));

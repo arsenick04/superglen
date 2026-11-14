@@ -26,7 +26,7 @@ export const PeopleConfig = {
 
 // ---- Models (merged coloured primitives: one mesh each) ---------------------------------------------------------------------
 
-function personGeo(color: number, hair: number): THREE.BufferGeometry {
+export function personGeo(color: number, hair: number): THREE.BufferGeometry {
   const eye = 0x2b1a12;
   return merge([
     { g: cyl(0.2, 0.34, 0.85, 8), c: color, p: [0, 0.56, 0] },
