@@ -202,6 +202,7 @@ export class KotaLevel implements Level {
         setGoal: (g) => this.setGoal(g),
         dropMission: () => this.d3?.people.drop(),
         finished: () => this.d3?.people.onChange?.(),
+        placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
       });
       this.ch3.start();
     }
@@ -242,6 +243,14 @@ export class KotaLevel implements Level {
   /** Map star (null: follow the objective beam). */
   setGoal(goal: { x: number; z: number } | null): void {
     this.goalOverride = goal;
+  }
+
+  /** Story helper: stand the player on the ground at (x, z) (colliders ready first) and swing the camera behind. */
+  placePlayer(x: number, z: number, yaw: number): void {
+    this.prepareTeleport(x, z);
+    this.ctx.physics.refreshQueries();
+    this.ctx.player.placeAt(x, 0, z, yaw);
+    this.ctx.cameraRig.snapBehind(yaw);
   }
 
   prepareTeleport(x: number, z: number): void {

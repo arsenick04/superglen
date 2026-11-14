@@ -35,6 +35,8 @@ export interface Chapter3Hooks {
   dropMission(): void;
   /** The chapter ended: residents offer missions again (the map redraws). */
   finished(): void;
+  /** Put the player on the ground at (x, z) facing `yaw` (colliders made ready, the camera snaps behind). */
+  placePlayer(x: number, z: number, yaw: number): void;
 }
 
 /** Chapter 3 steps, in order. '' = not started; the chapter is over when 'bab3' is in `chaptersDone`. */
@@ -252,6 +254,8 @@ export class Chapter3 {
       this.hooks.setGoal(null);
       const hub = MARKET.hub;
       if (!skipRakus) {
+        // The scene needs the child at the crossing (a clear view of the street, not behind pines or on the plaza).
+        this.stage(MARKET.stage.rakus, 14);
         cameraRig.setFraming(this.tmp.set(hub.x, 1.2, hub.z), { weight: 0.6, distance: 5 });
         const mesh = this.rats.makeRakus();
         mesh.position.set(hub.x, 0, hub.z);
@@ -293,6 +297,7 @@ export class Chapter3 {
     const { ctx } = this;
     const { seq, dialog, game, cameraRig } = ctx;
     const f = MARKET.figure;
+    this.stage(MARKET.stage.figure, 12);
     const geo = personGeo(0x34406a, 0x34406a);
     const mat = new THREE.MeshBasicMaterial({ color: 0x34406a, transparent: true, opacity: 0, fog: true });
     const fig = new THREE.Mesh(geo, mat);
@@ -325,6 +330,12 @@ export class Chapter3 {
     ctx.quiz.coinsChanged();
     this.party = new Celebration(ctx, 'Chapter 3 selesai!', ctx.fx.sparkles);
     await this.party.play();
+  }
+
+  /** Put the child at a stage spot (street, clear view) when he is further than `maxDist` from it. */
+  private stage(spot: { x: number; z: number; yaw: number }, maxDist: number): void {
+    const p = this.ctx.player.position;
+    if (Math.hypot(p.x - spot.x, p.z - spot.z) > maxDist) this.hooks.placePlayer(spot.x, spot.z, spot.yaw);
   }
 
   private foodBeam(): void {

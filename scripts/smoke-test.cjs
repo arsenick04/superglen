@@ -8751,8 +8751,9 @@ async function bab3CountScenario(page, check, touch) {
 }
 
 /** Play frames in chunks and record every distinct dialog line, the scene markers and the celebration. */
-async function ch3Watch(page, frames) {
+async function ch3Watch(page, frames, shots = null) {
   const seen = [];
+  const seenAt = {};
   let scenes = [];
   let star = false;
   let locked = 0;
@@ -8767,6 +8768,15 @@ async function ch3Watch(page, frames) {
     if (r.scene && scenes[scenes.length - 1] !== r.scene) scenes.push(r.scene);
     star = star || r.star;
     if (r.ctl === false) locked++;
+    if (shots && r.scene && shots[r.scene]) {
+      // A screenshot a few frames into the scene (the camera has settled) for the human reviewer.
+      seenAt[r.scene] = (seenAt[r.scene] || 0) + 1;
+      if (seenAt[r.scene] === 4) {
+        fs.mkdirSync(OUT, { recursive: true });
+        await page.evaluate(() => window.__superglen.advance(1, true));
+        await page.screenshot({ path: path.join(OUT, shots[r.scene] + '.png') });
+      }
+    }
   }
   return { seen, scenes, star, locked };
 }
@@ -8774,7 +8784,7 @@ async function ch3Watch(page, frames) {
 async function bab3EndScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   await ch3Open(page, ch3Save({ bab3: { step: 'rakus', tamed: [0, 1, 2, 3, 4, 5, 6] } }), touch);
-  const w = await ch3Watch(page, 2600);
+  const w = await ch3Watch(page, 2600, { rakus: `bab3-end-rakus${touch ? '-touch' : ''}`, figure: `bab3-end-figure${touch ? '-touch' : ''}` });
   const has = (t) => w.seen.some((l) => l.indexOf(t) >= 0);
   const order = ['milikku', 'jangan lari', 'RAJA', 'Tikus Rakus', 'bayangan', 'cari tahu'].map((t) => w.seen.findIndex((l) => l.indexOf(t) >= 0));
   check(`bab3-end ${tag}: Si Tikus Rakus laughs, runs off shouting about being KING, Nino reacts, then the figure line, in that order`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify(order) + JSON.stringify(w.seen));
