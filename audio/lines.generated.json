@@ -4,7 +4,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hore, pulang sekolah!",
-    "tts": "[playful] Hore, pulang sekolah!",
+    "tts": "[amazed] Hore, pulang sekolah!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -13,7 +13,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Ayo, kita lompat!",
-    "tts": "[playful] Ayo, kita lompat!",
+    "tts": "[amazed] Ayo, kita lompat!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -94,7 +94,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Kamu siapa?",
-    "tts": "[surprised] Kamu siapa?",
+    "tts": "[amazed] Kamu siapa?",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -121,7 +121,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aku jadi Superglen!",
-    "tts": "[excited] Aku jadi Superglen!",
+    "tts": "[amazed] Aku jadi Superglen!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -184,7 +184,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aduh! Kepala kena atap!",
-    "tts": "[surprised] Aduh! Kepala kena atap!",
+    "tts": "[amazed] Aduh! Kepala kena atap!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -310,7 +310,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Superglen siap!",
-    "tts": "[excited] Superglen siap!",
+    "tts": "[amazed] Superglen siap!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },

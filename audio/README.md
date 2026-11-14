@@ -42,6 +42,9 @@ Pascaproduksi otomatis setelah unduh: geser nada `pitchSemitones` (ffmpeg `rubbe
 
 Sampel uji (empat kalimat, hasil akhir): `audio/voice-tests/v2_final_{glen,nino}_{a,b}.mp3`. Kandidat lain (mentah, tanpa geser nada): `audio/voice-tests/v2_glen_{kakceria,finn,dakocan}_{a,b}.mp3` dan `v2_nino_{pratama,zandhira,rafiq}_{a,b}.mp3`. Kak Ceria (`d15jrIAARvF899pDoC6T`) adalah suara anak-anak/kakak TV yang sangat tinggi (sekitar 400 Hz, perempuan); bila mau Glen terdengar lebih kecil lagi, ganti `glen.voice_id` ke sini dan setel `pitchSemitones` 0.
 
+## Nada per kalimat (`pitchSemitones`)
+Nada Glen +3 semiton (dari `voices.json`) bisa diganti untuk satu kalimat saja: tambahkan `"pitchSemitones": 1` pada baris itu di `audio/dialog.json` (atau `"_pitch": { "<id>": 1 }` di `audio/delivery.json`). Nilai ini MENGGANTIKAN nada suara (bukan ditambahkan), dan ikut hash manifest, jadi mengubahnya membuat klip dibuat ulang. Dipakai untuk kalimat pendek Glen (`bab1_glen_pulang/lompat/superglen/siapa/tertawa`, `bab2_glen_aduh/siap`) = +1 supaya lebih berat. Uji: `--say=glen --pitch=N ...`; `--from-raw=file.mp3` memproses ulang rekaman mentah tanpa biaya; `--keep-raw=dir` menyimpan keluaran mentah saat membuat klip. Perbandingan satu take: `audio/voice-tests/glen_pulang_alt2_p{2,1,0}.mp3`.
+
 ## Mengganti suara
 Ubah `voice_id` (atau stability, similarity_boost, `pitchSemitones`, `model`) di `audio/voices.json`, lalu jalankan `npm run audio -- --category=...` (atau `--force`). Baris yang berubah dibuat ulang otomatis. Suara dari Voice Library harus ditambahkan ke akun dulu (gratis; Voice Library, "Add to my voices", atau API `POST /v1/voices/add/{public_owner_id}/{voice_id}`). Tes satu kalimat tanpa menyentuh manifest:
 

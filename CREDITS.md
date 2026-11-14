@@ -1,7 +1,7 @@
 # Kredit
 
 ## Suara (voices)
-Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Glen dan Nino dinaikkan di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
+Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Glen dan Nino dinaikkan (beberapa kalimat pendek Glen +1 semiton, lihat `pitchSemitones` di `audio/dialog.json`) di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
 
 | Peran | Suara | ID | Catatan |
 |---|---|---|---|
@@ -15,7 +15,8 @@ Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/mu
 
 | Adegan | File | Pencipta | Lisensi |
 |---|---|---|---|
-| | | | |
+| Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3` | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
+| Berubah jadi Superglen | `theme_berubah_tagline.mp3`, `theme_berubah.mp3`, `superglen_theme*.mp3` | lagu tema Superglen milik pemilik proyek (dibuat dengan Suno) | milik pemilik proyek |
 
 ## Suara hewan (domain publik / CC0)
 
