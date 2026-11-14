@@ -1,13 +1,13 @@
 {
   "glen": {
-    "voice_id": "d15jrIAARvF899pDoC6T",
-    "name": "Kak Ceria",
+    "voice_id": "zmTMXWr9TzPTCLvo0Uqr",
+    "name": "Finn - Expressive & Ads Indonesian",
     "model": "eleven_v4",
     "stability": 0.3,
     "similarity_boost": 0.8,
-    "pitchSemitones": -1.5,
-    "labels": "id, kids-TV, cheerful",
-    "note": "v3 2026-11-14: pilihan pemilik (Kak Ceria), nada diturunkan 1,5 semiton lewat ffmpeg rubberband"
+    "pitchSemitones": 1.5,
+    "labels": "id, standard accent, young male, excited",
+    "note": "v4 2026-11-14: pilihan pemilik (Finn, sampel mentah tanpa geser nada) +1,5 semiton"
   },
   "nino": {
     "voice_id": "q8qwd1jY2jS3AWOBeq25",
