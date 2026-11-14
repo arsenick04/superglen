@@ -42,6 +42,12 @@ export class CityMap implements MapSource {
     return b ? { x: b.x, z: b.z } : { x: CITY_LAYOUT.lab.door.x, z: CITY_LAYOUT.lab.door.z };
   })();
 
+  /** D3: residents with a mission to give (both maps) and parked bikes (full map only). Null: nothing of that yet. */
+  d3: { residents(): { x: number; z: number }[]; bikes(): { x: number; z: number }[] } | null = null;
+
+  /** Objective star (set by the level); undefined = follow the objective beam. */
+  goal: (() => { x: number; z: number } | null) | undefined = undefined;
+
   constructor(private readonly found: () => boolean) {}
 
   /** The hidden building was just found: the views redraw the static layer. */
@@ -112,6 +118,11 @@ export class CityMap implements MapSource {
     const sec = this.shownSecret();
     if (sec) this.glyph(g, X(sec.x), Z(sec.z), R * 1.1, 'secret', 0xffc928);
 
+    if (this.d3) {
+      for (const b of big ? this.d3.bikes() : []) this.bikeGlyph(g, X(b.x), Z(b.z), R * 0.9);
+      for (const q of this.d3.residents()) this.questGlyph(g, X(q.x), Z(q.z), R * (big ? 0.95 : 0.8));
+    }
+
     if (big) {
       g.textAlign = 'center';
       g.textBaseline = 'middle';
@@ -146,6 +157,46 @@ export class CityMap implements MapSource {
     g.strokeStyle = 'rgba(40,40,40,0.5)';
     g.lineWidth = Math.max(2, px / 100);
     g.strokeRect(0, 0, px, px);
+  }
+
+  /** A resident with a mission: an orange disc with a white "!" (no words needed). */
+  private questGlyph(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fillStyle = '#ff9f1c';
+    g.fill();
+    g.lineWidth = Math.max(1.5, r * 0.3);
+    g.strokeStyle = '#fff';
+    g.stroke();
+    g.fillStyle = '#fff';
+    g.fillRect(x - r * 0.13, y - r * 0.6, r * 0.26, r * 0.7);
+    g.beginPath();
+    g.arc(x, y + r * 0.5, r * 0.17, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  /** A parked bike: a white disc with a teal ring and a tiny two-wheeler. */
+  private bikeGlyph(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fillStyle = '#fff';
+    g.fill();
+    g.lineWidth = Math.max(1.5, r * 0.28);
+    g.strokeStyle = '#2ec4b6';
+    g.stroke();
+    g.strokeStyle = '#3a3a48';
+    g.lineWidth = Math.max(1, r * 0.16);
+    const w = r * 0.42;
+    for (const dx of [-w, w]) {
+      g.beginPath();
+      g.arc(x + dx, y + r * 0.22, r * 0.26, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.beginPath();
+    g.moveTo(x - w, y + r * 0.22);
+    g.lineTo(x - r * 0.05, y - r * 0.25);
+    g.lineTo(x + w, y + r * 0.22);
+    g.stroke();
   }
 
   /** One landmark icon: a white disc with a coloured ring and a tiny picture. (x, y) is the centre, r the radius. */

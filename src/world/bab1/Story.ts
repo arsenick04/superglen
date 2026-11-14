@@ -17,8 +17,11 @@ export interface StoryParts {
   ctx: LevelContext;
   lab: Lab;
   hall: Hall;
-  jump: JumpTutorial;
+  /** The street jump lesson ('street' mode only). */
+  jump: JumpTutorial | null;
   sparkles: Sparkles;
+  /** Lab mode: the front doorway (walk out to the city). null in street mode. */
+  exit: { x: number; z: number } | null;
   atmosphere: Atmosphere;
   flashlight: Flashlight;
   funny: FunnyFx;
@@ -71,8 +74,11 @@ export class Story {
     this.player.markSafe(x, y, z);
   }
 
-  /** Returning players: the finished lab, no story. */
-  setupReturning(): void {
+  /**
+   * Returning players: the finished lab, no story. `fromHangar`: back from the hangar; once Chapter 2 is done the beam then
+   * shows the way out (the city waits at the hill door).
+   */
+  setupReturning(fromHangar = false): void {
     const { lab, hall, ctx } = this.p;
     this.step = 'returning';
     hall.openInstant();
@@ -86,6 +92,7 @@ export class Story {
     ctx.game.debugInfo.chapterDone = true;
     // Next chapter not played yet: the beam leads to Nino.
     if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
+    else if (fromHangar && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
   }
 
   private addNinoTalk(): void {
@@ -104,12 +111,13 @@ export class Story {
     });
   }
 
-  start(): void {
-    this.p.ctx.seq.run(() => this.main());
+  /** 'street': the whole chapter (debug level). 'hall': from just inside the front door (the walk was in the city). */
+  start(from: 'street' | 'hall' = 'street'): void {
+    this.p.ctx.seq.run(() => (from === 'street' ? this.main() : this.inside()));
   }
 
   private async main(): Promise<void> {
-    const { ctx, hall, lab, flashlight } = this.p;
+    const { ctx } = this.p;
     const { seq, dialog } = ctx;
     const pl = this.player;
     this.step = 'street';
@@ -130,6 +138,15 @@ export class Story {
     void dialog.say('bab1_glen_pagar');
     this.setTarget(0, -43.6);
     await seq.waitUntil(() => pl.visualPosition.z < Z.facade - 1.4 && Math.abs(pl.visualPosition.x) < 3);
+    await this.inside();
+  }
+
+  /** Beats C-F: the hall, the lab, Nino, the costume, the funny ending, done. */
+  private async inside(): Promise<void> {
+    const { ctx, hall, lab, flashlight } = this.p;
+    const { seq, dialog } = ctx;
+    const pl = this.player;
+    await seq.waitUntil(() => startGate.started);
     this.safe(0, 0, -44);
 
     // ---- C. Hall ----
@@ -211,7 +228,9 @@ export class Story {
 
   /** Jump lesson: line + hint when the barrier is near; a plank appears after 20 s without crossing. */
   private async jumpLesson(): Promise<void> {
-    const { ctx, jump } = this.p;
+    const { ctx } = this.p;
+    const jump = this.p.jump;
+    if (!jump) return;
     const { seq, dialog } = ctx;
     const pl = this.player;
     const crossed = (): boolean => pl.visualPosition.z < Z.barrier - 0.9;

@@ -1,5 +1,7 @@
 import { Parkour } from '../../config/parkour';
+import { PlayerConfig } from '../../player/PlayerConfig';
 import { topOf, type Building, type BuildingClass, type Foothold, type LevelReachData } from '../kits/ParkourData';
+import { generatePlaces, type CityPlaces } from './CityPlaces';
 
 /**
  * KOTA BOTANICA: the open-world city as PURE DATA (no three.js, no Rapier, no DOM). `CityBuilder.ts` turns it into meshes
@@ -269,6 +271,27 @@ export interface CityLayout {
   lab: { building: string; door: { x: number; y: number; z: number }; hill: string };
   spawn: { x: number; y: number; z: number; yaw: number };
   greenLinks: [string, string][];
+  /** Chapter 1 in the city (see `kota/Chapter1Walk.ts`). */
+  chapter1: Chapter1Data;
+  /** Package D3: coins, bikes, residents, missions, signposts (see `CityPlaces.ts`). */
+  places: CityPlaces;
+}
+
+/**
+ * Chapter 1's walk: Glen leaves school, the light on the hill catches his eye, an old striped bar on the hill path is the jump
+ * lesson, then the door. `route`: guidance waypoints (ground points, in order; the last one is in front of the door).
+ * `beats`: the waypoint index whose arrival plays a line. `bar`: the jump-lesson bar across the old path (its collider is a
+ * Solid like every other one, so `npm run check:reach` sees it and proves Glen can hop it).
+ */
+export interface Chapter1Data {
+  start: { x: number; y: number; z: number; yaw: number };
+  route: [number, number][];
+  /** Waypoint index where Glen first sees the building on the hill ('bab1_glen_gedung'). */
+  seeIndex: number;
+  /** Waypoint index at the top of the fenced path ('bab1_glen_pagar'). */
+  fenceIndex: number;
+  /** The bar: centre x / z, width along x, depth along z, height. Crossing it means walking toward -z past it. */
+  bar: { x: number; z: number; w: number; d: number; h: number };
 }
 
 // ---- Seeded random -----------------------------------------------------------------------------------------------------------------
@@ -307,6 +330,8 @@ class Gen {
     lab: { building: '', door: { x: 0, y: 0, z: 0 }, hill: '' },
     spawn: { x: 0, y: 0, z: 22, yaw: Math.PI },
     greenLinks: [],
+    chapter1: { start: { x: 0, y: 0, z: 0, yaw: 0 }, route: [], seeIndex: 0, fenceIndex: 0, bar: { x: 0, z: 0, w: 0, d: 0, h: 0 } },
+    places: { coins: [], bikes: [], residents: [], missions: [], signs: [], signDests: [], reachCoins: [] },
   };
   readonly rng: () => number;
   private n = 0;
@@ -574,6 +599,32 @@ class Gen {
         else this.tree(x, z, 0.75 + this.rng() * 0.3);
       }
     }
+  }
+
+  // ---- Chapter 1 walk -----------------------------------------------------------------------------------------------------
+
+  /**
+   * School gate -> east along the school street -> down the avenue -> the old path's opening in the forest -> up the hill to
+   * the door. The jump bar stands on the straight piece of the old path (flat ground, no building within 20 m, so it changes
+   * no building's route). Its height is between the auto-step and Glen's jump (both from the config): it needs a real hop.
+   */
+  chapter1(): void {
+    const school = this.L.buildings.find((b) => b.kind === 'school');
+    const door = this.L.lab.door;
+    const sx = school ? school.x : -24;
+    const sz = school ? school.z + school.d / 2 + 5.5 : -95.5;
+    const step = PlayerConfig.stepHeight;
+    const h = r2(step + (Parkour.glenApex - step) / 4);
+    const bar = { x: OLD_PATH_X, z: -70, w: 6, d: 0.6, h };
+    this.L.chapter1 = {
+      // Facing east (+x) along the school street.
+      start: { x: sx, y: 0, z: r2(sz), yaw: Math.PI / 2 },
+      route: [[0, -93], [50, -93], [50, -50], [OLD_PATH_X, -50], [OLD_PATH_X, -62], [OLD_PATH_X, -76], [90, -82], [100, -88], [door.x, r2(door.z + 2.4)]],
+      seeIndex: 3,
+      fenceIndex: 7,
+      bar,
+    };
+    this.footBox({ id: 'jumpBar', kind: 'other', glen: true, center: [bar.x, h / 2, bar.z], size: [bar.w, h, bar.d] }, bar.x, bar.z);
   }
 
   // ---- Solids (colliders) and reach data -----------------------------------------------------------------------------------
@@ -864,12 +915,12 @@ function bukit(g: Gen): void {
   }
   // Forest band on the town side (west and south edges of the cell), leaving the old path open.
   for (let x = x0 + 3; x < x1 - 2; x += 5.5) for (let z = z1 - 14; z < z1 - 1; z += 5.5) {
-    if (Math.abs(x - 78) < 4.5) continue;
+    if (Math.abs(x - OLD_PATH_X) < 4.5) continue;
     g.tree(x + (g.rng() - 0.5) * 2.5, z + (g.rng() - 0.5) * 2.5, 1.4 + g.rng() * 0.6, 'pine', 0, true, true);
   }
   for (let z = z0 + 3; z < z1 - 14; z += 5.5) for (let x = x0 + 1; x < x0 + 14; x += 5.5) g.tree(x + (g.rng() - 0.5) * 2.5, z + (g.rng() - 0.5) * 2.5, 1.4 + g.rng() * 0.6, 'pine', 0, true, true);
   // The old path: from the avenue corner up to the door, fenced on both sides (old, some posts broken).
-  const path: [number, number][] = [[78, z1 + 2], [78, -78], [90, -82], [100, -88], [ob.x - 1.5, hill.z + hill.rTop - 1]];
+  const path: [number, number][] = [[OLD_PATH_X, z1 + 2], [OLD_PATH_X, -78], [90, -82], [100, -88], [ob.x - 1.5, hill.z + hill.rTop - 1]];
   for (let k = 1; k < path.length; k++) {
     const [ax, az] = path[k - 1];
     const [bx2, bz2] = path[k];
@@ -886,6 +937,9 @@ function bukit(g: Gen): void {
   g.L.ground.push({ x0: 60, z0: -128, x1: 74, z1: -108, kind: 'field', color: 0xb5d96a });
   g.L.pois.push({ id: 'labHint', name: 'Gedung Barongsai Tua', x: ob.x, z: ob.z, radius: 14 });
 }
+
+/** x of the straight first piece of the old fenced path up to the hill (from the avenue corner northward). */
+export const OLD_PATH_X = 78;
 
 /** Top radius / bottom radius of every hill (the drawn frustum template uses the same ratio and 14 sides). */
 export const HILL_TOP = 0.45;
@@ -979,7 +1033,9 @@ export function generateCity(seed: number = CITY.seed): CityLayout {
   const onRoad = (x: number, z: number): boolean => g.L.roads.some((r) => x > r.x0 + 1.2 && x < r.x1 - 1.2 && z > r.z0 + 1.2 && z < r.z1 - 1.2 && (r.x1 - r.x0 > r.z1 - r.z0 ? Math.abs(z - (r.z0 + r.z1) / 2) < (r.main ? CITY.main.road : CITY.local.road) + 0.2 : Math.abs(x - (r.x0 + r.x1) / 2) < (r.main ? CITY.main.road : CITY.local.road) + 0.2));
   const inPond = (x: number, z: number): boolean => g.L.ponds.some((p) => Math.abs(x - p.x) < p.r + 1.5 && Math.abs(z - p.z) < p.r + 1.5);
   const onHillSlope = (x: number, z: number): boolean => g.L.hills.some((h) => Math.hypot(x - h.x, z - h.z) < h.rBottom + 1);
-  g.L.trees = g.L.trees.filter((t) => !inBuilding(t.x, t.z, 1.2) && !onRoad(t.x, t.z) && !inPond(t.x, t.z) && (t.base > 0 || !onHillSlope(t.x, t.z) || !t.solid));
+  // The opening of the old hill path stays free (Chapter 1 walks through it; a street tree stood right in it).
+  const onOldPath = (x: number, z: number): boolean => Math.abs(x - OLD_PATH_X) < 3 && z > -62 && z < -42;
+  g.L.trees = g.L.trees.filter((t) => !onOldPath(t.x, t.z) && !inBuilding(t.x, t.z, 1.2) && !onRoad(t.x, t.z) && !inPond(t.x, t.z) && (t.base > 0 || !onHillSlope(t.x, t.z) || !t.solid));
   g.L.lamps = g.L.lamps.filter((l) => !inBuilding(l.x, l.z, 0.8) && !onRoad(l.x, l.z) && !inPond(l.x, l.z));
   g.L.benches = g.L.benches.filter((b) => !inBuilding(b.x, b.z, 1.5) && !inPond(b.x, b.z));
   // Trees that stand on a hill slope have their base there (no floating trunks).
@@ -990,6 +1046,7 @@ export function generateCity(seed: number = CITY.seed): CityLayout {
   g.L.solids.push({ id: 'ground', shape: 'box', c: [0, -0.5, 0], s: [CITY.half * 2 + 120, 1, CITY.half * 2 + 120], global: true, chunk: 0 });
   for (const b of g.L.buildings) g.solidsFor(b);
   g.propSolids();
+  g.chapter1();
   // Boundary hills (outside the play area, so not in the reach data): a steep ring the soft push never lets you reach.
   const ring = CITY.half + 14;
   for (let t = -ring; t <= ring; t += 26) {
@@ -1002,6 +1059,8 @@ export function generateCity(seed: number = CITY.seed): CityLayout {
       g.L.solids.push({ id, shape: 'hull', c: [x, hh.h / 2, z], s: [40, hh.h, 40], hull: pts, global: true, chunk: 0 });
     }
   }
+  // Package D3 content (last: it avoids every collider made above).
+  g.L.places = generatePlaces(g.L, { chunkIndex, districtAt, cellZone, flyHeight: CITY.flyHeight });
   return g.L;
 }
 
@@ -1018,7 +1077,7 @@ function reachData(L: CityLayout): LevelReachData {
   const footholds: Foothold[] = [];
   for (const s of L.solids) if (s.foothold) footholds.push(s.foothold);
   const buildings: Building[] = L.buildings.map((b) => ({ id: b.id, class: b.cls, roofIds: [b.roofId], wall: b.wall, level: b.level }));
-  return { id: 'kota', starts: ['ground'], footholds, buildings, coins: [], gates: [], greenLinks: L.greenLinks, compact: true };
+  return { id: 'kota', starts: ['ground'], footholds, buildings, coins: L.places.reachCoins, gates: [], greenLinks: L.greenLinks, compact: true };
 }
 
 export const KOTA_REACH: LevelReachData = reachData(CITY_LAYOUT);

@@ -6,17 +6,20 @@ import { Bab2Level } from './bab2/Bab2Level';
 import { KotaLevel } from './kota/KotaLevel';
 
 /**
- * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet. Returning players start where
- * `progress.ts` says (`startLevelFor`).
+ * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet (Chapter 1 starts in the city).
+ * Returning players start where `progress.ts` says (`startPlanFor`).
  */
-export const DEFAULT_LEVEL = 'bab1';
+export const DEFAULT_LEVEL = 'kota';
 
-/** All levels by id. Add a chapter here: `bab1: () => new Bab1Level()`. */
+/** All levels by id. Add a chapter here. An explicit `?level=<id>` is a debug start (the city then plays as free roam). */
 export const LEVELS: Readonly<Record<string, LevelFactory>> = {
   test: () => new TestArea(),
   demo: () => new DemoLevel(),
-  bab1: () => new Bab1Level(),
-  bab2: () => new Bab2Level(),
-  /** Kota Botanica, the open city (free roam; not yet part of the chapter flow): `?level=kota`. */
+  /** Kota Botanica, the open city: Chapter 1 begins here, free roam after it. */
   kota: () => new KotaLevel(),
+  /** Inside the old Barongsai building: the rest of Chapter 1, Nino's lab. */
+  lab: () => new Bab1Level('lab'),
+  bab2: () => new Bab2Level(),
+  /** Debug only: the old standalone Chapter 1 (street, building, lab in one level). */
+  bab1street: () => new Bab1Level('street'),
 };

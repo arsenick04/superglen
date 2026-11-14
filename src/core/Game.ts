@@ -31,7 +31,7 @@ import { Objectives } from '../gameplay/Objectives';
 import { LevelManager } from '../world/LevelManager';
 import type { LevelGame } from '../world/Level';
 import { LEVELS } from '../world/levels';
-import { startLevelFor } from '../world/progress';
+import { flow, migrateSave, setArrival, startPlanFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
@@ -321,7 +321,7 @@ export class Game {
   private levelControls = true;
   private fading = false;
   private dialogLocked = false;
-  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false };
+  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false, bike: false };
   /** The level lets the child switch Glen <-> Superglen (the star button / Q); the button also needs live controls. */
   private transformAllowed = false;
   private readonly modeCtl: ModeController;
@@ -464,6 +464,7 @@ export class Game {
     );
     this.input.addSource(this.walker);
     this.save = new SaveStore();
+    if (migrateSave(this.save)) this.save.persist();
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
@@ -688,6 +689,10 @@ export class Game {
         this.refreshTransform();
       },
       setSkills: (sk, persist) => this.setSkills(sk, persist),
+      setRiding: (on) => {
+        this.profile.bike = on;
+        this.applyLayout();
+      },
       setSkillButtons: (sk) => this.setSkills({ laser: sk.laser, shield: sk.shield }),
       setLegacyTestControls: (on) => {
         this.profile.legacyTest = on;
@@ -730,6 +735,9 @@ export class Game {
         this.transformAllowed = false;
         this.hud?.setTransformHelp(false);
         this.profile.transform = false;
+        this.profile.bike = false;
+        this.player.ride = null;
+        this.player.rideLift = 0;
         this.player.flight.resetLevelSettings();
         this.player.rhythm.cap = MAX_LEVEL;
         this.player.rhythm.reset();
@@ -774,7 +782,20 @@ export class Game {
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
     const wanted = new URLSearchParams(window.location.search).get('level');
-    this.levels.loadInstant(wanted && this.levels.has(wanted) ? wanted : startLevelFor(this.save));
+    if (wanted && this.levels.has(wanted)) {
+      // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
+      flow.sandbox = true;
+      this.levels.loadInstant(wanted);
+    } else {
+      const plan = startPlanFor(this.save);
+      if (plan.arrival) setArrival(plan.level, plan.arrival);
+      this.levels.loadInstant(plan.level);
+      const sl = plan.slot;
+      if (sl && this.levels.currentId === sl.level) {
+        this.levels.teleport(sl.x, sl.y + 0.3, sl.z, sl.yaw);
+        if (this.transformAllowed) this.setPlayerMode(sl.mode);
+      }
+    }
 
     // Live getters (a load finishes in real time even while the loop is paused for tests).
     Object.defineProperties(this.debug, {
@@ -921,6 +942,9 @@ export class Game {
     this.levels.update(dt);
     {
       const mp = this.player.visualPosition;
+      // Objective star: the level's own goal when it has one, else where the objective beam stands.
+      const src = this.levels.current?.map;
+      if (src) this.maps.setGoal(src.goal ? src.goal() : this.objectives.active ? this.objectives.position : null);
       this.maps.update(mp.x, mp.z, this.player.facing);
     }
     this.interactions.update();
@@ -1184,7 +1208,7 @@ export class Game {
     const lv = this.levels.current;
     if (!lv) return;
     if (lv.id === 'kota') {
-      const sp = lv.spawn;
+      const sp = lv.home ?? lv.spawn;
       this.levels.teleport(sp.x, sp.y, sp.z, sp.yaw ?? Math.PI);
     } else {
       this.player.respawn();
@@ -1199,7 +1223,7 @@ export class Game {
     if (!lv || this.levels.loading) return false;
     this.player.getSafeFeet(this.tmpFeet);
     const f = this.tmpFeet;
-    this.save.setSlot({ level: lv.id, x: f.x, y: f.y, z: f.z, yaw: this.player.facing, mode: this.player.mode });
+    this.save.setSlot({ level: lv.id, x: f.x, y: f.y, z: f.z, yaw: this.player.facing, mode: this.player.mode, t: Date.now() });
     return true;
   }
 

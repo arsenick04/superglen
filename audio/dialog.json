@@ -313,5 +313,299 @@
     "lang": "id",
     "text": "Layar Nino menyala! Ayo main Tantangan Pintar.",
     "delivery": "[cheerful] Layar Nino menyala! Ayo main Tantangan Pintar!"
+  },
+  {
+    "id": "kota_kucing_offer",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Kucingku hilang! Tolong cari.",
+    "delivery": "[worried] Kucingku hilang! [pleading] Tolong cari."
+  },
+  {
+    "id": "kota_kucing_remind",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Cari kucing di taman, ya.",
+    "delivery": "[warm] Cari kucing di taman, ya."
+  },
+  {
+    "id": "kota_kucing_done",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Kucingku pulang! Terima kasih!",
+    "delivery": "[happy] Kucingku pulang! [grateful] Terima kasih!"
+  },
+  {
+    "id": "kota_apel_offer",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Aku mau 5 apel dari pasar.",
+    "delivery": "[cheerful] Aku mau lima apel dari pasar!"
+  },
+  {
+    "id": "kota_apel_remind",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Ambil apel di pasar, ya.",
+    "delivery": "[cheerful] Ambil apel di pasar, ya."
+  },
+  {
+    "id": "kota_apel_done",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Apel segar! Terima kasih!",
+    "delivery": "[laughs] Apel segar! [cheerful] Terima kasih!"
+  },
+  {
+    "id": "kota_balon_offer",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Ada 3 balon di atap! Carikan?",
+    "delivery": "[excited] Ada tiga balon di atap! [pleading] Carikan?"
+  },
+  {
+    "id": "kota_balon_remind",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Balonnya ada di atap rumah.",
+    "delivery": "[encouraging] Balonnya ada di atap rumah!"
+  },
+  {
+    "id": "kota_balon_done",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Hore! Semua balon ketemu!",
+    "delivery": "[excited] Hore! Semua balon ketemu!"
+  },
+  {
+    "id": "kota_lonceng_offer",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Bunyikan lonceng di menara!",
+    "delivery": "[cheerful] Bunyikan lonceng di menara!"
+  },
+  {
+    "id": "kota_lonceng_remind",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Loncengnya di atas menara.",
+    "delivery": "[kind] Loncengnya di atas menara."
+  },
+  {
+    "id": "kota_lonceng_done",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Ding dong! Bagus sekali!",
+    "delivery": "[proud] Ding dong! Bagus sekali!"
+  },
+  {
+    "id": "kota_balap_offer",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Balapan! Naik sepeda ke air mancur.",
+    "delivery": "[playful] Balapan! Naik sepeda ke air mancur!"
+  },
+  {
+    "id": "kota_balap_remind",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Naik sepeda ke air mancur!",
+    "delivery": "[playful] Naik sepeda ke air mancur!"
+  },
+  {
+    "id": "kota_balap_done",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Kamu cepat sekali!",
+    "delivery": "[amazed] Kamu cepat sekali!"
+  },
+  {
+    "id": "kota_surat_offer",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Tolong antar surat ke dokter.",
+    "delivery": "[friendly] Tolong antar surat ke dokter."
+  },
+  {
+    "id": "kota_surat_remind",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Surat untuk Dokter Ani.",
+    "delivery": "[friendly] Surat untuk Dokter Ani."
+  },
+  {
+    "id": "kota_surat_done",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Suratnya sampai! Terima kasih!",
+    "delivery": "[delighted] Suratnya sampai! [warm] Terima kasih!"
+  },
+  {
+    "id": "kota_bola_offer",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolaku hilang! Bisa cari?",
+    "delivery": "[worried] Bolaku hilang! [curious] Bisa cari?"
+  },
+  {
+    "id": "kota_bola_remind",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolanya dekat menara koin.",
+    "delivery": "[gentle] Bolanya dekat menara koin."
+  },
+  {
+    "id": "kota_bola_done",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolaku ketemu! Terima kasih!",
+    "delivery": "[delighted] Bolaku ketemu! [warm] Terima kasih!"
+  },
+  {
+    "id": "kota_bunga_offer",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Aku mau 4 bunga. Bantu?",
+    "delivery": "[cheerful] Aku mau empat bunga. [curious] Bantu?"
+  },
+  {
+    "id": "kota_bunga_remind",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Bunganya ada di lapangan.",
+    "delivery": "[cheerful] Bunganya ada di lapangan."
+  },
+  {
+    "id": "kota_bunga_done",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Cantik sekali! Terima kasih!",
+    "delivery": "[amazed] Cantik sekali! [cheerful] Terima kasih!"
+  },
+  {
+    "id": "kota_sari_halo",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[warm] Halo, Glen!"
+  },
+  {
+    "id": "kota_sari_terima",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[warm] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_joko_halo",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[cheerful] Halo, Glen!"
+  },
+  {
+    "id": "kota_joko_terima",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[cheerful] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_dimas_halo",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[excited] Halo, Glen!"
+  },
+  {
+    "id": "kota_dimas_terima",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[excited] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_guru_halo",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[kind] Halo, Glen!"
+  },
+  {
+    "id": "kota_guru_terima",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[kind] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_lala_halo",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[playful] Halo, Glen!"
+  },
+  {
+    "id": "kota_lala_terima",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[playful] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_pos_halo",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[friendly] Halo, Glen!"
+  },
+  {
+    "id": "kota_pos_terima",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[friendly] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_ani_halo",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[gentle] Halo, Glen!"
+  },
+  {
+    "id": "kota_ani_terima",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[gentle] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_bima_halo",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "delivery": "[cheerful] Halo, Glen!"
+  },
+  {
+    "id": "kota_bima_terima",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "delivery": "[cheerful] Terima kasih, Glen!"
+  },
+  {
+    "id": "kota_glen_ketemu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ketemu! Ayo antar pulang.",
+    "delivery": "[excited] Ketemu! Ayo antar pulang."
+  },
+  {
+    "id": "kota_glen_semua",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Sudah semua! Ayo kembali.",
+    "delivery": "[proud] Sudah semua! Ayo kembali."
   }
 ]

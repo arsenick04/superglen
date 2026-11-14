@@ -62,5 +62,85 @@
     "pitchSemitones": 0,
     "labels": "en, american, young male, narrative_story",
     "note": "v2 2026-11-14: hanya untuk kata bahasa Inggris di quiz (pelafalan penutur asli, ramah anak)"
+  },
+  "res_sari": {
+    "voice_id": "fpsPI3vlnQ0anCTPiHk5",
+    "name": "Serena - Heartfelt Indonesian Voice",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, middle-aged female, gentle",
+    "note": "D3 2026-11-14: suara warga kota, Bu Sari, ibu hangat"
+  },
+  "res_joko": {
+    "voice_id": "GcHP6UfXX0zaHYu0b0ut",
+    "name": "Mazlan - Warm, Neutral and Clear",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, old male, calm",
+    "note": "D3 2026-11-14: suara warga kota, Pak Joko, penjual buah tua ceria"
+  },
+  "res_dimas": {
+    "voice_id": "xlBOShi2835jfBgaEld4",
+    "name": "Rafiq - Upbeat",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young male, casual",
+    "note": "D3 2026-11-14: suara warga kota, Kak Dimas, remaja energik"
+  },
+  "res_guru": {
+    "voice_id": "vLsH4ENK3zGpAuW1lSh4",
+    "name": "Ghaisan - Warm, Engaging and Clear",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, middle-aged male, casual",
+    "note": "D3 2026-11-14: suara warga kota, Pak Guru, guru ramah dan jelas"
+  },
+  "res_lala": {
+    "voice_id": "JaUVfDrFcfwGIsv8X2kN",
+    "name": "Defasyalala - Warm, Expressive and Clear",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young female, excited",
+    "note": "D3 2026-11-14: suara warga kota, Mbak Lala, wanita muda sporty"
+  },
+  "res_pos": {
+    "voice_id": "Aw7qttNp8aSAczVs9nwb",
+    "name": "Angga - Authentic Indonesian",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young male, casual",
+    "note": "D3 2026-11-14: suara warga kota, Pak Pos, tukang pos ramah"
+  },
+  "res_ani": {
+    "voice_id": "RbNgJzKAV7jpYJNtCBpj",
+    "name": "Citra - Gentle, Inviting and Calm",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young female, calm",
+    "note": "D3 2026-11-14: suara warga kota, Dokter Ani, dokter lembut"
+  },
+  "res_bima": {
+    "voice_id": "H7dnu83omjrDrtfihMsb",
+    "name": "Aldo - Youth, Friendly, Natural",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young male, confident, social_media",
+    "note": "D3 2026-11-14: Kak Bima, pemuda ceria; pengganti Dakocan (ditolak pemilik)"
   }
 }

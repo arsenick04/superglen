@@ -61,6 +61,9 @@ Untuk ganti: ubah `mandarin.voice_id` di `audio/voices.json`, lalu `npm run audi
 
 Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Tag emosi membuat nada lebih naik-turun; kalau nada Mandarin terdengar berlebihan, ganti tag di `audio/delivery.json` (`speak_zh`) atau hilangkan. Minta penutur asli mengecek nada sebelum dipakai anak.
 
+## Warga Kota Botanica (D3, 2026-11-14)
+Delapan warga punya suara sendiri (speaker `res_sari`, `res_joko`, `res_dimas`, `res_guru`, `res_lala`, `res_pos`, `res_ani`, `res_bima` di `audio/voices.json`, nada 0, eleven_v4, stability 0.3). Nama suara ada di `CREDITS.md`. Id klip: `kota_<misi>_<offer|remind|done>`, `kota_<warga>_<halo|terima>` (salam per warga), `kota_glen_ketemu`, `kota_glen_semua` (Glen, Finn +2 st). Kalimat `surat_done` diucapkan Dokter Ani. "Ganti tugas?" adalah judul tombol Ya/Tidak, bukan dialog, jadi tanpa suara. Kategori manifest: `lainnya`. Id dikirim dari `CityPeople.say(speaker, text, id)`.
+
 ## Aturan hemat kredit
 - Selalu `--dry-run` dulu, lalu `--sample`, minta persetujuan, baru batch.
 - Jangan `--force` tanpa alasan. Satu karakter teks = satu kredit.

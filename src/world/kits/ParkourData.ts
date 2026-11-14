@@ -65,6 +65,8 @@ export interface Coin {
   level?: number;
   /** Foothold it lies over (default: the highest foothold whose top contains pos.x / pos.z and lies at or below pos.y). */
   on?: string;
+  /** A floating coin that only flight reaches (the checker only looks at its height). */
+  flight?: boolean;
 }
 
 export interface Gate {

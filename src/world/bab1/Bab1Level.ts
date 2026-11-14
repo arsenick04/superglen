@@ -17,17 +17,35 @@ import { Story } from './Story';
 import { StreetFx } from './StreetFx';
 import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
+import { flow, takeArrival, travel, LAB_EXIT_TARGET } from '../progress';
+import { DOOR_HALF } from './Layout';
 
 /** Where Nino's quiz terminal stands in the lab (left of the entrance path). */
 export const TERMINAL_LAB = { x: -2.8, z: -64.6 } as const;
 
+/** Lab mode: where the player stands just inside the front door, and the walk-out zone in the doorway. */
+const ENTRY = { x: 0, z: Z.facade - 2.5 } as const;
+const EXIT_Z = Z.facade + 1.2;
+
 /**
- * Bab 1: Komputer Kuno Barongsai. One continuous level along -Z: street, old Barongsai building, dim hall, laboratory.
- * Story script: Story.ts. Layout constants: Layout.ts. Returning players start in the finished lab.
+ * Bab 1: Komputer Kuno Barongsai, inside the old Barongsai building. Two modes:
+ *
+ *   'lab'     (level id `lab`, the story): the dim hall, the panel, the laboratory, Nino and the costume. The street part of
+ *             Chapter 1 happens in the city (kota/Chapter1Walk.ts); the front doorway is bright daylight, walking out of it
+ *             fades to the city at the hill door. Returning players start in the finished lab (or at the door / the
+ *             hangar door, depending on how they came in: progress.ts `Arrival`).
+ *   'street'  (level id `bab1street`, debug only: `?level=bab1street`): the old standalone chapter along -Z (street with the
+ *             jump lesson, the building outside, then the same hall and lab). Kept for the street parkour tests.
+ *
+ * Story script: Story.ts. Layout constants: Layout.ts.
  */
 export class Bab1Level implements Level {
-  readonly id = 'bab1';
+  readonly id: string;
   spawn: { x: number; y: number; z: number; yaw?: number } = { x: 0, y: 0, z: 0, yaw: Math.PI };
+
+  constructor(private readonly mode: 'lab' | 'street' = 'lab') {
+    this.id = mode === 'lab' ? 'lab' : 'bab1street';
+  }
 
   private ctx!: LevelContext;
   private atmosphere!: Atmosphere;
@@ -36,11 +54,12 @@ export class Bab1Level implements Level {
   private exterior!: BuildingExterior;
   private hall!: Hall;
   private lab!: Lab;
-  private jump!: JumpTutorial;
+  private jump: JumpTutorial | null = null;
   private funny!: FunnyFx;
   private door!: LabDoor;
   private story!: Story;
-  private streetFx!: StreetFx;
+  private streetFx: StreetFx | null = null;
+  private leaving = false;
   private terminal!: NinoTerminal;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
@@ -50,6 +69,9 @@ export class Bab1Level implements Level {
     this.ctx = ctx;
     const { root, physics, scene } = ctx;
     this.done = ctx.save.isChapterDone('bab1');
+    const lab = this.mode === 'lab';
+    const arrival = takeArrival(this.id);
+    if (lab && !flow.sandbox) ctx.save.setWhere('lab');
     // Voice files of the chapter (if any) load in the background; the music starts with the first tap.
     ctx.audio.preload(ctx.dialog.idsWithPrefix('bab1_'));
     ctx.audio.music.setScene('jelajah');
@@ -59,7 +81,7 @@ export class Bab1Level implements Level {
     ctx.game.setTransformAllowed(this.done);
     // The lab is small: flying is harmless (low ceiling, a flight box around the whole walkable area).
     ctx.player.flight.maxFlyHeight = 4.5;
-    ctx.player.flight.bounds = { minX: -13, maxX: 13, minZ: Z.labBack + 0.8, maxZ: 8 };
+    ctx.player.flight.bounds = { minX: -13, maxX: 13, minZ: Z.labBack + 0.8, maxZ: lab ? Z.facade + 2 : 8 };
 
     this.atmosphere = new Atmosphere(scene, root);
     this.sparkles = new Sparkles(root);
@@ -71,7 +93,9 @@ export class Bab1Level implements Level {
     const zFacade = Z.facade - 0.6;
     const zHall = Z.hallBack - 0.6;
     const zLab = Z.labBack - 1;
-    physics.addFixedCuboid({ x: 20, y: 0.5, z: (9 - zFacade) / 2 }, { x: 0, y: -0.5, z: (9 + zFacade) / 2 });
+    // Lab mode: only a porch outside the door (the walk-out zone is on it); street mode: the whole street and plaza.
+    const zFront = lab ? Z.facade + 3 : 9;
+    physics.addFixedCuboid({ x: lab ? HALL_HALF + 0.6 : 20, y: 0.5, z: (zFront - zFacade) / 2 }, { x: 0, y: -0.5, z: (zFront + zFacade) / 2 });
     physics.addFixedCuboid({ x: HALL_HALF + 0.6, y: 0.5, z: (zFacade - zHall) / 2 }, { x: 0, y: -0.5, z: (zFacade + zHall) / 2 });
     physics.addFixedCuboid({ x: 7.6, y: 0.5, z: (zHall - zLab) / 2 }, { x: 0, y: LAB_FLOOR - 0.5, z: (zHall + zLab) / 2 });
 
@@ -82,14 +106,15 @@ export class Bab1Level implements Level {
     const labKit = new Kit(physics, mats, false);
     for (const k of [street, building, hallKit, labKit]) k.roofs = this.roofs;
 
-    const pk = buildStreet(street);
-    this.jump = new JumpTutorial(ctx, street, this.sparkles);
+    const pk = lab ? null : buildStreet(street);
+    if (!lab) this.jump = new JumpTutorial(ctx, street, this.sparkles);
     this.exterior = new BuildingExterior(building, root, this.sparkles);
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
     this.door = new LabDoor(ctx, labKit, this.sparkles);
-    this.streetFx = new StreetFx(ctx, this.sparkles);
-    if (this.testInfo) {
+    if (!lab) this.streetFx = new StreetFx(ctx, this.sparkles);
+    if (lab) this.buildExit(ctx);
+    if (this.testInfo && pk && this.streetFx) {
       ctx.game.debugInfo.roofs = this.roofs.json();
       // Layout data for the smoke test: the climbable footholds (drawn size, top), the route of each building, the coins.
       ctx.game.debugInfo.street = JSON.stringify({
@@ -119,6 +144,7 @@ export class Bab1Level implements Level {
       hall: this.hall,
       jump: this.jump,
       sparkles: this.sparkles,
+      exit: lab ? { x: 0, z: Z.facade + 0.8 } : null,
       atmosphere: this.atmosphere,
       flashlight: this.flashlight,
       funny: this.funny,
@@ -126,13 +152,46 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      this.spawn = { x: 0, y: LAB_FLOOR, z: -65, yaw: Math.PI };
-      this.atmosphere.snap(2);
-      this.story.setupReturning();
+      if (arrival === 'labEntrance') {
+        this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
+        this.atmosphere.snap(1);
+      } else {
+        this.spawn = { x: 0, y: LAB_FLOOR, z: -65, yaw: Math.PI };
+        this.atmosphere.snap(2);
+      }
+      this.story.setupReturning(arrival === 'labFromHangar');
+    } else if (lab) {
+      this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
+      this.atmosphere.snap(1);
+      this.story.start('hall');
     } else {
       this.spawn = { x: 0, y: 0, z: 0, yaw: Math.PI };
-      this.story.start();
+      this.story.start('street');
     }
+  }
+
+  /** Lab mode: the front doorway glows with daylight; walking out through it fades to the city at the hill door. */
+  private buildExit(ctx: LevelContext): void {
+    const mat = new THREE.MeshBasicMaterial({ color: 0xfff4d8, transparent: true, opacity: 0.92, toneMapped: false, fog: false, side: THREE.DoubleSide, depthWrite: false });
+    const light = new THREE.Mesh(new THREE.PlaneGeometry(DOOR_HALF * 2 + 0.2, 3.5), mat);
+    light.position.set(0, 1.75, Z.facade + 0.15);
+    light.renderOrder = 2;
+    ctx.root.add(light);
+    ctx.interactions.addZone({
+      shape: 'box',
+      center: new THREE.Vector3(0, 1, EXIT_Z),
+      half: new THREE.Vector3(DOOR_HALF + 0.6, 1.6, 0.8),
+      onEnter: () => this.leave(),
+    });
+  }
+
+  /** Out of the front door: to the city, arriving at the hill door. */
+  private leave(): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    void travel(this.ctx.game, LAB_EXIT_TARGET, 'hillDoor').finally(() => {
+      this.leaving = false;
+    });
   }
 
   update(dt: number): void {
@@ -150,9 +209,9 @@ export class Bab1Level implements Level {
     this.hall.update(dt);
     this.lab.update(dt, zone >= 1);
     this.door.update(dt);
-    this.jump.update(dt);
+    this.jump?.update(dt);
     this.funny.update(dt);
-    this.streetFx.update(dt);
+    this.streetFx?.update(dt);
     this.terminal.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
@@ -160,10 +219,10 @@ export class Bab1Level implements Level {
     info.step = this.story.step;
     info.flashlight = this.flashlight.on;
     info.wallOpen = this.hall.opened;
-    info.plank = this.jump.plankShown;
+    info.plank = this.jump ? this.jump.plankShown : false;
     info.coinsTaken = this.story.coinsTaken;
     info.zone = zone;
-    info.hint = this.jump.hinting;
+    info.hint = this.jump ? this.jump.hinting : false;
     if (this.testInfo) {
       // Camera/pole numbers for the automated tests only (the pole projection costs ~100 matrix maths a frame).
       info.poleCover = this.poleCover();

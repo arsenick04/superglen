@@ -267,6 +267,11 @@ export class QuizEngine {
   // Statistics, adaptive level, coins
   // ---------------------------------------------------------------------------------------------------------------
 
+  /** The coin total changed outside the quiz (city coins, missions; the save already holds it): refresh the HUD counter. */
+  coinsChanged(): void {
+    this.panel.coinsChanged();
+  }
+
   /** Called when a question has been answered right (`wrong` = wrong picks before). Updates and saves. */
   private record(q: Question, wrong: number): { answer: QuizAnswerRecord; coins: number } {
     const d = this.data;

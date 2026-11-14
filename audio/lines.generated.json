@@ -405,6 +405,384 @@
     "category": "quiz_nino"
   },
   {
+    "id": "kota_kucing_offer",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Kucingku hilang! Tolong cari.",
+    "tts": "[worried] Kucingku hilang! [pleading] Tolong cari.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_kucing_remind",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Cari kucing di taman, ya.",
+    "tts": "[warm] Cari kucing di taman, ya.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_kucing_done",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Kucingku pulang! Terima kasih!",
+    "tts": "[happy] Kucingku pulang! [grateful] Terima kasih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_apel_offer",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Aku mau 5 apel dari pasar.",
+    "tts": "[cheerful] Aku mau lima apel dari pasar!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_apel_remind",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Ambil apel di pasar, ya.",
+    "tts": "[cheerful] Ambil apel di pasar, ya.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_apel_done",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Apel segar! Terima kasih!",
+    "tts": "[laughs] Apel segar! [cheerful] Terima kasih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balon_offer",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Ada 3 balon di atap! Carikan?",
+    "tts": "[excited] Ada tiga balon di atap! [pleading] Carikan?",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balon_remind",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Balonnya ada di atap rumah.",
+    "tts": "[encouraging] Balonnya ada di atap rumah!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balon_done",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Hore! Semua balon ketemu!",
+    "tts": "[excited] Hore! Semua balon ketemu!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_lonceng_offer",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Bunyikan lonceng di menara!",
+    "tts": "[cheerful] Bunyikan lonceng di menara!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_lonceng_remind",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Loncengnya di atas menara.",
+    "tts": "[kind] Loncengnya di atas menara.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_lonceng_done",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Ding dong! Bagus sekali!",
+    "tts": "[proud] Ding dong! Bagus sekali!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balap_offer",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Balapan! Naik sepeda ke air mancur.",
+    "tts": "[playful] Balapan! Naik sepeda ke air mancur!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balap_remind",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Naik sepeda ke air mancur!",
+    "tts": "[playful] Naik sepeda ke air mancur!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_balap_done",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Kamu cepat sekali!",
+    "tts": "[amazed] Kamu cepat sekali!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_surat_offer",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Tolong antar surat ke dokter.",
+    "tts": "[friendly] Tolong antar surat ke dokter.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_surat_remind",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Surat untuk Dokter Ani.",
+    "tts": "[friendly] Surat untuk Dokter Ani.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_surat_done",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Suratnya sampai! Terima kasih!",
+    "tts": "[delighted] Suratnya sampai! [warm] Terima kasih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bola_offer",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolaku hilang! Bisa cari?",
+    "tts": "[worried] Bolaku hilang! [curious] Bisa cari?",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bola_remind",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolanya dekat menara koin.",
+    "tts": "[gentle] Bolanya dekat menara koin.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bola_done",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Bolaku ketemu! Terima kasih!",
+    "tts": "[delighted] Bolaku ketemu! [warm] Terima kasih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bunga_offer",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Aku mau 4 bunga. Bantu?",
+    "tts": "[cheerful] Aku mau empat bunga. [curious] Bantu?",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bunga_remind",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Bunganya ada di lapangan.",
+    "tts": "[cheerful] Bunganya ada di lapangan.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bunga_done",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Cantik sekali! Terima kasih!",
+    "tts": "[amazed] Cantik sekali! [cheerful] Terima kasih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_sari_halo",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[warm] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_sari_terima",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[warm] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_joko_halo",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[cheerful] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_joko_terima",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[cheerful] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_dimas_halo",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[excited] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_dimas_terima",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[excited] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_guru_halo",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[kind] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_guru_terima",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[kind] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_lala_halo",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[playful] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_lala_terima",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[playful] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_pos_halo",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[friendly] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_pos_terima",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[friendly] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_ani_halo",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[gentle] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_ani_terima",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[gentle] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bima_halo",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[cheerful] Halo, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_bima_terima",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[cheerful] Terima kasih, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_glen_ketemu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ketemu! Ayo antar pulang.",
+    "tts": "[excited] Ketemu! Ayo antar pulang.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "kota_glen_semua",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Sudah semua! Ayo kembali.",
+    "tts": "[proud] Sudah semua! Ayo kembali.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",

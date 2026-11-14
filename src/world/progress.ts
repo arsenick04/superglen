@@ -1,17 +1,110 @@
-import type { SaveStore } from '../core/Save';
+import type { SaveStore, SlotSave } from '../core/Save';
+import type { LevelGame } from './Level';
+import { CITY_LAYOUT } from './kota/CityData';
+import { Z } from './bab1/Layout';
 
 /**
- * The chapter flow in one place (single source of truth for "where does the game start" and "where does Nino
- * send me next"). Pure functions of the save, no side effects.
+ * The chapter flow in one place (single source of truth for "where does the game start", "where does a door lead" and
+ * "where does Nino send me next"). Level ids of the story:
  *
- *   fresh save                    -> bab1 (story)
- *   bab1 done, bab2 not           -> bab1 lab (Nino there starts Chapter 2, so does the glowing door)
- *   bab2 done                     -> bab2 training hall, free play
+ *   kota   Kota Botanica, the open city. Chapter 1 starts here (walk home from school, guided to the hidden hill).
+ *   lab    Inside the old Barongsai building: dark hall, panel, laboratory, Nino, the costume (rest of Chapter 1).
+ *   bab2   Nino's training hangar behind the lab (Chapter 2).
+ *
+ * Continue (`startPlanFor`), from the save:
+ *   Chapter 1 not done   -> lab when the child was last inside it ("where" = lab), else the city at the school
+ *   Chapter 1 done only  -> the city at the hill door when the child was last outside, else the lab (Nino starts Chapter 2)
+ *   Chapter 2 done       -> the manual save slot when it is newer than the end of Chapter 2, else the city at the hill door
+ *
+ * Doors: city hill door <-> lab entrance (walk in / walk out), lab glowing door <-> hangar.
  */
+
+/** Where a level should put the player when it was entered through a door (consumed by the level's build). */
+export type Arrival =
+  /** City: in front of the old building's door on the hill, facing away from it. */
+  | 'hillDoor'
+  /** Lab: just inside the old building's front door. */
+  | 'labEntrance'
+  /** Lab: next to the glowing hangar door (back from Chapter 2). */
+  | 'labFromHangar';
+
+let pending: { level: string; arrival: Arrival } | null = null;
+
+/**
+ * Debug free roam: the page was opened with an explicit `?level=<id>`. The city then plays as before D2 (every power, the
+ * plaza spawn, no Chapter 1 walk), whatever the save says. Set once by the Game at startup.
+ */
+export const flow = { sandbox: false };
+
+/** Remember where the next build of `level` should put the player. */
+export function setArrival(level: string, arrival: Arrival): void {
+  pending = { level, arrival };
+}
+
+/** Called by a level's build: the arrival meant for it (once), or null. */
+export function takeArrival(level: string): Arrival | null {
+  if (!pending || pending.level !== level) return null;
+  const a = pending.arrival;
+  pending = null;
+  return a;
+}
+
+/** Fade to a level and arrive at a door spot. */
+export function travel(game: LevelGame, level: string, arrival: Arrival): Promise<void> {
+  setArrival(level, arrival);
+  return game.loadLevel(level);
+}
+
+/** Feet spot in the city in front of the old building's door (outside the door's walk-in zone), facing south (+z). */
+export const HILL_DOOR_SPOT = { x: CITY_LAYOUT.lab.door.x, y: CITY_LAYOUT.lab.door.y, z: CITY_LAYOUT.lab.door.z + 4.6, yaw: 0 } as const;
+
+/** What the game loads on start. `slot`: teleport there after loading `level`. */
+export interface StartPlan {
+  level: string;
+  arrival?: Arrival;
+  slot?: SlotSave;
+}
+
+export function startPlanFor(save: SaveStore): StartPlan {
+  const where = save.data.where;
+  if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
+  if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
+  const slot = save.data.slot;
+  if (slot && slot.t > 0 && slot.t >= (save.data.doneAt.bab2 ?? 0)) return { level: slot.level, slot: { ...slot } };
+  return { level: 'kota', arrival: 'hillDoor' };
+}
+
+/** Level id the game starts with (see `startPlanFor`). */
 export function startLevelFor(save: SaveStore): string {
-  if (!save.isChapterDone('bab1')) return 'bab1';
-  if (save.isChapterDone('bab2')) return 'bab2';
-  return 'bab1';
+  return startPlanFor(save).level;
+}
+
+/**
+ * Bring a save of an older version onto the current flow (idempotent; never touches chaptersDone, skills or the quiz).
+ *   - The old standalone Chapter 1 level 'bab1' (street + building + lab) is gone: a manual slot there moves into the
+ *     'lab' (same coordinates for the hall and the lab) or, when it was on the street, to the city at the hill door.
+ *   - "where" was the Chapter 1 level: inside the lab now.
+ *   - Whoever finished Chapter 1 has found the old building: it shows on the city map.
+ * Returns true when something changed (the caller persists).
+ */
+export function migrateSave(save: SaveStore): boolean {
+  const d = save.data;
+  let changed = false;
+  const sl = d.slot;
+  if (sl && sl.level === 'bab1') {
+    if (sl.z > Z.facade - 0.6) d.slot = { ...sl, level: 'kota', x: HILL_DOOR_SPOT.x, y: HILL_DOOR_SPOT.y, z: HILL_DOOR_SPOT.z, yaw: HILL_DOOR_SPOT.yaw };
+    else d.slot = { ...sl, level: 'lab' };
+    changed = true;
+  }
+  if (d.where === 'bab1') {
+    d.where = 'lab';
+    changed = true;
+  }
+  if (save.isChapterDone('bab1') && !d.discovered.lab) {
+    d.discovered.lab = true;
+    changed = true;
+  }
+  return changed;
 }
 
 /** What talking to Nino in the lab does: the line to say and the level to fade to afterwards (null = stay). */
@@ -22,5 +115,7 @@ export function labNinoTalk(save: SaveStore): { line: string; next: string | nul
 
 /** Where the glowing lab door leads (the training hall). */
 export const LAB_DOOR_TARGET = 'bab2';
-/** Where the hall's exit door leads (the finished lab). */
-export const HALL_DOOR_TARGET = 'bab1';
+/** Where the hall's exit door leads (the lab, arriving next to the glowing door). */
+export const HALL_DOOR_TARGET = 'lab';
+/** Where the old building's front door leads from the inside (the city, at the hill door). */
+export const LAB_EXIT_TARGET = 'kota';
