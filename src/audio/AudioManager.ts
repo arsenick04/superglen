@@ -59,6 +59,9 @@ export interface AudioOptions {
   musicOn: () => boolean;
   /** URL ?mute=1 */
   muteUrl: boolean;
+  /** Settings panel sliders (0..1, default 1): scale the music and sfx lanes. The on/off switches still win (off = 0). */
+  musicVolume?: () => number;
+  sfxVolume?: () => number;
 }
 
 /** One streamed music track: an HTMLAudioElement (never decoded into memory) routed through its own gain node. */
@@ -525,13 +528,23 @@ export class AudioManager {
     }
   }
 
+  private vol(f: (() => number) | undefined): number {
+    const v = f ? f() : 1;
+    return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
+  }
+
+  /** A volume slider moved (settings panel): only the lane gains change. */
+  applyVolumes(): void {
+    this.applyGains(false);
+  }
+
   /** The lane targets follow the settings and the duck state. */
   private applyGains(instant: boolean): void {
     const V = AudioConfig.volumes;
     const silent = this.silent;
     this.lane.voice = silent ? 0 : V.voice;
-    this.lane.sfx = silent ? 0 : V.sfx;
-    this.lane.music = this.musicSilent ? 0 : V.music * (this.voiceActive ? AudioConfig.duckFactor : 1);
+    this.lane.sfx = silent ? 0 : V.sfx * this.vol(this.opts.sfxVolume);
+    this.lane.music = this.musicSilent ? 0 : V.music * this.vol(this.opts.musicVolume) * (this.voiceActive ? AudioConfig.duckFactor : 1);
     if (!this.master || !this.voiceGain || !this.sfxGain || !this.musicGain) return;
     const fast = 0.02;
     this.setParam(this.master.gain, V.master, fast);

@@ -1107,6 +1107,13 @@ export class Player {
     this.safePos.set(x, feetY + CENTER_TO_FEET + C.skinOffset, z);
   }
 
+  /** Feet position of the last safe ground (what a fall returns to; the manual save stores this). */
+  getSafeFeet(out: { x: number; y: number; z: number }): void {
+    out.x = this.safePos.x;
+    out.y = this.safePos.y - CENTER_TO_FEET - C.skinOffset;
+    out.z = this.safePos.z;
+  }
+
   /** A hop on its own (cutscene fun): same as a jump press, even while input is disabled. */
   hop(): void {
     this.jumpBufferTimer = Parkour.windows.good;

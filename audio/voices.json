@@ -1,13 +1,13 @@
 {
   "glen": {
-    "voice_id": "plgKUYgnlZ1DCNh54DwJ",
-    "name": "Dakocan - Expressive, Cheerful and Clear",
+    "voice_id": "zmTMXWr9TzPTCLvo0Uqr",
+    "name": "Finn - Expressive & Ads Indonesian",
     "model": "eleven_v4",
     "stability": 0.3,
     "similarity_boost": 0.8,
-    "pitchSemitones": 3,
-    "labels": "id, standard accent, young male, casual, social_media",
-    "note": "v2 2026-11-14: suara pemuda ekspresif, nada dinaikkan 3 semiton lewat ffmpeg rubberband supaya terdengar seperti anak"
+    "pitchSemitones": 2,
+    "labels": "id, standard accent, young male, excited",
+    "note": "v4 2026-11-14: pilihan pemilik (Finn, sampel mentah tanpa geser nada) +2 semiton (naik dari +1,5)"
   },
   "nino": {
     "voice_id": "q8qwd1jY2jS3AWOBeq25",

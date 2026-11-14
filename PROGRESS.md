@@ -639,12 +639,37 @@ Pemilik proyek melaporkan "Hore, pulang sekolah!" terdengar seperti orang tua me
 ### Kredit
 ElevenLabs: sekitar 9.750 dari 40.000. Higgsfield: 0.
 
+## Tambahan setelah D1 (14 November 2026): setelan, mini map, musik baru, suara Glen, controller
+
+Atas permintaan pemilik proyek. Kode oleh `gameplay-dev` (sonnet), audio oleh `asset-pipeline` (sonnet), ditinjau orkestrator.
+
+### Yang selesai
+- **Menu setelan** (roda gigi kiri atas): volume musik, volume efek, lihat peta, kembali ke tengah kota, simpan dan muat, ulang dari awal level dengan konfirmasi (bawaan "Tidak").
+- **Mini map** agak transparan selama bermain di kota, utara di atas. **Peta penuh** dengan nama distrik. Gedung tua Barongsai baru muncul di peta setelah ditemukan.
+- **Musik latar baru**: `ringan_a.mp3` (marimba riang, tanpa drum, dibuat oleh `scripts/make-music.py`), lebih pelan. Pilihan B (`ringan_b.mp3`) tersimpan. Tagline "sistem aktif, Superglen siap!" tetap untuk transformasi.
+- **Suara Glen**: Finn, nada naik 2 semiton (pilihan pemilik proyek setelah mencoba Dakocan, Kak Ceria, dan empat suara lain). Semua 15 kalimat.
+- **Controller (DualSense atau gamepad standar)**: stik kiri atau D-pad jalan, stik kanan kamera, Silang lompat (tahan = terbang), Kotak bicara, Segitiga berubah, R2 atau Lingkaran laser, L2 atau L1 perisai, Options setelan, Create atau touchpad peta. Menu dan kuis bisa dijalankan dengan controller. Petunjuk tombol di layar berganti otomatis. `?pad=debug` menampilkan apa yang dibaca browser dari controller.
+
+### Hasil tes
+- build, typecheck, `check:reach`: lulus.
+- Smoke test `settings`, `minimap`, `gamepad` (6 skenario, 3 kali berturut-turut), `kota`, `audio`, `sfx`, `perf`, `bab1`, `bab2`, `quiz`: lulus, 0 error console.
+
+### Masalah yang diketahui
+- "Muat" di level cerita mengembalikan posisi, tetapi cerita level mulai dari awal.
+- Di PC, roda gigi baru bisa diklik setelah Esc melepas kursor (atau tekan Options di controller).
+- Browser PS5 belum dites: belum tahu apakah ia meneruskan controller ke halaman web, menjalankan grafik 3D, dan memutar suara setelah tombol controller ditekan.
+- Halaman orang tua belum bisa dijalankan dengan controller.
+- Beda nada antar kalimat Glen (seruan pendek lebih tinggi daripada kalimat tenang) belum dinilai telinga.
+
+### Kredit
+ElevenLabs: sekitar 10.500 dari 40.000 menurut akun (angka akun terlambat; pemakaian nyata sedikit lebih tinggi). Higgsfield: 0.
+
 ## Pengingat untuk pemilik proyek
 - **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
 - **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
 Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
-1. **Jelajahi kota**: buka https://arsenick04.github.io/superglen/?level=kota lalu jalan, lompat ke atap rumah, berubah jadi Superglen (tombol bintang) dan terbang melintasi kota. Apakah ukurannya sudah terasa luas? Apakah lancar di iPhone (lihat angka FPS)?
-2. **Cari gedung tua Barongsai**: tersembunyi di bukit pinggir kota. Apakah anak bisa menemukannya, dan apakah letaknya sudah sesuai bayangan Anda?
-3. **Suara Glen**: dengarkan file pembanding yang dikirim di chat, pilih gaya atau suara yang cocok.
+1. **Kota dengan setelan dan peta**: buka https://arsenick04.github.io/superglen/?level=kota lalu coba roda gigi (volume, peta, simpan, muat, kembali ke tengah kota) dan mini map. Dengarkan musik baru dan suara Glen di https://arsenick04.github.io/superglen/?reset=1
+2. **Controller di PC atau iPhone**: sambungkan DualSense, tekan tombol apa saja di layar awal, lalu main.
+3. **PS5**: buka https://arsenick04.github.io/superglen/?level=kota&pad=debug dan laporkan isi kotak di kiri bawah (gamepad api, pad, webgl), apakah game jalan, dan apakah ada suara.

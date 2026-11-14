@@ -7281,6 +7281,682 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
+// ---- Settings panel (gear) and the maps ---------------------------------------------------------------------------------------
+
+/** Screenshots of the settings / map checks go to $UI_SHOTS when set (else test-results). */
+async function uiShot(page, name) {
+  const dir = process.env.UI_SHOTS || OUT;
+  fs.mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: path.join(dir, `${name}.png`) });
+}
+
+const rectOf = (sel) => document.querySelector(sel) && (() => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })();
+
+async function menuBoot(page, touch) {
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(1200);
+}
+
+/** Press a DOM element at its centre (touch: tap, PC: let go of the pointer lock first, then click). */
+async function menuHit(page, sel, touch, fx = 0.5) {
+  const c = await page.evaluate(([sel, fx]) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
+  if (touch) await page.touchscreen.tap(c.x, c.y);
+  else {
+    await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
+    await sleep(100);
+    await page.mouse.click(c.x, c.y);
+  }
+  await sleep(250);
+}
+
+const menuSt = (page) => page.evaluate(() => {
+  const g = window.__superglen;
+  const s = g.settings;
+  return { open: s.open, frozen: s.frozen, frames: s.frames, confirming: s.confirming, toast: s.toast, slot: s.slot, vol: s.volumes, homeLabel: s.homeLabel, level: g.level, x: g.player.x, y: g.player.y, z: g.player.z, mode: g.mode, loading: g.loading, lanes: g.audio.lanes };
+});
+
+const near = (s, x, z, r) => Math.hypot(s.x - x, s.z - z) <= r;
+
+async function settingsScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
+  await menuBoot(page, touch);
+
+  // Gear: visible, big enough, opens the panel and pauses the loop; X and Esc close it.
+  const gear = await page.evaluate(rectOf, '.set-gear');
+  check(`settings ${tag}: the gear is visible and >= 44 px`, gear && gear.w >= 44 && gear.h >= 44 && gear.x >= 0 && gear.y >= 0, JSON.stringify(gear));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-gear`);
+  await menuHit(page, '.set-gear', touch);
+  let s = await menuSt(page);
+  check(`settings ${tag}: tapping the gear opens the panel and pauses the game`, s.open && s.frozen, JSON.stringify({ open: s.open, frozen: s.frozen }));
+  const visible = await page.evaluate(() => { const p = document.querySelector('.settings'); return !p.hidden && getComputedStyle(p).display !== 'none'; });
+  check(`settings ${tag}: the panel is on screen`, visible);
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-panel`);
+  const f0 = (await menuSt(page)).frames;
+  await page.keyboard.down('w');
+  await sleep(600);
+  await page.keyboard.up('w');
+  const s1 = await menuSt(page);
+  check(`settings ${tag}: no game frames run while the panel is open (W does not move the player)`, s1.frames === f0 && near(s1, s.x, s.z, 0.01), JSON.stringify({ f0, f1: s1.frames }));
+  const wide = await page.evaluate(() => [...document.querySelectorAll('.settings .menu-btn, .settings-close')].filter((b) => b.offsetParent !== null).map((b) => { const r = b.getBoundingClientRect(); return Math.round(Math.min(r.width, r.height)); }));
+  check(`settings ${tag}: every panel button is at least 44 px (touch >= 56)`, wide.every((v) => v >= (touch ? 56 : 44)), JSON.stringify(wide));
+  await menuHit(page, '.settings-close', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: the X closes the panel and the game runs again`, !s.open && !s.frozen);
+  await sleep(500);
+  check(`settings ${tag}: frames advance again after closing`, (await menuSt(page)).frames > s.frames);
+  await menuHit(page, '.set-gear', touch);
+  await page.keyboard.press('Escape');
+  await sleep(250);
+  s = await menuSt(page);
+  check(`settings ${tag}: Esc closes the panel`, !s.open && !s.frozen);
+
+  // Volume sliders: lane gains follow, the save keeps them, a reload applies them, the switches still win.
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0.3);
+  await menuHit(page, '[data-slider=sfx] .set-track', touch, 0.5);
+  s = await menuSt(page);
+  const mv = s.vol.music;
+  const sv = s.vol.sfx;
+  check(`settings ${tag}: sliders set music ~30 % and effects ~50 %`, Math.abs(mv - 0.3) < 0.08 && Math.abs(sv - 0.5) < 0.08, JSON.stringify(s.vol));
+  check(`settings ${tag}: the music lane gain is 0.55 x slider, the sfx lane 0.9 x slider`, Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify(s.lanes));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-sliders`);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).settings);
+  check(`settings ${tag}: the volumes are written to the save`, saved.musicVol === mv && saved.sfxVol === sv, JSON.stringify(saved));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0);
+  s = await menuSt(page);
+  check(`settings ${tag}: slider at 0 % silences its lane`, s.vol.music === 0 && s.lanes.music === 0, JSON.stringify({ v: s.vol, l: s.lanes }));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 1);
+  s = await menuSt(page);
+  check(`settings ${tag}: slider at 100 % gives the full lane gain`, s.vol.music === 1 && Math.abs(s.lanes.music - 0.55) < 0.01, JSON.stringify({ v: s.vol, l: s.lanes }));
+  await menuHit(page, '[data-slider=music] .set-track', touch, 0.3);
+  // The Musik / Suara switches of the parents' page keep working together with the sliders.
+  await page.evaluate(() => { window.__superglen.settings.hide(); window.__superglen.parents.show(); });
+  await sleep(200);
+  await menuHit(page, '.toggle[data-setting=music] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Musik off = silent music lane, effects lane unchanged`, s.lanes.music === 0 && s.lanes.sfx > 0, JSON.stringify(s.lanes));
+  await menuHit(page, '.toggle[data-setting=music] .switch', touch);
+  await menuHit(page, '.toggle[data-setting=sound] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Suara off = every lane silent whatever the sliders say`, s.lanes.music === 0 && s.lanes.sfx === 0 && s.lanes.voice === 0, JSON.stringify(s.lanes));
+  await menuHit(page, '.toggle[data-setting=sound] .switch', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: Suara on again = the slider levels are back`, Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify(s.lanes));
+  await page.evaluate(() => window.__superglen.parents.close());
+  await page.goto(URL + '?level=kota');
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: after a reload the saved volumes apply at startup`, s.vol.music === mv && s.vol.sfx === sv && Math.abs(s.lanes.music - 0.55 * mv) < 0.01 && Math.abs(s.lanes.sfx - 0.9 * sv) < 0.01, JSON.stringify({ v: s.vol, l: s.lanes }));
+
+  // Respawn in the middle of the city.
+  await page.evaluate(() => window.__superglen.placePlayer(60, -80));
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: (setup) the player stands far from the centre`, near(s, 60, -80, 4), JSON.stringify(s));
+  await menuHit(page, '.set-gear', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: in the city the button says "Kembali ke tengah kota"`, s.homeLabel === 'Kembali ke tengah kota', s.homeLabel);
+  await menuHit(page, '[data-act=home]', touch);
+  await sleep(400);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Kembali ke tengah kota" puts the player on the city spawn and closes the panel`, near(s, 0, 26, 1.5) && !s.open && s.y < 3, JSON.stringify(s));
+
+  // Save / load.
+  await menuHit(page, '.set-gear', touch);
+  const loadOff = await page.evaluate(() => document.querySelector('[data-act=load]').disabled);
+  check(`settings ${tag}: "Muat" is disabled while there is no slot`, loadOff);
+  await menuHit(page, '[data-act=load]', touch);
+  check(`settings ${tag}: pressing the disabled "Muat" does nothing`, (await menuSt(page)).open);
+  await page.evaluate(() => window.__superglen.settings.hide());
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.placePlayer(-50, 30); });
+  await sleep(1200);
+  const at = await menuSt(page);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=save]', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Simpan" shows "Tersimpan" and fills the slot (level, position, mode)`, s.toast === 'Tersimpan' && s.slot && s.slot.level === 'kota' && s.slot.mode === 'superglen' && Math.hypot(s.slot.x + 50, s.slot.z - 30) < 2, JSON.stringify(s.slot));
+  check(`settings ${tag}: "Muat" is enabled once a slot exists`, await page.evaluate(() => !document.querySelector('[data-act=load]').disabled));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-saved`);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).slot);
+  check(`settings ${tag}: the slot is in localStorage`, stored && stored.level === 'kota', JSON.stringify(stored));
+  await page.evaluate(() => window.__superglen.settings.hide());
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen'); g.placePlayer(70, 60); });
+  await sleep(1000);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=load]', touch);
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Muat" brings the player back to the saved spot and mode`, near(s, -50, 30, 2) && s.mode === 'superglen' && !s.open && s.y < 5, JSON.stringify({ x: s.x, z: s.z, mode: s.mode, y: s.y }));
+  // Load from another level: the saved level is loaded first.
+  await page.evaluate(() => window.__superglen.loadLevel('test'));
+  await page.waitForFunction(() => window.__superglen.level === 'test' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(600);
+  await menuHit(page, '.set-gear', touch);
+  const homeTest = (await menuSt(page)).homeLabel;
+  check(`settings ${tag}: outside the city the button says "Kembali ke tempat aman"`, homeTest === 'Kembali ke tempat aman', homeTest);
+  await menuHit(page, '[data-act=load]', touch);
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Muat" from another level loads the city and puts the player on the slot`, s.level === 'kota' && near(s, -50, 30, 2.5), JSON.stringify({ level: s.level, x: s.x, z: s.z }));
+
+  // Reset level: confirmation, "Tidak" first.
+  await page.evaluate(() => { const g = window.__superglen; g.save.markChapterDone('bab1'); g.levelInfo.probe = 1; g.placePlayer(40, 40); });
+  await sleep(900);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=restart]', touch);
+  s = await menuSt(page);
+  const focus = await page.evaluate(() => document.activeElement && document.activeElement.dataset.act);
+  const q = await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent);
+  check(`settings ${tag}: "Ulang dari awal level" asks "Ulang dari awal?" first and nothing restarted yet`, s.confirming && q === 'Ulang dari awal?' && (await page.evaluate(() => window.__superglen.levelInfo.probe)) === 1, q);
+  check(`settings ${tag}: the focus starts on "Tidak"`, focus === 'no', String(focus));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-confirm`);
+  await menuHit(page, '[data-act=no]', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: "Tidak" does nothing (panel still open, same level and spot)`, !s.confirming && s.open && s.level === 'kota' && near(s, 40, 40, 2) && (await page.evaluate(() => window.__superglen.levelInfo.probe)) === 1, JSON.stringify(s));
+  await menuHit(page, '[data-act=restart]', touch);
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  s = await menuSt(page);
+  check(`settings ${tag}: Esc on the question means "Tidak"`, !s.confirming && s.open);
+  await menuHit(page, '[data-act=restart]', touch);
+  await menuHit(page, '[data-act=yes]', touch);
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading && window.__superglen.levelInfo.probe === undefined, null, { timeout: 30000 });
+  await sleep(800);
+  s = await menuSt(page);
+  const done = await page.evaluate(() => window.__superglen.save.isChapterDone('bab1'));
+  check(`settings ${tag}: "Ya" restarts the level from its beginning (rebuilt, player on the spawn, panel closed)`, near(s, 0, 26, 2) && !s.open && !s.frozen, JSON.stringify({ x: s.x, z: s.z, open: s.open }));
+  check(`settings ${tag}: the restart keeps the chapter progress of the save`, done);
+}
+
+async function minimapScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
+  await menuBoot(page, touch);
+  const m = await page.evaluate(() => {
+    const e = document.querySelector('.minimap');
+    const r = e.getBoundingClientRect();
+    const cs = getComputedStyle(e);
+    return { w: r.width, h: r.height, op: parseFloat(cs.opacity), pe: cs.pointerEvents, hidden: e.hidden, canvases: e.querySelectorAll('canvas').length, d: window.__superglen.map };
+  });
+  check(`minimap ${tag}: visible in the city, opacity < 1, ignores touches`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'none', JSON.stringify({ op: m.op, pe: m.pe }));
+  check(`minimap ${tag}: size ${touch ? '110-140' : '~180'} px, two canvases (static + marker)`, m.canvases === 2 && (touch ? m.w >= 110 && m.w <= 140 : m.w >= 170 && m.w <= 190), JSON.stringify({ w: m.w, h: m.h }));
+  await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}`);
+  // The marker follows the player; the static layer is not redrawn per frame.
+  const mk = () => page.evaluate(() => { const d = window.__superglen.map; const g = window.__superglen; return { x: d.markerX, y: d.markerY, size: d.size, half: d.half, st: d.staticDraws, md: d.markerDraws, px: g.player.x, pz: g.player.z }; });
+  const a = await mk();
+  await page.evaluate(() => window.__superglen.placePlayer(-60, -70));
+  await sleep(1200);
+  const b = await mk();
+  const k = b.size / (b.half * 2);
+  check(`minimap ${tag}: the marker moves with the player and sits at the projected position`, Math.hypot(b.x - a.x, b.y - a.y) > 20 && Math.abs(b.x - (b.px + b.half) * k) <= 4 && Math.abs(b.y - (b.pz + b.half) * k) <= 4, JSON.stringify({ a, b }));
+  await sleep(800);
+  const c = await mk();
+  check(`minimap ${tag}: the marker is not redrawn while standing still and the static layer stays as drawn`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
+  // Hidden building: not on the map until found.
+  const px0 = await page.evaluate(() => {
+    const g = window.__superglen;
+    const lx = g.levelInfo.labX, lz = g.levelInfo.labZ;
+    const d = g.map;
+    const k = d.size / (d.half * 2);
+    const cv = document.querySelector('.minimap-base');
+    const ctx = cv.getContext('2d');
+    const cx = Math.round((102 + d.half) * k), cy = Math.round((-104.5 + d.half) * k);
+    window.__labPx = [cx, cy];
+    const grab = () => Array.from(ctx.getImageData(cx - 3, cy - 3, 7, 7).data).join(',');
+    window.__grab = grab;
+    return { secret: d.secret, sig: grab(), lab: [lx, lz] };
+  });
+  check(`minimap ${tag}: the old Barongsai building is not on the map before it is found (no marker, nothing drawn at its spot)`, px0.secret === null, JSON.stringify(px0.secret));
+  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 2, z + 1.2); }, [100.5, 6, -100.4]);
+  await sleep(1500);
+  const px1 = await page.evaluate(() => ({ secret: window.__superglen.map.secret, sig: window.__grab(), found: window.__superglen.levelInfo.labFound, saved: JSON.parse(localStorage.getItem('superglen.save.v1')).discovered }));
+  check(`minimap ${tag}: after reaching its door the building is on the map (picture at its spot changed, discovery saved)`, px1.found === true && px1.secret !== null && px1.sig !== px0.sig && px1.saved.lab === true, JSON.stringify({ found: px1.found, secret: px1.secret, same: px1.sig === px0.sig, saved: px1.saved }));
+  await page.evaluate(() => window.__superglen.placePlayer(0, 26));
+  await sleep(900);
+
+  // No overlap with the HUD and the touch controls (Superglen mode: laser, shield and the drum icons are up too).
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+  await sleep(700);
+  if (touch) {
+    await page.touchscreen.tap(30, 200); // the floating stick shows its base where the finger lands: keep a finger down
+  }
+  const boxes = await page.evaluate(() => {
+    const out = [];
+    const add = (name, e) => {
+      if (!e || e.hidden) return;
+      const cs = getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return;
+      const r = e.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return;
+      out.push({ name, x: r.left, y: r.top, r: r.right, b: r.bottom });
+    };
+    add('gear', document.querySelector('.set-gear'));
+    add('minimap', document.querySelector('.minimap'));
+    add('fps', document.querySelector('.hud-fps'));
+    add('drums', document.querySelector('.drums'));
+    add('toast', document.querySelector('.city-toast.show'));
+    add('coin', document.querySelector('.coin-hud'));
+    add('hint', document.querySelector('.tc-hint'));
+    document.querySelectorAll('.tc-button').forEach((e, i) => add(`btn${i}:${e.dataset.action}`, e));
+    return out;
+  });
+  const clashes = [];
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+    const p = boxes[i], q = boxes[j];
+    if (p.x < q.r && q.x < p.r && p.y < q.b && q.y < p.b) clashes.push(`${p.name}/${q.name}`);
+  }
+  const mine = clashes.filter((c) => /gear|minimap/.test(c));
+  check(`minimap ${tag}: gear and mini map overlap no other HUD element or touch button (${boxes.map((b) => b.name).join(',')})`, boxes.length >= 3 && mine.length === 0, JSON.stringify({ mine, boxes }));
+  await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}-superglen`);
+
+  // Full map.
+  await page.evaluate(() => { window.__superglen.placePlayer(60, -80); });
+  await sleep(900);
+  await menuHit(page, '.set-gear', touch);
+  const mapBtn = await page.evaluate(() => { const b = document.querySelector('[data-act=map]'); return { hidden: b.hidden, dis: b.disabled }; });
+  check(`minimap ${tag}: "Lihat peta" is usable in the city`, !mapBtn.hidden && !mapBtn.dis, JSON.stringify(mapBtn));
+  await menuHit(page, '[data-act=map]', touch);
+  const full = await page.evaluate(() => {
+    const f = document.querySelector('.fullmap');
+    const r = document.querySelector('.fullmap-base').getBoundingClientRect();
+    const p = document.querySelector('.settings');
+    return { open: !f.hidden, w: r.width, h: r.height, inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, panel: !p.hidden, frozen: window.__superglen.settings.frozen };
+  });
+  check(`minimap ${tag}: the full map opens big and inside the screen, the game stays paused`, full.open && full.inside && full.w >= (touch ? 300 : 600) && full.frozen && !full.panel, JSON.stringify(full));
+  await uiShot(page, `fullmap-${touch ? 'touch' : 'desktop'}`);
+  await menuHit(page, '.fullmap-close', touch);
+  const back = await page.evaluate(() => ({ full: !document.querySelector('.fullmap').hidden, panel: !document.querySelector('.settings').hidden, open: window.__superglen.settings.open }));
+  check(`minimap ${tag}: the full map's close button returns to the panel`, !back.full && back.panel && back.open, JSON.stringify(back));
+  await menuHit(page, '[data-act=map]', touch);
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  const back2 = await page.evaluate(() => ({ full: !document.querySelector('.fullmap').hidden, panel: !document.querySelector('.settings').hidden }));
+  check(`minimap ${tag}: Esc closes only the full map`, !back2.full && back2.panel, JSON.stringify(back2));
+  await menuHit(page, '.settings-close', touch);
+
+  // A level without map data: no mini map, no "Lihat peta".
+  await page.evaluate(() => window.__superglen.loadLevel('bab1'));
+  await page.waitForFunction(() => window.__superglen.level === 'bab1' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  const nb = await page.evaluate(() => ({ hidden: document.querySelector('.minimap').hidden, has: window.__superglen.map.hasMap }));
+  check(`minimap ${tag}: in bab1 the mini map is hidden`, nb.hidden && !nb.has, JSON.stringify(nb));
+  await page.evaluate(() => window.__superglen.settings.show());
+  const nb2 = await page.evaluate(() => { const b = document.querySelector('[data-act=map]'); const r = b.getBoundingClientRect(); return { hidden: b.hidden, dis: b.disabled, w: r.width, label: window.__superglen.settings.homeLabel }; });
+  check(`minimap ${tag}: in bab1 "Lihat peta" is hidden and disabled, the respawn says "tempat aman"`, nb2.hidden && nb2.dis && nb2.label === 'Kembali ke tempat aman', JSON.stringify(nb2));
+  await uiShot(page, `settings-${touch ? 'touch' : 'desktop'}-bab1`);
+  const before = await page.evaluate(() => ({ x: window.__superglen.player.x, z: window.__superglen.player.z }));
+  await page.evaluate(() => window.__superglen.testFall());
+  await menuHit(page, '[data-act=home]', touch);
+  await sleep(700);
+  const after = await menuSt(page);
+  check(`minimap ${tag}: "Kembali ke tempat aman" returns the player to safe ground`, !after.open && after.y > -2 && after.y < 6, JSON.stringify({ before, after: { x: after.x, y: after.y, z: after.z } }));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Game controller (group `gamepad`): a fake pad is injected by stubbing navigator.getGamepads.
+// ---------------------------------------------------------------------------------------------------------------------
+const PAD_STUB = () => {
+  const fp = { list: [null, null, null, null], rumbles: 0, pad: null };
+  window.__fp = fp;
+  navigator.getGamepads = () => fp.list.slice();
+  const mk = (kind) => {
+    const std = kind === 'std';
+    const p = {
+      id: std ? 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)' : 'Wireless Controller (054c-0ce6)',
+      index: 0, connected: true, mapping: std ? 'standard' : '', timestamp: 0,
+      buttons: Array.from({ length: std ? 18 : 14 }, () => ({ pressed: false, value: 0, touched: false })),
+      axes: new Array(std ? 4 : 10).fill(0),
+      vibrationActuator: { playEffect: () => { fp.rumbles++; return Promise.resolve('complete'); } },
+    };
+    if (!std) p.axes[9] = 1.2857; // hat centred
+    return p;
+  };
+  // Physical button index per logical name, per kind.
+  const IDX = {
+    std: { cross: 0, circle: 1, square: 2, triangle: 3, l1: 4, r1: 5, l2: 6, r2: 7, create: 8, options: 9, up: 12, down: 13, left: 14, right: 15, touchpad: 17 },
+    ds: { cross: 1, circle: 2, square: 0, triangle: 3, l1: 4, r1: 5, l2: 6, r2: 7, create: 8, options: 9, touchpad: 13 },
+  };
+  const AX = { std: { lx: 0, ly: 1, rx: 2, ry: 3 }, ds: { lx: 0, ly: 1, rx: 2, ry: 5 } };
+  window.__pad = {
+    kind: 'std',
+    on(kind, silent) { this.kind = kind; fp.pad = mk(kind); fp.list[0] = fp.pad; if (!silent) window.dispatchEvent(new Event('gamepadconnected')); },
+    off() { fp.list[0] = null; fp.pad = null; window.dispatchEvent(new Event('gamepaddisconnected')); },
+    btn(name, down) { const b = fp.pad.buttons[IDX[this.kind][name]]; b.pressed = !!down; b.value = down ? 1 : 0; },
+    left(x, y) { fp.pad.axes[AX[this.kind].lx] = x; fp.pad.axes[AX[this.kind].ly] = y; },
+    right(x, y) { fp.pad.axes[AX[this.kind].rx] = x; fp.pad.axes[AX[this.kind].ry] = y; },
+    dpad(dir) {
+      if (this.kind === 'std') { for (const n of ['up', 'down', 'left', 'right']) this.btn(n, n === dir); return; }
+      const steps = { up: 0, right: 2, down: 4, left: 6 };
+      fp.pad.axes[9] = dir ? -1 + (steps[dir] * 2) / 7 : 1.2857;
+    },
+  };
+};
+
+const padAdv = (page, n) => page.evaluate((n) => window.__superglen.advance(n, false), n);
+const padSt = (page) => page.evaluate(() => {
+  const g = window.__superglen;
+  return { x: g.player.x, z: g.player.z, y: g.player.y, yaw: g.cameraYaw, jumps: g.jumps, grounded: g.grounded, airborne: g.airborne, mode: g.mode, started: g.started, flying: g.skills.flying, laserShots: g.skills.laserShots, shieldUp: g.skills.shieldUp, dialog: g.dialog.open, pad: { c: g.pad.connected, a: g.pad.active, table: g.pad.table, focus: g.pad.focus, rumbles: g.pad.rumbles }, settings: g.settings.open, confirming: g.settings.confirming, fullOpen: g.map.fullOpen, hasMap: g.map.hasMap, level: g.level, controls: g.controlsEnabled };
+});
+const padDo = (page, code, arg) => page.evaluate(code, arg);
+/** Hold / release a logical pad button for n paused frames. */
+async function padTap(page, name, frames = 3) {
+  await page.evaluate((n) => window.__pad.btn(n, true), name);
+  await padAdv(page, frames);
+  await page.evaluate((n) => window.__pad.btn(n, false), name);
+  await padAdv(page, 2);
+}
+const padCss = (page, sel, prop) => page.evaluate(([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[p] : 'missing'; }, [sel, prop]);
+
+async function gamepadScenario(page, check, kind, touch) {
+  const tag = `${kind} ${touch ? 'touch 844x390' : 'desktop 1280x720'}`;
+  await page.waitForFunction(() => window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  let s = await padSt(page);
+  check(`gamepad ${tag}: no pad yet: pad inactive and the game waits at the start screen`, !s.started && !s.pad.c && !s.pad.a);
+
+  // ---- Start by pad: tilting a stick only switches the glyphs, a button starts the game ----
+  await padDo(page, (k) => window.__pad.on(k) || window.__pad.left(1, 0), kind);
+  await sleep(500);
+  s = await padSt(page);
+  check(`gamepad ${tag}: a stick tilt connects the pad and does not start the game`, s.pad.c && s.pad.a && !s.started, JSON.stringify(s.pad));
+  check(`gamepad ${tag}: the pad is detected with the right table (${kind === 'std' ? 'standard' : 'dualsense fallback'})`, s.pad.table === (kind === 'std' ? 'standard' : 'dualsense'), s.pad.table);
+  check(`gamepad ${tag}: the start pill shows the pad text and hides the click/tap text`, (await padCss(page, '.start-text-pad', 'display')) !== 'none' && (await padCss(page, '.start-text-pc', 'display')) === 'none' && (await padCss(page, '.start-text-touch', 'display')) === 'none');
+  await padDo(page, () => window.__pad.left(0, 0));
+  await padDo(page, () => window.__pad.btn('cross', true));
+  await sleep(500);
+  await padDo(page, () => window.__pad.btn('cross', false));
+  await sleep(300);
+  s = await padSt(page);
+  check(`gamepad ${tag}: a pad button starts the game`, s.started, JSON.stringify({ started: s.started }));
+  check(`gamepad ${tag}: the start overlay is gone and the start press did not jump`, (await page.evaluate(() => !document.querySelector('.start-overlay'))) && s.jumps === 0, `jumps ${s.jumps}`);
+  check(`gamepad ${tag}: PC help card hidden while the pad is active`, (await padCss(page, '.hud-card', 'display')) === 'none');
+  if (touch) check(`gamepad ${tag}: touch controls hide while the pad is active`, (await padCss(page, '.touch-layer', 'display')) === 'none');
+  check(`gamepad ${tag}: prompt glyph is the Square button, key cap hidden`, (await padCss(page, '.prompt-pad', 'display')) === 'block' && (await padCss(page, '.prompt-key', 'display')) === 'none' && (await page.evaluate(() => !!document.querySelector('.prompt-pad [data-glyph=square]'))));
+
+  // ---- Gameplay, deterministic frames ----
+  await padDo(page, () => window.__superglen.pause(true));
+  await padDo(page, () => window.__superglen.game.setTransformAllowed(true));
+  await padAdv(page, 5);
+  const a = await padSt(page);
+  await padDo(page, () => window.__pad.left(0, -1));
+  await padAdv(page, 60);
+  await padDo(page, () => window.__pad.left(0, 0));
+  await padAdv(page, 15);
+  const b = await padSt(page);
+  const full = Math.hypot(b.x - a.x, b.z - a.z);
+  check(`gamepad ${tag}: left stick forward walks (>= 1 m in a second)`, full >= 1, `${full.toFixed(2)} m`);
+  await padDo(page, () => window.__pad.left(0, -0.5));
+  await padAdv(page, 60);
+  await padDo(page, () => window.__pad.left(0, 0));
+  await padAdv(page, 15);
+  const c = await padSt(page);
+  const half = Math.hypot(c.x - b.x, c.z - b.z);
+  check(`gamepad ${tag}: half tilt walks slower than full tilt (analogue speed)`, half > 0.1 && half < full * 0.8, `half ${half.toFixed(2)} vs full ${full.toFixed(2)}`);
+  await padDo(page, () => window.__pad.left(0.1, -0.1));
+  await padAdv(page, 40);
+  await padDo(page, () => window.__pad.left(0, 0));
+  const dz = await padSt(page);
+  check(`gamepad ${tag}: a tiny stick drift (inside the dead zone) does not move the player`, Math.hypot(dz.x - c.x, dz.z - c.z) < 0.05, `${Math.hypot(dz.x - c.x, dz.z - c.z).toFixed(3)}`);
+  await padDo(page, () => window.__pad.dpad('up'));
+  await padAdv(page, 45);
+  await padDo(page, () => window.__pad.dpad(null));
+  await padAdv(page, 15);
+  const dp = await padSt(page);
+  check(`gamepad ${tag}: D-pad also walks`, Math.hypot(dp.x - dz.x, dp.z - dz.z) >= 0.7, `${Math.hypot(dp.x - dz.x, dp.z - dz.z).toFixed(2)} m`);
+
+  const y0 = (await padSt(page)).yaw;
+  await padDo(page, () => window.__pad.right(1, 0));
+  await padAdv(page, 30);
+  await padDo(page, () => window.__pad.right(0, 0));
+  await padAdv(page, 2);
+  const y1 = (await padSt(page)).yaw;
+  check(`gamepad ${tag}: right stick right turns the camera right (same sign as the mouse), about 1.3 rad in half a second`, y0 - y1 > 0.8 && y0 - y1 < 2, `yaw ${y0.toFixed(2)} -> ${y1.toFixed(2)}`);
+  await padDo(page, () => window.__pad.right(-0.1, 0.1));
+  await padAdv(page, 30);
+  await padDo(page, () => window.__pad.right(0, 0));
+  check(`gamepad ${tag}: right-stick drift does not turn the camera`, Math.abs((await padSt(page)).yaw - y1) < 0.001);
+
+  const j0 = (await padSt(page)).jumps;
+  await padTap(page, 'cross', 4);
+  const j1 = await padSt(page);
+  check(`gamepad ${tag}: Cross jumps`, j1.jumps === j0 + 1 && j1.airborne, `jumps ${j0} -> ${j1.jumps}`);
+  await padAdv(page, 150);
+  check(`gamepad ${tag}: ...and lands again`, (await padSt(page)).grounded);
+
+  // Hold Cross = hold Space: flight needs the fly skill.
+  await padDo(page, () => window.__superglen.game.setSkills({ fly: true }));
+  await padDo(page, () => window.__superglen.game.setPlayerMode('superglen'));
+  await padAdv(page, 3);
+  await padDo(page, () => window.__pad.btn('cross', true));
+  await padAdv(page, 100);
+  const fl = await padSt(page);
+  await padDo(page, () => window.__pad.btn('cross', false));
+  await padAdv(page, 150);
+  check(`gamepad ${tag}: holding Cross flies (same as holding Space)`, fl.flying || fl.y > 3, `flying ${fl.flying} y ${fl.y.toFixed(2)}`);
+  await padDo(page, () => window.__superglen.game.setSkills({ fly: false }));
+
+  // Transform (Triangle), laser (R2 / Circle), shield (L2 / L1).
+  let m0 = (await padSt(page)).mode;
+  await padTap(page, 'triangle');
+  const m1 = (await padSt(page)).mode;
+  await padTap(page, 'triangle');
+  const m2 = (await padSt(page)).mode;
+  check(`gamepad ${tag}: Triangle switches Glen <-> Superglen and back`, m1 !== m0 && m2 === m0, `${m0} -> ${m1} -> ${m2}`);
+  const rumbles = await page.evaluate(() => window.__fp.rumbles);
+  check(`gamepad ${tag}: the transform rumbles the pad (light, short)`, rumbles >= 2, `playEffect calls ${rumbles}`);
+  await padDo(page, () => window.__superglen.game.setPlayerMode('superglen'));
+  await padDo(page, () => window.__superglen.game.setSkills({ laser: true, shield: true }));
+  await padAdv(page, 3);
+  const l0 = (await padSt(page)).laserShots;
+  await padTap(page, 'r2');
+  await padAdv(page, 20);
+  const l1 = (await padSt(page)).laserShots;
+  await padTap(page, 'circle');
+  await padAdv(page, 20);
+  const l2 = (await padSt(page)).laserShots;
+  check(`gamepad ${tag}: R2 fires the laser, and Circle does too`, l1 > l0 && l2 > l1, `${l0} -> ${l1} -> ${l2}`);
+  await padDo(page, () => window.__pad.btn('l2', true));
+  await padAdv(page, 15);
+  const sh1 = (await padSt(page)).shieldUp;
+  await padDo(page, () => window.__pad.btn('l2', false));
+  await padAdv(page, 60);
+  const sh2 = (await padSt(page)).shieldUp;
+  await padDo(page, () => window.__pad.btn('l1', true));
+  await padAdv(page, 15);
+  const sh3 = (await padSt(page)).shieldUp;
+  await padDo(page, () => window.__pad.btn('l1', false));
+  await padAdv(page, 60);
+  check(`gamepad ${tag}: L2 or L1 holds the shield up, releasing drops it`, sh1 && !sh2 && sh3 && !(await padSt(page)).shieldUp, `${sh1} ${sh2} ${sh3}`);
+
+  // Dialog: Square advances any line, Cross advances a line that locks the controls (and does not jump).
+  await padDo(page, () => window.__superglen.say({ speaker: 'nino', text: 'Halo Glen, ini tes.' }));
+  await padAdv(page, 40);
+  check(`gamepad ${tag}: a dialog line is showing`, (await padSt(page)).dialog);
+  await padTap(page, 'square');
+  await padAdv(page, 8);
+  check(`gamepad ${tag}: Square advances the dialog`, !(await padSt(page)).dialog);
+  const jb = (await padSt(page)).jumps;
+  await padDo(page, () => window.__superglen.say({ speaker: 'nino', text: 'Tahan dulu ya.' }, { lockControls: true }));
+  await padAdv(page, 40);
+  await padTap(page, 'cross');
+  await padAdv(page, 10);
+  const dl = await padSt(page);
+  check(`gamepad ${tag}: Cross advances a locking dialog line without jumping`, !dl.dialog && dl.jumps === jb, `dialog ${dl.dialog} jumps ${jb}->${dl.jumps}`);
+
+  // ---- Quiz: focus ring, stick / D-pad move, Cross answers ----
+  await padDo(page, () => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await padAdv(page, 10);
+  s = await padSt(page);
+  check(`gamepad ${tag}: quiz open: focus starts on a card and the ring is on it`, /qp-card/.test(s.pad.focus.cls) && (await page.evaluate(() => !!document.querySelector('.qp .pad-focus'))), JSON.stringify(s.pad.focus));
+  const ring = await page.evaluate(() => { const e = document.querySelector('.pad-focus'); const cs = getComputedStyle(e); return { w: parseFloat(cs.outlineWidth), style: cs.outlineStyle }; });
+  check(`gamepad ${tag}: the focus ring is big (outline >= 6 px)`, ring.w >= 6 && ring.style === 'solid', JSON.stringify(ring));
+  const f0 = s.pad.focus.cls;
+  await padDo(page, () => window.__pad.dpad('right'));
+  await padAdv(page, 3);
+  await padDo(page, () => window.__pad.dpad(null));
+  await padAdv(page, 2);
+  const f1 = (await padSt(page)).pad.focus.cls;
+  check(`gamepad ${tag}: D-pad right moves the focus to another card`, f1 !== f0 && /qp-card/.test(f1), `${f0} -> ${f1}`);
+  await padDo(page, () => window.__pad.left(-1, 0));
+  await padAdv(page, 3);
+  await padDo(page, () => window.__pad.left(0, 0));
+  await padAdv(page, 2);
+  check(`gamepad ${tag}: the left stick moves the focus back`, (await padSt(page)).pad.focus.cls === f0, (await padSt(page)).pad.focus.cls);
+  const jq = (await padSt(page)).jumps;
+  await padTap(page, 'cross', 3);
+  await padAdv(page, 8);
+  const z = await page.evaluate(() => ({ state: window.__superglen.quiz.state, wrong: window.__superglen.quiz.wrong, idx: window.__superglen.quiz.index }));
+  check(`gamepad ${tag}: Cross answers the focused card (right or wrong, the quiz reacts) and does not jump`, (z.state !== 'answering' || z.wrong > 0) && (await padSt(page)).jumps === jq, JSON.stringify(z));
+  if (await page.evaluate(() => window.__superglen.quiz.open)) await padDo(page, () => window.__superglen.quiz.close());
+  await padAdv(page, 5);
+  await padDo(page, () => window.__superglen.pause(false));
+
+  // ---- Settings and map by pad (real time: the panel pauses the loop, pad polling goes on) ----
+  const wait = async (fn, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await page.evaluate(fn)) return true; await sleep(60); } return false; };
+  // The pad is polled once per frame and a frame can take a long time in the software renderer, so a press is held
+  // until the game has polled it twice, and the release is also waited for (no press can slip between two frames).
+  const seqNow = () => page.evaluate(() => window.__superglen.pad.seq);
+  const afterPolls = async (n) => { const s0 = await seqNow(); await page.waitForFunction((t) => window.__superglen.pad.seq >= t, s0 + n, { timeout: 8000 }).catch(() => {}); };
+  const setBtn = (name, on) => {
+    const dir = ['up', 'down', 'left', 'right'].includes(name);
+    return padDo(page, ([n, d, v]) => (d ? window.__pad.dpad(v ? n : null) : window.__pad.btn(n, v)), [name, dir, on]);
+  };
+  const pressUntil = async (name, cond) => {
+    await setBtn(name, true);
+    await afterPolls(2);
+    await wait(cond, 5000);
+    await setBtn(name, false);
+    await afterPolls(2);
+  };
+  const press = async (name) => {
+    await setBtn(name, true);
+    await afterPolls(2);
+    await setBtn(name, false);
+    await afterPolls(2);
+  };
+  await pressUntil('options', () => window.__superglen.settings.open);
+  check(`gamepad ${tag}: Options opens the settings panel`, await wait(() => window.__superglen.settings.open));
+  s = await padSt(page);
+  check(`gamepad ${tag}: settings focus starts on the first row and the ring shows`, !!s.pad.focus.cls && (await page.evaluate(() => !!document.querySelector('.settings .pad-focus'))), JSON.stringify(s.pad.focus));
+  const vol0 = await page.evaluate(() => window.__superglen.settings.volumes.music);
+  await press('left');
+  const vol1 = await page.evaluate(() => window.__superglen.settings.volumes.music);
+  check(`gamepad ${tag}: left on a volume slider lowers it`, vol1 < vol0, `${vol0} -> ${vol1}`);
+  await press('right');
+  // Walk the focus down to "Ulang dari awal level" and press Cross.
+  let reached = false;
+  const route = ['down', 'right', 'right', 'right', 'down', 'left', 'up', 'right', 'down', 'left', 'up', 'right'];
+  for (let i = 0; i < route.length && !reached; i++) {
+    reached = (await padSt(page)).pad.focus.act === 'restart';
+    if (!reached) await press(route[i]);
+  }
+  reached = reached || (await padSt(page)).pad.focus.act === 'restart';
+  check(`gamepad ${tag}: the D-pad reaches the restart button`, reached, JSON.stringify((await padSt(page)).pad.focus));
+  const lvl = (await padSt(page)).level;
+  await pressUntil('cross', () => window.__superglen.settings.confirming);
+  s = await padSt(page);
+  check(`gamepad ${tag}: Cross on restart opens the question and focus starts on "Tidak" (safe)`, s.confirming && s.pad.focus.act === 'no', JSON.stringify({ c: s.confirming, f: s.pad.focus }));
+  await pressUntil('circle', () => !window.__superglen.settings.confirming);
+  s = await padSt(page);
+  check(`gamepad ${tag}: Circle answers no / goes back (panel stays open)`, !s.confirming && s.settings, JSON.stringify({ c: s.confirming, o: s.settings }));
+  await pressUntil('circle', () => !window.__superglen.settings.open);
+  check(`gamepad ${tag}: Circle closes the settings panel and the game runs`, await wait(() => !window.__superglen.settings.open && !window.__superglen.settings.frozen));
+  await pressUntil('options', () => window.__superglen.settings.open);
+  await pressUntil('options', () => !window.__superglen.settings.open);
+  check(`gamepad ${tag}: Options toggles the panel closed again`, await wait(() => !window.__superglen.settings.open));
+  check(`gamepad ${tag}: nothing restarted by accident`, (await padSt(page)).level === lvl);
+  await pressUntil('create', () => window.__superglen.map.fullOpen);
+  check(`gamepad ${tag}: Create opens the full map`, await wait(() => window.__superglen.map.fullOpen));
+  await pressUntil('circle', () => !window.__superglen.map.fullOpen);
+  s = await padSt(page);
+  check(`gamepad ${tag}: Circle closes the map (panel comes back), Circle again closes it`, !s.fullOpen && s.settings, JSON.stringify({ f: s.fullOpen, o: s.settings }));
+  await pressUntil('circle', () => !window.__superglen.settings.open);
+  await pressUntil('touchpad', () => window.__superglen.map.fullOpen);
+  check(`gamepad ${tag}: the touchpad button toggles the map too`, await wait(() => window.__superglen.map.fullOpen));
+  await pressUntil('touchpad', () => !window.__superglen.map.fullOpen && !window.__superglen.settings.open);
+  check(`gamepad ${tag}: ...and a second press closes map and panel`, await wait(() => !window.__superglen.map.fullOpen && !window.__superglen.settings.open), JSON.stringify(await padSt(page)));
+
+  // ---- Rumble is off when the effects volume is 0 ----
+  await padDo(page, () => window.__superglen.save.setVolumes(window.__superglen.save.data.settings.musicVol, 0));
+  const r0 = await page.evaluate(() => window.__fp.rumbles);
+  await padDo(page, () => window.__superglen.pause(true));
+  await padTap(page, 'triangle');
+  const r1 = await page.evaluate(() => window.__fp.rumbles);
+  check(`gamepad ${tag}: no rumble when the effects volume is 0`, r1 === r0, `${r0} -> ${r1}`);
+  await padDo(page, () => window.__superglen.save.setVolumes(window.__superglen.save.data.settings.musicVol, 0.7));
+
+  // ---- Disconnect mid-move stops the player ----
+  await padDo(page, () => window.__pad.left(0, -1));
+  await padAdv(page, 30);
+  const mv = await padSt(page);
+  await padDo(page, () => window.__pad.off());
+  await padAdv(page, 25);
+  const p1 = await padSt(page);
+  await padAdv(page, 25);
+  const p2 = await padSt(page);
+  check(`gamepad ${tag}: pulling the pad mid-walk stops the player`, Math.hypot(p1.x - mv.x, p1.z - mv.z) > 0.1 && Math.hypot(p2.x - p1.x, p2.z - p1.z) < 0.02 && !p2.pad.c, `${Math.hypot(p2.x - p1.x, p2.z - p1.z).toFixed(3)}`);
+  check(`gamepad ${tag}: after disconnect the glyphs switch back (pad-ui off)`, !(await page.evaluate(() => document.documentElement.classList.contains('pad-ui'))));
+
+  // Reconnect, then switch back to keyboard / touch.
+  await padDo(page, (k) => window.__pad.on(k), kind);
+  await padAdv(page, 3);
+  await padDo(page, () => window.__pad.btn('cross', true));
+  await padAdv(page, 3);
+  await padDo(page, () => window.__pad.btn('cross', false));
+  await padAdv(page, 3);
+  check(`gamepad ${tag}: reconnecting and pressing a button makes the pad active again`, await page.evaluate(() => document.documentElement.classList.contains('pad-ui')));
+  if (touch) {
+    await page.touchscreen.tap(700, 100);
+    await sleep(200);
+    check(`gamepad ${tag}: touching the screen switches back to touch controls`, !(await page.evaluate(() => document.documentElement.classList.contains('pad-ui'))) && (await padCss(page, '.touch-layer', 'display')) === 'block');
+  } else {
+    await page.keyboard.press('KeyP');
+    await sleep(100);
+    check(`gamepad ${tag}: a key press switches back to keyboard glyphs`, !(await page.evaluate(() => document.documentElement.classList.contains('pad-ui'))) && (await padCss(page, '.prompt-key', 'display')) === 'block' && (await padCss(page, '.prompt-pad', 'display')) === 'none');
+  }
+}
+
+/** No pad at all, and no Gamepad API at all: the game behaves exactly as before. */
+async function gamepadNoneScenario(page, check, noApi) {
+  const tag = noApi ? 'no API' : 'no pad';
+  await page.waitForFunction(() => window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1000);
+  check(`gamepad ${tag}: the start pill still says "Klik untuk mulai"`, await page.evaluate(() => { const t = document.querySelector('.start-text-pc'); return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai'; }));
+  await page.mouse.click(640, 360);
+  await sleep(700);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const a = await padSt(page);
+  await page.keyboard.down('w');
+  await padAdv(page, 60);
+  await page.keyboard.up('w');
+  await padAdv(page, 10);
+  const b = await padSt(page);
+  check(`gamepad ${tag}: keyboard walking works as before`, a.started && Math.hypot(b.x - a.x, b.z - a.z) > 0.8 && !b.pad.c && !b.pad.a, `${Math.hypot(b.x - a.x, b.z - a.z).toFixed(2)} m`);
+  check(`gamepad ${tag}: no pad-ui class, key cap visible`, !(await page.evaluate(() => document.documentElement.classList.contains('pad-ui'))) && (await padCss(page, '.prompt-key', 'display')) === 'block');
+  if (noApi) check('gamepad no API: navigator.getGamepads is really missing', await page.evaluate(() => typeof navigator.getGamepads !== 'function'));
+}
+
+/** ?pad=debug overlay. */
+async function gamepadDebugScenario(page, check) {
+  await page.waitForFunction(() => window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(800);
+  await page.waitForFunction(() => document.querySelector('.pad-debug') && /webgl/.test(document.querySelector('.pad-debug').textContent), null, { timeout: 8000 }).catch(() => {});
+  let t = await page.evaluate(() => (document.querySelector('.pad-debug') || {}).textContent || '');
+  check('gamepad debug: overlay shows the WebGL version and renderer without a pad', /webgl [12] /.test(t) && /gamepad api: yes/.test(t) && /pad: none/.test(t), t.replace(/\n/g, ' | '));
+  // No gamepadconnected event (as on some console browsers): the idle scan must find the pad by itself.
+  await page.evaluate(() => { window.__pad.on('ds', true); window.__pad.btn('cross', true); window.__pad.left(0.5, 0); });
+  await page.waitForFunction(() => /054c/.test((document.querySelector('.pad-debug') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
+  t = await page.evaluate(() => document.querySelector('.pad-debug').textContent);
+  check('gamepad debug: overlay lists pad id, mapping, axes and pressed buttons', /054c/.test(t) && /mapping ""/.test(t) && /table dualsense/.test(t) && /axes: 0\.50/.test(t) && /buttons: 1/.test(t), t.replace(/\n/g, ' | '));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -7408,6 +8084,20 @@ async function main() {
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-flow', { viewport: { width: 1280, height: 720 } }, bab2FlowScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'settings-desktop', { viewport: { width: 1280, height: 720 } }, (p, c) => settingsScenario(p, c, false), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'settings-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => settingsScenario(p, c, true), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'minimap-desktop', { viewport: { width: 1280, height: 720 } }, (p, c) => minimapScenario(p, c, false), '?level=kota&reset=1'));
+    results.push(await runScenario(browser, 'minimap-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => minimapScenario(p, c, true), '?level=kota&reset=1'));
+
+    // Game controller (Gamepad API stubbed with fake pads)
+    const phone390 = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
+    results.push(await runScenario(browser, 'gamepad-desktop', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'std', false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-dualsense', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'ds', false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-touch', { ...phone390, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'std', true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-nopad', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadNoneScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-noapi', { viewport: { width: 1280, height: 720 }, initScript: () => { Object.defineProperty(Navigator.prototype, 'getGamepads', { value: undefined, configurable: true }); } }, (p, c) => gamepadNoneScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-debug', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, gamepadDebugScenario, '?level=kota&fps=0&reset=1&pad=debug'));
 
     results.push(await runScenario(browser, 'kota', { viewport: { width: 1280, height: 720 } }, kotaDesktopScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'kota-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaTouchScenario, '?level=kota&fps=0'));

@@ -29,8 +29,26 @@ export interface SaveData {
     sound: boolean;
     /** Background music on/off (default on). */
     music: boolean;
+    /** Music volume 0..1 (settings panel; the Musik switch silences it regardless). */
+    musicVol: number;
+    /** Effects volume 0..1 (procedural and file effects; the Suara switch silences it regardless). */
+    sfxVol: number;
   };
+  /** Manual save slot of the settings panel (null = empty). Chapter progress lives in `chaptersDone`, not here. */
+  slot: SlotSave | null;
+  /** Places the child has found (shown on the map only after that). */
+  discovered: { lab: boolean };
   quiz: QuizSave;
+}
+
+/** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
+export interface SlotSave {
+  level: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  mode: PlayerMode;
 }
 
 export type SkillName = keyof SaveData['skills'];
@@ -80,7 +98,9 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, sound: true, music: true },
+    settings: { easyJump: Parkour.easy.defaultOn, sound: true, music: true, musicVol: 1, sfxVol: 1 },
+    slot: null,
+    discovered: { lab: false },
     quiz: defaultQuiz(),
   };
 }
@@ -132,7 +152,17 @@ function sanitize(raw: unknown): SaveData {
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
+    if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
+    if (typeof st.sfxVol === 'number' && Number.isFinite(st.sfxVol)) out.settings.sfxVol = Math.max(0, Math.min(1, st.sfxVol));
   }
+  if (typeof r.slot === 'object' && r.slot !== null) {
+    const sl = r.slot as Record<string, unknown>;
+    const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+    if (typeof sl.level === 'string' && fin(sl.x) && fin(sl.y) && fin(sl.z)) {
+      out.slot = { level: sl.level, x: sl.x, y: sl.y, z: sl.z, yaw: fin(sl.yaw) ? sl.yaw : Math.PI, mode: sl.mode === 'superglen' ? 'superglen' : 'glen' };
+    }
+  }
+  if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   return out;
 }
 
@@ -212,6 +242,29 @@ export class SaveStore {
   setMusic(on: boolean): void {
     if (this.data.settings.music === on) return;
     this.data.settings.music = on;
+    this.persist();
+  }
+
+  /** Settings panel: music and effects volume (0..1). */
+  setVolumes(music: number, sfx: number): void {
+    const m = Math.max(0, Math.min(1, music));
+    const f = Math.max(0, Math.min(1, sfx));
+    if (this.data.settings.musicVol === m && this.data.settings.sfxVol === f) return;
+    this.data.settings.musicVol = m;
+    this.data.settings.sfxVol = f;
+    this.persist();
+  }
+
+  /** Settings panel: write (or clear) the manual slot. */
+  setSlot(slot: SlotSave | null): void {
+    this.data.slot = slot;
+    this.persist();
+  }
+
+  /** The child found the hidden old Barongsai building: the map may show it from now on. */
+  discoverLab(): void {
+    if (this.data.discovered.lab) return;
+    this.data.discovered.lab = true;
     this.persist();
   }
 

@@ -34,6 +34,10 @@ import { LEVELS } from '../world/levels';
 import { startLevelFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
+import { GamepadSource } from '../input/GamepadSource';
+import { padHub, PadConfig } from '../input/GamepadHub';
+import { PadUi } from '../input/PadUi';
+import { PadDebug } from '../ui/PadDebug';
 import { startGate } from './StartGate';
 import { touchMode } from './TouchMode';
 import { FrameClock } from './FrameClock';
@@ -43,6 +47,9 @@ import { QuizEngine } from '../quiz/QuizEngine';
 import { AudioManager, AudioConfig } from '../audio/AudioManager';
 import { wireQuizVoice } from '../audio/QuizVoice';
 import { ParentsPage } from '../ui/ParentsPage';
+import { SettingsMenu } from '../ui/SettingsMenu';
+import { MapView } from '../ui/MapView';
+import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -119,7 +126,9 @@ export interface DebugHandle {
   /** Fixed steps run by the most recent frame. */
   lastSteps: number;
   /** Test-only: show a dialog line (a table id or literal text, optionally with an id). */
-  say: (line: string | { speaker: string; text: string; id?: string }) => void;
+  say: (line: string | { speaker: string; text: string; id?: string }, opts?: { lockControls?: boolean }) => void;
+  /** Controller state and test helpers (see input/GamepadHub.ts, input/PadUi.ts). */
+  pad: { connected: boolean; active: boolean; table: string; mapping: string; id: string; focus: { scope: string; act: string; label: string; cls: string }; rumbles: number; presses: number; seq: number };
   /**
    * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
    * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
@@ -153,6 +162,10 @@ export interface DebugHandle {
   sfx: Record<string, unknown>;
   /** The parents' page (long-press on the start logo). */
   parents: { open: boolean; show: () => void; close: () => void };
+  /** Settings panel (gear): state and test helpers. `frames` counts rendered game frames, `frozen` = the loop is paused. */
+  settings: Record<string, unknown>;
+  /** Mini map / full map state (see ui/MapView.ts). */
+  map: Record<string, unknown>;
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
   adaptReset: () => void;
   /** Adaptive resolution state: step index and number of ratio changes so far. */
@@ -270,6 +283,11 @@ export class Game {
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
   private readonly walker: WalkSource;
+  private readonly padSource: GamepadSource;
+  private readonly padUi: PadUi;
+  private readonly padDebug: PadDebug | null = null;
+  /** Virtual clock (ms) for the pad when a test steps frames by hand. */
+  private padClock = 1e7;
   private paused = false;
   readonly sparkles: Sparkles;
   readonly flashes: BillboardRings;
@@ -284,6 +302,13 @@ export class Game {
   readonly sfx: Sfx;
   readonly quiz: QuizEngine;
   readonly parents: ParentsPage;
+  readonly settings: SettingsMenu;
+  readonly maps: MapView;
+  /** The settings panel is open: the game loop is paused (audio keeps playing so a volume slider can be heard). */
+  private menuOpen = false;
+  private menuReleasedLock = false;
+  private frameCount = 0;
+  private readonly tmpFeet = { x: 0, y: 0, z: 0 };
   /** The quiz overlay is open: controls and interactions are locked. */
   private quizLocked = false;
   private quizReleasedLock = false;
@@ -345,6 +370,8 @@ export class Game {
     audio: {},
     sfx: {},
     parents: undefined as unknown as DebugHandle['parents'],
+    settings: {},
+    map: {},
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
@@ -361,8 +388,19 @@ export class Game {
     },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
-    say: (line) => {
-      void this.dialog.say(line);
+    say: (line, opts) => {
+      void this.dialog.say(line, opts);
+    },
+    pad: {
+      connected: false,
+      active: false,
+      table: '',
+      mapping: '',
+      id: '',
+      focus: { scope: '', act: '', label: '', cls: '' },
+      rumbles: 0,
+      presses: 0,
+      seq: 0,
     },
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
     smoothing: (on: boolean) => {
@@ -417,6 +455,9 @@ export class Game {
       this.input.addSource(this.touch);
     }
 
+    this.padSource = new GamepadSource();
+    this.input.addSource(this.padSource);
+
     this.walker = new WalkSource(
       () => this.player.visualPosition,
       () => this.cameraRig.steeringYaw,
@@ -444,7 +485,10 @@ export class Game {
       soundOn: () => this.save.data.settings.sound,
       musicOn: () => this.save.data.settings.music,
       muteUrl: this.muteUrl,
+      musicVolume: () => this.save.data.settings.musicVol,
+      sfxVolume: () => this.save.data.settings.sfxVol,
     });
+    this.synth.setVolume(this.save.data.settings.sfxVol);
     startGate.onStart(() => this.audio.unlock());
     this.debug.audio = this.audio.debugHandle();
     // Procedural effects: same context, the sfx lane gain, silent when muted.
@@ -527,6 +571,60 @@ export class Game {
       show: () => parentsPage.show(),
       close: () => parentsPage.close(),
     };
+    this.maps = new MapView(uiRoot);
+    this.maps.onFullClose = () => this.settings.mapClosed();
+    this.settings = new SettingsMenu({
+      ui: uiRoot,
+      save: this.save,
+      canOpen: () => startGate.started && !this.quizLocked && !this.fading && !this.parents.open,
+      onOpenChange: (open) => this.setMenuOpen(open),
+      onVolumes: () => {
+        this.audio.applyVolumes();
+        this.synth.setVolume(this.save.data.settings.sfxVol);
+      },
+      hasMap: () => this.maps.hasMap,
+      openMap: () => this.maps.openFull(),
+      closeMap: () => this.maps.closeFull(),
+      inCity: () => this.levels.currentId === 'kota',
+      respawn: () => this.respawnHome(),
+      saveSlot: () => this.saveSlot(),
+      loadSlot: () => this.loadSlot(),
+      restart: () => {
+        void this.levels.load(this.levels.currentId);
+      },
+    });
+    startGate.onStart(() => this.maps.setShown(true));
+    this.padUi = new PadUi({
+      settings: this.settings,
+      maps: this.maps,
+      quizOpen: () => this.quizLocked,
+      resumeAudio: () => {
+        // A pad press may not count as a user gesture: keep asking quietly until the context runs.
+        const c = this.synth.audioContext;
+        if (!c || c.state === 'suspended') this.synth.unlock();
+      },
+    });
+    Object.defineProperty(this.debug.pad, 'focus', { get: () => this.padUi.focusInfo, enumerable: true });
+    padHub.rumbleAllowed = () => !this.muteUrl && this.save.data.settings.sound && this.save.data.settings.sfxVol > 0;
+    this.player.events.on('land', (e) => {
+      if (e.impact > PadConfig.rumbleLandImpact) this.rumble(0.45, 0.25, 110);
+    });
+    if (new URLSearchParams(window.location.search).get('pad') === 'debug') {
+      this.padDebug = new PadDebug(uiRoot, this.renderer.renderer.getContext());
+    }
+    {
+      const menu = this.settings;
+      const maps = this.maps;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const g = this;
+      this.debug.settings = Object.defineProperties(menu.debugHandle(), {
+        frames: { get: () => g.frameCount, enumerable: true },
+        frozen: { get: () => g.paused || g.menuOpen, enumerable: true },
+        slot: { get: () => (g.save.data.slot ? { ...g.save.data.slot } : null), enumerable: true },
+        volumes: { get: () => ({ music: g.save.data.settings.musicVol, sfx: g.save.data.settings.sfxVol }), enumerable: true },
+      });
+      this.debug.map = maps.debugHandle();
+    }
     this.drumIcons = new DrumIcons(uiRoot);
     this.debug.rhythm = this.makeRhythmDebug();
     if (new URLSearchParams(window.location.search).get('perf') === '1') {
@@ -664,6 +762,8 @@ export class Game {
       },
       onAfterBuild: () => {
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
+        this.maps.setSource(this.levels.current?.map ?? null);
+        this.settings.refresh();
         this.applyLayout();
         this.syncDebug();
         // Show every skill effect once so its shader program is compiled now, not in the middle of play.
@@ -703,6 +803,11 @@ export class Game {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.frame);
     if (this.paused) return;
+    this.pollPad(now);
+    if (this.menuOpen) {
+      this.padSource.sync(); // presses made inside the panel are not game presses
+      return;
+    }
     const panel = this.perfPanel;
     const t0 = panel ? performance.now() : 0;
     const steps = this.runFrame(now, true);
@@ -711,6 +816,7 @@ export class Game {
 
   /** Tests: one whole frame at a made-up timestamp, even while the real loop is paused. */
   private simFrame(nowMs: number, render: boolean): number {
+    this.pollPad(nowMs);
     const steps = this.runFrame(nowMs, render);
     this.syncDebug();
     return steps;
@@ -722,6 +828,7 @@ export class Game {
    */
   private runFrame(now: number, render: boolean): number {
     const dt = Math.min(this.clock.tick(now), MAX_FRAME_DT);
+    this.frameCount++;
 
     this.input.update();
     this.cameraRig.handleInput();
@@ -767,6 +874,32 @@ export class Game {
     return [f((v.x * 0.5 + 0.5) * size), f((v.y * 0.5 + 0.5) * size)];
   }
 
+  /** Read the controller (once per frame, before input.update) and run its menu navigation. */
+  private pollPad(nowMs: number): void {
+    const h = padHub;
+    h.poll(nowMs);
+    if (!h.connected) {
+      if (this.debug.pad.connected) this.debug.pad.connected = false;
+      this.padDebug?.update(nowMs);
+      return;
+    }
+    this.padUi.update();
+    this.padDebug?.update(nowMs);
+    const d = this.debug.pad;
+    d.connected = true;
+    d.active = h.deviceActive;
+    d.table = h.table;
+    d.mapping = h.mapping;
+    d.id = h.id;
+    d.presses = h.count[0] + h.count[1] + h.count[2] + h.count[3];
+    d.seq = h.seq;
+  }
+
+  private rumble(strong: number, weak: number, ms: number): void {
+    this.debug.pad.rumbles++;
+    padHub.rumble(strong, weak, ms);
+  }
+
   private playerMoving(): boolean {
     const v = this.player.velocity;
     return v.x * v.x + v.z * v.z > 0.25;
@@ -786,6 +919,10 @@ export class Game {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
     this.skillFrame(dt);
     this.levels.update(dt);
+    {
+      const mp = this.player.visualPosition;
+      this.maps.update(mp.x, mp.z, this.player.facing);
+    }
     this.interactions.update();
     this.objectives.update(dt);
   }
@@ -982,6 +1119,7 @@ export class Game {
       const f = this.player.getFeetPosition(this.feet);
       this.rings.spawn(f.x, f.y, f.z, 1.6, 0.35, 0xfff2a8, 1);
       this.sfx.transform(mode === 'superglen');
+      this.rumble(0.25, 0.55, 140);
     }
   }
 
@@ -1015,6 +1153,70 @@ export class Game {
 
   private readonly feet = new THREE.Vector3();
 
+  // ---- Settings panel actions ----
+
+  /** The panel opened / closed: pause the game loop, free the mouse, drop held input. */
+  private setMenuOpen(open: boolean): void {
+    this.menuOpen = open;
+    if (open) {
+      this.sfx.stopAll();
+      this.input.reset();
+      this.menuReleasedLock = !!document.pointerLockElement && typeof document.exitPointerLock === 'function';
+      if (this.menuReleasedLock) document.exitPointerLock();
+    } else {
+      if (this.player.flight.jetsOn) this.sfx.jetStart(false);
+      this.accumulator = 0;
+      this.clock.reset();
+      if (this.menuReleasedLock) {
+        this.menuReleasedLock = false;
+        try {
+          const r = this.renderer.canvas.requestPointerLock() as unknown;
+          if (r instanceof Promise) r.catch(() => undefined);
+        } catch {
+          // no gesture / unsupported: the next click captures the mouse
+        }
+      }
+    }
+  }
+
+  /** "Kembali ke tengah kota" (the city) or "Kembali ke tempat aman" (every other level). */
+  private respawnHome(): void {
+    const lv = this.levels.current;
+    if (!lv) return;
+    if (lv.id === 'kota') {
+      const sp = lv.spawn;
+      this.levels.teleport(sp.x, sp.y, sp.z, sp.yaw ?? Math.PI);
+    } else {
+      this.player.respawn();
+      this.cameraRig.snapBehind(this.player.facing);
+      this.cameraRig.update(0, this.player.visualPosition, this.player);
+    }
+  }
+
+  /** "Simpan": level, safe ground under the player, facing and mode go into the manual slot. */
+  private saveSlot(): boolean {
+    const lv = this.levels.current;
+    if (!lv || this.levels.loading) return false;
+    this.player.getSafeFeet(this.tmpFeet);
+    const f = this.tmpFeet;
+    this.save.setSlot({ level: lv.id, x: f.x, y: f.y, z: f.z, yaw: this.player.facing, mode: this.player.mode });
+    return true;
+  }
+
+  /** "Muat": back to the saved level and spot (the level is loaded first when it is another one). */
+  private loadSlot(): void {
+    const s = this.save.data.slot;
+    if (!s || !this.levels.has(s.level)) return;
+    void this.applySlot({ ...s });
+  }
+
+  private async applySlot(s: SlotSave): Promise<void> {
+    if (this.levels.currentId !== s.level) await this.levels.load(s.level);
+    if (this.levels.currentId !== s.level) return;
+    this.levels.teleport(s.x, s.y + 0.3, s.z, s.yaw);
+    if (this.transformAllowed) this.setPlayerMode(s.mode);
+  }
+
   private setPaused(on: boolean): void {
     this.paused = on;
     this.audio.setGamePaused(on);
@@ -1029,6 +1231,8 @@ export class Game {
   /** Test helper: run `frames` virtual frames of exactly one fixed step each, then render once (unless `render` is false). */
   private advance(frames: number, render: boolean): void {
     for (let i = 0; i < frames; i++) {
+      this.padClock += FIXED_DT * 1000;
+      this.pollPad(this.padClock);
       this.input.update();
       this.cameraRig.handleInput();
       this.fixedStep(FIXED_DT);

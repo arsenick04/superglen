@@ -4,7 +4,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hore, pulang sekolah!",
-    "tts": "[playful] Hore, pulang sekolah!",
+    "tts": "[excited] Hore, pulang sekolah!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -13,7 +13,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Ayo, kita lompat!",
-    "tts": "[playful] Ayo, kita lompat!",
+    "tts": "[excited] Ayo, kita lompat!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },

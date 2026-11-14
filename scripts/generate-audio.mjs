@@ -8,8 +8,9 @@
  *   --category=a,b       bab1|bab2|quiz_nino|quiz_hitung|quiz_inggris|quiz_mandarin|quiz_hewan|quiz_baca|speak_en|speak_zh
  *                        (bab* categories give one glen and one nino line)
  *   --only=id,id         only these ids (regenerates even if the file exists)
+ *   --keep-raw=dir       also save the raw (unprocessed) TTS take per id into dir
  *   --force              regenerate even if up to date
- *   --say=glen --text="..." [--delivery="[excited] ..."] --out=path.mp3   one-off test clip (no manifest, no category rules)
+ *   --say=glen [--pitch=N] --text="..." [--delivery="[excited] ..."] --out=path.mp3   one-off (--from-raw=file.mp3 re-processes a saved raw take without calling TTS) test clip (no manifest, no category rules)
  *
  * Model/settings/pitch come from audio/voices.json per role (default model eleven_v4). The spoken text is the line's
  * `delivery` (audio/dialog.json) or the category rule in audio/delivery.json (audio tags such as [excited]); the displayed
@@ -32,7 +33,7 @@ const DRY = flag('dry-run'), FORCE = flag('force'), SAMPLE = flag('sample');
 const LIMIT = arg('limit') ? parseInt(arg('limit'), 10) : Infinity;
 const CATS = arg('category')?.split(',');
 const ONLY = arg('only')?.split(',');
-const SAY = arg('say'), OUT_ARG = arg('out');
+const SAY = arg('say'), OUT_ARG = arg('out'), KEEP_RAW = arg('keep-raw'), FROM_RAW = arg('from-raw');
 
 const AUDIO_DIR = path.join(ROOT, 'audio');
 const OUT_DIR = path.join(ROOT, 'public', 'audio');
@@ -51,7 +52,7 @@ function collect() {
   for (const d of dialog) {
     const cat = d.id.startsWith('bab1_') ? 'bab1' : d.id.startsWith('bab2_') ? 'bab2' : d.id.startsWith('quiz_nino') ? 'quiz_nino'
       : d.id.startsWith('bab') ? d.id.split('_')[0] : 'lainnya';
-    add({ id: d.id, speaker: d.speaker, lang: d.lang || 'id', text: d.text, delivery: d.delivery, source: 'audio/dialog.json', category: cat, recorded: d.source === 'recorded' });
+    add({ id: d.id, speaker: d.speaker, lang: d.lang || 'id', text: d.text, delivery: d.delivery, pitchSemitones: d.pitchSemitones, source: 'audio/dialog.json', category: cat, recorded: d.source === 'recorded' });
   }
   for (const name of QUIZ_FILES) {
     const f = path.join(ROOT, 'src', 'data', 'quiz', `${name}.json`);
@@ -81,7 +82,9 @@ function settingsOf(v) {
   if (/multilingual_v2|turbo_v2|flash_v2/.test(modelOf(v))) { if (v.style != null) s.style = v.style; if (v.use_speaker_boost != null) s.use_speaker_boost = v.use_speaker_boost; }
   return s;
 }
-const pitchOf = (v) => v.pitchSemitones || 0;
+// Pitch shift in semitones: a per-line `pitchSemitones` (audio/dialog.json, or `_pitch[id]` in audio/delivery.json) replaces the voice's value.
+const linePitch = (j) => (typeof j?.pitchSemitones === 'number' ? j.pitchSemitones : deliveryRules._pitch?.[j?.id]);
+const pitchOf = (v, j) => { const l = linePitch(j); return typeof l === 'number' ? l : (v.pitchSemitones || 0); };
 // Text sent to TTS: per-line `delivery`, else the category rule (prefix tag variants picked by id hash), else the plain text.
 function ttsText(j) {
   if (j.delivery) return j.delivery;
@@ -93,7 +96,7 @@ function ttsText(j) {
   return `${pick}${j.text}${rule.suffix || ''}`;
 }
 // What must match for a clip to count as up to date: spoken text, voice, model, settings and pitch.
-const sig = (j, v) => hash(JSON.stringify([ttsText(j), v?.voice_id, modelOf(v || {}), settingsOf(v || {}), pitchOf(v || {})]));
+const sig = (j, v) => hash(JSON.stringify([ttsText(j), v?.voice_id, modelOf(v || {}), settingsOf(v || {}), pitchOf(v || {}, j)]));
 const mp3 = (id) => path.join(OUT_DIR, `${id}.mp3`);
 const saveManifest = () => fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 const voiceOf = (j) => voices[j.speaker];
@@ -135,12 +138,12 @@ function ff(args) {
   if (r.status !== 0) throw new Error(`ffmpeg failed: ${(r.stderr || '').slice(-300)}`);
   return r.stderr;
 }
-function postprocess(raw, v) {
+function postprocess(raw, v, j) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-audio-'));
   try {
     const inp = path.join(dir, 'in.mp3'), mid = path.join(dir, 'mid.wav'), out = path.join(dir, 'out.mp3');
     fs.writeFileSync(inp, raw);
-    const pitch = pitchOf(v);
+    const pitch = pitchOf(v, j);
     const trim = 'silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.03,areverse,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.06,areverse';
     // gentle compression keeps expressive peaks from limiting the loudness; then a plain gain to the target and a true-peak limiter
     const chain = [pitch ? `rubberband=pitch=${Math.pow(2, pitch / 12).toFixed(5)}:formant=shifted:pitchq=quality` : null, 'highpass=f=70', trim,
@@ -161,10 +164,10 @@ async function say() {
   if (!voiceReady(v)) throw new Error(`voice "${SAY}" not set in audio/voices.json`);
   const text = arg('text'), job = { id: 'say', speaker: SAY, lang: arg('lang') || 'id', text, tts: arg('delivery') || text };
   if (!text || !OUT_ARG) throw new Error('--say needs --text and --out');
-  const raw = await tts(job, v);
+  const raw = FROM_RAW ? fs.readFileSync(FROM_RAW) : await tts(job, v);
   if (flag('raw')) fs.writeFileSync(OUT_ARG, raw);
-  else { const p = postprocess(raw, v); fs.writeFileSync(OUT_ARG, p.buf); console.log(`pitch ${pitchOf(v)} st, ${p.lufs} LUFS, peak ${p.peak} dBTP, ${p.dur}s`); }
-  console.log(`ok ${OUT_ARG} (${job.tts.length} chars billed, model ${modelOf(v)})`);
+  else { const pv = arg('pitch') != null ? { ...v, pitchSemitones: parseFloat(arg('pitch')) } : v; const p = postprocess(raw, pv); fs.writeFileSync(OUT_ARG, p.buf); console.log(`pitch ${pitchOf(pv)} st, ${p.lufs} LUFS, peak ${p.peak} dBTP, ${p.dur}s`); }
+  console.log(`ok ${OUT_ARG} (${FROM_RAW ? 0 : job.tts.length} chars billed, model ${modelOf(v)})`);
 }
 
 async function main() {
@@ -221,12 +224,13 @@ async function main() {
     const v = voiceOf(j);
     try {
       const raw = await tts(j, v);
+      if (KEEP_RAW) { fs.mkdirSync(KEEP_RAW, { recursive: true }); fs.writeFileSync(path.join(KEEP_RAW, `${j.id}.raw.mp3`), raw); }
       used += j.tts.length; budget -= j.tts.length; // billed even if post-processing fails
-      const p = postprocess(raw, v);
+      const p = postprocess(raw, v, j);
       fs.writeFileSync(mp3(j.id), p.buf);
-      manifest[j.id] = { id: j.id, speaker: j.speaker, voice_id: v.voice_id, voice: v.name, model: modelOf(v), settings: settingsOf(v), pitchSemitones: pitchOf(v), lang: j.lang,
+      manifest[j.id] = { id: j.id, speaker: j.speaker, voice_id: v.voice_id, voice: v.name, model: modelOf(v), settings: settingsOf(v), pitchSemitones: pitchOf(v, j), lang: j.lang,
         hash: sig(j, v), tts: j.tts, chars: j.tts.length, bytes: p.buf.length, duration: +p.dur.toFixed(2), lufs: p.lufs, peak_dbtp: p.peak, generated_at: new Date().toISOString(),
-        normalized: `loudnorm ${TARGET_LUFS} LUFS, silence trimmed, mono 96k${pitchOf(v) ? `, pitch +${pitchOf(v)} st (rubberband)` : ''}` };
+        normalized: `loudnorm ${TARGET_LUFS} LUFS, silence trimmed, mono 96k${pitchOf(v, j) ? `, pitch +${pitchOf(v, j)} st (rubberband)` : ''}` };
       saveManifest();
       done++;
       console.log(`ok   ${j.id} (${j.tts.length} chars, ${p.buf.length} bytes, ${p.dur.toFixed(2)}s, ${p.lufs} LUFS)`);

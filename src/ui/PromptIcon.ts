@@ -1,3 +1,5 @@
+import { padGlyph } from './PadGlyphs';
+
 export type PromptKind = 'talk' | 'hand' | 'press';
 
 const ICONS: Readonly<Record<PromptKind, string>> = {
@@ -35,7 +37,11 @@ export class PromptIcon {
     const key = document.createElement('div');
     key.className = 'prompt-key';
     key.textContent = 'E';
-    bob.append(this.iconEl, key);
+    // Controller: the Square glyph replaces the key cap (CSS switches on html.pad-ui).
+    const pad = document.createElement('div');
+    pad.className = 'prompt-pad';
+    pad.innerHTML = padGlyph('square');
+    bob.append(this.iconEl, key, pad);
     this.element.appendChild(bob);
     root.appendChild(this.element);
   }
