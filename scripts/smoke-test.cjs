@@ -8911,6 +8911,71 @@ async function bab4AaraScenario(page, check, touch) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+const ch4Clues = (page) => page.evaluate(() => window.__ch4.clues());
+const lineNow = (page) => page.evaluate(() => (window.__superglen.dialog.open ? window.__superglen.dialog.text : ''));
+
+async function bab4CluesScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch4Save({ bab4: { step: 'park', clue: 0 } }), touch);
+  let c = await ch4Clues(page);
+  check(`bab4-clues ${tag}: the first board stands on the park's north path, the beam leads to it, no beacon yet`, c.phase === 'paper' && c.paper && c.paper.visible && Math.abs(c.paper.x + 113.5) < 0.5 && c.beacon && !c.beacon.visible && (await ch4Info(page)).obj === true, JSON.stringify(c));
+  const d0 = await ch3Draw(page, -113.5, -111);
+  console.log(`   [bab4-clues ${tag}] park draw calls ${d0.calls}, triangles ${d0.tris}`);
+  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  // Walk in: Aara points out the board.
+  await d3Go(page, -113.5, -102, 10);
+  const seen = [];
+  const watch = async (n) => { for (let i = 0; i < n; i += 20) { await d3Adv(page, 20); const l = await lineNow(page); if (l && seen[seen.length - 1] !== l) seen.push(l); } };
+  await watch(260);
+  check(`bab4-clues ${tag}: entering the park Aara says "Lihat! Ada papan petunjuk"`, seen.some((l) => /papan petunjuk/.test(l)), JSON.stringify(seen));
+  // Help: nobody does anything for ~25 s.
+  await watch(1500);
+  check(`bab4-clues ${tag}: after a while without progress Aara helps ("Dekati papan itu")`, seen.some((l) => /Dekati papan/.test(l)), JSON.stringify(seen));
+  fs.mkdirSync(OUT, { recursive: true });
+  const words = ['bola', 'pohon', 'kolam'];
+  const spots = [[-108.5, -104.5], [-117.5, -119.5], [-107.1, -115.8]];
+  const first = [-113.5, -110.5];
+  for (let i = 0; i < 3; i++) {
+    c = await ch4Clues(page);
+    const at = i === 0 ? first : spots[i - 1];
+    await d3Go(page, at[0], at[1] + (i === 0 ? 0 : 1.2), 12);
+    for (let k = 0; k < 30 && (await page.evaluate(() => window.__superglen.dialog.open)); k++) await d3Adv(page, 20);
+    await d3Adv(page, 30);
+    if (i === 0) {
+      await page.evaluate(() => window.__superglen.advance(1, true));
+      await page.screenshot({ path: path.join(OUT, `bab4-clues-board${touch ? '-touch' : ''}.png`) });
+    }
+    await d3Press(page, 'e', 3);
+    // Aara's "Baca katanya" the first time, then the question.
+    for (let k = 0; k < 40 && !(await page.evaluate(() => window.__superglen.quiz.open)); k++) await d3Adv(page, 15);
+    if (process.env.DBG) console.log('DBG', i, JSON.stringify(await page.evaluate(() => ({ open: window.__superglen.quiz.open, view: window.__superglen.quiz.view, dlg: window.__superglen.dialog.open, txt: window.__superglen.dialog.text, ctl: window.__superglen.controlsEnabled, clues: window.__ch4.clues() }))));
+    const q = await page.evaluate(() => ({ id: window.__superglen.quiz.questionId, kind: window.__superglen.quiz.kind, cat: window.__superglen.quiz.category, state: window.__superglen.quiz.state, big: (document.querySelector('.qp-bigtext') || {}).textContent, cards: document.querySelectorAll('.qp-card').length, say: !!document.querySelector('.qp-say') }));
+    check(`bab4-clues ${tag}: clue ${i + 1}: the board word "${words[i]}" is shown big as a reading card with three picture cards and the speaker button`, q.id === `bab4_clue_${words[i]}` && q.kind === 'text' && q.cat === 'membaca' && q.big === words[i] && q.cards === 3 && q.say, JSON.stringify(q));
+    if (i === 0) { await page.evaluate(() => window.__superglen.advance(1, true)); await page.screenshot({ path: path.join(OUT, `bab4-clues-card${touch ? '-touch' : ''}.png`) }); }
+    await d3Adv(page, 40);
+    await ch4Answer(page, i === 0);
+    await d3Adv(page, 200);
+    c = await ch4Clues(page);
+    const s = await ch4Info(page);
+    const glow = CLUE_GLOW[i];
+    check(`bab4-clues ${tag}: clue ${i + 1}: after the right card the ${words[i]} place glows, the board is gone, the beam leads there, progress is saved (${i + 1})`, c.phase === 'place' && c.beacon.visible && Math.abs(c.beacon.x - glow[0]) < 0.5 && Math.abs(c.beacon.z - glow[1]) < 0.5 && !c.paper.visible && s.save.bab4.clue === i + 1 && s.obj === true, JSON.stringify([c, s.save.bab4, s.obj]));
+    if (i === 0) { await page.evaluate(() => window.__superglen.advance(1, true)); await page.screenshot({ path: path.join(OUT, `bab4-clues-glow${touch ? '-touch' : ''}.png`) }); }
+    await d3Go(page, spots[i][0], spots[i][1], 12);
+    await d3Adv(page, 60);
+    c = await ch4Clues(page);
+    if (i < 2) check(`bab4-clues ${tag}: arriving at the glowing place the beacon fades and the next board stands there`, c.phase === 'paper' && !c.beacon.visible && c.paper.visible && Math.abs(c.paper.x - spots[i][0]) < 0.5 && c.clue === i + 1, JSON.stringify(c));
+  }
+  await d3Adv(page, 60);
+  const s = await ch4Info(page);
+  check(`bab4-clues ${tag}: after the third clue (kolam) the step becomes "figure" (saved), three clues counted`, s.ch4.step === 'figure' && s.save.bab4.step === 'figure' && s.save.bab4.clue === 3, JSON.stringify([s.ch4, s.save.bab4]));
+  // Resume mid-way: 2 clues read -> board 3 stands at the tree place.
+  await ch3Open(page, ch4Save({ bab4: { step: 'park', clue: 2 } }), touch);
+  c = await ch4Clues(page);
+  check(`bab4-clues ${tag}: resuming with 2 clues read puts board 3 at the tree place`, c.phase === 'paper' && c.clue === 2 && Math.abs(c.paper.x + 117.5) < 0.5, JSON.stringify(c));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+const CLUE_GLOW = [[-108.5, -104.5], [-118.5, -120.3], [-107.12, -119.88]];
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -9074,6 +9139,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4AaraScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4AaraScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-clues', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4CluesScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-clues-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4CluesScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 

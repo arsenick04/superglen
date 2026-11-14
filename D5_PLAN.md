@@ -13,7 +13,7 @@ Pola yang sudah ada: Chapter 3 di src/world/kota/Chapter3.ts + Bab3Data.ts + D4_
 - [x] **L0 Perbaikan kecil dari D4.** Kamera adegan akhir Chapter 3 terhalang pohon pinus (test-results/bab3-end.png): posisikan adegan/kamera supaya Si Tikus Rakus dan sosok misterius terlihat jelas. Tes `bab3-end` tetap lulus, simpan tangkapan layar baru.
 - [x] **L1 Pemicu dan alur Chapter 4.** Setelah Chapter 3 selesai: Chapter 4 aktif, Glen dalam mode Glen (tanpa kostum, detektif), tujuan + bintang peta ke Sekolah. State machine tersimpan di save, bisa dilanjutkan setelah reload. Misi warga dijeda. Tes `bab4-flow`.
 - [x] **L2 Aara.** Aara (sahabat sekolah Glen, acuan art/reference/aara_*) sebagai figur sederhana low-poly di sekolah, membawa alat penerjemah. Tantangan "Kata Inggris dari Aara": 3 soal pakai quiz engine (mis. "Apa bahasa Inggrisnya buku?"), tiap jawaban benar membuat alatnya makin canggih (efek visual), lalu alat menangkap sinyal yang menunjuk ke taman kota. Tes `bab4-aara`.
-- [ ] **L3 Petunjuk di taman.** 3 papan/kertas petunjuk bertuliskan satu kata ("bola", "pohon", "kolam"), dibacakan bila anak menekan tombol pengeras suara. Anak memilih tempat yang cocok (atau berjalan ke sana), tempat itu berkilau, petunjuk berikutnya muncul. Tanpa jalan buntu: bantuan muncul setelah beberapa detik. Tes `bab4-clues`.
+- [x] **L3 Petunjuk di taman.** 3 papan/kertas petunjuk bertuliskan satu kata ("bola", "pohon", "kolam"), dibacakan bila anak menekan tombol pengeras suara. Anak memilih tempat yang cocok (atau berjalan ke sana), tempat itu berkilau, petunjuk berikutnya muncul. Tanpa jalan buntu: bantuan muncul setelah beberapa detik. Tes `bab4-clues`.
 - [ ] **L4 Sosok Misterius + penutup.** Siluet muncul di taman: "Aku sudah lama mengawasimu... Superglen." lalu menghilang (ramah, tidak menakutkan). Kembali ke Lab: Nino menemukan pasukan tikus memakai alat curian dari lab lama; misi berikutnya dimulai (teaser). Chapter 4 selesai, perayaan, kota bebas lagi dan misi warga aktif. Tes `bab4-end`.
 - [ ] **L5 Suara.** Semua kalimat baru Chapter 4 ke audio/dialog.json dengan ekspresi per kalimat. Aara: pilih suara anak perempuan/remaja putri yang ceria, berbeda dari warga lain. Sosok Misterius: tenang, misterius-ramah, tidak menakutkan. Glen = Finn +2, Nino = Pratama +2. Kata-kata soal dan petunjuk (bola, pohon, kolam, kata Inggris) pakai klip yang sudah ada bila ada. Anggaran sekitar 1.000 karakter.
 - [ ] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D5 + "Untuk dicoba besok pagi".
@@ -38,3 +38,17 @@ Kalimat baru L2 (teks saja):
 - `bab4_aara_benar3` (aara): Hebat! Alatnya sudah canggih sekali!
 - `bab4_aara_sinyal` (aara): Tuut tuut! Ada sinyal. Menunjuk ke taman kota!
 - `bab4_glen_taman` (glen): Ayo ke taman, kita selidiki!
+
+**L3 selesai.** `ClueProps.ts` (1 papan petunjuk yang pindah-pindah + 1 tiang cahaya = 2 draw call; park: 43-44 draw call / ~50k segitiga). `Chapter4` fase taman: `clue` (0..3, disimpan di `save.bab4.clue`) + `phase` 'paper'/'place'. Papan 0 di jalan utara taman, papan n berdiri di tempat yang ditemukan petunjuk n-1. Tombol tangan di papan membuka kartu baca (soal cerita `bab4_clue_<kata>`, kategori membaca, tampilan teks besar, 3 kartu gambar bola/pohon/kolam, tombol pengeras suara = `audio_id` `bab4_kata_<kata>`, KLIP BELUM ADA: L5 harus membuatnya; kalimat kartu "Baca katanya. Tempat apa?"). Benar -> tempat berkilau (tiang cahaya), beam ke sana, tiba -> papan berikut muncul di situ; kolam (ketiga) -> langkah 'figure' (L4 mengisi). Tanpa jalan buntu: Aara menolong setelah 22 dtk tanpa kemajuan (`CLUE_HELP_AFTER`); kartu salah dua kali menyisakan yang benar (quiz engine). Resume: clue n -> papan n di tempatnya (clue 3 -> menuju kolam). Item baru `pohon`, `kolam` di src/data/quiz/items.json (emoji sementara). Tes `bab4-clues`, `-touch` (tangkapan layar bab4-clues-*.png). Catatan: menekan tombol tangan saat baris dialog terbuka hanya melewati baris (tekan lagi).
+Klip kata (bola/pohon/kolam) tidak ada di public/audio atau bank kuis: L5 perlu `bab4_kata_bola`, `bab4_kata_pohon`, `bab4_kata_kolam`.
+
+Kalimat baru L3 (teks saja):
+- `bab4_aara_taman` (aara): Lihat! Ada papan petunjuk. Ayo kita baca!
+- `bab4_aara_baca` (aara): Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.
+- `bab4_aara_papan` (aara): Dekati papan itu, lalu tekan tombol tangan.
+- `bab4_aara_bola` (aara): Bola! Tempat bermain berkilau. Ayo ke sana!
+- `bab4_aara_pohon` (aara): Pohon! Pohonnya berkilau. Ayo ke sana!
+- `bab4_aara_kolam` (aara): Kolam! Kolamnya berkilau. Ayo ke sana!
+- `bab4_aara_lagi` (aara): Ada papan lagi di sini! Baca, yuk.
+- `bab4_aara_ayo` (aara): Ayo, ke tempat yang berkilau!
+- (klip kartu baca, bukan baris dialog) `bab4_kata_bola` / `bab4_kata_pohon` / `bab4_kata_kolam`; teks kartu: "Baca katanya. Tempat apa?"

@@ -282,7 +282,7 @@ export class KotaLevel implements Level {
   fixedUpdate(dt = 1 / 60): void {
     this.story?.fixedUpdate();
     this.ch3?.fixedUpdate(dt);
-    this.ch4?.fixedUpdate();
+    this.ch4?.fixedUpdate(dt);
     this.d3?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
