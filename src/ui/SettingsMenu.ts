@@ -91,6 +91,7 @@ export class SettingsMenu {
       deps.save.setVolumes(deps.save.data.settings.musicVol, v);
       deps.onVolumes();
     });
+    this.music.track.dataset.padDefault = '1'; // controller focus starts on the first row
     const sliders = make('div', 'settings-sliders');
     sliders.append(this.music.row, this.sfx.row);
 
@@ -136,6 +137,7 @@ export class SettingsMenu {
     yes.dataset.act = 'yes';
     this.btnNo = this.button('menu-btn settings-no', MenuIcons.no, 'Tidak', () => this.ask(false));
     this.btnNo.dataset.act = 'no';
+    this.btnNo.dataset.padDefault = '1'; // controller focus starts on the safe answer
     const row = make('div', 'settings-confirm-row');
     row.append(yes, this.btnNo);
     q.append(row);
@@ -183,6 +185,26 @@ export class SettingsMenu {
     this.panel.hidden = true;
     this.confirm.hidden = true;
     this.deps.onOpenChange(false);
+  }
+
+  /**
+   * Controller shortcut (Create / touchpad): open the full map straight away, or close map and panel again.
+   * Does nothing in a level without a map.
+   */
+  toggleMap(): void {
+    if (this.isOpen && this.mapOpen) {
+      this.deps.closeMap();
+      this.close();
+      return;
+    }
+    if (!this.deps.hasMap()) return;
+    if (!this.isOpen) {
+      this.open();
+      if (!this.isOpen) return;
+    } else if (this.confirming) return;
+    this.mapOpen = true;
+    this.panel.hidden = true;
+    this.deps.openMap();
   }
 
   /** The full map closed: the panel comes back. */

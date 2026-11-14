@@ -1,6 +1,8 @@
 import { touchMode } from '../../core/TouchMode';
 import type { LevelContext } from '../Level';
 import type { Action } from '../../input/Input';
+import { padHub } from '../../input/GamepadHub';
+import { padGlyph } from '../../ui/PadGlyphs';
 
 /**
  * Picture-only hints for the powers: "press and HOLD the jump button" (touch: a ring that closes onto the button;
@@ -14,8 +16,12 @@ export class HoldHint {
     this.key = document.createElement('div');
     this.key.className = 'b2-key';
     this.key.hidden = true;
-    this.key.innerHTML = '<div class="b2-cap">Spasi</div><div class="b2-bar"><i></i></div>';
+    this.key.innerHTML = `<div class="b2-cap">Spasi</div><div class="b2-cap-pad">${padGlyph('cross')}</div><div class="b2-bar"><i></i></div>`;
     ctx.ui.appendChild(this.key);
+    const sync = (): void => {
+      this.key.hidden = !this.on || (touchMode.active && !padHub.deviceActive);
+    };
+    padHub.onActiveChange(sync);
     ctx.onDispose(() => {
       this.key.remove();
       document.documentElement.classList.remove('b2-hold');
@@ -29,7 +35,7 @@ export class HoldHint {
   set(on: boolean): void {
     if (on === this.on) return;
     this.on = on;
-    this.key.hidden = !on || touchMode.active;
+    this.key.hidden = !on || (touchMode.active && !padHub.deviceActive);
     document.documentElement.classList.toggle('b2-hold', on);
   }
 }

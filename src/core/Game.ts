@@ -34,6 +34,10 @@ import { LEVELS } from '../world/levels';
 import { startLevelFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
+import { GamepadSource } from '../input/GamepadSource';
+import { padHub, PadConfig } from '../input/GamepadHub';
+import { PadUi } from '../input/PadUi';
+import { PadDebug } from '../ui/PadDebug';
 import { startGate } from './StartGate';
 import { touchMode } from './TouchMode';
 import { FrameClock } from './FrameClock';
@@ -122,7 +126,9 @@ export interface DebugHandle {
   /** Fixed steps run by the most recent frame. */
   lastSteps: number;
   /** Test-only: show a dialog line (a table id or literal text, optionally with an id). */
-  say: (line: string | { speaker: string; text: string; id?: string }) => void;
+  say: (line: string | { speaker: string; text: string; id?: string }, opts?: { lockControls?: boolean }) => void;
+  /** Controller state and test helpers (see input/GamepadHub.ts, input/PadUi.ts). */
+  pad: { connected: boolean; active: boolean; table: string; mapping: string; id: string; focus: { scope: string; act: string; label: string; cls: string }; rumbles: number; presses: number; seq: number };
   /**
    * Perf-test hooks. `simFrame` runs one complete frame as if requestAnimationFrame had delivered `nowMs`
    * (works while paused; `render` false skips the WebGL draw). `smoothing` switches the dt filter,
@@ -277,6 +283,11 @@ export class Game {
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
   private readonly walker: WalkSource;
+  private readonly padSource: GamepadSource;
+  private readonly padUi: PadUi;
+  private readonly padDebug: PadDebug | null = null;
+  /** Virtual clock (ms) for the pad when a test steps frames by hand. */
+  private padClock = 1e7;
   private paused = false;
   readonly sparkles: Sparkles;
   readonly flashes: BillboardRings;
@@ -377,8 +388,19 @@ export class Game {
     },
     camera: { x: 0, y: 0, z: 0 },
     lastSteps: 0,
-    say: (line) => {
-      void this.dialog.say(line);
+    say: (line, opts) => {
+      void this.dialog.say(line, opts);
+    },
+    pad: {
+      connected: false,
+      active: false,
+      table: '',
+      mapping: '',
+      id: '',
+      focus: { scope: '', act: '', label: '', cls: '' },
+      rumbles: 0,
+      presses: 0,
+      seq: 0,
     },
     simFrame: (nowMs: number, render: boolean) => this.simFrame(nowMs, render),
     smoothing: (on: boolean) => {
@@ -432,6 +454,9 @@ export class Game {
       this.touch = new TouchSource(ui, () => touchMode.active);
       this.input.addSource(this.touch);
     }
+
+    this.padSource = new GamepadSource();
+    this.input.addSource(this.padSource);
 
     this.walker = new WalkSource(
       () => this.player.visualPosition,
@@ -569,6 +594,24 @@ export class Game {
       },
     });
     startGate.onStart(() => this.maps.setShown(true));
+    this.padUi = new PadUi({
+      settings: this.settings,
+      maps: this.maps,
+      quizOpen: () => this.quizLocked,
+      resumeAudio: () => {
+        // A pad press may not count as a user gesture: keep asking quietly until the context runs.
+        const c = this.synth.audioContext;
+        if (!c || c.state === 'suspended') this.synth.unlock();
+      },
+    });
+    Object.defineProperty(this.debug.pad, 'focus', { get: () => this.padUi.focusInfo, enumerable: true });
+    padHub.rumbleAllowed = () => !this.muteUrl && this.save.data.settings.sound && this.save.data.settings.sfxVol > 0;
+    this.player.events.on('land', (e) => {
+      if (e.impact > PadConfig.rumbleLandImpact) this.rumble(0.45, 0.25, 110);
+    });
+    if (new URLSearchParams(window.location.search).get('pad') === 'debug') {
+      this.padDebug = new PadDebug(uiRoot, this.renderer.renderer.getContext());
+    }
     {
       const menu = this.settings;
       const maps = this.maps;
@@ -759,7 +802,12 @@ export class Game {
   private readonly frame = (now: number): void => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.frame);
-    if (this.paused || this.menuOpen) return;
+    if (this.paused) return;
+    this.pollPad(now);
+    if (this.menuOpen) {
+      this.padSource.sync(); // presses made inside the panel are not game presses
+      return;
+    }
     const panel = this.perfPanel;
     const t0 = panel ? performance.now() : 0;
     const steps = this.runFrame(now, true);
@@ -768,6 +816,7 @@ export class Game {
 
   /** Tests: one whole frame at a made-up timestamp, even while the real loop is paused. */
   private simFrame(nowMs: number, render: boolean): number {
+    this.pollPad(nowMs);
     const steps = this.runFrame(nowMs, render);
     this.syncDebug();
     return steps;
@@ -823,6 +872,32 @@ export class Game {
     const size = l.shadow.mapSize.x;
     const f = (n: number): number => n - Math.floor(n);
     return [f((v.x * 0.5 + 0.5) * size), f((v.y * 0.5 + 0.5) * size)];
+  }
+
+  /** Read the controller (once per frame, before input.update) and run its menu navigation. */
+  private pollPad(nowMs: number): void {
+    const h = padHub;
+    h.poll(nowMs);
+    if (!h.connected) {
+      if (this.debug.pad.connected) this.debug.pad.connected = false;
+      this.padDebug?.update(nowMs);
+      return;
+    }
+    this.padUi.update();
+    this.padDebug?.update(nowMs);
+    const d = this.debug.pad;
+    d.connected = true;
+    d.active = h.deviceActive;
+    d.table = h.table;
+    d.mapping = h.mapping;
+    d.id = h.id;
+    d.presses = h.count[0] + h.count[1] + h.count[2] + h.count[3];
+    d.seq = h.seq;
+  }
+
+  private rumble(strong: number, weak: number, ms: number): void {
+    this.debug.pad.rumbles++;
+    padHub.rumble(strong, weak, ms);
   }
 
   private playerMoving(): boolean {
@@ -1044,6 +1119,7 @@ export class Game {
       const f = this.player.getFeetPosition(this.feet);
       this.rings.spawn(f.x, f.y, f.z, 1.6, 0.35, 0xfff2a8, 1);
       this.sfx.transform(mode === 'superglen');
+      this.rumble(0.25, 0.55, 140);
     }
   }
 
@@ -1155,6 +1231,8 @@ export class Game {
   /** Test helper: run `frames` virtual frames of exactly one fixed step each, then render once (unless `render` is false). */
   private advance(frames: number, render: boolean): void {
     for (let i = 0; i < frames; i++) {
+      this.padClock += FIXED_DT * 1000;
+      this.pollPad(this.padClock);
       this.input.update();
       this.cameraRig.handleInput();
       this.fixedStep(FIXED_DT);

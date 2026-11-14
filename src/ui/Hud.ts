@@ -1,6 +1,7 @@
 import { startGate } from '../core/StartGate';
 import { touchMode } from '../core/TouchMode';
 import { QuizIcons } from './QuizIcons';
+import { padGlyph } from './PadGlyphs';
 
 /** Long-press on the start-screen logo (touch) opens the parents' page after this long. */
 const PARENTS_HOLD_MS = 3000;
@@ -156,6 +157,10 @@ export class Hud {
     hint.appendChild(icon);
     hint.appendChild(el('span', 'start-text start-text-touch', 'Ketuk untuk mulai'));
     hint.appendChild(el('span', 'start-text start-text-pc', 'Klik untuk mulai'));
+    const padText = el('span', 'start-text start-text-pad');
+    padText.append(el('span', 'start-pad-glyph'), document.createTextNode('Tekan tombol untuk mulai'));
+    (padText.firstChild as HTMLElement).innerHTML = padGlyph('cross');
+    hint.appendChild(padText);
     const bg = el('div', 'start-bg');
     bg.append(el('div', 'start-rays'));
     for (const c of ['c1', 'c2', 'c3', 'c4']) bg.append(el('div', `start-cloud ${c}`));
