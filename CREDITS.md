@@ -15,6 +15,8 @@ Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi sep
 | Pak Pos | Angga - Authentic Indonesian | `Aw7qttNp8aSAczVs9nwb` | Indonesia, laki-laki muda, santai |
 | Dokter Ani | Citra - Gentle, Inviting and Calm | `RbNgJzKAV7jpYJNtCBpj` | Indonesia, perempuan muda, lembut |
 | Kak Bima | Aldo - Youth, Friendly, Natural | `H7dnu83omjrDrtfihMsb` | Indonesia, laki-laki muda, ceria |
+| Bu Lina (penjual kue pasar) | Maya - Warm, Calm and Soft | `U3dExJoUNcmTY5H6GMuG` | Indonesia, perempuan paruh baya, hangat |
+| Si Tikus Rakus | Clowny - Funny and Cheerful | `UafGxvF2q1XMC9Qy4tPR` | Indonesia, laki-laki muda bernada tinggi jenaka, nada +3 semiton |
 | Kata bahasa Inggris | Josh - Teacher for Kids | `nzFihrBIvB34imQBuxub` | Inggris Amerika |
 | Kata Mandarin | Sage - Soothing & Gentle | `APSIkVZudNbPAwyPoeVO` | Mandarin standar (dipilih pemilik proyek) |
 

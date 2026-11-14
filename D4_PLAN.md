@@ -13,7 +13,7 @@ Anggaran grafis kota hampir penuh (57/60 draw call, 63,5k/65k segitiga di preset
 - [x] **L2 Tikus Kecil.** 6-8 tikus lucu low-poly membawa makanan di pasar. Perilaku: lari menjauh, berputar di sekitar kios, tidak menyerang. Dijinakkan dengan 1 laser atau hentakan mendarat: efek bintang + "boing", tikus menjatuhkan makanan lalu kabur ke gorong-gorong (tidak mati). Mudah untuk anak 5 tahun (lambat, bisa dikejar dengan terbang). Tes `bab3-rats`.
 - [x] **L3 Tantangan berhitung pasar.** Pedagang: "Bakpaoku hilang 3, kue hilang 2." Anak mengumpulkan jumlah yang tepat dari makanan yang jatuh, lalu menjawab "Totalnya berapa?" (pilih dari 3 kartu besar, pakai quiz engine yang ada). Jawaban benar = makanan kembali ke kios + perayaan. Salah = coba lagi dengan bantuan visual. Tes `bab3-count`.
 - [x] **L4 Si Tikus Rakus + penutup.** Muncul, tertawa "Hihihi, semua makanan ini milikku!", kabur ke gorong-gorong: "Suatu hari aku akan jadi RAJA kota ini!" (adegan, tanpa pertarungan). Penutup: sosok misterius terlihat sebentar di bayangan. Chapter 3 selesai, stiker/perayaan, kota bebas lagi. Tes `bab3-end`.
-- [ ] **L5 Suara.** Semua kalimat baru Chapter 3 ke audio/dialog.json dengan ekspresi per kalimat; suara Tikus Rakus dan pedagang dipilih berbeda dan lucu (bukan menakutkan); generate lewat pipeline. Glen = Finn +2, Nino = Pratama +2 (audio/voices.json). Anggaran sekitar 1.000 karakter.
+- [x] **L5 Suara.** Semua kalimat baru Chapter 3 ke audio/dialog.json dengan ekspresi per kalimat; suara Tikus Rakus dan pedagang dipilih berbeda dan lucu (bukan menakutkan); generate lewat pipeline. Glen = Finn +2, Nino = Pratama +2 (audio/voices.json). Anggaran sekitar 1.000 karakter.
 - [ ] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D4 + "Untuk dicoba besok pagi"; perbarui CLAUDE.md jika perlu.
 
 ## Catatan antar sesi
@@ -48,3 +48,5 @@ Tikus tidak punya collider (hanya berlari di jalan pasar, dijepit `clampToStreet
 - `bab3_nino_siapa` (nino): Hmm, kita cari tahu nanti. Kerja bagus, Glen!
 - `bab3_lina_terima` (lina): Terima kasih, Superglen!
 (`bab3_nino_ubah` dan `bab3_nino_tiba` tampil di jalan; `bab3_lina_terima` belum dipakai; `bab3_glen_semua` dipakai setelah tikus terakhir.)
+
+**L5 selesai.** 16 klip `bab3_*` di `audio/dialog.json` (dengan `delivery`), `public/audio/bab3_*.mp3`, semua lolos cek Scribe (ind). Suara baru di `audio/voices.json`: `lina` = Maya (U3dExJoUNcmTY5H6GMuG), `rakus` = Clowny (UafGxvF2q1XMC9Qy4tPR, +3 semiton). Ketiganya (Maya, Clowny, Lunetta uQyqjJGSy9EJK7ZcWe4B yang tidak dipakai) ditambah ke akun; slot akun 3/10 setelahnya. Soal Bu Lina memakai id `bab3_lina_total`. Teks tampilan tetap '3' dan '2'; ucapan memakai kata lewat `delivery`. Tanpa perubahan kode src.

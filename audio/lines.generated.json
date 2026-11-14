@@ -783,6 +783,150 @@
     "category": "lainnya"
   },
   {
+    "id": "bab3_nino_cepat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Cepat, ke pasar, Superglen!",
+    "tts": "[urgent] Cepat, ke pasar, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_nino_ubah",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ubah jadi Superglen dulu, Glen!",
+    "tts": "[encouraging] Ubah jadi Superglen dulu, Glen!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_nino_tiba",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu mereka! Tembak atau hentakkan, ya!",
+    "tts": "[excited] Itu mereka! [cheerful] Tembak atau hentakkan, ya!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_lucu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hihi, tikusnya lucu sekali!",
+    "tts": "[giggles] Hihi, [amused] tikusnya lucu sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_semua",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua tikus kecil sudah kabur!",
+    "tts": "[excited] Semua tikus kecil sudah kabur!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_lina_hilang",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Bakpaoku hilang 3, kue hilang 2.",
+    "tts": "[worried] Bakpaoku hilang tiga, kue hilang dua.",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_lina_tolong",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Tolong kumpulkan, ya, Superglen!",
+    "tts": "[pleading] Tolong kumpulkan, ya, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_lina_total",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih! Totalnya berapa?",
+    "tts": "[grateful] Terima kasih! [curious] Totalnya berapa?",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_lina_hore",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Hore! Semua kembali ke kios. Kamu pintar!",
+    "tts": "[delighted] Hore! Semua kembali ke kios. [warm] Kamu pintar!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_rakus_tawa",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hihihi, semua makanan ini milikku!",
+    "tts": "[mischievous giggle] Hihihi, [playful] semua makanan ini milikku!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_hei",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hei, jangan lari!",
+    "tts": "[surprised] Hei, jangan lari!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_rakus_raja",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Suatu hari aku akan jadi RAJA kota ini!",
+    "tts": "[dramatic] Suatu hari aku akan jadi [proudly] RAJA kota ini!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_nino_rakus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu Si Tikus Rakus! Kita pasti bertemu lagi.",
+    "tts": "[amused] Itu Si Tikus Rakus! [confident] Kita pasti bertemu lagi.",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_siapa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Eh, siapa itu di bayangan?",
+    "tts": "[curious] Eh, siapa itu di bayangan?",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_nino_siapa",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hmm, kita cari tahu nanti. Kerja bagus, Glen!",
+    "tts": "[thoughtful] Hmm, kita cari tahu nanti. [cheerful] Kerja bagus, Glen!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_lina_terima",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[grateful] Terima kasih, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
