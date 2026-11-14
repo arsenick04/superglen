@@ -17,7 +17,7 @@ Kunci tidak pernah dicetak atau dimasukkan ke kode game. Di mesin yang memakai p
 - `npm run audio -- --only=bab1_glen_pulang` : hanya id itu (dibuat ulang walau sudah ada).
 - `npm run audio -- --force` : buat ulang semuanya (boros kredit).
 - `npm run audio` : semua yang belum ada atau berubah. **Perlu persetujuan pemilik proyek** (memakai kuota).
-- `npm run audio:voices` : pilih suara otomatis per peran dan tulis ke `audio/voices.json` (tambah `--dry-run` untuk hanya melihat usulan).
+- `npm run audio:voices` : (lama, tidak dipakai lagi untuk v2) pilih suara otomatis per peran dan tulis ke `audio/voices.json` (tambah `--dry-run` untuk hanya melihat usulan).
 
 File yang sudah ada dilewati. Teks atau suara yang berubah terdeteksi lewat hash di manifest dan dibuat ulang otomatis.
 
@@ -26,17 +26,37 @@ File yang sudah ada dilewati. Teks atau suara yang berubah terdeteksi lewat hash
 2. Beri tanda di `audio/dialog.json` pada kalimat itu: `"source": "recorded"` (untuk soal quiz, di `audio/manifest.json`: `"<id>": { "source": "recorded" }`).
 3. Skrip tidak akan menimpa kalimat itu. MP3 yang tidak ada di manifest juga dianggap buatan tangan dan tidak ditimpa (kecuali `--force`).
 
+## Suara dan model (v2, 2026-11-14)
+Model: `eleven_v4` (paling ekspresif yang tersedia di paket ini, 1 karakter = 1 kredit; mendukung tag emosi dan bahasa Indonesia/Mandarin/Inggris). Tag seperti `[excited]`, `[laughs]` dibaca sebagai arahan, bukan diucapkan (diperiksa dengan speech-to-text). Tag dihitung sebagai karakter kuota.
+
+| Peran | Suara | Pengaturan | Nada |
+|---|---|---|---|
+| glen | Dakocan - Expressive, Cheerful and Clear (`plgKUYgnlZ1DCNh54DwJ`), Indonesia aksen standar | stability 0.3, similarity 0.8 | +3 semiton |
+| nino | Pratama - Clear, Confident and Warm (`q8qwd1jY2jS3AWOBeq25`), Indonesia aksen standar | stability 0.35, similarity 0.8 | +2 semiton |
+| english | Josh - Teacher for Kids (`nzFihrBIvB34imQBuxub`), kata bahasa Inggris di quiz | stability 0.35 | 0 |
+| mandarin | Sage (`APSIkVZudNbPAwyPoeVO`) | stability 0.4, similarity 0.8 | 0 |
+
+Penyampaian: tiap baris di `audio/dialog.json` punya `delivery` (teks khusus TTS dengan tag; `text` untuk tampilan tidak berubah). Soal quiz dan kata memakai aturan kategori di `audio/delivery.json` (tag awal bervariasi per id). Mengubah `delivery`, aturan, suara, model, pengaturan, atau `pitchSemitones` otomatis menandai klip "berubah" (hash di manifest).
+
+Pascaproduksi otomatis setelah unduh: geser nada `pitchSemitones` (ffmpeg `rubberband`, formant ikut naik supaya terdengar seperti penutur lebih kecil, tanpa efek tupai), potong hening awal/akhir, kompresi ringan, gain ke -16 LUFS, pembatas -1.5 dBTP, mono 44.1 kHz 96 kbps.
+
+Sampel uji (empat kalimat, hasil akhir): `audio/voice-tests/v2_final_{glen,nino}_{a,b}.mp3`. Kandidat lain (mentah, tanpa geser nada): `audio/voice-tests/v2_glen_{kakceria,finn,dakocan}_{a,b}.mp3` dan `v2_nino_{pratama,zandhira,rafiq}_{a,b}.mp3`. Kak Ceria (`d15jrIAARvF899pDoC6T`) adalah suara anak-anak/kakak TV yang sangat tinggi (sekitar 400 Hz, perempuan); bila mau Glen terdengar lebih kecil lagi, ganti `glen.voice_id` ke sini dan setel `pitchSemitones` 0.
+
 ## Mengganti suara
-Ubah `voice_id` (atau pengaturan stability, similarity_boost, style) di `audio/voices.json`, lalu jalankan `npm run audio` (atau `--category=...` dulu). Baris dengan suara lama dibuat ulang otomatis. Kalau API tidak bisa dijangkau, cari suara di ElevenLabs Voice Library, salin Voice ID, tempel manual ke `voices.json`. Semua suara harus mendukung model multilingual untuk Bahasa Indonesia.
+Ubah `voice_id` (atau stability, similarity_boost, `pitchSemitones`, `model`) di `audio/voices.json`, lalu jalankan `npm run audio -- --category=...` (atau `--force`). Baris yang berubah dibuat ulang otomatis. Suara dari Voice Library harus ditambahkan ke akun dulu (gratis; Voice Library, "Add to my voices", atau API `POST /v1/voices/add/{public_owner_id}/{voice_id}`). Tes satu kalimat tanpa menyentuh manifest:
+
+    node scripts/generate-audio.mjs --say=glen --text="Aduh!" --delivery="[surprised] Aduh!" --out=audio/voice-tests/coba.mp3
+
+(`--raw` menyimpan keluaran mentah tanpa geser nada.) Versi lama (v1) ada di folder scratchpad sesi, tidak di repo; riwayat git menyimpan manifest lama.
 
 ## Mandarin
-Suara aktif: Sage - Soothing & Gentle (perempuan, aksen standar daratan, lembut seperti guru). Dipilih dari metadata (bahasa zh, aksen standar), BELUM didengar penutur asli: cek nada dulu. Alternatif (sudah ada di akun, sampel uji di `audio/voice-tests/`, 4 nada + "nihao" + "xiexie"):
+Suara aktif: Sage - Soothing & Gentle (perempuan, aksen standar daratan). Dipilih dari metadata, BELUM didengar penutur asli: cek nada dulu. Alternatif (sudah ada di akun, sampel uji di `audio/voice-tests/`, 4 nada + "nihao" + "xiexie"):
 - `4VZIsMPtgggwNg7OXbPY` James Gao (laki-laki, tenang, hangat, aksen standar) : `mandarin_jamesgao.mp3`
 - `MI36FIkp9wRP7cpWKPTl` Evan Zhao (laki-laki muda, hangat, aksen Beijing) : `mandarin_evanzhao.mp3`
 - `APSIkVZudNbPAwyPoeVO` Sage (terpilih) : `mandarin_sage.mp3`
 Untuk ganti: ubah `mandarin.voice_id` di `audio/voices.json`, lalu `npm run audio -- --category=quiz_mandarin,speak_zh`.
 
-Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Minta penutur asli mengecek nada sebelum dipakai anak.
+Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Tag emosi membuat nada lebih naik-turun; kalau nada Mandarin terdengar berlebihan, ganti tag di `audio/delivery.json` (`speak_zh`) atau hilangkan. Minta penutur asli mengecek nada sebelum dipakai anak.
 
 ## Aturan hemat kredit
 - Selalu `--dry-run` dulu, lalu `--sample`, minta persetujuan, baru batch.

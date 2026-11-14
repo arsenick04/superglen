@@ -3,270 +3,315 @@
     "id": "bab1_glen_pulang",
     "speaker": "glen",
     "lang": "id",
-    "text": "Hore, pulang sekolah!"
+    "text": "Hore, pulang sekolah!",
+    "delivery": "[excited] Hore, pulang sekolah!"
   },
   {
     "id": "bab1_glen_lompat",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ayo, kita lompat!"
+    "text": "Ayo, kita lompat!",
+    "delivery": "[excited] Ayo, kita lompat!"
   },
   {
     "id": "bab1_glen_gedung",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!"
+    "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!",
+    "delivery": "[amazed] Wah, gedung Barongsai tua. [curious] Ada cahaya di dalam!"
   },
   {
     "id": "bab1_glen_pagar",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ada celah di pagar. Aku bisa masuk!"
+    "text": "Ada celah di pagar. Aku bisa masuk!",
+    "delivery": "[curious] Ada celah di pagar. [excited] Aku bisa masuk!"
   },
   {
     "id": "bab1_glen_gelap",
     "speaker": "glen",
     "lang": "id",
-    "text": "Gelap, ya. Nyalakan senter dulu."
+    "text": "Gelap, ya. Nyalakan senter dulu.",
+    "delivery": "[nervous] Gelap, ya. [cheerful] Nyalakan senter dulu."
   },
   {
     "id": "bab1_glen_panel",
     "speaker": "glen",
     "lang": "id",
-    "text": "Apa ini? Ada panel yang menyala."
+    "text": "Apa ini? Ada panel yang menyala.",
+    "delivery": "[curious] Apa ini? Ada panel yang menyala."
   },
   {
     "id": "bab1_glen_dinding",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wow, dindingnya terbuka!"
+    "text": "Wow, dindingnya terbuka!",
+    "delivery": "[amazed] Wow, dindingnya terbuka!"
   },
   {
     "id": "bab1_glen_lab",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wah, lab rahasia!"
+    "text": "Wah, lab rahasia!",
+    "delivery": "[amazed] Wah, lab rahasia!"
   },
   {
     "id": "bab1_glen_tombol",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ada tombol besar. Tekan, ah!"
+    "text": "Ada tombol besar. Tekan, ah!",
+    "delivery": "[playful] Ada tombol besar. Tekan, ah!"
   },
   {
     "id": "bab1_nino_halo",
     "speaker": "nino",
     "lang": "id",
-    "text": "Sistem aktif. Halo."
+    "text": "Sistem aktif. Halo.",
+    "delivery": "Sistem aktif. [cheerful] Halo!"
   },
   {
     "id": "bab1_glen_siapa",
     "speaker": "glen",
     "lang": "id",
-    "text": "Kamu siapa?"
+    "text": "Kamu siapa?",
+    "delivery": "[surprised] Kamu siapa?"
   },
   {
     "id": "bab1_nino_terpilih",
     "speaker": "nino",
     "lang": "id",
-    "text": "Aku Nino. Kamu terpilih karena hatimu, Glen."
+    "text": "Aku Nino. Kamu terpilih karena hatimu, Glen.",
+    "delivery": "[warm] Aku Nino. Kamu terpilih karena hatimu, Glen!"
   },
   {
     "id": "bab1_nino_kostum",
     "speaker": "nino",
     "lang": "id",
-    "text": "Ini kostum Barongsai Super. Silakan pakai."
+    "text": "Ini kostum Barongsai Super. Silakan pakai.",
+    "delivery": "[excited] Ini kostum Barongsai Super. Silakan pakai!"
   },
   {
     "id": "bab1_glen_superglen",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aku jadi Superglen!"
+    "text": "Aku jadi Superglen!",
+    "delivery": "[excited] Aku jadi Superglen!"
   },
   {
     "id": "bab1_nino_semua_nyala",
     "speaker": "nino",
     "lang": "id",
-    "text": "Ups, semua tombolnya menyala!"
+    "text": "Ups, semua tombolnya menyala!",
+    "delivery": "[surprised] Ups, semua tombolnya menyala! [laughs] Hehe!"
   },
   {
     "id": "bab1_glen_tertawa",
     "speaker": "glen",
     "lang": "id",
-    "text": "Hahaha, geli!"
+    "text": "Hahaha, geli!",
+    "delivery": "[laughs] Hahaha, geli! Hihi!"
   },
   {
     "id": "bab1_nino_lompat_barongsai",
     "speaker": "nino",
     "lang": "id",
-    "text": "Kamu bisa Lompat Barongsai. Tekan lompat dua kali!"
+    "text": "Kamu bisa Lompat Barongsai. Tekan lompat dua kali!",
+    "delivery": "[excited] Kamu bisa Lompat Barongsai. Tekan lompat dua kali!"
   },
   {
     "id": "bab1_nino_besok",
     "speaker": "nino",
     "lang": "id",
-    "text": "Besok pagi kita latihan, ya!"
+    "text": "Besok pagi kita latihan, ya!",
+    "delivery": "[cheerful] Besok pagi kita latihan, ya!"
   },
   {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",
-    "text": "Selamat pagi, Superglen! Ayo latihan."
+    "text": "Selamat pagi, Superglen! Ayo latihan.",
+    "delivery": "[cheerful] Selamat pagi, Superglen! Ayo latihan!"
   },
   {
     "id": "bab2_nino_terbang",
     "speaker": "nino",
     "lang": "id",
-    "text": "Tahan tombol lompat untuk terbang."
+    "text": "Tahan tombol lompat untuk terbang.",
+    "delivery": "[cheerful] Tahan tombol lompat untuk terbang!"
   },
   {
     "id": "bab2_glen_aduh",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aduh! Kepala kena atap!"
+    "text": "Aduh! Kepala kena atap!",
+    "delivery": "[surprised] Aduh! Kepala kena atap!"
   },
   {
     "id": "bab2_nino_pelan",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hehe, pelan-pelan saja."
+    "text": "Hehe, pelan-pelan saja.",
+    "delivery": "[laughs] Hehe, pelan-pelan saja."
   },
   {
     "id": "bab2_nino_cincin",
     "speaker": "nino",
     "lang": "id",
-    "text": "Terbang lewat lima cincin cahaya."
+    "text": "Terbang lewat lima cincin cahaya.",
+    "delivery": "[cheerful] Terbang lewat lima cincin cahaya!"
   },
   {
     "id": "bab2_nino_cincin_bagus",
     "speaker": "nino",
     "lang": "id",
-    "text": "Bagus! Terus!"
+    "text": "Bagus! Terus!",
+    "delivery": "[excited] Bagus! Terus!"
   },
   {
     "id": "bab2_nino_laser",
     "speaker": "nino",
     "lang": "id",
-    "text": "Sekarang laser. Kena lima sasaran, ya."
+    "text": "Sekarang laser. Kena lima sasaran, ya.",
+    "delivery": "[cheerful] Sekarang laser. Kena lima sasaran, ya!"
   },
   {
     "id": "bab2_nino_tenang",
     "speaker": "nino",
     "lang": "id",
-    "text": "Tenang dulu, baru bidik."
+    "text": "Tenang dulu, baru bidik.",
+    "delivery": "[encouraging] Tenang dulu, baru bidik."
   },
   {
     "id": "bab2_nino_laser_bagus",
     "speaker": "nino",
     "lang": "id",
-    "text": "Kena! Bagus!"
+    "text": "Kena! Bagus!",
+    "delivery": "[excited] Kena! Bagus!"
   },
   {
     "id": "bab2_nino_perisai",
     "speaker": "nino",
     "lang": "id",
-    "text": "Aku lempar bola karet. Pakai perisai!"
+    "text": "Aku lempar bola karet. Pakai perisai!",
+    "delivery": "[playful] Aku lempar bola karet. Pakai perisai!"
   },
   {
     "id": "bab2_nino_tangkis",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hebat, kena perisai!"
+    "text": "Hebat, kena perisai!",
+    "delivery": "[excited] Hebat, kena perisai!"
   },
   {
     "id": "bab2_nino_coba_lagi",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hampir! Coba lagi."
+    "text": "Hampir! Coba lagi.",
+    "delivery": "[encouraging] Hampir! Coba lagi, ya."
   },
   {
     "id": "bab2_nino_hebat",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hebat, Glen!"
+    "text": "Hebat, Glen!",
+    "delivery": "[proud] Hebat, Glen!"
   },
   {
     "id": "bab2_nino_bekal",
     "speaker": "nino",
     "lang": "id",
-    "text": "Istirahat dulu. Ayo makan bekal."
+    "text": "Istirahat dulu. Ayo makan bekal.",
+    "delivery": "[cheerful] Istirahat dulu. Ayo makan bekal!"
   },
   {
     "id": "bab2_glen_enak",
     "speaker": "glen",
     "lang": "id",
-    "text": "Nyam, enak!"
+    "text": "Nyam, enak!",
+    "delivery": "[delighted] Nyam, enak!"
   },
   {
     "id": "bab2_nino_alarm",
     "speaker": "nino",
     "lang": "id",
-    "text": "Alarm! Ada masalah di pasar!"
+    "text": "Alarm! Ada masalah di pasar!",
+    "delivery": "[alarmed] Alarm! Ada masalah di pasar!"
   },
   {
     "id": "bab2_glen_siap",
     "speaker": "glen",
     "lang": "id",
-    "text": "Superglen siap!"
+    "text": "Superglen siap!",
+    "delivery": "[excited] Superglen siap!"
   },
   {
     "id": "quiz_nino_kunci",
     "speaker": "nino",
     "lang": "id",
-    "text": "Kunci ini butuh jawaban pintar!"
+    "text": "Kunci ini butuh jawaban pintar!",
+    "delivery": "[cheerful] Kunci ini butuh jawaban pintar!"
   },
   {
     "id": "quiz_nino_hampir",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hampir! Coba lagi."
+    "text": "Hampir! Coba lagi.",
+    "delivery": "[encouraging] Hampir! Coba lagi, ya."
   },
   {
     "id": "quiz_nino_tinggal",
     "speaker": "nino",
     "lang": "id",
-    "text": "Ini dia! Ketuk yang ini ya."
+    "text": "Ini dia! Ketuk yang ini ya.",
+    "delivery": "[cheerful] Ini dia! Ketuk yang ini ya."
   },
   {
     "id": "quiz_nino_hebat",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hebat, Glen!"
+    "text": "Hebat, Glen!",
+    "delivery": "[proud] Hebat, Glen!"
   },
   {
     "id": "quiz_nino_selesai",
     "speaker": "nino",
     "lang": "id",
-    "text": "Tantangan selesai! Ini koin dan stikermu."
+    "text": "Tantangan selesai! Ini koin dan stikermu.",
+    "delivery": "[excited] Tantangan selesai! Ini koin dan stikermu!"
   },
   {
     "id": "quiz_nino_kepingan",
     "speaker": "nino",
     "lang": "id",
-    "text": "Wah, kamu dapat kepingan memori ilmuwan!"
+    "text": "Wah, kamu dapat kepingan memori ilmuwan!",
+    "delivery": "[amazed] Wah, kamu dapat kepingan memori ilmuwan!"
   },
   {
     "id": "quiz_nino_pilih",
     "speaker": "nino",
     "lang": "id",
-    "text": "Mau tantangan apa? Pilih satu ya."
+    "text": "Mau tantangan apa? Pilih satu ya.",
+    "delivery": "[cheerful] Mau tantangan apa? Pilih satu ya."
   },
   {
     "id": "quiz_nino_album",
     "speaker": "nino",
     "lang": "id",
-    "text": "Ini album stikermu!"
+    "text": "Ini album stikermu!",
+    "delivery": "[cheerful] Ini album stikermu!"
   },
   {
     "id": "quiz_nino_energi",
     "speaker": "nino",
     "lang": "id",
-    "text": "Energi Pintar menyala! Kostummu makin kuat."
+    "text": "Energi Pintar menyala! Kostummu makin kuat.",
+    "delivery": "[excited] Energi Pintar menyala! Kostummu makin kuat!"
   },
   {
     "id": "quiz_nino_terminal",
     "speaker": "nino",
     "lang": "id",
-    "text": "Layar Nino menyala! Ayo main Tantangan Pintar."
+    "text": "Layar Nino menyala! Ayo main Tantangan Pintar.",
+    "delivery": "[cheerful] Layar Nino menyala! Ayo main Tantangan Pintar!"
   }
 ]

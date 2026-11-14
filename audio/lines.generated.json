@@ -4,6 +4,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hore, pulang sekolah!",
+    "tts": "[excited] Hore, pulang sekolah!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -12,6 +13,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Ayo, kita lompat!",
+    "tts": "[excited] Ayo, kita lompat!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -20,6 +22,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!",
+    "tts": "[amazed] Wah, gedung Barongsai tua. [curious] Ada cahaya di dalam!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -28,6 +31,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Ada celah di pagar. Aku bisa masuk!",
+    "tts": "[curious] Ada celah di pagar. [excited] Aku bisa masuk!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -36,6 +40,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Gelap, ya. Nyalakan senter dulu.",
+    "tts": "[nervous] Gelap, ya. [cheerful] Nyalakan senter dulu.",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -44,6 +49,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Apa ini? Ada panel yang menyala.",
+    "tts": "[curious] Apa ini? Ada panel yang menyala.",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -52,6 +58,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Wow, dindingnya terbuka!",
+    "tts": "[amazed] Wow, dindingnya terbuka!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -60,6 +67,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Wah, lab rahasia!",
+    "tts": "[amazed] Wah, lab rahasia!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -68,6 +76,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Ada tombol besar. Tekan, ah!",
+    "tts": "[playful] Ada tombol besar. Tekan, ah!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -76,6 +85,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Sistem aktif. Halo.",
+    "tts": "Sistem aktif. [cheerful] Halo!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -84,6 +94,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Kamu siapa?",
+    "tts": "[surprised] Kamu siapa?",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -92,6 +103,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku Nino. Kamu terpilih karena hatimu, Glen.",
+    "tts": "[warm] Aku Nino. Kamu terpilih karena hatimu, Glen!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -100,6 +112,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini kostum Barongsai Super. Silakan pakai.",
+    "tts": "[excited] Ini kostum Barongsai Super. Silakan pakai!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -108,6 +121,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aku jadi Superglen!",
+    "tts": "[excited] Aku jadi Superglen!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -116,6 +130,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ups, semua tombolnya menyala!",
+    "tts": "[surprised] Ups, semua tombolnya menyala! [laughs] Hehe!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -124,6 +139,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Hahaha, geli!",
+    "tts": "[laughs] Hahaha, geli! Hihi!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -132,6 +148,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Kamu bisa Lompat Barongsai. Tekan lompat dua kali!",
+    "tts": "[excited] Kamu bisa Lompat Barongsai. Tekan lompat dua kali!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -140,6 +157,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Besok pagi kita latihan, ya!",
+    "tts": "[cheerful] Besok pagi kita latihan, ya!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -148,6 +166,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Selamat pagi, Superglen! Ayo latihan.",
+    "tts": "[cheerful] Selamat pagi, Superglen! Ayo latihan!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -156,6 +175,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Tahan tombol lompat untuk terbang.",
+    "tts": "[cheerful] Tahan tombol lompat untuk terbang!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -164,6 +184,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Aduh! Kepala kena atap!",
+    "tts": "[surprised] Aduh! Kepala kena atap!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -172,6 +193,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hehe, pelan-pelan saja.",
+    "tts": "[laughs] Hehe, pelan-pelan saja.",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -180,6 +202,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Terbang lewat lima cincin cahaya.",
+    "tts": "[cheerful] Terbang lewat lima cincin cahaya!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -188,6 +211,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Bagus! Terus!",
+    "tts": "[excited] Bagus! Terus!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -196,6 +220,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Sekarang laser. Kena lima sasaran, ya.",
+    "tts": "[cheerful] Sekarang laser. Kena lima sasaran, ya!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -204,6 +229,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Tenang dulu, baru bidik.",
+    "tts": "[encouraging] Tenang dulu, baru bidik.",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -212,6 +238,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Kena! Bagus!",
+    "tts": "[excited] Kena! Bagus!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -220,6 +247,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku lempar bola karet. Pakai perisai!",
+    "tts": "[playful] Aku lempar bola karet. Pakai perisai!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -228,6 +256,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hebat, kena perisai!",
+    "tts": "[excited] Hebat, kena perisai!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -236,6 +265,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hampir! Coba lagi.",
+    "tts": "[encouraging] Hampir! Coba lagi, ya.",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -244,6 +274,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hebat, Glen!",
+    "tts": "[proud] Hebat, Glen!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -252,6 +283,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Istirahat dulu. Ayo makan bekal.",
+    "tts": "[cheerful] Istirahat dulu. Ayo makan bekal!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -260,6 +292,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Nyam, enak!",
+    "tts": "[delighted] Nyam, enak!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -268,6 +301,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Alarm! Ada masalah di pasar!",
+    "tts": "[alarmed] Alarm! Ada masalah di pasar!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -276,6 +310,7 @@
     "speaker": "glen",
     "lang": "id",
     "text": "Superglen siap!",
+    "tts": "[excited] Superglen siap!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -284,6 +319,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Kunci ini butuh jawaban pintar!",
+    "tts": "[cheerful] Kunci ini butuh jawaban pintar!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -292,6 +328,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hampir! Coba lagi.",
+    "tts": "[encouraging] Hampir! Coba lagi, ya.",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -300,6 +337,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini dia! Ketuk yang ini ya.",
+    "tts": "[cheerful] Ini dia! Ketuk yang ini ya.",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -308,6 +346,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Hebat, Glen!",
+    "tts": "[proud] Hebat, Glen!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -316,6 +355,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Tantangan selesai! Ini koin dan stikermu.",
+    "tts": "[excited] Tantangan selesai! Ini koin dan stikermu!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -324,6 +364,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Wah, kamu dapat kepingan memori ilmuwan!",
+    "tts": "[amazed] Wah, kamu dapat kepingan memori ilmuwan!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -332,6 +373,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mau tantangan apa? Pilih satu ya.",
+    "tts": "[cheerful] Mau tantangan apa? Pilih satu ya.",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -340,6 +382,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini album stikermu!",
+    "tts": "[cheerful] Ini album stikermu!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -348,6 +391,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Energi Pintar menyala! Kostummu makin kuat.",
+    "tts": "[excited] Energi Pintar menyala! Kostummu makin kuat!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -356,6 +400,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Layar Nino menyala! Ayo main Tantangan Pintar.",
+    "tts": "[cheerful] Layar Nino menyala! Ayo main Tantangan Pintar!",
     "source": "audio/dialog.json",
     "category": "quiz_nino"
   },
@@ -364,6 +409,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa apel?",
+    "tts": "[playful] Ada berapa apel?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -372,6 +418,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa bintang?",
+    "tts": "[curious] Ada berapa bintang?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -380,6 +427,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa kucing?",
+    "tts": "[playful] Ada berapa kucing?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -388,6 +436,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa ikan?",
+    "tts": "[cheerful] Ada berapa ikan?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -396,6 +445,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa bola?",
+    "tts": "[curious] Ada berapa bola?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -404,6 +454,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa balon?",
+    "tts": "[cheerful] Ada berapa balon?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -412,6 +463,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa bintang?",
+    "tts": "[cheerful] Ada berapa bintang?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -420,6 +472,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada berapa pisang?",
+    "tts": "[cheerful] Ada berapa pisang?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -428,6 +481,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa bakpao semuanya?",
+    "tts": "[cheerful] Berapa bakpao semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -436,6 +490,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa kucing semuanya?",
+    "tts": "[playful] Berapa kucing semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -444,6 +499,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa ikan semuanya?",
+    "tts": "[curious] Berapa ikan semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -452,6 +508,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa bola semuanya?",
+    "tts": "[curious] Berapa bola semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -460,6 +517,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa balon semuanya?",
+    "tts": "[cheerful] Berapa balon semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -468,6 +526,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa bintang semuanya?",
+    "tts": "[cheerful] Berapa bintang semuanya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -476,6 +535,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[cheerful] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -484,6 +544,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[cheerful] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -492,6 +553,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[curious] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -500,6 +562,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[cheerful] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -508,6 +571,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[cheerful] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -516,6 +580,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Berapa hasil tambahnya?",
+    "tts": "[playful] Berapa hasil tambahnya?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -524,6 +589,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya kucing?",
+    "tts": "[curious] Apa bahasa Inggrisnya kucing?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -532,6 +598,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya anjing?",
+    "tts": "[curious] Apa bahasa Inggrisnya anjing?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -540,6 +607,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya burung?",
+    "tts": "[curious] Apa bahasa Inggrisnya burung?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -548,6 +616,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya ikan?",
+    "tts": "[curious] Apa bahasa Inggrisnya ikan?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -556,6 +625,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya apel?",
+    "tts": "[cheerful] Apa bahasa Inggrisnya apel?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -564,6 +634,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya jeruk?",
+    "tts": "[cheerful] Apa bahasa Inggrisnya jeruk?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -572,6 +643,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya bola?",
+    "tts": "[curious] Apa bahasa Inggrisnya bola?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -580,6 +652,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya buku?",
+    "tts": "[curious] Apa bahasa Inggrisnya buku?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -588,14 +661,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[curious] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_009_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Dog!",
+    "tts": "[cheerful] Dog!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -604,14 +679,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[curious] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_010_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Apple!",
+    "tts": "[cheerful] Apple!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -620,14 +697,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[curious] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_011_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Fish!",
+    "tts": "[cheerful] Fish!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -636,14 +715,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[curious] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_012_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Bird!",
+    "tts": "[cheerful] Bird!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -652,14 +733,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[curious] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_013_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Ball!",
+    "tts": "[cheerful] Ball!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -668,14 +751,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[cheerful] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_014_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Banana!",
+    "tts": "[cheerful] Banana!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -684,14 +769,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[cheerful] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_015_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Red!",
+    "tts": "[cheerful] Red!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -700,6 +787,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya ayah?",
+    "tts": "[curious] Apa bahasa Inggrisnya ayah?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -708,14 +796,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[cheerful] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_017_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Mother!",
+    "tts": "[cheerful] Mother!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -724,6 +814,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya sekolah?",
+    "tts": "[curious] Apa bahasa Inggrisnya sekolah?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -732,6 +823,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Apa bahasa Inggrisnya pensil?",
+    "tts": "[cheerful] Apa bahasa Inggrisnya pensil?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
@@ -740,14 +832,16 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Nino bilang apa? Pilih gambarnya!",
+    "tts": "[cheerful] Nino bilang apa? Pilih gambarnya!",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
   },
   {
     "id": "quiz_inggris_020_kata",
-    "speaker": "nino",
+    "speaker": "english",
     "lang": "en",
     "text": "Table!",
+    "tts": "[cheerful] Table!",
     "source": "src/data/quiz/inggris.json",
     "category": "speak_en"
   },
@@ -756,6 +850,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Artinya apa, ya?",
+    "tts": "[curious] Artinya apa, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -764,6 +859,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "你好",
+    "tts": "[cheerful] 你好",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -772,6 +868,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Artinya apa, ya?",
+    "tts": "[curious] Artinya apa, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -780,6 +877,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "谢谢",
+    "tts": "[cheerful] 谢谢",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -788,6 +886,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Artinya apa, ya?",
+    "tts": "[cheerful] Artinya apa, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -796,6 +895,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "再见",
+    "tts": "[cheerful] 再见",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -804,6 +904,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Angka ini artinya apa?",
+    "tts": "[cheerful] Angka ini artinya apa?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -812,6 +913,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "三",
+    "tts": "[cheerful] 三！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -820,6 +922,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Angka ini artinya apa?",
+    "tts": "[curious] Angka ini artinya apa?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -828,6 +931,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "五",
+    "tts": "[cheerful] 五！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -836,6 +940,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Angka ini artinya apa?",
+    "tts": "[curious] Angka ini artinya apa?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -844,6 +949,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "八",
+    "tts": "[cheerful] 八！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -852,6 +958,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Angka ini artinya apa?",
+    "tts": "[cheerful] Angka ini artinya apa?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -860,6 +967,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "十",
+    "tts": "[cheerful] 十",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -868,6 +976,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -876,6 +985,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "红色",
+    "tts": "[cheerful] 红色",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -884,6 +994,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -892,6 +1003,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "蓝色",
+    "tts": "[cheerful] 蓝色",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -900,6 +1012,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[curious] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -908,6 +1021,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "黄色",
+    "tts": "[cheerful] 黄色",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -916,6 +1030,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -924,6 +1039,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "绿色",
+    "tts": "绿色。",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -932,6 +1048,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -940,6 +1057,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "狮子",
+    "tts": "[cheerful] 狮子",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -948,6 +1066,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[curious] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -956,6 +1075,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "猫",
+    "tts": "[cheerful] 猫",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -964,6 +1084,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -972,6 +1093,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "狗",
+    "tts": "[cheerful] 狗！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -980,6 +1102,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[curious] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -988,6 +1111,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "家",
+    "tts": "[cheerful] 家！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -996,6 +1120,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -1004,6 +1129,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "学校",
+    "tts": "[cheerful] 学校",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -1012,6 +1138,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[cheerful] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -1020,6 +1147,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "银行",
+    "tts": "[cheerful] 银行",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -1028,6 +1156,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang benar, ya?",
+    "tts": "[curious] Pilih gambar yang benar, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -1036,6 +1165,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "医院",
+    "tts": "[cheerful] 医院",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -1044,6 +1174,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Warna Barongsai ini artinya apa?",
+    "tts": "[curious] Warna Barongsai ini artinya apa?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -1052,6 +1183,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "红色",
+    "tts": "[cheerful] 红色",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -1060,6 +1192,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini artinya apa, ya?",
+    "tts": "[cheerful] Ini artinya apa, ya?",
     "source": "src/data/quiz/mandarin.json",
     "category": "quiz_mandarin"
   },
@@ -1068,6 +1201,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "银行",
+    "tts": "[cheerful] 银行",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -1076,6 +1210,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[curious] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1084,6 +1219,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[playful] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1092,6 +1228,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[curious] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1100,6 +1237,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[curious] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1108,6 +1246,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[playful] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1116,6 +1255,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[curious] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1124,6 +1264,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Dengarkan suaranya. Siapa itu?",
+    "tts": "[playful] Dengarkan suaranya. Siapa itu?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1132,6 +1273,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[curious] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1140,6 +1282,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[curious] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1148,6 +1291,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[curious] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1156,6 +1300,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[curious] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1164,6 +1309,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[curious] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1172,6 +1318,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[playful] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1180,6 +1327,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ini bayangan siapa, ya?",
+    "tts": "[playful] Ini bayangan siapa, ya?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1188,6 +1336,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku punya belalai panjang. Siapa aku?",
+    "tts": "[curious] Aku punya belalai panjang. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1196,6 +1345,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku punya telinga panjang. Siapa aku?",
+    "tts": "[playful] Aku punya telinga panjang. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1204,6 +1354,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku berenang dan punya sirip. Siapa aku?",
+    "tts": "[playful] Aku berenang dan punya sirip. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1212,6 +1363,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku suka bergelantungan di pohon. Siapa aku?",
+    "tts": "[curious] Aku suka bergelantungan di pohon. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1220,6 +1372,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku berkokok setiap pagi. Siapa aku?",
+    "tts": "[playful] Aku berkokok setiap pagi. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1228,6 +1381,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Aku berbelang dan mengaum. Siapa aku?",
+    "tts": "[playful] Aku berbelang dan mengaum. Siapa aku?",
     "source": "src/data/quiz/hewan.json",
     "category": "quiz_hewan"
   },
@@ -1236,6 +1390,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf b?",
+    "tts": "[cheerful] Mana huruf b?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1244,6 +1399,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf a?",
+    "tts": "[curious] Mana huruf a?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1252,6 +1408,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf m?",
+    "tts": "[curious] Mana huruf m?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1260,6 +1417,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf k?",
+    "tts": "[cheerful] Mana huruf k?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1268,6 +1426,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf p?",
+    "tts": "[curious] Mana huruf p?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1276,6 +1435,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf i?",
+    "tts": "[curious] Mana huruf i?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1284,6 +1444,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf s?",
+    "tts": "[curious] Mana huruf s?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1292,6 +1453,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata bu?",
+    "tts": "[curious] Mana suku kata bu?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1300,6 +1462,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ka?",
+    "tts": "[curious] Mana suku kata ka?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1308,6 +1471,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ba?",
+    "tts": "[curious] Mana suku kata ba?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1316,6 +1480,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata bo?",
+    "tts": "[cheerful] Mana suku kata bo?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1324,6 +1489,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ki?",
+    "tts": "[curious] Mana suku kata ki?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1332,6 +1498,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ku?",
+    "tts": "[cheerful] Mana suku kata ku?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1340,6 +1507,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[curious] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1348,6 +1516,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[cheerful] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1356,6 +1525,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[cheerful] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1364,6 +1534,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[curious] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1372,6 +1543,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[curious] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1380,6 +1552,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[cheerful] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -1388,6 +1561,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Pilih gambar yang sesuai kata ini.",
+    "tts": "[curious] Pilih gambar yang sesuai kata ini.",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   }
