@@ -46,6 +46,8 @@ export interface SaveData {
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
+  /** Kota Botanica, package D3: ids of the coins taken and of the missions done (both survive reloads). */
+  city: { coins: string[]; missions: string[] };
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -113,6 +115,7 @@ function defaults(): SaveData {
     where: '',
     doneAt: {},
     quiz: defaultQuiz(),
+    city: { coins: [], missions: [] },
   };
 }
 
@@ -158,6 +161,12 @@ function sanitize(raw: unknown): SaveData {
   }
   if (r.lastMode === 'glen' || r.lastMode === 'superglen') out.lastMode = r.lastMode;
   out.quiz = sanitizeQuiz(r.quiz);
+  if (typeof r.city === 'object' && r.city !== null) {
+    const c = r.city as Record<string, unknown>;
+    const ids = (v: unknown, max: number): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.length < 40))].slice(0, max) : []);
+    out.city.coins = ids(c.coins, 1000);
+    out.city.missions = ids(c.missions, 100);
+  }
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
@@ -290,6 +299,22 @@ export class SaveStore {
   discoverLab(): void {
     if (this.data.discovered.lab) return;
     this.data.discovered.lab = true;
+    this.persist();
+  }
+
+  /** City coin taken (once per id): it is also one more coin in the shared total. Returns false when it was already taken. */
+  takeCityCoin(id: string): boolean {
+    if (this.data.city.coins.includes(id)) return false;
+    this.data.city.coins.push(id);
+    this.data.quiz.coins += 1;
+    this.persist();
+    return true;
+  }
+
+  /** A resident's mission was done: remember it and pay `coins` into the shared total. */
+  finishCityMission(id: string, coins: number): void {
+    if (!this.data.city.missions.includes(id)) this.data.city.missions.push(id);
+    this.data.quiz.coins += coins;
     this.persist();
   }
 

@@ -71,6 +71,8 @@ export interface LevelGame {
    * `persist: true` also writes the unlocked ones into the save (use `ctx.save.unlockSkill` for story unlocks).
    */
   setSkills(skills: { laser?: boolean; shield?: boolean; fly?: boolean }, persist?: boolean): void;
+  /** The city's bike: touch layout shows a bell on the big button while riding (reset on every level load). */
+  setRiding(on: boolean): void;
   /** Older name: touch buttons for laser and shield (same as `setSkills({ laser, shield })`). */
   setSkillButtons(skills: { laser: boolean; shield: boolean }): void;
   /** Pulse a touch button ("press me now"). Cleared on every level load. No effect without touch UI. */

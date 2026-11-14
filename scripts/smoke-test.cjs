@@ -8113,6 +8113,419 @@ async function gamepadDebugScenario(page, check) {
   check('gamepad debug: overlay lists pad id, mapping, axes and pressed buttons', /054c/.test(t) && /mapping ""/.test(t) && /table dualsense/.test(t) && /axes: 0\.50/.test(t) && /buttons: 1/.test(t), t.replace(/\n/g, ' | '));
 }
 
+// ---- Kota Botanica D3 (coins, bike, residents and missions, signposts, map icons): group `kota-d3` --------------------------------
+
+/** Frames with promise continuations flushed in between (dialogs and missions are promise driven). */
+const d3Adv = (page, n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+const d3Info = (page) => page.evaluate(() => ({ ...window.__superglen.levelInfo, roofSamples: undefined }));
+const d3Hold = async (page, key, frames) => {
+  await page.keyboard.down(key);
+  await d3Adv(page, frames);
+  await page.keyboard.up(key);
+};
+/** One press of a key as a single latched edge (E, Q, Space). */
+const d3Press = async (page, key, frames = 3) => {
+  await page.keyboard.down(key);
+  await d3Adv(page, 2);
+  await page.keyboard.up(key);
+  await d3Adv(page, frames);
+};
+const d3Player = (page) => page.evaluate(() => { const g = window.__superglen; return { x: g.player.x, y: g.player.y, z: g.player.z, feet: g.feetY, mode: g.mode, jumps: g.jumps, grounded: g.grounded }; });
+/** Teleport the player to a ground spot and let the world settle. */
+const d3Go = (page, x, z, frames = 8) => page.evaluate(([x, z, n]) => { const g = window.__superglen; g.placePlayer(x, z); g.advance(n, false); }, [x, z, frames]);
+const d3Talk = async (page, id) => {
+  const r = await page.evaluate((id) => window.__d3.people().find((p) => p.id === id), id);
+  await d3Go(page, r.x, r.z + 1.7, 10);
+  await d3Press(page, 'e', 3);
+  return r;
+};
+/** Distance walked holding W (camera yaw 0 = north) for `frames` fixed steps from a standstill, measured over the last second. */
+async function d3Speed(page, frames = 150) {
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await page.keyboard.down('w');
+  await d3Adv(page, frames - 60);
+  const a = await d3Player(page);
+  await d3Adv(page, 60);
+  const b = await d3Player(page);
+  await page.keyboard.up('w');
+  await d3Adv(page, 40);
+  return Math.hypot(b.x - a.x, b.z - a.z);
+}
+
+async function kotaD3Scenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const report = (label, v) => console.log(`   [kota-d3 ${touch ? 'touch' : 'desktop'}] ${label}: ${v}`);
+  await kotaBoot(page, touch);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.sfx.reset(); });
+  await d3Adv(page, 30);
+  const P = await page.evaluate(() => { const p = window.__d3.places(); return { coins: p.coins, bikes: p.bikes, residents: p.residents, missions: p.missions, signs: p.signs, dests: p.signDests }; });
+  const info0 = await d3Info(page);
+
+  // ---- Coins ----
+  const fly = P.coins.filter((c) => c.kind === 'fly');
+  const roofs = P.coins.filter((c) => c.kind === 'roof' || c.kind === 'route' || c.kind === 'tower');
+  const districts = new Set(P.coins.filter((c) => c.kind === 'street' || c.kind === 'park').map((c) => `${Math.floor((c.x + 50) / 100)},${Math.floor((c.z + 50) / 100)}`));
+  report('coins', `${P.coins.length} (${fly.length} flight-only, ${roofs.length} on roofs / routes / towers), ${districts.size} city cells with ground coins`);
+  check(`kota-d3 ${tag}: about 150-250 coins in the city (${P.coins.length}), ids unique, all districts have some`, P.coins.length >= 150 && P.coins.length <= 250 && new Set(P.coins.map((c) => c.id)).size === P.coins.length && info0.d3CoinTotal === P.coins.length && districts.size >= 7, JSON.stringify({ n: P.coins.length, cells: districts.size, level: info0.d3CoinTotal }));
+  check(`kota-d3 ${tag}: coins sit in every kind of spot: streets, rooftops, landmark tops and flight-only trails`, ['street', 'park', 'roof', 'route', 'tower', 'fly'].every((k) => P.coins.some((c) => c.kind === k)) && fly.length >= 15 && fly.every((c) => c.y >= 6), `${fly.length} flight`);
+  check(`kota-d3 ${tag}: coins are streamed with chunks (only the near ones are instanced: 0 < ${info0.d3CoinsVisible} < ${P.coins.length / 2})`, info0.d3CoinsVisible >= 0 && info0.d3CoinsVisible < P.coins.length / 2, String(info0.d3CoinsVisible));
+  // Pick two neighbouring street coins of one trail.
+  const trailA = P.coins.find((c, i) => c.kind === 'street' && P.coins[i + 1] && P.coins[i + 1].id.split('.')[0] === c.id.split('.')[0]);
+  const trailB = P.coins[P.coins.indexOf(trailA) + 1];
+  await d3Go(page, trailA.x - 6, trailA.z, 10);
+  const before = await page.evaluate(() => ({ coins: window.__superglen.save.data.quiz.coins, taken: window.__superglen.levelInfo.d3Coins, sfx: window.__superglen.sfx.logCount }));
+  await d3Go(page, trailA.x, trailA.z, 4);
+  await d3Go(page, trailB.x, trailB.z, 4);
+  const after = await page.evaluate(() => {
+    const g = window.__superglen;
+    const hud = document.querySelector('.coin-hud');
+    return { coins: g.save.data.quiz.coins, taken: g.levelInfo.d3Coins, hud: hud ? hud.textContent : '', shown: hud ? hud.classList.contains('show') : false, ids: g.save.data.city.coins.slice(), coinSfx: g.sfx.log.filter((e) => e.id === 'coin').map((e) => e.hz) };
+  });
+  check(`kota-d3 ${tag}: taking two coins raises the city count by 2 and the HUD coin counter (${before.coins} -> ${after.coins}, HUD "${after.hud}")`, after.taken === before.taken + 2 && after.coins === before.coins + 2 && after.shown && after.hud.trim() === String(after.coins) && after.ids.includes(trailA.id) && after.ids.includes(trailB.id), JSON.stringify(after));
+  check(`kota-d3 ${tag}: the coin sound rises in pitch for two coins in a row`, after.coinSfx.length >= 2 && after.coinSfx[after.coinSfx.length - 1] > after.coinSfx[after.coinSfx.length - 2], JSON.stringify(after.coinSfx.slice(-3)));
+  const gone = await page.evaluate(([a, b]) => window.__d3.coins().filter((c) => c.id === a || c.id === b).every((c) => c.gone), [trailA.id, trailB.id]);
+  check(`kota-d3 ${tag}: a taken coin is gone from the world`, gone);
+  // A flight-only coin: taken in the air at its height.
+  const fc = fly[0];
+  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.teleportFeet(x, y - 0.85, z); g.advance(2, false); }, [fc.x, fc.y, fc.z]);
+  check(`kota-d3 ${tag}: a flight-only coin is taken in the air`, await page.evaluate((id) => window.__d3.coins().find((c) => c.id === id).gone, fc.id), fc.id);
+  await page.evaluate(() => { const g = window.__superglen; for (let i = 0; i < 300 && !g.grounded; i++) g.advance(1, false); g.game.setPlayerMode('glen'); });
+  // A rooftop coin reached by climbing (real jumps: rhythm taps, steering, the air jump).
+  const groups = {};
+  for (const c of P.coins) if (c.id.startsWith('R:') && c.id.includes('-house-')) (groups[c.id.split('.')[0]] ??= {})[c.id.split('.')[1]] = c;
+  const cands = Object.entries(groups).filter(([, g]) => g['0'] && g['1']);
+  const d = makeArenaDriver(page);
+  let climbed = null;
+  for (const [gid, g] of cands.slice(0, 8)) {
+    const roof = g['0'];
+    const aw = g['1'];
+    const ox = aw.x - roof.x;
+    const oz = aw.z - roof.z;
+    const len = Math.hypot(ox, oz);
+    const sx = aw.x + (ox / len) * 3.2;
+    const sz = aw.z + (oz / len) * 3.2;
+    await d.stand(sx, 0, sz, 0, 4);
+    await d.rhythmTo(1);
+    await d.dash(aw.x, aw.z, { useDouble: true });
+    const onAwning = d.last.grounded && d.last.y > 2.2;
+    if (!onAwning) continue;
+    await d.step(100);
+    await d.rhythmTo(1);
+    await d.dash(roof.x, roof.z, { useDouble: true });
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [roof.x, roof.z]);
+    await d.step(150);
+    await d.cancelWalk();
+    const got = await page.evaluate((id) => window.__d3.coins().find((c) => c.id === id).gone, roof.id);
+    climbed = { gid, got, y: d.last.y, roofY: roof.y };
+    if (got) break;
+  }
+  report('climb', JSON.stringify(climbed));
+  check(`kota-d3 ${tag}: a rooftop coin is taken by really climbing a house (awning, then the roof)`, climbed && climbed.got, JSON.stringify(climbed));
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen'); g.rhythm.setCap(4); });
+  await d3Go(page, trailB.x, trailB.z + 14, 20);
+  await uiShot(page, `kota-d3-coins-${touch ? 'touch' : 'desktop'}`);
+
+  // ---- Bike ----
+  const bk = P.bikes[1];
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen'); });
+  await d3Go(page, bk.x + 3, bk.z + 8, 30);
+  const walk = await d3Speed(page);
+  await d3Go(page, bk.x, bk.z + 1.5, 20);
+  const mountKey = async () => {
+    if (!touch) return d3Press(page, 'e', 6);
+    const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="interact"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  };
+  const bellKey = async () => {
+    if (!touch) return d3Press(page, 'Space', 4);
+    const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="jump"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  };
+  check(`kota-d3 ${tag}: the parked bike shows the hand prompt for Glen`, await page.evaluate(() => window.__superglen.prompt.inRange === true && window.__superglen.prompt.icon === 'hand'));
+  await mountKey();
+  let s = await d3Info(page);
+  check(`kota-d3 ${tag}: the interact button gets on the bike (riding, one mount)`, s.d3Riding === true && s.d3Mounts === 1, JSON.stringify({ r: s.d3Riding, m: s.d3Mounts }));
+  if (touch) {
+    const ui = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="jump"]'); const r = b.getBoundingClientRect(); return { bell: b.innerHTML.includes('cy="54"'), w: r.width, h: r.height }; });
+    check('kota-d3 touch: the big button shows a bell while riding and stays >= 80 x 80', ui.bell && ui.w >= 80 && ui.h >= 80, JSON.stringify(ui));
+  }
+  const j0 = (await d3Player(page)).jumps;
+  const bells0 = s.d3Bells;
+  await bellKey();
+  s = await d3Info(page);
+  check(`kota-d3 ${tag}: the jump button rings the bell and does not jump on the bike`, s.d3Bells === bells0 + 1 && (await d3Player(page)).jumps === j0, JSON.stringify({ bells: s.d3Bells, jumps: (await d3Player(page)).jumps }));
+  const bellSfx = await page.evaluate(() => window.__superglen.sfx.log.some((e) => e.id === 'bell'));
+  check(`kota-d3 ${tag}: the bell sound played (procedural sfx)`, bellSfx);
+  await d3Go(page, bk.x + 3, bk.z + 8, 30).catch(() => undefined);
+  const ride = await d3Speed(page);
+  report('speed', `walk ${(walk / 1).toFixed(2)} m/s  bike ${ride.toFixed(2)} m/s`);
+  check(`kota-d3 ${tag}: the bike is faster than walking (${ride.toFixed(1)} vs ${walk.toFixed(1)} m/s)`, ride > walk * 1.3 && ride < 11, `${ride.toFixed(2)} vs ${walk.toFixed(2)}`);
+  await uiShot(page, `kota-d3-bike-${touch ? 'touch' : 'desktop'}`);
+  // Cannot climb: riding into a house wall does not lift the bike (no jump, no mantle).
+  const jb = await d3Player(page);
+  await page.keyboard.down('Space');
+  await d3Adv(page, 20);
+  await page.keyboard.up('Space');
+  const ja = await d3Player(page);
+  check(`kota-d3 ${tag}: the bike cannot jump or climb (feet stay on the ground, ${ja.feet.toFixed(2)} m)`, ja.feet < 0.4 && ja.jumps === jb.jumps, JSON.stringify(ja));
+  // Get off: same button; the bike stays where it was left.
+  const at = await d3Player(page);
+  await mountKey();
+  s = await d3Info(page);
+  const parked = await page.evaluate(() => window.__d3.bikes());
+  const near = parked.some((b) => !b.riding && Math.hypot(b.x - at.x, b.z - at.z) < 2.5);
+  check(`kota-d3 ${tag}: the same button gets off; the bike is parked beside the player`, s.d3Riding === false && s.d3Dismounts === 1 && near, JSON.stringify({ r: s.d3Riding, parked: parked.map((b) => [b.x.toFixed(1), b.z.toFixed(1)]) }));
+  if (touch) check('kota-d3 touch: the big button is the jump arrow again after getting off', await page.evaluate(() => !document.querySelector('.tc-button[data-action="jump"]').innerHTML.includes('cy="54"')));
+  await d3Adv(page, 40);
+  // Transform dismounts (and Superglen cannot get on).
+  await mountKey();
+  s = await d3Info(page);
+  const rode = s.d3Riding === true;
+  await page.evaluate(() => window.__superglen.game.setTransformAllowed(true));
+  if (!touch) await d3Press(page, 'q', 6);
+  else {
+    const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="transform"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  }
+  s = await d3Info(page);
+  const pl = await d3Player(page);
+  check(`kota-d3 ${tag}: turning into Superglen gets off the bike by itself`, rode && pl.mode === 'superglen' && s.d3Riding === false, JSON.stringify({ rode, mode: pl.mode, riding: s.d3Riding }));
+  const m0 = s.d3Mounts;
+  await d3Go(page, parked.find((b) => !b.riding).x, parked.find((b) => !b.riding).z + 1.2, 30);
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
+  await mountKey();
+  s = await d3Info(page);
+  check(`kota-d3 ${tag}: Superglen cannot get on a bike`, s.d3Riding === false && s.d3Mounts === m0, JSON.stringify({ r: s.d3Riding, m: s.d3Mounts }));
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen'));
+
+  // ---- Signposts ----
+  const lab = await page.evaluate(() => ({ x: window.__superglen.levelInfo.labX, z: window.__superglen.levelInfo.labZ }));
+  const nearLab = P.signs.filter((sg) => Math.hypot(sg.x - lab.x, sg.z - lab.z) < 40);
+  const labDest = P.dests.filter((dd) => /barongsai|lab|gedung tua/i.test(dd.name + dd.id) || Math.hypot(dd.x - lab.x, dd.z - lab.z) < 30);
+  check(`kota-d3 ${tag}: ${P.signs.length} signposts (>= 6) with arms to Rumah Glen, Sekolah, Pasar, Alun-alun, Bank, Rumah Sakit`, P.signs.length >= 6 && info0.d3Signs === P.signs.length && P.signs.every((sg) => sg.arms.length >= 4) && ['Rumah Glen', 'Sekolah', 'Pasar', 'Alun-alun', 'Bank', 'Rumah Sakit'].every((n) => P.dests.some((dd) => dd.name === n)), JSON.stringify(P.dests.map((dd) => dd.name)));
+  check(`kota-d3 ${tag}: no signpost or board for the hidden old building (no post within 40 m of it, no board for it)`, nearLab.length === 0 && labDest.length === 0, JSON.stringify({ nearLab: nearLab.length, labDest: labDest.length }));
+  const sg0 = P.signs.find((sg) => Math.abs(sg.x) > 40) || P.signs[0];
+  await page.evaluate(([x, z]) => { const g = window.__superglen; g.placePlayer(x + 4, z + 9); g.setCameraYaw(Math.PI); g.advance(50, true); }, [sg0.x, sg0.z]);
+  await uiShot(page, `kota-d3-signpost-${touch ? 'touch' : 'desktop'}`);
+
+  // ---- Residents and one full mission ----
+  const people = await page.evaluate(() => window.__d3.people());
+  const dist = new Set(P.residents.map((r) => r.district));
+  report('residents', `${people.length} in ${dist.size} districts; missions ${P.missions.length}`);
+  check(`kota-d3 ${tag}: 6-10 residents (${people.length}) in different districts (${dist.size}), each with a short text-only mission (every line < 8 words)`, people.length >= 6 && people.length <= 10 && dist.size >= 4 && P.missions.every((m) => [m.offer, m.remind, m.done].every((t) => t.split(/\s+/).length <= 8)), JSON.stringify([...dist]));
+  check(`kota-d3 ${tag}: every resident starts with a mission available`, people.every((p) => p.available));
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen'));
+  const kit = P.missions.find((m) => m.id === 'kucing');
+  const giver = people.find((p) => p.mission === 'kucing');
+  const coins0 = await page.evaluate(() => window.__superglen.save.data.quiz.coins);
+  await d3Talk(page, giver.id);
+  await d3Adv(page, 8);
+  const line = await page.evaluate(() => document.querySelector('.dlg-text') ? document.querySelector('.dlg-text').textContent : '');
+  check(`kota-d3 ${tag}: talking to a resident shows the offer line (text only)`, line === kit.offer, line);
+  await uiShot(page, `kota-d3-talk-${touch ? 'touch' : 'desktop'}`);
+  await d3Adv(page, 260);
+  s = await d3Info(page);
+  const obj = await page.evaluate(() => ({ active: window.__superglen.objective.active, goal: window.__superglen.map.goal }));
+  check(`kota-d3 ${tag}: after the offer the mission is active, the beam and the map star point at the kitten`, s.d3Mission === 'kucing' && obj.active && obj.goal && Math.hypot(obj.goal.x - kit.items[0].x, obj.goal.z - kit.items[0].z) < 1, JSON.stringify({ m: s.d3Mission, obj }));
+  const avail = await page.evaluate(() => window.__d3.people().find((p) => p.mission === 'kucing').available);
+  check(`kota-d3 ${tag}: the giver no longer shows as available while the mission runs`, avail === false);
+  await d3Go(page, kit.items[0].x, kit.items[0].z, 6);
+  await d3Adv(page, 200);
+  const obj2 = await page.evaluate(() => ({ active: window.__superglen.objective.active, goal: window.__superglen.map.goal }));
+  check(`kota-d3 ${tag}: the kitten is taken; the beam and star now point back at the giver`, obj2.goal && Math.hypot(obj2.goal.x - giver.x, obj2.goal.z - giver.z) < 1, JSON.stringify(obj2));
+  await d3Talk(page, giver.id);
+  await d3Adv(page, 260);
+  s = await d3Info(page);
+  const done = await page.evaluate(() => { const g = window.__superglen; return { missions: g.save.data.city.missions.slice(), coins: g.save.data.quiz.coins, toast: document.querySelector('.city-star') ? document.querySelector('.city-star').className : '', obj: g.objective.active }; });
+  check(`kota-d3 ${tag}: handing it back finishes the mission: coins +${kit.reward} (${coins0} -> ${done.coins}), celebration, saved as done, beam off`, s.d3Finished === 1 && done.missions.includes('kucing') && done.coins === coins0 + kit.reward && !done.obj && s.d3Mission === '', JSON.stringify(done));
+  await uiShot(page, `kota-d3-reward-${touch ? 'touch' : 'desktop'}`);
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).city);
+  check(`kota-d3 ${tag}: the finished mission is in the stored save file`, stored.missions.includes('kucing'), JSON.stringify(stored.missions));
+  check(`kota-d3 ${tag}: a finished mission is not offered again`, (await page.evaluate(() => window.__d3.people().find((p) => p.mission === 'kucing').available)) === false);
+
+  // ---- Dropping a mission: start apples, talk to another giver, answer Tidak then Ya ----
+  const joko = people.find((p) => p.mission === 'apel');
+  const sari2 = people.find((p) => p.mission === 'bola');
+  await d3Talk(page, joko.id);
+  await d3Adv(page, 260);
+  s = await d3Info(page);
+  check(`kota-d3 ${tag}: another mission (5 apples) is started`, s.d3Mission === 'apel', s.d3Mission);
+  await d3Talk(page, sari2.id);
+  await d3Adv(page, 5);
+  const q1 = await page.evaluate(() => { const y = document.querySelector('.yn'); const b = [...document.querySelectorAll('.yn-btn')].map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }); return { open: !!y && !y.hidden, b, controls: window.__superglen.controlsEnabled }; });
+  check(`kota-d3 ${tag}: talking to another giver asks Ya / Tidak (two big buttons >= 80 px, controls locked)`, q1.open && q1.b.length === 2 && q1.b.every(([w, h]) => w >= 80 && h >= 80) && q1.controls === false, JSON.stringify(q1));
+  await uiShot(page, `kota-d3-yesno-${touch ? 'touch' : 'desktop'}`);
+  // Tidak: the default choice keeps the running mission.
+  await d3Adv(page, 30);
+  if (touch) { const r = await page.evaluate(() => { const b = document.querySelector('.yn-btn.no').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }); await page.touchscreen.tap(r[0], r[1]); await d3Adv(page, 4); } else await d3Press(page, 'e', 4);
+  s = await d3Info(page);
+  check(`kota-d3 ${tag}: Tidak keeps the running mission`, s.d3Mission === 'apel' && s.d3Dropped === 0 && (await page.evaluate(() => document.querySelector('.yn').hidden)), JSON.stringify({ m: s.d3Mission, d: s.d3Dropped }));
+  await d3Adv(page, 260);
+  // Ya: drops it and starts the new one.
+  await d3Talk(page, sari2.id);
+  await d3Adv(page, 40);
+  if (touch) { const r = await page.evaluate(() => { const b = document.querySelector('.yn-btn.yes').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }); await page.touchscreen.tap(r[0], r[1]); await d3Adv(page, 4); } else { await d3Hold(page, 'a', 4); await d3Adv(page, 4); await d3Press(page, 'e', 4); }
+  await d3Adv(page, 260);
+  s = await d3Info(page);
+  const apelAvail = await page.evaluate(() => window.__d3.people().find((p) => p.mission === 'apel').available);
+  check(`kota-d3 ${tag}: Ya drops the apples and starts the ball mission (only one at a time; the dropped one is available again)`, s.d3Mission === 'bola' && s.d3Dropped === 1 && apelAvail === true, JSON.stringify({ m: s.d3Mission, d: s.d3Dropped, apelAvail }));
+
+  // ---- Map icons (mini map and full map) ----
+  // Count the pixels of a colour in a window around a world spot (icons may overlap a landmark glyph a little).
+  const pix = (sel, x, z, kind) => page.evaluate(([sel, x, z, kind]) => {
+    const cv = document.querySelector(sel);
+    const k = cv.width / 300;
+    const g = cv.getContext('2d');
+    const w = Math.round(cv.width * 0.03);
+    const px = Math.round((x + 150) * k) - w;
+    const py = Math.round((z + 150) * k) - w;
+    const d = g.getImageData(Math.max(0, px), Math.max(0, py), 2 * w + 1, 2 * w + 1).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], gg = d[i + 1], b = d[i + 2];
+      if (kind === 'orange' ? r > 235 && gg > 135 && gg < 185 && b < 60 : r < 70 && gg > 180 && gg < 215 && b > 160 && b < 200) n++;
+    }
+    return n;
+  }, [sel, x, z, kind]);
+  const orange = (n) => n >= 6;
+  const live = await page.evaluate(() => window.__d3.people());
+  const open2 = live.filter((p) => p.available);
+  const gone2 = live.filter((p) => !p.available);
+  await d3Adv(page, 4);
+  const miniOn = [];
+  for (const p of open2) miniOn.push(orange(await pix('.minimap-base', p.x, p.z, 'orange')));
+  const miniOff = [];
+  for (const p of gone2) miniOff.push(orange(await pix('.minimap-base', p.x, p.z, 'orange')));
+  report('mini map icons', `${miniOn.filter(Boolean).length}/${open2.length} available shown, ${miniOff.filter(Boolean).length}/${gone2.length} unavailable shown`);
+  check(`kota-d3 ${tag}: the mini map shows an icon at every resident with a mission to give (${miniOn.filter(Boolean).length}/${open2.length}) and none at the busy / finished ones`, open2.length >= 5 && miniOn.every(Boolean) && miniOff.every((v) => !v), JSON.stringify({ on: miniOn, off: miniOff }));
+  const bikeMini = [];
+  for (const b of P.bikes) bikeMini.push(await pix('.minimap-base', b.x, b.z, 'teal'));
+  check(`kota-d3 ${tag}: bikes are not on the mini map`, bikeMini.every((n) => n < 3), JSON.stringify(bikeMini));
+  await uiShot(page, `kota-d3-minimap-${touch ? 'touch' : 'desktop'}`);
+  await menuHit(page, '.set-gear', touch);
+  await menuHit(page, '[data-act=map]', touch);
+  await sleep(300);
+  const bikesNow = await page.evaluate(() => window.__d3.bikes().filter((b) => !b.riding));
+  const fullOn = [];
+  for (const p of open2) fullOn.push(orange(await pix('.fullmap-base', p.x, p.z, 'orange')));
+  const bikeFull = [];
+  for (const b of bikesNow) bikeFull.push(await pix('.fullmap-base', b.x, b.z, 'teal'));
+  check(`kota-d3 ${tag}: the full map shows the resident icons (${fullOn.filter(Boolean).length}/${open2.length}) and every parked bike (${bikesNow.length})`, fullOn.every(Boolean) && bikesNow.length === 3 && bikeFull.every((n) => n >= 6), JSON.stringify({ fullOn, bikeFull }));
+  await uiShot(page, `kota-d3-fullmap-${touch ? 'touch' : 'desktop'}`);
+  await menuHit(page, '.fullmap-close', touch);
+  await menuHit(page, '.settings-close', touch);
+}
+
+/** Gamepad pass: get on with Square, ride with the stick, bell on Cross, get off with Square. */
+async function kotaD3PadScenario(page, check) {
+  await page.waitForFunction(() => window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  await padDo(page, () => window.__pad.on('std'));
+  await sleep(400);
+  await padDo(page, () => window.__pad.btn('cross', true));
+  await sleep(500);
+  await padDo(page, () => window.__pad.btn('cross', false));
+  await sleep(300);
+  await padDo(page, () => window.__superglen.pause(true));
+  await padAdv(page, 5);
+  const bk = await page.evaluate(() => window.__d3.places().bikes[1]);
+  await d3Go(page, bk.x + 3, bk.z + 8, 30);
+  const padWalk = async (frames) => {
+    await padDo(page, () => { window.__superglen.setCameraYaw(0); window.__pad.left(0, -1); });
+    await padAdv(page, frames - 60);
+    const a = await padSt(page);
+    await padAdv(page, 60);
+    const b = await padSt(page);
+    await padDo(page, () => window.__pad.left(0, 0));
+    await padAdv(page, 40);
+    return Math.hypot(b.x - a.x, b.z - a.z);
+  };
+  const walk = await padWalk(150);
+  await d3Go(page, bk.x, bk.z + 1.5, 20);
+  const pr = await page.evaluate(() => window.__superglen.prompt);
+  check('kota-d3 pad: near the bike the prompt shows the hand icon with the Square glyph', pr.inRange && pr.icon === 'hand' && (await padCss(page, '.prompt-pad', 'display')) === 'block', JSON.stringify(pr));
+  await padTap(page, 'square', 3);
+  let s = await d3Info(page);
+  check('kota-d3 pad: Square gets on the bike', s.d3Riding === true && s.d3Mounts === 1, JSON.stringify({ r: s.d3Riding }));
+  await d3Go(page, bk.x + 3, bk.z + 8, 30);
+  const ride = await padWalk(150);
+  check(`kota-d3 pad: the stick rides faster than it walks (${ride.toFixed(1)} vs ${walk.toFixed(1)} m/s)`, ride > walk * 1.3, `${ride.toFixed(2)} vs ${walk.toFixed(2)}`);
+  const b0 = s.d3Bells;
+  const j0 = (await padSt(page)).jumps;
+  await padTap(page, 'cross', 3);
+  s = await d3Info(page);
+  check('kota-d3 pad: Cross rings the bell and does not jump', s.d3Bells === b0 + 1 && (await padSt(page)).jumps === j0, JSON.stringify({ bells: s.d3Bells }));
+  await padTap(page, 'square', 3);
+  s = await d3Info(page);
+  check('kota-d3 pad: Square gets off again', s.d3Riding === false && s.d3Dismounts === 1, JSON.stringify({ r: s.d3Riding }));
+  await padTap(page, 'square', 3);
+  s = await d3Info(page);
+  check('kota-d3 pad: one press never gets off and on again (re-mount waits a moment)', s.d3Mounts === 1, JSON.stringify({ m: s.d3Mounts }));
+}
+
+/** The city fills up only after Chapter 1: not during the walk, offers wait while the story's own beam is on, everything after Chapter 2. */
+async function kotaD3StoryScenario(page, check) {
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 20);
+  let s = await page.evaluate(() => ({ li: { ...window.__superglen.levelInfo, roofSamples: undefined }, d3: typeof window.__d3, save: window.__superglen.save.data.city }));
+  check('kota-d3 story: during the Chapter 1 walk there are no coins, bikes, residents or signposts', s.li.storyStep === 'walk' && s.d3 === 'undefined' && s.li.d3CoinTotal === undefined && s.li.d3Signs === undefined && s.save.coins.length === 0, JSON.stringify({ step: s.li.storyStep, d3: s.d3 }));
+  const open = async (data) => {
+    await page.evaluate((d) => localStorage.setItem('superglen.save.v1', JSON.stringify(d)), data);
+    await page.goto(URL + '?fps=0');
+    await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+    await sleep(900);
+    await page.mouse.click(640, 360);
+    await sleep(500);
+    await page.evaluate(() => window.__superglen.pause(true));
+    await d3Adv(page, 30);
+    return page.evaluate(() => ({ li: { ...window.__superglen.levelInfo, roofSamples: undefined }, d3: typeof window.__d3, people: window.__d3 ? window.__d3.people() : [], level: window.__superglen.level }));
+  };
+  const NONE = { laser: false, shield: false, fly: false };
+  const ALL = { laser: true, shield: true, fly: true };
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1'], skills: NONE, lastMode: 'superglen', discovered: { lab: true } });
+  check('kota-d3 story: Chapter 1 done: coins, bikes, residents and signposts are in the city', s.level === 'kota' && s.d3 === 'object' && s.li.d3CoinTotal > 150 && s.li.d3Signs >= 6 && s.li.d3Bikes === 3 && s.li.d3Residents >= 6, JSON.stringify({ c: s.li.d3CoinTotal, s: s.li.d3Signs }));
+  check('kota-d3 story: between Chapter 1 and 2 no mission is offered (the story beam is on the door)', s.people.every((p) => !p.available), JSON.stringify(s.people.map((p) => p.available)));
+  const r = s.people[0];
+  await d3Talk(page, r.id);
+  await d3Adv(page, 6);
+  const t = await page.evaluate(() => ({ line: document.querySelector('.dlg-text') ? document.querySelector('.dlg-text').textContent : '', m: window.__superglen.levelInfo.d3Mission, obj: window.__superglen.objective.active }));
+  check('kota-d3 story: a resident only waves then ("Halo, Glen!"), no mission, the story beam stays', t.line === 'Halo, Glen!' && t.m === '' , JSON.stringify(t));
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } });
+  check('kota-d3 story: after Chapter 2 every resident has a mission to give', s.people.length >= 6 && s.people.every((p) => p.available), JSON.stringify(s.people.map((p) => p.available)));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+
+/** Coins persist: take two, reload the page (no reset), they are still gone and the HUD total is still there. */
+async function kotaD3ReloadScenario(page, check) {
+  await kotaBoot(page, false);
+  await d3Adv(page, 20);
+  const P = await page.evaluate(() => window.__d3.places().coins.filter((c) => c.kind === 'street').slice(0, 3));
+  for (const c of P) await d3Go(page, c.x, c.z, 4);
+  const a = await page.evaluate(() => ({ n: window.__superglen.levelInfo.d3Coins, total: window.__superglen.save.data.quiz.coins, stored: JSON.parse(localStorage.getItem('superglen.save.v1')).city.coins.length }));
+  check('kota-d3 reload: three coins taken, counted and written to the save', a.n === 3 && a.total === 3 && a.stored === 3, JSON.stringify(a));
+  await page.goto(URL + '?level=kota&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 10);
+  const b = await page.evaluate((ids) => ({ n: window.__superglen.levelInfo.d3Coins, total: window.__superglen.save.data.quiz.coins, gone: window.__d3.coins().filter((c) => ids.includes(c.id)).map((c) => c.gone), hud: document.querySelector('.coin-hud b') ? document.querySelector('.coin-hud b').textContent : '', hudShown: document.querySelector('.coin-hud').classList.contains('show') }), P.map((c) => c.id));
+  check('kota-d3 reload: after a reload the taken coins stay gone, the count (3) and the HUD total (3) are still there', b.n === 3 && b.total === 3 && b.gone.every(Boolean) && b.hud === '3' && b.hudShown, JSON.stringify(b));
+  // Walking over the spot again takes nothing.
+  await d3Go(page, P[0].x, P[0].z, 6);
+  const c = await page.evaluate(() => window.__superglen.levelInfo.d3CoinsNow);
+  check('kota-d3 reload: walking over the empty spot takes nothing', c === 0, String(c));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -8259,6 +8672,12 @@ async function main() {
     results.push(await runScenario(browser, 'kota', { viewport: { width: 1280, height: 720 } }, kotaDesktopScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'kota-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaTouchScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'kota-perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaPerfScenario, '?level=kota&fps=0'));
+    // Package D3: coins, bike, residents and missions, signposts, map icons
+    results.push(await runScenario(browser, 'kota-d3', { viewport: { width: 1280, height: 720 } }, (p, c) => kotaD3Scenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-d3-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => kotaD3Scenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-d3-pad', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, kotaD3PadScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-d3-story', { viewport: { width: 1280, height: 720 } }, kotaD3StoryScenario, '?fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));

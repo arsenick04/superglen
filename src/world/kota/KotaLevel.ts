@@ -11,6 +11,7 @@ import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
 import { flow, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
+import { CityD3 } from './CityD3';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -51,6 +52,8 @@ export class KotaLevel implements Level {
   /** Mini map and full map data (the old building shows only after it was found). */
   map: MapSource | undefined;
   private cityMap!: CityMap;
+  /** Package D3 (coins, bikes, people, signposts): null during the Chapter 1 walk. */
+  d3: CityD3 | null = null;
 
   private ctx!: LevelContext;
   private streamer!: ChunkStreamer;
@@ -166,6 +169,9 @@ export class KotaLevel implements Level {
       onInteract: () => this.enterLab(),
     });
 
+    // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
+    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam);
+
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
@@ -230,8 +236,9 @@ export class KotaLevel implements Level {
     this.streamer.flushVisuals(x, z);
   }
 
-  fixedUpdate(): void {
+  fixedUpdate(dt = 1 / 60): void {
     this.story?.fixedUpdate();
+    this.d3?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
       const d = CITY_LAYOUT.lab.door;
@@ -253,6 +260,7 @@ export class KotaLevel implements Level {
       this.sun.target.position.copy(p);
     }
     this.hud.update(dt, p.x, p.z);
+    this.d3?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;

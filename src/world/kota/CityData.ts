@@ -1,6 +1,7 @@
 import { Parkour } from '../../config/parkour';
 import { PlayerConfig } from '../../player/PlayerConfig';
 import { topOf, type Building, type BuildingClass, type Foothold, type LevelReachData } from '../kits/ParkourData';
+import { generatePlaces, type CityPlaces } from './CityPlaces';
 
 /**
  * KOTA BOTANICA: the open-world city as PURE DATA (no three.js, no Rapier, no DOM). `CityBuilder.ts` turns it into meshes
@@ -272,6 +273,8 @@ export interface CityLayout {
   greenLinks: [string, string][];
   /** Chapter 1 in the city (see `kota/Chapter1Walk.ts`). */
   chapter1: Chapter1Data;
+  /** Package D3: coins, bikes, residents, missions, signposts (see `CityPlaces.ts`). */
+  places: CityPlaces;
 }
 
 /**
@@ -328,6 +331,7 @@ class Gen {
     spawn: { x: 0, y: 0, z: 22, yaw: Math.PI },
     greenLinks: [],
     chapter1: { start: { x: 0, y: 0, z: 0, yaw: 0 }, route: [], seeIndex: 0, fenceIndex: 0, bar: { x: 0, z: 0, w: 0, d: 0, h: 0 } },
+    places: { coins: [], bikes: [], residents: [], missions: [], signs: [], signDests: [], reachCoins: [] },
   };
   readonly rng: () => number;
   private n = 0;
@@ -1055,6 +1059,8 @@ export function generateCity(seed: number = CITY.seed): CityLayout {
       g.L.solids.push({ id, shape: 'hull', c: [x, hh.h / 2, z], s: [40, hh.h, 40], hull: pts, global: true, chunk: 0 });
     }
   }
+  // Package D3 content (last: it avoids every collider made above).
+  g.L.places = generatePlaces(g.L, { chunkIndex, districtAt, cellZone, flyHeight: CITY.flyHeight });
   return g.L;
 }
 
@@ -1071,7 +1077,7 @@ function reachData(L: CityLayout): LevelReachData {
   const footholds: Foothold[] = [];
   for (const s of L.solids) if (s.foothold) footholds.push(s.foothold);
   const buildings: Building[] = L.buildings.map((b) => ({ id: b.id, class: b.cls, roofIds: [b.roofId], wall: b.wall, level: b.level }));
-  return { id: 'kota', starts: ['ground'], footholds, buildings, coins: [], gates: [], greenLinks: L.greenLinks, compact: true };
+  return { id: 'kota', starts: ['ground'], footholds, buildings, coins: L.places.reachCoins, gates: [], greenLinks: L.greenLinks, compact: true };
 }
 
 export const KOTA_REACH: LevelReachData = reachData(CITY_LAYOUT);

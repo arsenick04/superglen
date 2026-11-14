@@ -117,6 +117,13 @@ export class Player {
   readonly flight: Flight;
   /** Multiplier on walking and flying speed (the raised shield sets 0.6 each fixed step). */
   speedScale = 1;
+  /**
+   * Riding a bike (city): faster, gentler start and stop, wide smooth turns, and no jumping (the jump button is the bell).
+   * Set by the city's bike system, null on foot. The numbers are `BikeConfig.ride`.
+   */
+  ride: { runSpeed: number; accel: number; decel: number; turnSpeed: number } | null = null;
+  /** Visual only: the body sits this much higher (m) on the saddle. */
+  rideLift = 0;
 
   private readonly world: RAPIER.World;
   private readonly controller: RAPIER.KinematicCharacterController;
@@ -364,7 +371,7 @@ export class Player {
       const dx = mx / len;
       const dy = my / len;
       const t = Math.min(1, len / C.analogFullAt);
-      const speed = (flyingNow ? FlightConfig.flySpeed : T.runSpeed) * this.speedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
+      const speed = (flyingNow ? FlightConfig.flySpeed : (this.ride ? this.ride.runSpeed : T.runSpeed)) * this.speedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
       this.wishDir.set(dx * cosY - dy * sinY, 0, -dx * sinY - dy * cosY);
       this.targetVel.copy(this.wishDir).multiplyScalar(speed);
     } else {
@@ -372,7 +379,7 @@ export class Player {
       this.targetVel.set(0, 0, 0);
     }
 
-    let rate: number = hasInput ? C.acceleration : C.deceleration;
+    let rate: number = this.ride ? (hasInput ? this.ride.accel : this.ride.decel) : hasInput ? C.acceleration : C.deceleration;
     if (flyingNow) {
       rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
       this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);
@@ -400,7 +407,7 @@ export class Player {
     } else if (hasInput) {
       const targetYaw = Math.atan2(this.wishDir.x, this.wishDir.z);
       const d = angleDelta(this.facing, targetYaw);
-      const step = C.turnSpeed * dt;
+      const step = (this.ride ? this.ride.turnSpeed : C.turnSpeed) * dt;
       this.facing += Math.abs(d) <= step ? d : Math.sign(d) * step;
     }
 
@@ -418,8 +425,8 @@ export class Player {
     this.updateLandEta();
 
     const sg = T.superglen;
-    const jumpDown = this.inputEnabled && this.input.isDown('jump');
-    const pressed = this.inputEnabled && this.input.wasPressed('jump');
+    const jumpDown = this.inputEnabled && !this.ride && this.input.isDown('jump');
+    const pressed = this.inputEnabled && !this.ride && this.input.wasPressed('jump');
     if (!jumpDown) {
       this.chainHold = false;
       this.heldSincePress = false;
@@ -1008,7 +1015,7 @@ export class Player {
     const F = this.flight;
     F.updateVisual(dt, this.visualPosition, this.velocity.x, this.velocity.z, this.object.rotation.y, this.verticalVelocity);
     this.spinGroup.rotation.set(this.spinAngle + F.tiltX, 0, F.tiltZ);
-    this.spinGroup.position.y = CENTER_TO_FEET + F.bob;
+    this.spinGroup.position.y = CENTER_TO_FEET + F.bob + this.rideLift;
 
     // Blob shadow on the ground below: shrinks and fades with height.
     if (this.hasGround) {

@@ -1482,3 +1482,100 @@ html.pad-ui .pad-focus {
   white-space: pre-wrap;
   pointer-events: none;
 }
+
+/* ---- Kota Botanica D3: Ya / Tidak question and the mission star ---- */
+.yn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 30, 60, 0.28);
+  z-index: 8;
+  pointer-events: auto;
+}
+.yn[hidden] {
+  display: none;
+}
+.yn-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px 16px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 4px solid #ffd23f;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.yn-title {
+  color: #2b3a55;
+  font-size: 26px;
+  font-weight: 800;
+}
+.yn-row {
+  display: flex;
+  gap: 28px;
+}
+.yn-btn {
+  width: 104px;
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px;
+  border: 5px solid transparent;
+  border-radius: 28px;
+  color: #fff;
+  font: 800 20px system-ui, sans-serif;
+  box-sizing: border-box;
+  cursor: pointer;
+  touch-action: none;
+}
+.yn-btn svg {
+  width: 56px;
+  height: 56px;
+}
+.yn-btn.yes {
+  background: #2fb36a;
+}
+.yn-btn.no {
+  background: #e8453c;
+}
+.yn-btn.sel {
+  border-color: #ffd23f;
+  box-shadow: 0 0 0 4px rgba(255, 210, 63, 0.55);
+  transform: scale(1.08);
+}
+.city-star {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, 0) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 7;
+  color: #b9740a;
+  font-size: 34px;
+  font-weight: 900;
+  text-shadow: 0 2px 0 #fff;
+}
+.city-star svg {
+  width: 84px;
+  height: 84px;
+}
+.city-star.show {
+  animation: city-star-pop 2.6s ease-out forwards;
+}
+@keyframes city-star-pop {
+  0% { transform: translate(-50%, 10px) scale(0); opacity: 0; }
+  14% { transform: translate(-50%, 0) scale(1.15); opacity: 1; }
+  24% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  80% { transform: translate(-50%, -8px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -22px) scale(0.9); opacity: 0; }
+}

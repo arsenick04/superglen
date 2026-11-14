@@ -394,6 +394,11 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
 
   // Coins / rewards.
   for (const c of data.coins) {
+    if (c.flight) {
+      // A floating trail: only flight gets there. It must be inside the flight ceiling and clearly above head height.
+      if (c.pos[1] > 15 || c.pos[1] < 3) err(`koin terbang "${c.id}" di luar tinggi terbang / flight coin outside 3..15 m: ${c.pos[1].toFixed(2)} m`);
+      continue;
+    }
     let onId = c.on;
     if (!onId) {
       let best: Foothold | undefined;
@@ -512,7 +517,7 @@ function checkAlley(a: KickAlley, byId: Map<string, Foothold>, A: Analysis, err:
 
 /** One block per building class for big levels (the open city): counts and the spread of route levels. */
 function printSummary(data: LevelReachData, A: Analysis, rows: { name: string; id: string; level: number; kind: string }[]): void {
-  console.log(`\n== ${data.id}: ${data.footholds.length} pijakan / footholds, ${data.buildings.length} bangunan, ${data.coins.length} koin, ${(data.greenLinks ?? []).length} rute hijau ==`);
+  console.log(`\n== ${data.id}: ${data.footholds.length} pijakan / footholds, ${data.buildings.length} bangunan, ${data.coins.length} koin (${data.coins.filter((c) => c.flight).length} hanya terbang / flight-only), ${(data.greenLinks ?? []).length} rute hijau ==`);
   for (const cls of ['house', 'ruko', 'landmark'] as const) {
     const bs = data.buildings.filter((b) => b.class === cls);
     if (!bs.length) continue;
