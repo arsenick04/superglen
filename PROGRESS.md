@@ -533,73 +533,80 @@ Semua 100 soal dites muat tanpa meluap di layar 844x281 dan 667x375. **Fps di pe
 ### Kredit terpakai
 Higgsfield: 0. ElevenLabs: 0.
 
-## Paket malam B4: suara (13 November 2026): selesai, musik menunggu file
+## Paket malam B4: suara, musik, efek suara (13–14 November 2026): selesai
 
-Orkestrator (Fable) hanya mendelegasikan dan meninjau. Pipeline dan aset oleh `asset-pipeline` (sonnet), kode game oleh `gameplay-dev` (sonnet), pemeriksaan oleh `qa-tester` (haiku).
+Orkestrator hanya mendelegasikan dan meninjau. Pipeline dan aset oleh `asset-pipeline` (sonnet), kode game oleh `gameplay-dev` (sonnet), pemeriksaan oleh `qa-tester` (haiku).
 
 ### Yang selesai
-- **174 klip suara ElevenLabs** di `public/audio/`: semua dialog Chapter 1 dan 2, kalimat Nino untuk kuis, 100 soal, kata Inggris dan Mandarin. Total 3,6 MB, semuanya disamakan kerasnya.
-- **Suara sementara** (dipilih otomatis, tercatat di `audio/voices.json`):
-  | Peran | Suara |
+- **174 klip suara ElevenLabs, versi 2** di `public/audio/`, dibuat ulang setelah masukan "terlalu kaku dan medok":
+  - Model `eleven_v4`, dengan arahan ekspresi per kalimat (`audio/delivery.json`, kolom `delivery` di `audio/dialog.json`).
+  - Nada dinaikkan supaya terdengar lebih muda: Glen = Dakocan +3 semiton, Nino = Pratama +2 semiton. Inggris = Josh, Mandarin = Sage.
+  - 6 klip yang suku katanya bergabung atau salah ucap sudah dibuat ulang dan dicek ulang dengan pengenal suara (STT).
+- **Musik dari lagu pemilik proyek** (90 BPM, dipotong tepat di birama, `audio/MUSIC.md`):
+  | Adegan | File |
   |---|---|
-  | Glen | Raihan (pria muda; tidak ada suara anak di akun) |
-  | Nino | Den |
-  | Mandarin | Sage, penutur asli dari Voice Library (dipilih pemilik proyek) |
-- **7 suara hewan** untuk kuis: kucing, ayam, kuda, singa dari rekaman domain publik Wikimedia Commons; anjing, sapi, bebek dari ElevenLabs Sound Effects. Sumber dan lisensi di `CREDITS.md`.
+  | Layar awal | `theme_awal.mp3` (birama 1–12) |
+  | Menjelajah | `theme_jelajah.mp3` (birama 18–29, volume 80%) |
+  | Latihan, pertarungan | `theme_latihan.mp3` (birama 14–21) |
+  | Berubah jadi Superglen | `theme_berubah_tagline.mp3`: "sistem aktif, Superglen siap!" dari ujung lagu versi vokal (4,9 detik). Bunyi lama tanpa vokal (`theme_berubah.mp3`) masih ada sebagai cadangan. |
+- **Efek suara** dibuat langsung oleh browser, tanpa file (`src/audio/Sfx.ts`, semua setelan di `SfxConfig`):
+  - koin (nadanya naik kalau diambil beruntun), laser (tembak, kena, meleset), jet terbang (berulang selama terbang), perisai (nyala, menangkis, mati), bola memantul
+  - lompat, lompat ganda, mendarat, tendang dinding, memanjat, cincin terbang
+  - transformasi, fanfare akhir Chapter, tombol sentuh, kuis (ketuk, benar, salah, stiker)
+  - Paling banyak 8 bunyi sekaligus. Bunyi yang sama tidak bisa diulang terlalu rapat. Semua bunyi diam saat saklar Suara mati.
+- **7 suara hewan** untuk kuis: kucing, ayam, kuda, singa dari Wikimedia Commons (domain publik); anjing, sapi, bebek dari ElevenLabs Sound Effects.
 - **Suara di dalam game** (`src/audio/AudioManager.ts`):
-  - Dialog dibacakan, dan balon menunggu sampai klip selesai. Ketukan tetap melewatinya.
-  - Kuis membacakan soal, lalu kata asing atau suara hewan. Tombol pengeras suara mengulang.
-  - Game tidak pernah memanggil ElevenLabs saat dimainkan. Semua suara adalah file.
-  - Kalau file suatu kalimat belum ada, teksnya tampil seperti biasa dan game tetap jalan.
-- **Jalur musik**: berulang per adegan, mulai dari ketukan pertama, mengecil saat ada suara, crossfade antar adegan. Musik diputar streaming, tidak dimuat utuh ke memori. **Belum ada lagu**: file soundtrack belum diunggah, jadi game masih tanpa musik.
-- **Halaman orang tua**: saklar Musik di samping saklar Suara.
-- **Script**: `npm run audio` (dialog dan kuis), `npm run audio:voices` (pilih suara), `npm run audio:sfx` (3 suara hewan). Semua melewati file yang sudah ada. Panduan di `audio/README.md`.
+  - Dialog dibacakan, dan balon menunggu klip selesai. Ketukan tetap bisa melewatinya.
+  - Kuis membacakan soal, lalu kata asing atau suara hewan.
+  - Musik diputar streaming dan mengecil saat ada suara.
+  - Kalau file suara belum ada, teks tetap tampil.
+  - Game tidak pernah memanggil ElevenLabs saat dimainkan.
+- **Halaman orang tua**: ada saklar Suara dan Musik.
 
 ### Cara mengganti suara nanti
 - **Rekaman sendiri**: taruh `public/audio/<id>.mp3` dengan id yang sama dan tandai `"source": "recorded"`. Script tidak akan menimpanya.
-- **Suara Glen baru**: ganti `voice_id` Glen di `audio/voices.json`, lalu `npm run audio`. Hanya kalimat Glen yang dibuat ulang.
-- **Soundtrack**: unggah ke `public/audio/music/` dan isi `public/audio/music/tracks.json` (adegan: `awal`, `jelajah`, `berubah`, `latihan`, `pertarungan`).
+- **Suara Glen baru**: ganti `voice_id` Glen di `audio/voices.json`, lalu jalankan `npm run audio`.
+- **Musik per adegan**: atur di `public/audio/music/tracks.json`.
 
-### Hasil tes
+### Hasil tes (`qa-tester`, 14 November)
 | Pemeriksaan | Hasil |
 |---|---|
-| `npm run build` | Lulus |
-| Skenario suara (dijalankan orkestrator) | Lulus 84 dari 84 |
-| Pemeriksaan memori (dijalankan orkestrator, 2 kali) | Lulus, sekitar 3 KB per frame dari batas 16 KB |
-| Smoke test penuh oleh `qa-tester`, sekali jalan | Lulus: 1.229 pemeriksaan, 0 gagal, 0 error console |
-| `check:quiz`, `check:reach`, `check:reach --strict`, `typecheck` | Lulus |
-| Kunci atau panggilan ElevenLabs di kode game dan hasil build | Tidak ada |
-| 174 id di manifest punya file, 7 suara hewan ada | Lulus |
+| `npm run build`, typecheck | Lulus |
+| `check:quiz`, `check:reach` | Lulus |
+| Dry-run `audio` dan `audio:sfx` | Lulus, 0 file perlu dibuat |
+| Smoke test penuh | Lulus: 1.285 pemeriksaan, 0 gagal, 0 error console |
+| Kunci rahasia di repo | Tidak ada |
+| Ukuran | `dist/` 15,2 MB, `public/audio/` 9,7 MB |
 
-Pemeriksaan memori yang sempat tidak stabil di P1 dan B4 sudah diperbaiki: pengukurannya sekarang memakai pemanasan dan median tiga jendela. Batasnya tidak dilonggarkan. Agen menjalankannya 8 kali berturut-turut, semuanya lulus.
+- **Tes kalimat lompat Glen di Chapter 1 versi HP:** sempat gagal karena suara baru lebih panjang. Gamenya benar. Tesnya sekarang menunggu kalimat itu sampai benar-benar muncul.
+- **Frame rate:** di browser tanpa kartu grafis (tes otomatis) 10 sampai 27 fps. Angka ini bukan angka perangkat asli.
 
-### Kredit ElevenLabs
-Akun: 6.374 dari 40.000 karakter terpakai bulan ini (sebelum B4: 4.657). Kenaikan selama B4 sekitar 1.700 menurut akun, untuk sekitar 3.900 karakter teks dan 6 efek suara. Selisihnya tidak bisa dijelaskan dari sini; angka akun yang dipegang. Higgsfield: 0.
+### Kredit
+- **ElevenLabs:** sekitar 9.650 dari 40.000 karakter terpakai bulan ini. Sebagian besar untuk pembuatan ulang 174 klip versi 2.
+- **Higgsfield:** 0.
 
 ### Masalah yang diketahui
-- **Mutu suara belum didengar orkestrator maupun agen.** Semua pilihan berdasarkan data dan bentuk gelombang. Pemilik proyek perlu mendengarkan.
-- Suara Glen kemungkinan terdengar terlalu dewasa. Pemilik proyek akan menggantinya nanti.
 - Nada 18 kata Mandarin belum dicek penutur asli.
-- Suara anjing kemungkinan berisi tiga gonggongan, bukan dua, dan awalnya agak mendadak.
-- Lagu MP3 yang diulang mungkin punya jeda kecil di sambungannya.
-- Kode B4 ada di commit bertanda "WIP B4": agen terhenti oleh batas pemakaian setelah pekerjaannya tersimpan di sana.
+- "suku" di `quiz_baca_011` mungkin terdengar seperti "suka".
+- Suara anjing berisi tiga gonggongan.
+- Sambungan ulang musik di Safari iPhone mungkin ada jeda kecil.
+- Tombol bintang sentuh tetap berbunyi "pop" di level yang tidak mengizinkan transformasi.
 
 ### Yang hanya bisa dinilai di iPhone asli
-- Apakah suara mulai setelah ketukan pertama, dan apakah berbunyi saat tombol senyap aktif.
-- Apakah musik lanjut setelah aplikasi ditinggalkan lalu dibuka lagi.
-- Jeda sebelum kalimat pertama terdengar.
+- Keseimbangan keras-pelan antara efek, musik, dan suara di speaker iPhone.
+- Apakah bunyi jet terlalu terus-menerus atau terlalu keras.
+- Apakah suara mulai setelah ketukan pertama, juga saat tombol senyap aktif.
 
 ### Catatan lingkungan
-- Sesi pindah ke lingkungan cloud "superglen" yang mengizinkan `commons.wikimedia.org` dan `upload.wikimedia.org` (untuk suara hewan). Kunci ElevenLabs tersimpan di lingkungan itu, tidak di repo.
+- Sesi berjalan di lingkungan cloud "superglen", yang mengizinkan akses ke Wikimedia untuk suara hewan.
+- Kunci ElevenLabs tersimpan di lingkungan itu, tidak di repo.
 
 ## Pengingat untuk pemilik proyek
-
-- **Soundtrack Superglen:** jalur musik sudah siap, tinggal filenya. Unggah ke `public/audio/music/` di repo lewat GitHub (MP3 atau M4A, tiap lagu di bawah sekitar 3 MB), lalu sebutkan lagu mana untuk adegan mana: layar awal, menjelajah, berubah jadi Superglen, latihan, pertarungan.
-- **Suara Glen:** masih suara sementara. Pilih suara lain atau rekam sendiri kalau sudah sempat.
-- **Nada Mandarin:** minta penutur asli memeriksa 18 kata di bagian B3.
+- **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
+- **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
 Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/?reset=1 di Safari iPhone (landscape) atau di PC. Pastikan tombol senyap iPhone mati dan volume naik.
-1. **Dengarkan Chapter 1**: Glen dan Nino sekarang berbicara. Perhatikan apakah suaranya cocok dan apakah "Barongsai", "Superglen", dan "Nino" diucapkan benar.
-2. **Tantangan Pintar dengan suara**: jawab beberapa soal. Nino membacakan soalnya; coba soal tebak hewan dari suara dan soal Mandarin, dan tombol pengeras suara untuk mengulang.
-3. **Halaman orang tua**: tekan lama logo 3 detik, coba saklar Suara dan Musik.
+1. **Chapter 1 dengan suara baru dan musik**: apakah Glen dan Nino terdengar lebih ceria, dan apakah "sistem aktif, Superglen siap!" pas saat berubah.
+2. **Efek suara**: ambil koin beruntun, terbang, tembak laser, tangkis bola dengan perisai. Apakah bunyinya enak, tidak terlalu keras?
+3. **Tantangan Pintar**: soal suara hewan dan Mandarin.
