@@ -37,6 +37,7 @@ import { PlayerConfig, ModeTunings } from '../src/player/PlayerConfig';
 import { topOf, type Foothold, type KickAlley, type LevelReachData } from '../src/world/kits/ParkourData';
 import { ARENA_REACH } from '../src/world/arena/ArenaData';
 import { STREET_REACH } from '../src/world/bab1/StreetData';
+import { KOTA_REACH } from '../src/world/kota/CityData';
 
 const R = Parkour.reachModel;
 const MAX = Parkour.levels.length - 1;
@@ -148,46 +149,162 @@ interface Result {
   reached: Map<string, { path: string[]; tight: string[]; hops: string[] }>;
 }
 
-function analyse(data: LevelReachData, m: Mode): Result {
-  const byId = new Map<string, Foothold>();
-  for (const f of data.footholds) byId.set(f.id, f);
-  const outlines = new Map<string, P2[]>();
-  const top = (id: string): number => (id === GROUND ? 0 : topOf(byId.get(id) as Foothold));
-  const gapOf = (a: string, b: string): number => {
-    if (a === GROUND || b === GROUND) return 0; // the ground can be walked to the foot of anything
-    if (!outlines.has(a)) outlines.set(a, outline(byId.get(a) as Foothold));
-    if (!outlines.has(b)) outlines.set(b, outline(byId.get(b) as Foothold));
-    return polyDist(outlines.get(a) as P2[], outlines.get(b) as P2[]);
-  };
-  // Dijkstra on (number of tight hops * 1000 + number of hops): solid routes win over tight ones.
-  const cost = new Map<string, number>();
-  const reached = new Map<string, { path: string[]; tight: string[]; hops: string[] }>();
-  const queue: string[] = [];
-  for (const s of data.starts) {
-    cost.set(s, 0);
-    reached.set(s, { path: [s], tight: [], hops: [] });
-    queue.push(s);
+/** Binary min-heap of node indices keyed by a cost array (lazy deletion: stale entries are skipped by the caller). */
+class Heap {
+  private readonly a: number[] = [];
+  private readonly k: number[] = [];
+  get size(): number {
+    return this.a.length;
   }
-  while (queue.length) {
-    queue.sort((a, b) => (cost.get(a) as number) - (cost.get(b) as number));
-    const a = queue.shift() as string;
-    const ra = reached.get(a) as { path: string[]; tight: string[]; hops: string[] };
-    for (const B of data.footholds) {
-      if (B.id === a) continue;
+  push(node: number, key: number): void {
+    const a = this.a;
+    const k = this.k;
+    let i = a.length;
+    a.push(node);
+    k.push(key);
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (k[p] <= key) break;
+      a[i] = a[p];
+      k[i] = k[p];
+      i = p;
+    }
+    a[i] = node;
+    k[i] = key;
+  }
+  /** Pops the smallest: [node, key]. */
+  pop(): [number, number] {
+    const a = this.a;
+    const k = this.k;
+    const top: [number, number] = [a[0], k[0]];
+    const ln = a.pop() as number;
+    const lk = k.pop() as number;
+    if (a.length) {
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        if (l >= a.length) break;
+        const r = l + 1;
+        const c = r < a.length && k[r] < k[l] ? r : l;
+        if (k[c] >= lk) break;
+        a[i] = a[c];
+        k[i] = k[c];
+        i = c;
+      }
+      a[i] = ln;
+      k[i] = lk;
+    }
+    return top;
+  }
+}
+
+/**
+ * Dijkstra over the footholds (plus the ground). Neighbours come from a uniform grid: a hop longer than `reachR` (the
+ * largest horizontal distance ANY hop of this mode can bridge, from the highest top down to the ground, including the
+ * generous "tight" estimate) is always 'no', so only footholds whose bounding circles are within reachR are tested. The
+ * result is exactly the all-pairs search, but the open city (thousands of footholds) checks in seconds.
+ */
+function analyse(data: LevelReachData, m: Mode): Result {
+  const fs = data.footholds;
+  const n = fs.length;
+  const G = n; // index of the ground node
+  const index = new Map<string, number>();
+  fs.forEach((f, i) => index.set(f.id, i));
+  const tops = fs.map(topOf);
+  const outlines: (P2[] | undefined)[] = new Array(n);
+  const ol = (i: number): P2[] => (outlines[i] ??= outline(fs[i]));
+  const rad = fs.map((f) => (f.round ? f.size[0] / 2 + FRIENDLY : Math.hypot(f.size[0] / 2 + FRIENDLY, f.size[2] / 2 + FRIENDLY)));
+  let hMax = 0;
+  let rMax = 0;
+  for (let i = 0; i < n; i++) {
+    hMax = Math.max(hMax, tops[i], fs[i].peak ?? 0);
+    rMax = Math.max(rMax, rad[i]);
+  }
+  const jump = m.apex + (m.air ? Parkour.doubleJumpApex : 0);
+  const rise = tUp(m.apex) + (m.air ? tUp(Parkour.doubleJumpApex) : 0);
+  const reachR = m.speed * (rise + tFall(hMax + jump + MANTLE_UP)) + PlayerConfig.radius + Parkour.mantle.reach + 0.01;
+  const cell = reachR + 2 * rMax;
+  const grid = new Map<string, number[]>();
+  const key = (cx: number, cz: number): string => `${cx},${cz}`;
+  for (let i = 0; i < n; i++) {
+    const k = key(Math.floor(fs[i].center[0] / cell), Math.floor(fs[i].center[2] / cell));
+    let l = grid.get(k);
+    if (!l) grid.set(k, (l = []));
+    l.push(i);
+  }
+  const near = (i: number): number[] => {
+    const cx = Math.floor(fs[i].center[0] / cell);
+    const cz = Math.floor(fs[i].center[2] / cell);
+    const out: number[] = [];
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dz = -1; dz <= 1; dz++) {
+        const l = grid.get(key(cx + dx, cz + dz));
+        if (!l) continue;
+        for (const j of l) {
+          if (j === i) continue;
+          const d = Math.hypot(fs[j].center[0] - fs[i].center[0], fs[j].center[2] - fs[i].center[2]);
+          if (d - rad[i] - rad[j] <= reachR) out.push(j);
+        }
+      }
+    return out;
+  };
+  const all = Array.from({ length: n }, (_, i) => i);
+  const top = (i: number): number => (i === G ? 0 : tops[i]);
+  const name = (i: number): string => (i === G ? GROUND : fs[i].id);
+
+  // Dijkstra on (number of tight hops * 1000 + number of hops): solid routes win over tight ones.
+  const cost = new Array<number>(n + 1).fill(Infinity);
+  const prev = new Array<number>(n + 1).fill(-1);
+  const tightHop = new Array<boolean>(n + 1).fill(false);
+  const hopGap = new Array<number>(n + 1).fill(0);
+  const done = new Array<boolean>(n + 1).fill(false);
+  const heap = new Heap();
+  for (const s of data.starts) {
+    const i = s === GROUND ? G : index.get(s);
+    if (i === undefined) continue;
+    cost[i] = 0;
+    heap.push(i, 0);
+  }
+  while (heap.size) {
+    const [a, c0] = heap.pop();
+    if (done[a] || c0 > cost[a]) continue;
+    done[a] = true;
+    const hA = top(a);
+    for (const b of a === G ? all : near(a)) {
+      const B = fs[b];
       if ((B.slopeDeg ?? 0) > Parkour.world.roofMaxSlopeDeg) continue;
-      const h = hop(top(a), B, gapOf(a, B.id), m);
-      if (h.verdict === 'no') continue;
-      const c = (cost.get(a) as number) + 1 + (h.verdict === 'tight' ? 1000 : 0);
-      if (c < (cost.get(B.id) ?? Infinity)) {
-        cost.set(B.id, c);
-        reached.set(B.id, {
-          path: [...ra.path, B.id],
-          tight: h.verdict === 'tight' ? [...ra.tight, `${a}->${B.id}`] : ra.tight,
-          hops: [...ra.hops, `${a}(${top(a).toFixed(2)}) -> ${B.id}(${topOf(B).toFixed(2)}) gap ${h.gap.toFixed(2)} m ${h.verdict}`],
-        });
-        if (!queue.includes(B.id)) queue.push(B.id);
+      let verdict: Verdict;
+      let gap = 0;
+      if (a === G && B.ramp) verdict = 'ok';
+      else {
+        gap = a === G ? 0 : polyDist(ol(a), ol(b));
+        verdict = hop(hA, B, gap, m).verdict;
+      }
+      if (verdict === 'no') continue;
+      const c = c0 + 1 + (verdict === 'tight' ? 1000 : 0);
+      if (c < cost[b]) {
+        cost[b] = c;
+        prev[b] = a;
+        tightHop[b] = verdict === 'tight';
+        hopGap[b] = gap;
+        heap.push(b, c);
       }
     }
+  }
+  const reached = new Map<string, { path: string[]; tight: string[]; hops: string[] }>();
+  for (let i = 0; i <= n; i++) {
+    if (cost[i] === Infinity) continue;
+    const path: string[] = [];
+    const tight: string[] = [];
+    const hops: string[] = [];
+    for (let v = i; v !== -1; v = prev[v]) {
+      path.push(name(v));
+      const p = prev[v];
+      if (p === -1) break;
+      if (tightHop[v]) tight.push(`${name(p)}->${name(v)}`);
+      hops.push(`${name(p)}(${top(p).toFixed(2)}) -> ${name(v)}(${top(v).toFixed(2)}) gap ${hopGap[v].toFixed(2)} m ${tightHop[v] ? 'tight' : 'ok'}`);
+    }
+    reached.set(name(i), { path: path.reverse(), tight: tight.reverse(), hops: hops.reverse() });
   }
   return { reached };
 }
@@ -352,7 +469,7 @@ function checkLevel(data: LevelReachData, out: Problem[]): void {
       for (const h of A.air[m].reached.get(id)?.hops ?? []) console.log(`     ${h}`);
     }
   }
-  if (!QUIET) printTable(data, A, rows);
+  if (!QUIET) (data.compact ? printSummary : printTable)(data, A, rows);
 }
 
 /** Kick alleys: reachable with wall kicks only. See the WALL KICKS paragraph at the top. */
@@ -391,6 +508,24 @@ function checkAlley(a: KickAlley, byId: Map<string, Foothold>, A: Analysis, err:
     if (!withKick) err(`gang tendang "${a.id}": "${id}" (${top.toFixed(2)} m) tidak terjangkau dengan tendangan dinding (maks ${(best + MANTLE_UP).toFixed(2)} m, ${W.maxChain} tendangan) / not reachable with wall kicks`);
     if (!QUIET) console.log(`  kick alley ${a.id}/${id}: top ${top.toFixed(2)} m, tanpa tendangan: x (maks ${noKickMax.toFixed(2)} m, tingkat 4 + lompat ganda + naik), dengan tendangan: ${withKick ? `v (${kicksNeeded} tendangan dari tingkat 0, +${gain.toFixed(2)} m tiap tendangan)` : 'x'}`);
   }
+}
+
+/** One block per building class for big levels (the open city): counts and the spread of route levels. */
+function printSummary(data: LevelReachData, A: Analysis, rows: { name: string; id: string; level: number; kind: string }[]): void {
+  console.log(`\n== ${data.id}: ${data.footholds.length} pijakan / footholds, ${data.buildings.length} bangunan, ${data.coins.length} koin, ${(data.greenLinks ?? []).length} rute hijau ==`);
+  for (const cls of ['house', 'ruko', 'landmark'] as const) {
+    const bs = data.buildings.filter((b) => b.class === cls);
+    if (!bs.length) continue;
+    const hist = [0, 0, 0, 0, 0];
+    let none = 0;
+    for (const b of bs) {
+      const m = minLevel(A.air, b.roofIds[0]);
+      if (m < 0) none++;
+      else hist[m]++;
+    }
+    console.log(`  ${pad(cls, 9)} ${pad(String(bs.length), 4)} bangunan, atap terjangkau mulai tingkat / roofs first reached at level: ${hist.map((v, l) => `L${l}:${v}`).join(' ')}${none ? `  TIDAK: ${none}` : ''}`);
+  }
+  void rows;
 }
 
 function printTable(data: LevelReachData, A: Analysis, rows: { name: string; id: string; level: number; kind: string }[]): void {
@@ -477,7 +612,7 @@ function selfTest(): Problem[] {
 // ---- Main -------------------------------------------------------------------------------------------------------------------------
 
 /** Registered levels. Add the Chapter 1 street here once it has a *Data.ts. */
-const LEVELS: LevelReachData[] = [ARENA_REACH, STREET_REACH];
+const LEVELS: LevelReachData[] = [ARENA_REACH, STREET_REACH, KOTA_REACH];
 const PENDING: string[] = [];
 
 function main(): void {

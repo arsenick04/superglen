@@ -17,6 +17,7 @@ import type { BillboardRings } from '../fx/BillboardRings';
 import type { DizzyStars } from '../fx/DizzyStars';
 import type { Sparkles } from './bab1/Fx';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { Sfx } from '../audio/Sfx';
 import type { AudioManager } from '../audio/AudioManager';
 import type { QuizEngine } from '../quiz/QuizEngine';
 
@@ -108,6 +109,8 @@ export interface LevelContext {
   readonly game: LevelGame;
   /** The drum / cheer / boing synthesizer (no files; silent until the first tap or when muted). */
   readonly synth: DrumSynth;
+  /** Procedural sound effects (coin ting, fanfare, ...): `ctx.sfx.coin()`. Silent when muted or before the first tap. */
+  readonly sfx: Sfx;
   /**
    * Voice / sfx / music files. `ctx.audio.music.setScene('jelajah')` picks the looping music (it starts with the first tap and
    * crossfades); `ctx.audio.preload(ids)` loads the chapter's voice lines in the background.

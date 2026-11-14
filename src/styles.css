@@ -1031,3 +1031,35 @@ html.touch-ui .drums {
   60% { transform: scale(1.5); }
   100% { transform: scale(1); }
 }
+
+/* Kota Botanica: district / place name pill (top centre). Shown on change only (a few DOM writes per minute). */
+.city-toast {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 10px);
+  left: 50%;
+  transform: translate(-50%, -8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3a2a20;
+  font-weight: 800;
+  font-size: 20px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  white-space: nowrap;
+}
+.city-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.city-toast .dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}

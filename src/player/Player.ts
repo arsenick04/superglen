@@ -376,10 +376,12 @@ export class Player {
     if (flyingNow) {
       rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
       this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);
-    } else if (!this.grounded) {
-      rate *= C.airControl;
+    } else {
+      // Soft world edge on foot (only levels that set one, e.g. the open city).
+      if (this.flight.groundBounds) this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel, this.flight.groundBounds);
+      if (!this.grounded) rate *= C.airControl;
       // Just after a wall kick the push must carry: no stick = no braking, a stick against it is weak.
-      if (this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
+      if (!this.grounded && this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
     }
     // Move velocity toward target by at most rate*dt (frame-rate independent at fixed dt).
     this.tmp.subVectors(this.targetVel, this.velocity);
@@ -733,6 +735,11 @@ export class Player {
       this.jumpEvent.quality = quality;
       R.events.emit('rhythmJump', this.jumpEvent);
     }
+    const je = this.plainJumpEvent;
+    je.air = air;
+    je.superglen = T.superglen;
+    je.level = lvl;
+    R.events.emit('jump', je);
   }
 
   /** The kick itself: fixed apex, push away from the wall, turn away, feedback event. The air jump stays available. */
@@ -780,6 +787,7 @@ export class Player {
 
   private readonly kickEvent = { x: 0, y: 0, z: 0, nx: 0, nz: 0, chain: 0 };
   private readonly jumpEvent: { level: number; quality: RhythmQuality } = { level: 0, quality: 'normal' };
+  private readonly plainJumpEvent = { air: false, superglen: false, level: 0 };
   private readonly landEvent = { impact: 0, x: 0, y: 0, z: 0 };
   private readonly mantleEvent = { x: 0, y: 0, z: 0 };
   private readonly bounceEvent = { level: 0 };

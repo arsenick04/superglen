@@ -40,6 +40,8 @@ export interface Foothold {
   bounce?: boolean;
   /** Must also be reachable by Glen (school mode: glenApex jump, no air jump, no rhythm). */
   glen?: boolean;
+  /** Walkable from the ground without jumping (a gentle hill): ground -> this foothold always succeeds. */
+  ramp?: boolean;
 }
 
 export type BuildingClass = 'house' | 'ruko' | 'landmark';
@@ -98,6 +100,8 @@ export interface LevelReachData {
   greenLinks?: [string, string][];
   /** Kick alleys (see KickAlley): their tops are exempt from the plain-jump reach rules and checked by the kick model. */
   kickAlleys?: KickAlley[];
+  /** Big level (the open city): print a summary instead of one table row per roof. */
+  compact?: boolean;
 }
 
 /** Top height of a foothold (the entry height for a sloped roof). */

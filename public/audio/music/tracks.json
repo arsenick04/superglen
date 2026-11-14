@@ -1,7 +1,7 @@
 {
-  "awal": "",
-  "jelajah": "",
-  "berubah": "",
-  "latihan": "",
-  "pertarungan": ""
+  "awal": "theme_awal.mp3",
+  "jelajah": { "file": "theme_jelajah.mp3", "volume": 0.8 },
+  "berubah": "theme_berubah_tagline.mp3",
+  "latihan": "theme_latihan.mp3",
+  "pertarungan": "theme_latihan.mp3"
 }

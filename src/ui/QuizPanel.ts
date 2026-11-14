@@ -1,5 +1,6 @@
 import '../quiz.css';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { Sfx } from '../audio/Sfx';
 import type { SaveStore } from '../core/Save';
 import type { QuizBank } from '../quiz/QuizBank';
 import { QuizLines, type QuizLine } from '../quiz/lines';
@@ -10,6 +11,7 @@ import { CATEGORY_COLORS, CATEGORY_NAMES, QuizIcons } from './QuizIcons';
 
 export interface PanelDeps {
   synth: DrumSynth;
+  sfx: Sfx;
   bank: QuizBank;
   save: SaveStore;
   speak: (audioId: string, text: string, kind: 'prompt' | 'word' | 'nino' | 'sound') => void;
@@ -407,6 +409,7 @@ export class QuizPanel {
     if (this.view !== 'question' || this.state !== 'answering' || !cur) return;
     const card = this.cards[i];
     if (!card || card.classList.contains('gone')) return;
+    this.deps.sfx.quizTap();
     if (i === cur.correctIndex) this.solve(card);
     else this.wrongPick(card);
   }
@@ -417,7 +420,7 @@ export class QuizPanel {
     this.state = 'feedback';
     this.element.dataset.state = 'feedback';
     card.classList.add('wobble');
-    this.deps.synth.boing();
+    this.deps.sfx.quizWrong();
     const help = this.wrongs >= 2;
     this.ninoSays(help ? QuizLines.tinggal : QuizLines.hampir);
     this.after(T.goneAfter, () => {
@@ -456,6 +459,7 @@ export class QuizPanel {
     if (coins > 0) this.floatPlus(coins);
     this.ninoSays(QuizLines.hebat);
     this.deps.synth.drum(Math.min(4, 1 + this.idx), true);
+    this.deps.sfx.quizRight();
     this.after(0.18, () => this.deps.synth.drum(Math.min(4, 2 + this.idx), true));
     this.fireworks(card);
     this.nextBtn.classList.add('show');
@@ -648,6 +652,7 @@ export class QuizPanel {
         e.appendChild(st);
         this.after(T.reveal, () => {
           st.classList.add('reveal');
+          this.deps.sfx.sparkle();
           this.deps.synth.cheer();
           this.fireworks(st);
         });

@@ -1,5 +1,6 @@
 import type { SaveStore, QuizCategorySave } from '../core/Save';
 import type { DrumSynth } from '../audio/DrumSynth';
+import type { Sfx } from '../audio/Sfx';
 import type { AudioManager } from '../audio/AudioManager';
 import { QuizLines } from './lines';
 import { QuizPanel } from '../ui/QuizPanel';
@@ -58,6 +59,7 @@ export function makeRng(seed: number): () => number {
 export interface QuizDeps {
   save: SaveStore;
   synth: DrumSynth;
+  sfx: Sfx;
   /** Voice files: the quiz preloads the prompts of a challenge, and the panel asks whether an animal sound can be heard. */
   audio: AudioManager;
   /** The #ui overlay root. */
@@ -95,6 +97,7 @@ export class QuizEngine {
     this.rng = makeRng(seed);
     this.panel = new QuizPanel(deps.ui, {
       synth: deps.synth,
+      sfx: deps.sfx,
       bank: this.bank,
       save: deps.save,
       speak: (id, text, kind) => this.announce(id, text, kind),

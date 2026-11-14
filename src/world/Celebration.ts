@@ -37,6 +37,7 @@ export class Celebration {
     this.element.classList.remove('show');
     void this.element.offsetWidth;
     this.element.classList.add('show');
+    this.ctx.sfx.fanfare(); // the big star pops up: fanfare
     // More confetti while the star is up.
     seq.run(async () => {
       for (let i = 0; i < 4; i++) {

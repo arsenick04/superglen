@@ -96,6 +96,7 @@ export class FlyRing {
     sparkles.burst(o.x, o.y, o.z, 22, 5, 0xffe14d, { up: 0, life: 0.9, gravity: 1 });
     sparkles.burst(o.x, o.y, o.z, 10, 4, 0xffffff, { up: 0, life: 0.7, gravity: 1 });
     flashes.spawn(o.x, o.y, o.z, this.radius * 1.1, 0.45, 0xffffff);
+    this.env.player.skills.emit('ringPass', undefined);
     o.onPass?.(this);
   }
 

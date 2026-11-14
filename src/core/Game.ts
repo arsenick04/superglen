@@ -11,6 +11,8 @@ import { BillboardRings } from '../fx/BillboardRings';
 import { DizzyStars } from '../fx/DizzyStars';
 import { RhythmFx } from '../fx/RhythmFx';
 import { DrumSynth } from '../audio/DrumSynth';
+import { Sfx } from '../audio/Sfx';
+import { wireSfx } from '../audio/SfxWiring';
 import { MAX_LEVEL } from '../config/parkour';
 import { DrumIcons } from '../ui/DrumIcons';
 import { Sparkles } from '../world/bab1/Fx';
@@ -147,6 +149,8 @@ export interface DebugHandle {
   quiz: Record<string, unknown>;
   /** Voice / sfx / music state and the test hooks (see audio/AudioManager.ts). */
   audio: Record<string, unknown>;
+  /** Procedural sound effects: log of what played, counters and test helpers (see audio/Sfx.ts). */
+  sfx: Record<string, unknown>;
   /** The parents' page (long-press on the start logo). */
   parents: { open: boolean; show: () => void; close: () => void };
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
@@ -277,6 +281,7 @@ export class Game {
   private jetsShown = false;
   readonly synth: DrumSynth;
   readonly audio: AudioManager;
+  readonly sfx: Sfx;
   readonly quiz: QuizEngine;
   readonly parents: ParentsPage;
   /** The quiz overlay is open: controls and interactions are locked. */
@@ -338,6 +343,7 @@ export class Game {
     skills: undefined as unknown as DebugHandle['skills'],
     quiz: {},
     audio: {},
+    sfx: {},
     parents: undefined as unknown as DebugHandle['parents'],
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
@@ -441,6 +447,10 @@ export class Game {
     });
     startGate.onStart(() => this.audio.unlock());
     this.debug.audio = this.audio.debugHandle();
+    // Procedural effects: same context, the sfx lane gain, silent when muted.
+    this.sfx = new Sfx({ getContext: () => this.synth.audioContext, getOut: () => this.audio.sfxOut, isMuted: () => this.audio.silent });
+    this.debug.sfx = this.sfx.debugHandle();
+    wireSfx(this.sfx, this.player);
     this.rings = new GroundRings(this.scene);
     this.player.onStomp((e) => {
       this.rings.spawn(e.x, e.y, e.z, e.radius, 0.4, 0xffc400);
@@ -472,6 +482,7 @@ export class Game {
     this.quiz = new QuizEngine({
       save: this.save,
       synth: this.synth,
+      sfx: this.sfx,
       audio: this.audio,
       ui: uiRoot,
       onOpenChange: (open) => {
@@ -534,6 +545,7 @@ export class Game {
     );
     // Voice lines: the clip starts with the line and the bubble waits for it; advancing a line stops it.
     this.dialog.onLineStart((id) => {
+      this.sfx.blip();
       if (!id) return;
       void this.audio.playVoice(id).then((r) => {
         // The clip has just started: keep the bubble for its whole length (plus a tail) from now.
@@ -550,7 +562,11 @@ export class Game {
       this.cameraRig.camera,
       () => this.levelControls && !this.fading && !this.quizLocked,
     );
-    this.interactions.onNearChange((near) => this.touch?.controls.setPulse('interact', near));
+    this.interactions.onNearChange((near) => {
+      this.touch?.controls.setPulse('interact', near);
+      if (near) this.sfx.bling();
+    });
+    if (this.touch) this.touch.onButtonPress = (a) => (a === 'jump' ? undefined : this.sfx.pop());
     this.objectives = new Objectives(this.scene, uiRoot, this.cameraRig.camera, this.player);
     const fade = new Fade(uiRoot);
 
@@ -598,6 +614,7 @@ export class Game {
         ui: uiRoot,
         game: this.api,
         synth: this.synth,
+        sfx: this.sfx,
         audio: this.audio,
         quiz: this.quiz,
       },
@@ -633,6 +650,7 @@ export class Game {
       },
       onBeforeUnload: () => {
         this.quiz.cancel();
+        this.sfx.stopAll(); // the jet loop and any voice belong to the level that is going away
         // Targets, balls, rings and subscribers belong to the level that is going away.
         this.targets.clear();
         this.projectiles.clear();
@@ -773,6 +791,7 @@ export class Game {
   }
 
   private fixedStep(dt: number): void {
+    this.sfx.tick(dt);
     this.quiz.tick(dt); // quiz overlay timers (free while closed)
     this.levels.fixedUpdate(dt); // sequences first, then the level (e.g. the test area's mode toggle)
     this.modeCtl.fixedUpdate();
@@ -802,6 +821,11 @@ export class Game {
     if (jets !== this.jetsShown) {
       this.jetsShown = jets;
       this.touch?.controls.setJets(jets);
+    }
+    // Jet loop: follows the rise speed; cut if the jets are off but it still runs (a missed event, a level swap).
+    if (this.sfx.jetRunning) {
+      if (jets) this.sfx.jetUpdate(dt, this.player.flight.vy);
+      else this.sfx.jetStop();
     }
   }
 
@@ -843,6 +867,7 @@ export class Game {
   setSound(on: boolean): void {
     this.save.setSound(on);
     this.audio.refresh();
+    this.sfx.refresh();
   }
 
   /** Parents' page hook: background music on/off (saved). */
@@ -956,6 +981,7 @@ export class Game {
     if (changed) {
       const f = this.player.getFeetPosition(this.feet);
       this.rings.spawn(f.x, f.y, f.z, 1.6, 0.35, 0xfff2a8, 1);
+      this.sfx.transform(mode === 'superglen');
     }
   }
 
@@ -992,6 +1018,8 @@ export class Game {
   private setPaused(on: boolean): void {
     this.paused = on;
     this.audio.setGamePaused(on);
+    if (on) this.sfx.stopAll();
+    else if (this.player.flight.jetsOn) this.sfx.jetStart(false);
     if (!on) {
       this.accumulator = 0;
       this.clock.reset();

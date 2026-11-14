@@ -1,19 +1,23 @@
 {
   "glen": {
-    "voice_id": "c2RkS6PiHQTOV2e57rF5",
-    "stability": 0.4,
+    "voice_id": "plgKUYgnlZ1DCNh54DwJ",
+    "name": "Dakocan - Expressive, Cheerful and Clear",
+    "model": "eleven_v4",
+    "stability": 0.3,
     "similarity_boost": 0.8,
-    "style": 0.5,
-    "name": "Raihan - Collage Student",
-    "note": "sementara, pilihan otomatis"
+    "pitchSemitones": 3,
+    "labels": "id, standard accent, young male, casual, social_media",
+    "note": "v2 2026-11-14: suara pemuda ekspresif, nada dinaikkan 3 semiton lewat ffmpeg rubberband supaya terdengar seperti anak"
   },
   "nino": {
-    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
-    "stability": 0.6,
+    "voice_id": "q8qwd1jY2jS3AWOBeq25",
+    "name": "Pratama - Clear, Confident and Warm",
+    "model": "eleven_v4",
+    "stability": 0.35,
     "similarity_boost": 0.8,
-    "style": 0.3,
-    "name": "Den - expressive, clear, smooth",
-    "note": "sementara, pilihan otomatis"
+    "pitchSemitones": 2,
+    "labels": "id, standard accent, young male, casual, social_media",
+    "note": "v2 2026-11-14: kakak muda yang hangat dan lincah, nada +2 semiton"
   },
   "aara": {
     "voice_id": "qXOoUJU1h7AiwSe4ltRA",
@@ -41,10 +45,22 @@
   },
   "mandarin": {
     "voice_id": "APSIkVZudNbPAwyPoeVO",
-    "stability": 0.7,
-    "similarity_boost": 0.8,
-    "style": 0,
     "name": "Sage - Soothing & Gentle",
-    "note": "sementara, dipilih dari Voice Library; cek nada oleh penutur asli"
+    "model": "eleven_v4",
+    "stability": 0.4,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "zh, standard accent, young female, calm",
+    "note": "Sage tetap (disetujui pemilik); v2 memakai eleven_v4 dengan stability lebih rendah dan tag [cheerful]; cek nada oleh penutur asli"
+  },
+  "english": {
+    "voice_id": "nzFihrBIvB34imQBuxub",
+    "name": "Josh - Teacher for Kids",
+    "model": "eleven_v4",
+    "stability": 0.35,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "en, american, young male, narrative_story",
+    "note": "v2 2026-11-14: hanya untuk kata bahasa Inggris di quiz (pelafalan penutur asli, ramah anak)"
   }
 }

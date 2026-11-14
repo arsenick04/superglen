@@ -42,6 +42,9 @@ export class StreetFx {
   private readonly starMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffa300, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.2 });
   private readonly fanfare: { t: number; level: number }[] = [];
   private readonly feet = new THREE.Vector3();
+  /** Route (building / landmark prefix of the coin id) of each coin, and how many coins of each route are still lying there. */
+  private readonly route: Int32Array;
+  private readonly left: Int32Array;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -59,12 +62,20 @@ export class StreetFx {
     this.mesh = new THREE.InstancedMesh(this.geo, this.mat, Math.max(1, coins.length));
     this.mesh.frustumCulled = false; // the instances lie all over the street
     this.mesh.castShadow = false;
+    this.route = new Int32Array(coins.length);
+    const routeIds: string[] = [];
     coins.forEach((c, i) => {
+      const key = c.id.split(':')[0];
+      let r = routeIds.indexOf(key);
+      if (r < 0) r = routeIds.push(key) - 1;
+      this.route[i] = r;
       this.px[i] = c.pos[0];
       this.py[i] = c.pos[1];
       this.pz[i] = c.pos[2];
       this.ids.push(c.id);
     });
+    this.left = new Int32Array(routeIds.length);
+    for (let i = 0; i < coins.length; i++) this.left[this.route[i]]++;
     ctx.root.add(this.mesh);
     this.writeMatrices();
 
@@ -150,6 +161,8 @@ export class StreetFx {
       this.takenIds.push(this.ids[i]);
       this.sparkles.burst(this.px[i], this.py[i], this.pz[i], 8, 2.4, 0xffd23f, { gravity: 2, life: 0.6, up: 0.8 });
       this.ctx.synth.drum(Math.min(4, this.streak), false);
+      this.ctx.sfx.coin();
+      if (--this.left[this.route[i]] === 0) this.ctx.sfx.coinDone(); // the last coin of a route: a sparkly flourish
       this.streak++;
       this.streakT = 1.5;
     }

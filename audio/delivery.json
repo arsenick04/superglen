@@ -1,0 +1,59 @@
+{
+  "_note": "Aturan penyampaian untuk baris yang tidak punya `delivery` sendiri: tag audio ElevenLabs v4 disisipkan di depan teks (hanya untuk TTS, teks tampilan tidak berubah). `variants` dipilih per id supaya soal yang berulang tidak terdengar monoton.",
+  "quiz_hitung": {
+    "variants": [
+      "[cheerful] ",
+      "[curious] ",
+      "[playful] "
+    ]
+  },
+  "quiz_inggris": {
+    "variants": [
+      "[cheerful] ",
+      "[curious] "
+    ]
+  },
+  "quiz_mandarin": {
+    "variants": [
+      "[curious] ",
+      "[cheerful] "
+    ]
+  },
+  "quiz_hewan": {
+    "variants": [
+      "[playful] ",
+      "[curious] "
+    ]
+  },
+  "quiz_baca": {
+    "variants": [
+      "[cheerful] ",
+      "[curious] "
+    ]
+  },
+  "speak_en": {
+    "variants": [
+      "[cheerful] "
+    ]
+  },
+  "speak_zh": {
+    "variants": [
+      "[cheerful] "
+    ]
+  },
+  "_ids": {
+    "_note": "Perbaikan per id: kata Mandarin satu aksara kadang diucapkan dua kali atau salah dengar bila hanya diberi tag; tambahan tanda seru membuatnya satu kali.",
+    "quiz_mandarin_004_kata": "[cheerful] 三！",
+    "quiz_mandarin_005_kata": "[cheerful] 五！",
+    "quiz_mandarin_006_kata": "[cheerful] 八！",
+    "quiz_mandarin_011_kata": "绿色。",
+    "quiz_mandarin_014_kata": "[cheerful] 狗！",
+    "quiz_mandarin_015_kata": "[cheerful] 家！",
+    "quiz_baca_009": "[curious] Mana suku kata... ka?",
+    "quiz_baca_010": "[curious] Mana suku kata... baa?",
+    "quiz_baca_011": "[curious] Mana suku kata... bo?",
+    "quiz_baca_012": "[curious] Mana suku kata... ki?",
+    "quiz_baca_013": "[curious] Mana suku kata... ku?",
+    "quiz_nino_tinggal": "[cheerful] Ini dia! Ketuk... yang ini ya."
+  }
+}

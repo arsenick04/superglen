@@ -250,6 +250,7 @@ export class PracticeTarget {
     sparkles.burst(p.x, p.y, p.z, 16, 4, 0xffe14d, { up: 0.5, life: 0.9, gravity: 2.5 });
     sparkles.burst(p.x, p.y, p.z, 8, 3, 0x7dffa0, { up: 0.5, life: 0.8, gravity: 2.5 });
     flashes.spawn(p.x, p.y, p.z, 1.1, 0.4, 0xffffff);
+    this.env.player.skills.emit('targetFlip', undefined);
     this.opts.onHit?.(this);
   }
 

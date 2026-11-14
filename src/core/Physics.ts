@@ -108,6 +108,12 @@ export class Physics {
     this.levelBodies.add(body);
   }
 
+  /** Remove one level body (and its colliders) now, e.g. when the open city streams a chunk out. */
+  removeBody(body: RAPIER.RigidBody): void {
+    if (!this.levelBodies.delete(body)) return;
+    this.world.removeRigidBody(body);
+  }
+
   /** Remove every tracked body and its colliders. The player's own body is never tracked. */
   disposeLevelBodies(): void {
     for (const b of this.levelBodies) this.world.removeRigidBody(b);

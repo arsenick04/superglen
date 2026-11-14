@@ -1,7 +1,14 @@
 # Kredit
 
 ## Suara (voices)
-Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_multilingual_v2`) lewat langganan pemilik proyek. Suara sementara; akan diganti rekaman keluarga bila ada. Daftar suara: `audio/voices.json`. Suara Mandarin: "Sage - Soothing & Gentle" dari ElevenLabs Voice Library (dipakai lewat langganan berbayar).
+Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Glen dan Nino dinaikkan di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
+
+| Peran | Suara | ID | Catatan |
+|---|---|---|---|
+| Glen | Dakocan - Expressive, Cheerful and Clear | `plgKUYgnlZ1DCNh54DwJ` | Indonesia, aksen standar, nada +3 semiton |
+| Nino | Pratama - Clear, Confident and Warm | `q8qwd1jY2jS3AWOBeq25` | Indonesia, aksen standar, nada +2 semiton |
+| Kata bahasa Inggris | Josh - Teacher for Kids | `nzFihrBIvB34imQBuxub` | Inggris Amerika |
+| Kata Mandarin | Sage - Soothing & Gentle | `APSIkVZudNbPAwyPoeVO` | Mandarin standar (dipilih pemilik proyek) |
 
 ## Musik
 Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/music/`).
@@ -28,3 +35,11 @@ Catatan: akses ke commons.wikimedia.org dan upload.wikimedia.org terbuka (dengan
 
 ## Model 3D (Tripo, CC BY)
 Diisi di Fase C.
+
+## Musik
+
+| Lagu | File | Sumber | Dipakai di |
+|---|---|---|---|
+| Superglen Theme Song (instrumental) | `public/audio/music/superglen_theme.mp3` | Milik pemilik proyek | layar awal, menjelajah (Chapter 1), latihan (Chapter 2) |
+| Superglen Theme Song, versi adegan (`theme_awal`, `theme_jelajah`, `theme_latihan`, `theme_berubah`) | `public/audio/music/theme_*.mp3` | Dipotong dari Superglen Theme Song (milik pemilik proyek) | layar awal, menjelajah, latihan/pertarungan, berubah |
+| Superglen Theme Song (vokal), milik pemilik proyek; potongan tagline | `public/audio/music/superglen_theme_vocal.mp3`, `theme_berubah_tagline.mp3` | Milik pemilik proyek | berubah jadi Superglen ("sistem aktif, Superglen siap!") |
