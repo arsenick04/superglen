@@ -601,12 +601,50 @@ Orkestrator hanya mendelegasikan dan meninjau. Pipeline dan aset oleh `asset-pip
 - Sesi berjalan di lingkungan cloud "superglen", yang mengizinkan akses ke Wikimedia untuk suara hewan.
 - Kunci ElevenLabs tersimpan di lingkungan itu, tidak di repo.
 
+## Paket malam D1: kerangka Kota Botanica (14 November 2026): selesai
+
+Dikerjakan `architect` (opus), ditinjau orkestrator.
+
+### Yang selesai
+- **Kota 300 x 300 m**, dibuka dengan `?level=kota`. 134 bangunan, 6 distrik dengan warna dan menara penanda sendiri: Perumahan (merah muda, Menara Air, ada Rumah Glen), Sekolah (biru, Menara Lonceng), Alun-alun (emas, Menara Jam, tempat mulai), Pasar (oranye, Menara Lampion), Bank dan Rumah Sakit (hijau toska, Menara Koin), Bukit Pinggir Kota.
+- **Gedung tua Barongsai tidak di tengah kota**: di puncak bukit 6 m di pojok timur laut, 142 m dari pusat, di balik hutan dan lingkaran pohon pinus, tampak terbengkalai. Tidak terlihat dari alun-alun. Pintunya baru penanda, belum tersambung ke cerita.
+- **Dimuat per potongan 50 m**: detail dan dinding fisika dimuat di sekitar pemain dan dilepas saat jauh. Badan gedung selalu tampak, jadi garis kota tidak muncul tiba-tiba.
+- **Semua bangunan bisa dinaiki**: 90 rumah (tingkat lompat 0), 39 ruko (tingkat 2 sampai 3), 5 menara (tingkat 4). `check:reach` sekarang memeriksa kota.
+- **Bebas dijelajahi** sebagai Glen dan Superglen (terbang, laser, perisai aktif). Tepi dunia: dorongan lembut, lalu sabuk hutan dan bukit curam. Jatuh keluar dunia = muncul lagi di tempat aman.
+- Nama distrik muncul di atas layar saat masuk distrik.
+
+### Hasil tes
+| Pemeriksaan | Hasil |
+|---|---|
+| `npm run build`, `check:reach` | Lulus (804 pijakan, 134 bangunan) |
+| Smoke test `kota`, `kota-touch` (844x390), `kota-perf` | Lulus, 0 error console |
+| Smoke test `bab1`, `bab2`, `perf` | Lulus |
+| Draw call per frame (preset HP, termasuk bayangan) | 27 sampai 49, batas 60 |
+| Segitiga per frame | 27 ribu sampai 58 ribu, batas 65 ribu |
+| Memori per frame saat berjalan | sekitar 6 KB, batas 16 KB |
+
+Fps di perangkat asli belum diukur.
+
+### Masalah yang diketahui
+- Kota masih kosong: belum ada koin, warga, sepeda, misi (paket D2).
+- Sisi belakang sebagian gedung masih polos.
+- Pohon (selain pinus bukit) baru muncul dalam jarak 40 sampai 60 m di PC.
+- Hiasan di puncak menara bisa ditembus.
+- Jalan tanah di bukit terlihat bertingkat kecil-kecil.
+- Kota belum bisa dimasuki dari dalam cerita, hanya lewat alamat `?level=kota`.
+
+### Suara Glen (menunggu pemilik proyek)
+Pemilik proyek melaporkan "Hore, pulang sekolah!" terdengar seperti orang tua medok, sedangkan kalimat di dalam gedung sudah seperti anak. Tinggi nada bukan penyebabnya (kalimat itu justru paling tinggi). Dua kalimat sudah dibuat ulang dengan gaya lebih santai; contoh pembanding ada di `audio/voice-tests/glen_pulang_*.mp3`. Menunggu penilaian telinga pemilik proyek: lanjut gaya ini, atau ganti suara (misalnya Kak Ceria).
+
+### Kredit
+ElevenLabs: sekitar 9.750 dari 40.000. Higgsfield: 0.
+
 ## Pengingat untuk pemilik proyek
 - **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
 - **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
-Setelah PR di-merge dan deploy selesai, buka https://arsenick04.github.io/superglen/?reset=1 di Safari iPhone (landscape) atau di PC. Pastikan tombol senyap iPhone mati dan volume naik.
-1. **Chapter 1 dengan suara baru dan musik**: apakah Glen dan Nino terdengar lebih ceria, dan apakah "sistem aktif, Superglen siap!" pas saat berubah.
-2. **Efek suara**: ambil koin beruntun, terbang, tembak laser, tangkis bola dengan perisai. Apakah bunyinya enak, tidak terlalu keras?
-3. **Tantangan Pintar**: soal suara hewan dan Mandarin.
+Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
+1. **Jelajahi kota**: buka https://arsenick04.github.io/superglen/?level=kota lalu jalan, lompat ke atap rumah, berubah jadi Superglen (tombol bintang) dan terbang melintasi kota. Apakah ukurannya sudah terasa luas? Apakah lancar di iPhone (lihat angka FPS)?
+2. **Cari gedung tua Barongsai**: tersembunyi di bukit pinggir kota. Apakah anak bisa menemukannya, dan apakah letaknya sudah sesuai bayangan Anda?
+3. **Suara Glen**: dengarkan file pembanding yang dikirim di chat, pilih gaya atau suara yang cocok.

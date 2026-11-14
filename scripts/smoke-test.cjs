@@ -7041,6 +7041,246 @@ async function sfxNoAudioScenario(page, check) {
   check('sfx: the skills still worked (the laser fired, the shield blocked)', (await page.evaluate(() => window.__superglen.skills.laserShots > 0 && window.__superglen.skills.shieldBlocks > 0)));
 }
 
+// ---- Kota Botanica (open city, src/world/kota) ------------------------------------------------------------------------------
+
+/** Start the city level and freeze the loop (deterministic stepping). */
+async function kotaBoot(page, touch) {
+  await page.waitForFunction(() => window.__superglen && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(600);
+  await page.evaluate(() => window.__superglen.pause(true));
+}
+
+/** Run `frames` single-step frames in the page, steering to (x, z) (and holding Space for flight when `fly`); tracks stream numbers. */
+async function kotaTravel(page, x, z, frames, fly = false) {
+  if (fly) await page.keyboard.down('Space');
+  const r = await page.evaluate(([x, z, frames]) => {
+    const g = window.__superglen;
+    g.walkTo(x, z);
+    const li = g.levelInfo;
+    let maxCol = 0;
+    let maxVis = 0;
+    let maxColliders = 0;
+    let maxY = -1e9;
+    let maxAbs = 0;
+    let minY = 1e9;
+    let worstMs = 0;
+    for (let i = 0; i < frames; i++) {
+      const t0 = performance.now();
+      g.advance(1, false);
+      worstMs = Math.max(worstMs, performance.now() - t0);
+      maxCol = Math.max(maxCol, li.colBodies);
+      maxVis = Math.max(maxVis, li.visLoaded + li.visLoading);
+      maxColliders = Math.max(maxColliders, g.debugCounts().colliders);
+      maxY = Math.max(maxY, g.player.y);
+      minY = Math.min(minY, g.player.y);
+      maxAbs = Math.max(maxAbs, Math.abs(g.player.x), Math.abs(g.player.z));
+      if (!g.walking && i > 30) break;
+    }
+    g.cancelWalk();
+    return { maxCol, maxVis, maxColliders, maxY, minY, maxAbs, worstMs, x: g.player.x, z: g.player.z, li: { ...li, roofSamples: undefined } };
+  }, [x, z, frames]);
+  if (fly) await page.keyboard.up('Space');
+  return r;
+}
+
+async function kotaLoadChecks(page, check, tag) {
+  const s = await page.evaluate(() => ({ level: window.__superglen.level, li: window.__superglen.levelInfo, hud: document.querySelector('.city-toast')?.textContent || '', grounded: window.__superglen.grounded }));
+  check(`kota ${tag}: level loads, the name pill says "Kota Botanica", the player stands on the ground`, s.level === 'kota' && s.hud.includes('Kota Botanica') && s.grounded, JSON.stringify({ level: s.level, hud: s.hud, g: s.grounded }));
+  check(`kota ${tag}: a 300 m city in 50 m chunks with >= 100 buildings`, s.li.chunks === 36 && s.li.chunkSize === 50 && s.li.buildings >= 100 && s.li.playHalf >= 130, JSON.stringify({ chunks: s.li.chunks, b: s.li.buildings, fh: s.li.footholds }));
+  check(`kota ${tag}: chunks around the spawn are loaded at once (visuals and colliders)`, s.li.visLoaded >= 4 && s.li.colBodies > 20, JSON.stringify({ vis: s.li.visLoaded, col: s.li.colBodies }));
+  return s;
+}
+
+async function kotaDesktopScenario(page, check) {
+  await kotaBoot(page, false);
+  await kotaLoadChecks(page, check, 'desktop');
+  await shot(page, 'kota-desktop-spawn');
+  // The hidden old Barongsai building: on the edge of town, far outside the central districts.
+  const lab = await page.evaluate(() => {
+    const li = window.__superglen.levelInfo;
+    return { x: li.labX, y: li.labY, z: li.labZ, dist: li.labDist };
+  });
+  check('kota: the old Barongsai building is NOT in the centre (>= 110 m from it, outside the 9 central cells\' middle and the alun-alun)', lab.dist >= 110 && Math.abs(lab.x) > 60 && Math.abs(lab.z) > 60, JSON.stringify(lab));
+  check('kota: the old Barongsai building stands on a hill (door at >= 4 m)', lab.y >= 4, `door y ${lab.y}`);
+
+  // Walk along the main avenue across chunk boundaries (z = 0 .. 120 crosses z = 50 and z = 100).
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.placePlayer(50, -20); g.advance(10, false); });
+  const before = await page.evaluate(() => ({ ...window.__superglen.levelInfo, roofSamples: undefined }));
+  const walk = await kotaTravel(page, 50, 125, 2400);
+  console.log(`   [kota] walk 145 m: worst frame ${walk.worstMs.toFixed(1)} ms, max vis ${walk.maxVis}, max bodies ${walk.maxCol}, max colliders ${walk.maxColliders}, loads ${walk.li.visLoads - before.visLoads}/${walk.li.visUnloads - before.visUnloads} col ${walk.li.colLoads - before.colLoads}/${walk.li.colUnloads - before.colUnloads}`);
+  check('kota: walking 145 m along the avenue arrives', Math.hypot(walk.x - 50, walk.z - 125) < 1.5, `${walk.x.toFixed(1)}, ${walk.z.toFixed(1)}`);
+  check('kota: crossing chunk borders loads AND unloads chunk visuals', walk.li.visLoads - before.visLoads >= 2 && walk.li.visUnloads - before.visUnloads >= 2, JSON.stringify({ l: walk.li.visLoads - before.visLoads, u: walk.li.visUnloads - before.visUnloads }));
+  check('kota: crossing chunk borders loads AND unloads chunk colliders', walk.li.colLoads - before.colLoads >= 2 && walk.li.colUnloads - before.colUnloads >= 2, JSON.stringify({ l: walk.li.colLoads - before.colLoads, u: walk.li.colUnloads - before.colUnloads }));
+  check('kota: loaded counts stay bounded while walking (<= 12 visual chunks, <= 400 streamed bodies, <= 500 colliders in the world)', walk.maxVis <= 12 && walk.maxCol <= 400 && walk.maxColliders <= 500, JSON.stringify({ vis: walk.maxVis, bodies: walk.maxCol, colliders: walk.maxColliders }));
+  check('kota: walking never fell through a chunk (feet never below the ground)', walk.minY > 0.3, `min centre y ${walk.minY.toFixed(2)}`);
+
+  // Fly diagonally across the city (Superglen, jets held): many chunks, still bounded, no sync hitch needed.
+  const fly = await kotaTravel(page, -90, -110, 3600, true);
+  console.log(`   [kota] flight: worst frame ${fly.worstMs.toFixed(1)} ms, max y ${fly.maxY.toFixed(1)}, max vis ${fly.maxVis}, max bodies ${fly.maxCol}, sync loads ${fly.li.syncLoads}`);
+  check('kota: flying across the city works (rose above the roofs and arrived)', fly.maxY > 8 && Math.hypot(fly.x + 90, fly.z + 110) < 4, JSON.stringify({ y: fly.maxY.toFixed(1), x: fly.x.toFixed(1), z: fly.z.toFixed(1) }));
+  check('kota: flying keeps loaded counts bounded', fly.maxVis <= 12 && fly.maxCol <= 400 && fly.maxColliders <= 500, JSON.stringify({ vis: fly.maxVis, bodies: fly.maxCol, colliders: fly.maxColliders }));
+  await page.evaluate(() => { for (let i = 0; i < 400 && !window.__superglen.grounded; i++) window.__superglen.advance(1, false); });
+
+  // Roofs: drop onto sample roofs of each class in far-away chunks: the colliders must be there when the player arrives.
+  const roofs = await page.evaluate(() => {
+    const g = window.__superglen;
+    const list = JSON.parse(g.levelInfo.roofSamples);
+    const out = [];
+    for (const r of list) {
+      g.teleportFeet(r.x, r.top + 2.5, r.z);
+      for (let i = 0; i < 120; i++) g.advance(1, false);
+      out.push({ id: r.id, top: r.top, feet: g.feetY, grounded: g.grounded });
+    }
+    return out;
+  });
+  const bad = roofs.filter((r) => !(r.grounded && r.feet >= r.top - 0.15));
+  check(`kota: dropped onto ${roofs.length} sample roofs (houses, rukos, landmarks) the player stands on each`, roofs.length >= 10 && bad.length === 0, bad.length ? JSON.stringify(bad.slice(0, 4)) : `${roofs.length} roofs`);
+
+  // The lab hook: reaching the door fires it and shows the name.
+  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 2, z + 1.2); for (let i = 0; i < 90; i++) g.advance(1, false); }, [lab.x, lab.y, lab.z]);
+  const found = await page.evaluate(() => ({ f: window.__superglen.levelInfo.labFound, hud: document.querySelector('.city-toast')?.textContent || '' }));
+  check('kota: reaching the old building\'s door fires the entrance hook and names it', found.f === true && found.hud.includes('Gedung Barongsai Tua'), JSON.stringify(found));
+  await shot(page, 'kota-desktop-lab');
+
+  // World edge: walking and flying outward is eased back; nobody leaves the world.
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(120, 50); g.advance(10, false); });
+  const edgeWalk = await kotaTravel(page, 240, 50, 900);
+  check('kota: walking east toward the edge for 15 s stays inside the world (soft push, no hard wall at the edge)', edgeWalk.maxAbs < 146 && edgeWalk.minY > 0.3, JSON.stringify({ maxAbs: edgeWalk.maxAbs.toFixed(1), x: edgeWalk.x.toFixed(1) }));
+  const back = await page.evaluate(() => { const g = window.__superglen; g.advance(240, false); return g.player.x; });
+  check('kota: let go at the edge, the player drifts back inside the play area', back <= 138.5, `x ${back.toFixed(1)}`);
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(0, -60); g.advance(10, false); });
+  const edgeFly = await kotaTravel(page, 0, -260, 1500, true);
+  check('kota: flying north toward the edge for 25 s stays inside the world', edgeFly.maxAbs < 146, JSON.stringify({ maxAbs: edgeFly.maxAbs.toFixed(1), z: edgeFly.z.toFixed(1) }));
+  await page.evaluate(() => { for (let i = 0; i < 600 && !window.__superglen.grounded; i++) window.__superglen.advance(1, false); });
+  // A fall out of the world still returns to the last safe spot.
+  const fall = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(-50, 10);
+    g.advance(40, false);
+    g.testFall();
+    g.advance(60, false);
+    return { x: g.player.x, y: g.player.y, z: g.player.z, grounded: g.grounded };
+  });
+  check('kota: falling out of the world respawns on the last safe ground', fall.y > 0 && fall.y < 2 && Math.hypot(fall.x + 50, fall.z - 10) < 2, JSON.stringify(fall));
+}
+
+async function kotaTouchScenario(page, check) {
+  await kotaBoot(page, true);
+  await kotaLoadChecks(page, check, 'touch 844x390');
+  const ui = await page.evaluate(() => {
+    const el = document.querySelector('.city-toast');
+    const r = el.getBoundingClientRect();
+    return { inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0, joystick: window.__superglen.touchUi === true };
+  });
+  check('kota touch: name pill inside the viewport, touch controls shown', ui.inside && ui.joystick, JSON.stringify(ui));
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(-50, 30); g.advance(5, false); });
+  const w = await kotaTravel(page, -50, -70, 1500);
+  check('kota touch: walking 100 m through chunk borders arrives with streaming bounded', Math.hypot(w.x + 50, w.z + 70) < 1.5 && w.maxVis <= 12 && w.maxCol <= 400 && w.minY > 0.3, JSON.stringify({ x: w.x.toFixed(1), z: w.z.toFixed(1), vis: w.maxVis, col: w.maxCol }));
+  await page.evaluate(() => window.__superglen.advance(1, true));
+  await shot(page, 'kota-touch');
+}
+
+/** Draw calls, triangles and heap per frame in steady state (phone preset, like `perf`). */
+async function kotaPerfScenario(page, check) {
+  const report = (label, v) => console.log(`   [kota-perf] ${label}: ${v}`);
+  await kotaBoot(page, true);
+  const spots = [['alun-alun', 0, 26], ['perumahan', -93, 20], ['sekolah', -50, -100], ['pasar', 100, 50], ['bank', 0, 93], ['avenue cross', 50, 50]];
+  const r = await page.evaluate((spots) => {
+    const g = window.__superglen;
+    g.advance(3, true);
+    const p0 = g.debugCounts().programs;
+    const out = {};
+    let maxCalls = 0;
+    let maxTris = 0;
+    for (const [name, x, z] of spots) {
+      g.placePlayer(x, z);
+      g.advance(60, false); // stream in
+      for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        g.setCameraYaw(yaw);
+        g.advance(2, false);
+        g.advance(1, true);
+        const c = g.debugCounts();
+        maxCalls = Math.max(maxCalls, c.calls);
+        maxTris = Math.max(maxTris, c.triangles);
+        out[`${name}@${Math.round((yaw * 180) / Math.PI)}`] = `${c.calls}/${c.triangles}`;
+      }
+    }
+    return { p0, p1: g.debugCounts().programs, maxCalls, maxTris, out };
+  }, spots);
+  report('calls/triangles per spot and view', JSON.stringify(r.out));
+  check('kota perf: <= 60 draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= 60, `max ${r.maxCalls}`);
+  check('kota perf: <= 65000 triangles per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 65000, `max ${r.maxTris}`);
+  check('kota perf: no shader program compiled after warm-up while visiting every district', r.p1 === r.p0 && r.p0 > 0, `${r.p0} -> ${r.p1}`);
+
+  const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
+  if (!heapOk) {
+    report('heap', 'performance.memory/gc unavailable: skipped');
+    return;
+  }
+  // Steady state: walking back and forth inside one chunk area (no chunk changes). Median of 3 windows, like `perf`.
+  const bpf = await page.evaluate(() => {
+    const g = window.__superglen;
+    const heap = () => performance.memory.usedJSHeapSize;
+    g.placePlayer(-3, 30);
+    g.advance(120, false);
+    const li = g.levelInfo;
+    let loads0 = 0;
+    const win = () => {
+      g.placePlayer(-3, 30);
+      g.walkTo(-3, 42);
+      g.advance(30, false);
+      window.gc();
+      let prev = heap();
+      let acc = 0;
+      const n = 600;
+      for (let i = 0; i < n; i++) {
+        if (!g.walking) g.walkTo(i % 2 ? -3 : 3, i % 3 ? 42 : 30);
+        g.advance(1, false);
+        const h = heap();
+        if (h >= prev) acc += h - prev;
+        prev = h;
+      }
+      g.cancelWalk();
+      return acc / n;
+    };
+    g.walkTo(3, 42);
+    for (let i = 0; i < 480; i++) g.advance(1, false);
+    g.cancelWalk();
+    loads0 = li.visLoads + li.colLoads + li.visUnloads + li.colUnloads;
+    const w = [win(), win(), win()].sort((a, b) => a - b);
+    return { bpf: w[1], changes: li.visLoads + li.colLoads + li.visUnloads + li.colUnloads - loads0 };
+  });
+  report('heap steady walking', `${Math.round(bpf.bpf)} bytes per frame (${bpf.changes} chunk changes in the window)`);
+  check('kota perf: < 16000 bytes allocated per walking frame in steady state (same limit as `perf`)', bpf.bpf < 16000 && bpf.changes === 0, `${Math.round(bpf.bpf)} B/frame, ${bpf.changes} chunk changes`);
+  // Report only: what a chunk change costs (allocation spread over frames).
+  const cross = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(50, -40);
+    g.advance(60, false);
+    window.gc();
+    const heap = () => performance.memory.usedJSHeapSize;
+    let prev = heap();
+    let acc = 0;
+    let worst = 0;
+    g.walkTo(50, 60);
+    let n = 0;
+    for (; n < 1200 && (n < 30 || g.walking); n++) {
+      const t0 = performance.now();
+      g.advance(1, false);
+      worst = Math.max(worst, performance.now() - t0);
+      const h = heap();
+      if (h >= prev) acc += h - prev;
+      prev = h;
+    }
+    g.cancelWalk();
+    return { bpf: acc / Math.max(1, n), worst };
+  });
+  report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -7168,6 +7408,10 @@ async function main() {
     results.push(await runScenario(browser, 'bab2', { viewport: { width: 1280, height: 720 } }, bab2DesktopScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-touch', { viewport: { width: 844, height: 281 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, bab2TouchScenario, '?level=bab2&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab2-flow', { viewport: { width: 1280, height: 720 } }, bab2FlowScenario, '?fps=0&reset=1'));
+
+    results.push(await runScenario(browser, 'kota', { viewport: { width: 1280, height: 720 } }, kotaDesktopScenario, '?level=kota&fps=0'));
+    results.push(await runScenario(browser, 'kota-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaTouchScenario, '?level=kota&fps=0'));
+    results.push(await runScenario(browser, 'kota-perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, kotaPerfScenario, '?level=kota&fps=0'));
 
     results.push(await runScenario(browser, 'skills-desktop', { viewport: { width: 1280, height: 720 } }, skillsDesktopScenario, '?level=test&fps=0'));
     results.push(await runScenario(browser, 'skills-perf', { viewport: { width: 1280, height: 720 } }, skillsPerfScenario, '?level=test&fps=0'));

@@ -376,10 +376,12 @@ export class Player {
     if (flyingNow) {
       rate = hasInput ? FlightConfig.accel : FlightConfig.decel;
       this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel);
-    } else if (!this.grounded) {
-      rate *= C.airControl;
+    } else {
+      // Soft world edge on foot (only levels that set one, e.g. the open city).
+      if (this.flight.groundBounds) this.flight.limitVelocity(this.currPos.x, this.currPos.z, this.targetVel, this.flight.groundBounds);
+      if (!this.grounded) rate *= C.airControl;
       // Just after a wall kick the push must carry: no stick = no braking, a stick against it is weak.
-      if (this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
+      if (!this.grounded && this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
     }
     // Move velocity toward target by at most rate*dt (frame-rate independent at fixed dt).
     this.tmp.subVectors(this.targetVel, this.velocity);

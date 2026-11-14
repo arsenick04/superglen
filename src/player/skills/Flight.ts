@@ -56,6 +56,9 @@ export interface FlightBounds {
   maxX: number;
   minZ: number;
   maxZ: number;
+  /** Width of the easing band inside the edge (m) and the push-back speed (m/s). Default FlightConfig.boundsMargin / boundsPush. */
+  margin?: number;
+  push?: number;
 }
 
 const OFF = 0;
@@ -110,6 +113,11 @@ const FLAME_Z = -0.12;
 export class Flight {
   maxFlyHeight: number = FlightConfig.defaultMaxHeight;
   bounds: FlightBounds | null = null;
+  /**
+   * Optional soft box for walking and jumping too (the open city): the stick velocity is eased back inside it exactly like the
+   * flight box, so the world edge turns the child around gently instead of a wall. Reset on every level load.
+   */
+  groundBounds: FlightBounds | null = null;
   /** Filled by the Player every fixed step. */
   readonly inp: FlightInput = { can: false, jumpDown: false, jumpPressed: false, grounded: false, feetY: 0, groundY: NaN, ceilGap: Infinity, vy: 0 };
   /** Vertical velocity the flight wants this step (the Player applies it). */
@@ -186,6 +194,7 @@ export class Flight {
   resetLevelSettings(): void {
     this.maxFlyHeight = FlightConfig.defaultMaxHeight;
     this.bounds = null;
+    this.groundBounds = null;
   }
 
   /**
@@ -304,11 +313,10 @@ export class Flight {
    * Ease the wanted horizontal velocity away from the level bounds (never a hard stop).
    * `target` is the stick-driven velocity (m/s) and is modified in place.
    */
-  limitVelocity(px: number, pz: number, target: THREE.Vector3): void {
-    const b = this.bounds;
+  limitVelocity(px: number, pz: number, target: THREE.Vector3, b: FlightBounds | null = this.bounds): void {
     if (!b) return;
-    const m = FlightConfig.boundsMargin;
-    const push = FlightConfig.boundsPush;
+    const m = b.margin ?? FlightConfig.boundsMargin;
+    const push = b.push ?? FlightConfig.boundsPush;
     let t = (px - (b.maxX - m)) / m;
     if (t > 0) {
       t = Math.min(t, 1.5);

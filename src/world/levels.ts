@@ -3,6 +3,7 @@ import { TestArea } from './TestArea';
 import { DemoLevel } from './DemoLevel';
 import { Bab1Level } from './bab1/Bab1Level';
 import { Bab2Level } from './bab2/Bab2Level';
+import { KotaLevel } from './kota/KotaLevel';
 
 /**
  * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet. Returning players start where
@@ -16,4 +17,6 @@ export const LEVELS: Readonly<Record<string, LevelFactory>> = {
   demo: () => new DemoLevel(),
   bab1: () => new Bab1Level(),
   bab2: () => new Bab2Level(),
+  /** Kota Botanica, the open city (free roam; not yet part of the chapter flow): `?level=kota`. */
+  kota: () => new KotaLevel(),
 };
