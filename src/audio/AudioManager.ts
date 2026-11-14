@@ -328,7 +328,9 @@ export class AudioManager {
     try {
       const ctx = this.ctx;
       if (!ctx) return null;
-      const res = await fetch(url);
+      // 'no-cache' = always revalidate: clip file names stay the same when a voice is re-recorded, so a cached copy would
+      // keep playing the old voice.
+      const res = await fetch(url, { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const buf = await ctx.decodeAudioData(await res.arrayBuffer());
       this.maxBufferSeconds = Math.max(this.maxBufferSeconds, buf.duration);
