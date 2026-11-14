@@ -3,8 +3,10 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { AaraActor } from './Aara';
+import { personGeo } from './CityPeople';
+import { CITY_LAYOUT } from './CityData';
 import { ClueProps } from './ClueProps';
-import { AARA, AARA_QUESTIONS, BAB4_LINES as L, CLUE_ARRIVE, CLUE_HELP_AFTER, CLUE_PAPER0, CLUE_PRAISE, CLUES, PARK } from './Bab4Data';
+import { AARA, AARA_QUESTIONS, BAB4_LINES as L, CLUE_ARRIVE, CLUE_HELP_AFTER, CLUE_PAPER0, CLUE_PRAISE, CLUES, FIGURE, PARK } from './Bab4Data';
 
 /** What the level gives Chapter 4 (so this file does not need to know the level class). */
 export interface Chapter4Hooks {
@@ -12,8 +14,6 @@ export interface Chapter4Hooks {
   setGoal(goal: { x: number; z: number } | null): void;
   /** A resident's mission may not run during the chapter: drop the running one. */
   dropMission(): void;
-  /** The chapter ended: residents offer missions again (the map redraws). */
-  finished(): void;
   /** Put the player on the ground at (x, z) facing `yaw` (colliders made ready, the camera snaps behind). */
   placePlayer(x: number, z: number, yaw: number): void;
 }
@@ -52,6 +52,7 @@ export class Chapter4 {
   private reading = false;
   private saidTaman = false;
   private saidBaca = false;
+  private figureScene = false;
   private idle = 0;
   private beamTick = 0;
   /** Test counters. */
@@ -107,6 +108,8 @@ export class Chapter4 {
     if (this.step === '' || this.step === 'school') this.pointToSchool();
     if (this.step === 'aara') this.runAara();
     if (this.step === 'park') this.enterPark();
+    if (this.step === 'figure') this.runFigure();
+    if (this.step === 'lab') this.pointToLab();
     if (this.step === '' || this.step === 'school' || this.step === 'aara') this.putAara(AARA.pos.x, AARA.pos.z, AARA.pos.yaw);
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
@@ -125,6 +128,8 @@ export class Chapter4 {
     if (step === 'school') this.pointToSchool();
     if (step === 'aara') this.runAara();
     if (step === 'park') this.enterPark();
+    if (step === 'figure') this.runFigure();
+    if (step === 'lab') this.pointToLab();
   }
 
   private putAara(x: number, z: number, yaw: number): void {
@@ -335,6 +340,78 @@ export class Chapter4 {
     void ctx.dialog.say(L.aaraLagi);
   }
 
+  /**
+   * The Sosok Misterius: across the pond a soft dark-blue silhouette fades in, waves, says "Aku sudah lama mengawasimu...
+   * Superglen." and is gone in a sparkle (friendly, nothing to fear). Aara asks Glen to report to Nino in the lab.
+   */
+  private runFigure(): void {
+    if (this.figureScene) return;
+    this.figureScene = true;
+    const { ctx } = this;
+    const { seq, dialog, cameraRig, fx } = ctx;
+    seq.run(async () => {
+      await seq.waitUntil(() => startGate.started);
+      const info = ctx.game.debugInfo;
+      info.ch4Scene = 'figure';
+      ctx.game.setControlsEnabled(false);
+      ctx.objectives.clear();
+      this.hooks.setGoal(null);
+      this.props?.hideBeacon();
+      this.stage(FIGURE.stage, 5);
+      this.putAara(PARK.aara.x, PARK.aara.z, PARK.aara.yaw);
+      const f = FIGURE.pos;
+      const geo = personGeo(0x34406a, 0x34406a);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x34406a, transparent: true, opacity: 0, fog: true });
+      const fig = new THREE.Mesh(geo, mat);
+      fig.position.set(f.x, 0, f.z);
+      fig.rotation.y = Math.atan2(FIGURE.stage.x - f.x, FIGURE.stage.z - f.z);
+      fig.scale.setScalar(1.2);
+      fig.castShadow = false;
+      ctx.root.add(fig);
+      cameraRig.setFraming(this.tmp.set(f.x, 1.2, f.z), { weight: 0.45, distance: 3 });
+      await seq.tween(0.9, (t) => (mat.opacity = 0.8 * t));
+      let t = 0;
+      const wave = (): boolean => {
+        t += 1 / 60;
+        fig.rotation.z = Math.sin(t * 7) * 0.12;
+        return false;
+      };
+      seq.run(() => seq.waitUntil(wave));
+      await dialog.say(L.aaraLihat, { lockControls: true });
+      await dialog.say(L.misteriusAwas, { lockControls: true });
+      await seq.tween(0.7, (u) => (mat.opacity = 0.8 * (1 - u)));
+      fx.sparkles.burst(f.x, 1, f.z, 22, 2.6, 0xbcd0ff, { gravity: 0.5, life: 1.1, up: 0.6 });
+      fig.removeFromParent();
+      geo.dispose();
+      mat.dispose();
+      await dialog.say(L.glenTahu, { lockControls: true });
+      await dialog.say(L.aaraLapor, { lockControls: true });
+      cameraRig.setFraming(null);
+      this.setStep('lab');
+      ctx.game.setControlsEnabled(true);
+      info.ch4Scene = 'lab';
+    });
+  }
+
+  /** Back to the old building: the beam and the star lead to its door; inside, Nino has news (Story.chapter4Finale). */
+  private pointToLab(): void {
+    const d = CITY_LAYOUT.lab.door;
+    this.hooks.setGoal({ x: d.x, z: d.z });
+    this.ctx.objectives.set(this.tmp.set(d.x, d.y, d.z + 0.9));
+    this.props?.hidePaper();
+    this.props?.hideBeacon();
+    this.putAara(PARK.aara.x, PARK.aara.z, PARK.aara.yaw);
+  }
+
+  private labBeam(): void {
+    if (++this.beamTick % 20 !== 0) return;
+    const d = CITY_LAYOUT.lab.door;
+    const p = this.ctx.player.position;
+    const dist = Math.hypot(p.x - d.x, p.z - d.z);
+    if (dist < 6 && this.ctx.objectives.active) this.ctx.objectives.clear();
+    else if (dist >= 10 && !this.ctx.objectives.active) this.ctx.objectives.set(this.tmp.set(d.x, d.y, d.z + 0.9));
+  }
+
   /** Clue help: nobody gets stuck (Aara says what to do again; the beam leads back when the child wandered off). */
   private clueTick(dt: number): void {
     const p = this.ctx.player.position;
@@ -368,6 +445,7 @@ export class Chapter4 {
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
     if (this.step === 'park') this.clueTick(dt);
+    if (this.step === 'lab') this.labBeam();
     const p = this.ctx.player.position;
     if (this.step === 'school' && !this.arrived && Math.hypot(p.x - AARA.pos.x, p.z - AARA.pos.z) < AARA.arriveRadius) {
       this.arrived = true;
@@ -392,18 +470,5 @@ export class Chapter4 {
     const info = this.ctx.game.debugInfo;
     info.ch4Step = this.step;
     info.ch4Arrived = this.arrived;
-  }
-
-  /** The chapter is over: the save says so and the city is free again. */
-  complete(): void {
-    if (this.over) return;
-    this.over = true;
-    this.ctx.save.markChapterDone('bab4');
-    this.ctx.save.setBab4('', 0);
-    this.ctx.objectives.clear();
-    this.hooks.setGoal(null);
-    this.ctx.game.setTransformAllowed(true);
-    this.hooks.finished();
-    this.ctx.game.debugInfo.ch4Step = 'done';
   }
 }

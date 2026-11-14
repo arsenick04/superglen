@@ -14,7 +14,7 @@ Pola yang sudah ada: Chapter 3 di src/world/kota/Chapter3.ts + Bab3Data.ts + D4_
 - [x] **L1 Pemicu dan alur Chapter 4.** Setelah Chapter 3 selesai: Chapter 4 aktif, Glen dalam mode Glen (tanpa kostum, detektif), tujuan + bintang peta ke Sekolah. State machine tersimpan di save, bisa dilanjutkan setelah reload. Misi warga dijeda. Tes `bab4-flow`.
 - [x] **L2 Aara.** Aara (sahabat sekolah Glen, acuan art/reference/aara_*) sebagai figur sederhana low-poly di sekolah, membawa alat penerjemah. Tantangan "Kata Inggris dari Aara": 3 soal pakai quiz engine (mis. "Apa bahasa Inggrisnya buku?"), tiap jawaban benar membuat alatnya makin canggih (efek visual), lalu alat menangkap sinyal yang menunjuk ke taman kota. Tes `bab4-aara`.
 - [x] **L3 Petunjuk di taman.** 3 papan/kertas petunjuk bertuliskan satu kata ("bola", "pohon", "kolam"), dibacakan bila anak menekan tombol pengeras suara. Anak memilih tempat yang cocok (atau berjalan ke sana), tempat itu berkilau, petunjuk berikutnya muncul. Tanpa jalan buntu: bantuan muncul setelah beberapa detik. Tes `bab4-clues`.
-- [ ] **L4 Sosok Misterius + penutup.** Siluet muncul di taman: "Aku sudah lama mengawasimu... Superglen." lalu menghilang (ramah, tidak menakutkan). Kembali ke Lab: Nino menemukan pasukan tikus memakai alat curian dari lab lama; misi berikutnya dimulai (teaser). Chapter 4 selesai, perayaan, kota bebas lagi dan misi warga aktif. Tes `bab4-end`.
+- [x] **L4 Sosok Misterius + penutup.** Siluet muncul di taman: "Aku sudah lama mengawasimu... Superglen." lalu menghilang (ramah, tidak menakutkan). Kembali ke Lab: Nino menemukan pasukan tikus memakai alat curian dari lab lama; misi berikutnya dimulai (teaser). Chapter 4 selesai, perayaan, kota bebas lagi dan misi warga aktif. Tes `bab4-end`.
 - [ ] **L5 Suara.** Semua kalimat baru Chapter 4 ke audio/dialog.json dengan ekspresi per kalimat. Aara: pilih suara anak perempuan/remaja putri yang ceria, berbeda dari warga lain. Sosok Misterius: tenang, misterius-ramah, tidak menakutkan. Glen = Finn +2, Nino = Pratama +2. Kata-kata soal dan petunjuk (bola, pohon, kolam, kata Inggris) pakai klip yang sudah ada bila ada. Anggaran sekitar 1.000 karakter.
 - [ ] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D5 + "Untuk dicoba besok pagi".
 
@@ -52,3 +52,32 @@ Kalimat baru L3 (teks saja):
 - `bab4_aara_lagi` (aara): Ada papan lagi di sini! Baca, yuk.
 - `bab4_aara_ayo` (aara): Ayo, ke tempat yang berkilau!
 - (klip kartu baca, bukan baris dialog) `bab4_kata_bola` / `bab4_kata_pohon` / `bab4_kata_kolam`; teks kartu: "Baca katanya. Tempat apa?"
+
+**L4 selesai.** Adegan Sosok Misterius: `Chapter4.runFigure()` (langkah 'figure'): anak dipindah ke tepi kolam (`FIGURE.stage`), siluet biru-tua ramah (mesh `personGeo`, MeshBasic transparan) memudar masuk di rumput barat kolam (-114.5,-119.5), melambai, "Aku sudah lama mengawasimu... Superglen.", memudar dengan kilau; Aara dan Glen bereaksi; langkah 'lab' (beam + bintang peta ke pintu gedung tua, misi warga tetap dijeda, Glen tetap mode Glen, Aara menunggu di gerbang taman). Penutup di Lab: `Story.chapter4Finale()` (bab1/Story.ts): bila `bab4.step === 'lab'` beam menuju Nino, Nino bicara (komputer lab, pasukan tikus memakai alat curian dari lab lama, teaser), `markChapterDone('bab4')`, 5 koin, `Celebration` "Chapter 4 selesai!", lalu `travel` ke kota (pintu bukit): kota bebas, misi warga aktif, tombol ubah menyala. `Chapter4.complete()` dihapus (penutup terjadi di Lab). Wajah bubble `misterius` ditambah. Tes `bab4-end`, `bab4-end-touch` (figure -> lab -> Nino -> kota bebas; tangkapan bab4-end-figure.png). Catatan: tes `ch3Watch`-style memakai `.chapter-star` yang `show` (di Lab ada dua elemen bintang). Batas diketahui: kamera adegan siluet dituning lewat tangkapan layar desktop saja; reload di langkah 'lab' mulai di pintu bukit (beam mati bila < 6 m dari pintu).
+
+**Daftar lengkap kalimat baru Chapter 4 (teks saja; sumber `src/world/kota/Bab4Data.ts` `BAB4_LINES`)**:
+- `bab4_nino_mulai` (nino): Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!
+- `bab4_aara_halo` (aara): Glen! Aku membuat alat penerjemah. Mau coba?
+- `bab4_glen_mau` (glen): Mau! Aku siap menjawab.
+- `bab4_aara_benar1` (aara): Benar! Alatnya mulai menyala.
+- `bab4_aara_benar2` (aara): Betul! Alatnya makin canggih.
+- `bab4_aara_benar3` (aara): Hebat! Alatnya sudah canggih sekali!
+- `bab4_aara_sinyal` (aara): Tuut tuut! Ada sinyal. Menunjuk ke taman kota!
+- `bab4_glen_taman` (glen): Ayo ke taman, kita selidiki!
+- `bab4_aara_taman` (aara): Lihat! Ada papan petunjuk. Ayo kita baca!
+- `bab4_aara_baca` (aara): Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.
+- `bab4_aara_papan` (aara): Dekati papan itu, lalu tekan tombol tangan.
+- `bab4_aara_bola` (aara): Bola! Tempat bermain berkilau. Ayo ke sana!
+- `bab4_aara_pohon` (aara): Pohon! Pohonnya berkilau. Ayo ke sana!
+- `bab4_aara_kolam` (aara): Kolam! Kolamnya berkilau. Ayo ke sana!
+- `bab4_aara_lagi` (aara): Ada papan lagi di sini! Baca, yuk.
+- `bab4_aara_ayo` (aara): Ayo, ke tempat yang berkilau!
+- `bab4_aara_lihat` (aara): Glen, lihat! Siapa itu di dekat pohon?
+- `bab4_misterius_awas` (misterius): Aku sudah lama mengawasimu... Superglen.
+- `bab4_glen_tahu` (glen): Dia tahu namaku! Dia siapa, ya?
+- `bab4_aara_lapor` (aara): Ayo lapor ke Nino di lab!
+- `bab4_nino_temu` (nino): Glen! Aku menemukan sesuatu di komputer lab.
+- `bab4_nino_alat` (nino): Pasukan tikus memakai alat curian dari lab lama kita!
+- `bab4_glen_curi` (glen): Wah! Kita harus mengambilnya kembali.
+- `bab4_nino_siap` (nino): Betul. Petualangan berikutnya menunggu. Siap, Superglen?
+- Klip kartu baca (bukan dialog; belum ada di public/audio): `bab4_kata_bola`, `bab4_kata_pohon`, `bab4_kata_kolam`. Soal Aara memakai klip bank yang sudah ada (`quiz_inggris_008`, `_007`, `_001`).

@@ -38,6 +38,15 @@ export const CLUE_ARRIVE = 4.5;
 /** Seconds without progress after which Aara helps (no dead end). */
 export const CLUE_HELP_AFTER = 22;
 
+/**
+ * The Sosok Misterius (friendly silhouette) shows on the lawn west of the pond: the child stands at the pond spot facing it. A soft dark-blue
+ * shape that waves, says one line and is gone in a sparkle (no fear, no chase).
+ */
+export const FIGURE = {
+  pos: { x: -114.5, z: -119.5 },
+  stage: { x: -107.1, z: -115.8, yaw: Math.atan2(-114.5 + 107.1, -119.5 + 115.8) },
+} as const;
+
 /** The three English words Aara asks (bank question ids, so their voice clips already exist). */
 export const AARA_QUESTIONS = ['inggris_008', 'inggris_007', 'inggris_001'] as const;
 
@@ -59,6 +68,14 @@ export const BAB4_LINES = {
   aaraKolam: { id: 'bab4_aara_kolam', speaker: 'aara', text: 'Kolam! Kolamnya berkilau. Ayo ke sana!' },
   aaraLagi: { id: 'bab4_aara_lagi', speaker: 'aara', text: 'Ada papan lagi di sini! Baca, yuk.' },
   aaraAyo: { id: 'bab4_aara_ayo', speaker: 'aara', text: 'Ayo, ke tempat yang berkilau!' },
+  aaraLihat: { id: 'bab4_aara_lihat', speaker: 'aara', text: 'Glen, lihat! Siapa itu di dekat pohon?' },
+  misteriusAwas: { id: 'bab4_misterius_awas', speaker: 'misterius', text: 'Aku sudah lama mengawasimu... Superglen.' },
+  glenTahu: { id: 'bab4_glen_tahu', speaker: 'glen', text: 'Dia tahu namaku! Dia siapa, ya?' },
+  aaraLapor: { id: 'bab4_aara_lapor', speaker: 'aara', text: 'Ayo lapor ke Nino di lab!' },
+  ninoTemu: { id: 'bab4_nino_temu', speaker: 'nino', text: 'Glen! Aku menemukan sesuatu di komputer lab.' },
+  ninoAlat: { id: 'bab4_nino_alat', speaker: 'nino', text: 'Pasukan tikus memakai alat curian dari lab lama kita!' },
+  glenCuri: { id: 'bab4_glen_curi', speaker: 'glen', text: 'Wah! Kita harus mengambilnya kembali.' },
+  ninoSiap: { id: 'bab4_nino_siap', speaker: 'nino', text: 'Betul. Petualangan berikutnya menunggu. Siap, Superglen?' },
 } as const;
 
 /** Aara's praise after a clue is read right, by the clue's index. */

@@ -3,7 +3,8 @@ import type { LevelContext } from '../Level';
 import { Easings } from '../../gameplay/Sequence';
 import { startGate } from '../../core/StartGate';
 import { Celebration } from '../Celebration';
-import { labNinoTalk } from '../progress';
+import { labNinoTalk, travel } from '../progress';
+import { BAB4_LINES } from '../kota/Bab4Data';
 import type { LabDoor } from './LabDoor';
 import type { Atmosphere, Flashlight } from './Lighting';
 import type { Sparkles } from './Fx';
@@ -91,7 +92,7 @@ export class Story {
     this.p.door.enable();
     ctx.game.debugInfo.chapterDone = true;
     // Next chapter not played yet: the beam leads to Nino.
-    if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
+    if (!ctx.save.isChapterDone('bab2') || this.finale4Pending()) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
     else if (fromHangar && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
   }
 
@@ -103,11 +104,48 @@ export class Story {
       icon: 'talk',
       promptHeight: 1.5,
       onInteract: () => {
+        if (this.finale4Pending()) {
+          this.chapter4Finale();
+          return;
+        }
         const talk = labNinoTalk(ctx.save);
         void ctx.dialog.say(talk.line).then(() => {
           if (talk.next) void ctx.game.loadLevel(talk.next);
         });
       },
+    });
+  }
+
+  /** Chapter 4 is at its last step: the child comes back from the park with the news (package D5). */
+  private finale4Pending(): boolean {
+    const s = this.p.ctx.save;
+    return s.isChapterDone('bab3') && !s.isChapterDone('bab4') && s.data.bab4.step === 'lab';
+  }
+
+  private finale = false;
+
+  /**
+   * Chapter 4's end in the lab: Nino found that the rat army uses tools stolen from this lab (a teaser for what comes next),
+   * Chapter 4 is done (stars, confetti, coins), then the way out leads back to the city, now free again.
+   */
+  private chapter4Finale(): void {
+    if (this.finale) return;
+    this.finale = true;
+    const { ctx } = this.p;
+    const { seq, dialog, game } = ctx;
+    seq.run(async () => {
+      this.setTarget(null);
+      game.setControlsEnabled(false);
+      game.debugInfo.ch4Finale = 'start';
+      await dialog.sequence([BAB4_LINES.ninoTemu, BAB4_LINES.ninoAlat, BAB4_LINES.glenCuri, BAB4_LINES.ninoSiap], { lockControls: true });
+      ctx.save.markChapterDone('bab4');
+      ctx.save.setBab4('', 0);
+      ctx.save.finishCityMission('bab4', 5);
+      ctx.quiz.coinsChanged();
+      game.debugInfo.ch4Finale = 'done';
+      await new Celebration(ctx, 'Chapter 4 selesai!', this.p.sparkles).play();
+      game.setControlsEnabled(true);
+      await travel(game, 'kota', 'hillDoor');
     });
   }
 

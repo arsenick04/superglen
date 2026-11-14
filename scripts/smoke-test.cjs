@@ -8976,6 +8976,99 @@ async function bab4CluesScenario(page, check, touch) {
 }
 const CLUE_GLOW = [[-108.5, -104.5], [-118.5, -120.3], [-107.12, -119.88]];
 
+/** Watch a scene frame by frame: dialog lines (in order), scene markers, controls locked frames, the chapter star, screenshots by scene. */
+async function ch4Watch(page, frames, key, shots = null) {
+  const seen = [];
+  const scenes = [];
+  let star = false;
+  let locked = 0;
+  const seenAt = {};
+  for (let f = 0; f < frames; f += 20) {
+    const r = await page.evaluate(async (key) => {
+      await window.__superglen.advanceAsync(20, false);
+      const g = window.__superglen;
+      const st = document.querySelector('.chapter-star');
+      return { line: g.dialog.open ? g.dialog.text : '', scene: g.levelInfo[key] || '', star: !!st && st.classList.contains('show'), ctl: g.controlsEnabled, level: g.level };
+    }, key);
+    if (r.line && seen[seen.length - 1] !== r.line) seen.push(r.line);
+    if (r.scene && scenes[scenes.length - 1] !== r.scene) scenes.push(r.scene);
+    star = star || r.star;
+    if (r.ctl === false) locked++;
+    if (shots && r.scene && shots[r.scene]) {
+      seenAt[r.scene] = (seenAt[r.scene] || 0) + 1;
+      if (seenAt[r.scene] === 4) {
+        await page.evaluate(() => window.__superglen.advance(1, true));
+        fs.mkdirSync(OUT, { recursive: true });
+        await page.screenshot({ path: path.join(OUT, shots[r.scene] + '.png') });
+      }
+    }
+    if (r.level !== 'kota') break;
+  }
+  return { seen, scenes, star, locked };
+}
+const orderOk = (seen, parts) => { const idx = parts.map((t) => seen.findIndex((l) => l.indexOf(t) >= 0)); return idx.every((i) => i >= 0) && idx.every((v, i) => i === 0 || v > idx[i - 1]); };
+
+async function bab4EndScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch4Save({ bab4: { step: 'figure', clue: 3 } }), touch);
+  const w = await ch4Watch(page, 1500, 'ch4Scene', { figure: `bab4-end-figure${touch ? '-touch' : ''}` });
+  check(`bab4-end ${tag}: the figure scene: Aara notices, the silhouette says "Aku sudah lama mengawasimu... Superglen.", Glen and Aara react, in order`, orderOk(w.seen, ['Siapa itu', 'mengawasimu... Superglen', 'tahu namaku', 'lapor ke Nino']), JSON.stringify(w.seen));
+  check(`bab4-end ${tag}: controls locked during the scene, then free; markers figure -> lab`, w.locked > 5 && w.scenes.join('>').indexOf('figure>lab') >= 0 && (await page.evaluate(() => window.__superglen.controlsEnabled !== false)), JSON.stringify([w.locked, w.scenes]));
+  let s = await ch4Info(page);
+  const lx = s.li.labX;
+  check(`bab4-end ${tag}: afterwards step "lab" is saved and the beam leads to the old building's door`, s.ch4.step === 'lab' && s.save.bab4.step === 'lab' && s.obj === true && Math.abs(s.objXZ[0] - lx) < 2, JSON.stringify([s.ch4, s.save.bab4, s.obj, s.objXZ, lx]));
+  check(`bab4-end ${tag}: the residents still offer no mission and Glen is still Glen`, (await page.evaluate(() => window.__d3.people())).every((p) => !p.available) && (await page.evaluate(() => window.__superglen.mode)) === 'glen', '');
+  // Reload at 'lab': still the beam, no scene again.
+  await ch3Open(page, JSON.parse(await page.evaluate(() => localStorage.getItem('superglen.save.v1'))), touch);
+  s = await ch4Info(page);
+  check(`bab4-end ${tag}: a reload at "lab" resumes at "lab" (at the hill door the beam is off) and plays no figure scene`, s.ch4.step === 'lab' && s.li.ch4Scene !== 'figure', JSON.stringify([s.ch4, s.obj, s.li.ch4Scene]));
+  // Into the old building.
+  const door = { x: s.li.labX, y: s.li.labY, z: s.li.labZ };
+  await page.evaluate(([x, y, z]) => window.__superglen.teleportFeet(x, y + 2, z + 1.2), [door.x, door.y, door.z]);
+  await d3Adv(page, 60);
+  const pr = await page.evaluate(() => ({ ...window.__superglen.prompt }));
+  await d3Press(page, 'e', 3);
+  await page.evaluate(() => window.__superglen.pause(false));
+  if (process.env.DBG) console.log('DBG door', JSON.stringify(pr), await page.evaluate(() => window.__superglen.level));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 60);
+  s = await ch4Info(page);
+  check(`bab4-end ${tag}: in the lab the beam leads to Nino`, s.obj === true, JSON.stringify([s.obj, s.objXZ]));
+  await page.evaluate(() => window.__superglen.teleportFeet(3.2, -0.9 + 0.3, -68.3));
+  await d3Adv(page, 40);
+  await d3Adv(page, 20);
+  if (process.env.DBG) console.log('DBG nino', JSON.stringify(await page.evaluate(() => ({ p: window.__superglen.prompt, pos: window.__superglen.player }))));
+  await d3Press(page, 'e', 3);
+  const seen = [];
+  let star = false;
+  let lvl = 'lab';
+  let fin = '';
+  for (let f = 0; f < 4200 && lvl === 'lab'; f += fin === 'done' ? 4 : 20) {
+    const r = await page.evaluate(async (n) => { await window.__superglen.advanceAsync(n, false); const g = window.__superglen; const st = [...document.querySelectorAll('.chapter-star')].find((e) => e.classList.contains('show')); return { line: g.dialog.open ? g.dialog.text : '', star: !!st, level: g.level, fin: g.levelInfo.ch4Finale || '' }; }, fin === 'done' ? 4 : 20);
+    fin = r.fin;
+    if (process.env.DBG && fin) console.log('DBG fin', f, JSON.stringify(r));
+    if (r.line && seen[seen.length - 1] !== r.line) seen.push(r.line);
+    star = star || r.star;
+    if (r.fin === 'done' && f % 200 === 0 && !touch) { /* celebration running */ }
+    lvl = r.level;
+    if (r.fin === 'done' && star) break;
+  }
+  check(`bab4-end ${tag}: Nino's news in order (found something, rats use stolen tools, take them back, next adventure)`, orderOk(seen, ['komputer lab', 'alat curian', 'mengambilnya kembali', 'Petualangan berikutnya']), JSON.stringify(seen));
+  s = await ch4Info(page);
+  check(`bab4-end ${tag}: Chapter 4 is done and saved (bab4 in chaptersDone, step cleared), the star celebration was shown`, s.save.chaptersDone.includes('bab4') && s.save.bab4.step === '' && star, JSON.stringify([s.save.chaptersDone, s.save.bab4, star]));
+  // Back to the city: free again.
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 60000 });
+  await sleep(700);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 40);
+  s = await ch4Info(page);
+  const ppl = await page.evaluate(() => window.__d3.people());
+  check(`bab4-end ${tag}: back in the city there is no chapter any more, the residents offer missions again`, s.ch4 === null && ppl.length >= 6 && ppl.every((p) => p.available), JSON.stringify([s.ch4, ppl.map((p) => p.available)]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -9141,6 +9234,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab4-aara-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4AaraScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-clues', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4CluesScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-clues-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4CluesScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab4-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 

@@ -249,7 +249,6 @@ export class KotaLevel implements Level {
     this.ch4 = new Chapter4(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
-      finished: () => this.d3?.people.onChange?.(),
       placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
     }, this.lit);
     this.ch4.start();
