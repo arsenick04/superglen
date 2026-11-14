@@ -7,6 +7,14 @@ Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi sep
 |---|---|---|---|
 | Glen | Finn - Expressive & Ads Indonesian | `zmTMXWr9TzPTCLvo0Uqr` | Indonesia, laki-laki muda ekspresif, nada +2 semiton |
 | Nino | Pratama - Clear, Confident and Warm | `q8qwd1jY2jS3AWOBeq25` | Indonesia, aksen standar, nada +2 semiton |
+| Bu Sari (warga kota) | Serena - Heartfelt Indonesian Voice | `fpsPI3vlnQ0anCTPiHk5` | Indonesia, perempuan paruh baya, lembut |
+| Pak Joko | Mazlan - Warm, Neutral and Clear | `GcHP6UfXX0zaHYu0b0ut` | Indonesia, laki-laki tua, hangat |
+| Kak Dimas | Rafiq - Upbeat | `xlBOShi2835jfBgaEld4` | Indonesia, laki-laki muda, ceria |
+| Pak Guru | Ghaisan - Warm, Engaging and Clear | `vLsH4ENK3zGpAuW1lSh4` | Indonesia, laki-laki paruh baya, jelas |
+| Mbak Lala | Defasyalala - Warm, Expressive and Clear | `JaUVfDrFcfwGIsv8X2kN` | Indonesia, perempuan muda, bersemangat |
+| Pak Pos | Angga - Authentic Indonesian | `Aw7qttNp8aSAczVs9nwb` | Indonesia, laki-laki muda, santai |
+| Dokter Ani | Citra - Gentle, Inviting and Calm | `RbNgJzKAV7jpYJNtCBpj` | Indonesia, perempuan muda, lembut |
+| Kak Bima | Dakocan - Expressive, Cheerful and Clear | `plgKUYgnlZ1DCNh54DwJ` | Indonesia, laki-laki muda, ceria |
 | Kata bahasa Inggris | Josh - Teacher for Kids | `nzFihrBIvB34imQBuxub` | Inggris Amerika |
 | Kata Mandarin | Sage - Soothing & Gentle | `APSIkVZudNbPAwyPoeVO` | Mandarin standar (dipilih pemilik proyek) |
 

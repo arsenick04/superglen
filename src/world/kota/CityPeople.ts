@@ -325,8 +325,9 @@ export class CityPeople {
 
   // ---- Talking -------------------------------------------------------------------------------------------------------------------
 
-  private say(speaker: string, text: string, lock = true): Promise<void> {
-    return this.ctx.dialog.say({ speaker, text }, { lockControls: lock });
+  /** `id` is the voice clip id (`public/audio/<id>.mp3`, written by `npm run audio` from audio/dialog.json). */
+  private say(speaker: string, text: string, id: string, lock = true): Promise<void> {
+    return this.ctx.dialog.say({ speaker, text, id }, { lockControls: lock });
   }
 
   private talk(i: number): void {
@@ -337,7 +338,7 @@ export class CityPeople {
     if (act && act.m.kind === 'deliver' && act.m.deliverTo === r.id) {
       seq.run(async () => {
         this.busy = true;
-        await this.say(r.id, act.m.done);
+        await this.say(r.id, act.m.done, `kota_${act.m.id}_done`);
         this.finish(act.m);
         this.busy = false;
       });
@@ -347,14 +348,14 @@ export class CityPeople {
       if (act.ready) {
         seq.run(async () => {
           this.busy = true;
-          await this.say(r.id, m.done);
+          await this.say(r.id, m.done, `kota_${m.id}_done`);
           this.finish(m);
           this.busy = false;
         });
       } else {
         seq.run(async () => {
           this.busy = true;
-          await this.say(r.id, m.remind);
+          await this.say(r.id, m.remind, `kota_${m.id}_remind`);
           this.busy = false;
         });
       }
@@ -363,7 +364,7 @@ export class CityPeople {
     if (this.done.has(m.id) || !this.canOffer()) {
       seq.run(async () => {
         this.busy = true;
-        await this.say(r.id, this.done.has(m.id) ? 'Terima kasih, Glen!' : 'Halo, Glen!', false);
+        await this.say(r.id, this.done.has(m.id) ? 'Terima kasih, Glen!' : 'Halo, Glen!', `kota_${r.id}_${this.done.has(m.id) ? 'terima' : 'halo'}`, false);
         this.busy = false;
       });
       return;
@@ -378,7 +379,7 @@ export class CityPeople {
         }
         this.drop();
       }
-      await this.say(r.id, m.offer);
+      await this.say(r.id, m.offer, `kota_${m.id}_offer`);
       this.activate(m);
       this.busy = false;
     });
@@ -480,7 +481,7 @@ export class CityPeople {
     if (a.m.returns) {
       a.ready = true;
       this.pointToNext();
-      void this.say('glen', a.m.icon === 'cat' ? 'Ketemu! Ayo antar pulang.' : 'Sudah semua! Ayo kembali.', false);
+      void this.say('glen', a.m.icon === 'cat' ? 'Ketemu! Ayo antar pulang.' : 'Sudah semua! Ayo kembali.', a.m.icon === 'cat' ? 'kota_glen_ketemu' : 'kota_glen_semua', false);
     } else this.finish(a.m);
   }
 
