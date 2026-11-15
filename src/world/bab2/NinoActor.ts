@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
+import { Figure, figureMaterial } from '../../player/Figure';
 import { Easings } from '../../gameplay/Sequence';
 
 /**
- * Nino for Chapter 2: the blue glowing capsule of the lab, hovering, always turning to look at Glen. `glideTo` moves him
+ * Nino for Chapter 2: a low-poly boy in his blue costume, hovering, always turning to look at Glen. `glideTo` moves him
  * with a soft ease. Placeholder art until the real model arrives.
  */
 export class NinoActor {
@@ -11,6 +12,8 @@ export class NinoActor {
   /** Ground position (the visible group floats a little above it). */
   readonly pos = new THREE.Vector3();
   private readonly glow: THREE.Mesh;
+  private readonly fig: Figure;
+  private readonly st = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
   private t = 0;
   private yaw = 0;
   /** 0 = hovering, 1 = sitting on the ground. */
@@ -25,29 +28,13 @@ export class NinoActor {
     x: number,
     z: number,
   ) {
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.28, 0.4, 6, 14),
-      new THREE.MeshStandardMaterial({ color: 0x4dabf7, emissive: 0x2a74c8, emissiveIntensity: 0.7, roughness: 0.4 }),
-    );
-    body.position.y = 0.48;
-    const eyeM = new THREE.MeshBasicMaterial({ color: 0x0b2a4a });
-    const eyeG = new THREE.SphereGeometry(0.05, 8, 6);
-    for (const sx of [-1, 1]) {
-      const e = new THREE.Mesh(eyeG, eyeM);
-      e.position.set(sx * 0.1, 0.62, 0.25);
-      this.group.add(e);
-    }
-    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.05), new THREE.MeshStandardMaterial({ color: 0x2f6fd6, emissive: 0x1a4fa8, emissiveIntensity: 0.4 }));
-    cape.position.set(0, 0.4, -0.3);
-    cape.rotation.x = 0.25;
-    const clasp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc94d }));
-    clasp.position.set(0, 0.7, -0.16);
+    this.fig = new Figure('nino', figureMaterial(0x2a74c8, 0.08), false);
     this.glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.62, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      new THREE.SphereGeometry(0.85, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
     );
-    this.glow.position.y = 0.5;
-    this.group.add(body, cape, clasp, this.glow);
+    this.glow.position.y = 0.65;
+    this.group.add(this.fig.root, this.glow);
     this.pos.set(x, 0, z);
     this.group.position.set(x, 0.3, z);
     ctx.root.add(this.group);
@@ -99,5 +86,8 @@ export class NinoActor {
     }
     this.group.position.set(this.pos.x, hover * (1 - this.sit) + 0.0 * this.sit, this.pos.z);
     this.glow.scale.setScalar(1 + 0.08 * Math.sin(this.t * 3));
+    this.st.airborne = this.sit < 0.5;
+    this.st.vy = 0;
+    this.fig.pose(dt, this.st);
   }
 }

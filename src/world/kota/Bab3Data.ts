@@ -37,12 +37,9 @@ export const MARKET = {
   ],
   /** Where the big rat shows up (the crossing) and which drain he leaves by. */
   rakus: { x: 93, z: 0, drain: 2 },
-  /** The mysterious figure: at the edge of the plaza in the shade of the pagoda tower, 21 m from the crossing. */
-  figure: { x: 84.5, z: -20 },
   /** Where the child stands for the two closing scenes (on the streets, facing the action; yaw 0 = +z). */
   stage: {
     rakus: { x: 93, z: 9, yaw: Math.PI },
-    figure: { x: 92, z: -8, yaw: Math.atan2(84.5 - 92, -20 + 8) },
   },
 } as const;
 
@@ -87,8 +84,8 @@ export const BAB3_LINES = {
   ninoCepat: { id: 'bab3_nino_cepat', speaker: 'nino', text: 'Cepat, ke pasar, Superglen!' },
   ninoUbah: { id: 'bab3_nino_ubah', speaker: 'nino', text: 'Ubah jadi Superglen dulu, Glen!' },
   ninoTiba: { id: 'bab3_nino_tiba', speaker: 'nino', text: 'Itu mereka! Tembak atau hentakkan, ya!' },
-  glenLucu: { id: 'bab3_glen_lucu', speaker: 'glen', text: 'Hihi, tikusnya lucu sekali!' },
-  glenSemua: { id: 'bab3_glen_semua', speaker: 'glen', text: 'Semua tikus kecil sudah kabur!' },
+  glenLucu: { id: 'bab3_glen_lucu2', speaker: 'glen', text: 'Hihi, Curut Cemberutnya lucu sekali!' },
+  glenSemua: { id: 'bab3_glen_semua2', speaker: 'glen', text: 'Semua Curut Cemberut sudah kabur!' },
   linaHilang: { id: 'bab3_lina_hilang', speaker: 'lina', text: 'Bakpaoku hilang 3, kue hilang 2.' },
   linaTolong: { id: 'bab3_lina_tolong', speaker: 'lina', text: 'Tolong kumpulkan, ya, Superglen!' },
   linaTotal: { id: 'bab3_lina_total', speaker: 'lina', text: 'Terima kasih! Totalnya berapa?' },
@@ -97,8 +94,7 @@ export const BAB3_LINES = {
   glenHei: { id: 'bab3_glen_hei', speaker: 'glen', text: 'Hei, jangan lari!' },
   rakusRaja: { id: 'bab3_rakus_raja', speaker: 'rakus', text: 'Suatu hari aku akan jadi RAJA kota ini!' },
   ninoRakus: { id: 'bab3_nino_rakus', speaker: 'nino', text: 'Itu Si Tikus Rakus! Kita pasti bertemu lagi.' },
-  glenSiapa: { id: 'bab3_glen_siapa', speaker: 'glen', text: 'Eh, siapa itu di bayangan?' },
-  ninoSiapa: { id: 'bab3_nino_siapa', speaker: 'nino', text: 'Hmm, kita cari tahu nanti. Kerja bagus, Glen!' },
+  ninoHebat: { id: 'bab3_nino_hebat', speaker: 'nino', text: 'Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!' },
   linaTerima: { id: 'bab3_lina_terima', speaker: 'lina', text: 'Terima kasih, Superglen!' },
 } as const;
 

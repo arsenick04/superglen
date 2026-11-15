@@ -3,7 +3,7 @@ import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
 import { Quality } from '../../core/Quality';
 import { ShadowFollower } from '../../core/ShadowSnap';
-import { CITY, CITY_LAYOUT, KOTA_REACH, districtAt } from './CityData';
+import { CITY, CITY_LAYOUT, FACE_VEC, KOTA_REACH, districtAt } from './CityData';
 import { buildCity, type BuiltCity } from './CityBuilder';
 import { ChunkStreamer, STREAM } from './ChunkStreamer';
 import { CityHud } from './CityHud';
@@ -13,6 +13,7 @@ import { Chapter1Walk } from './Chapter1Walk';
 import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { Chapter3 } from './Chapter3';
+import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
@@ -86,6 +87,20 @@ export class KotaLevel implements Level {
     const sandbox = sandboxActive(ctx.save);
     const bab1 = ctx.save.isChapterDone('bab1');
     const arrival = takeArrival('kota');
+    {
+      // Glen's hearts show in the city once Chapter 1 is behind him. The Rumah Sakit rest spot: on the pavement in front of it.
+      const hb = CITY_LAYOUT.buildings.find((b) => b.kind === 'hospital');
+      if (hb) {
+        const [fx, fz] = FACE_VEC[hb.face];
+        const half = hb.face < 2 ? hb.d / 2 : hb.w / 2;
+        ctx.health.hospital = { x: hb.x + fx * (half + 3.2), z: hb.z + fz * (half + 3.2), yaw: Math.atan2(fx, fz) };
+      }
+      ctx.health.setShown(sandbox || bab1);
+      ctx.onDispose(() => {
+        ctx.health.hospital = null;
+        ctx.health.setShown(false);
+      });
+    }
     if (!sandbox) ctx.save.setWhere('kota');
     if (sandbox || ctx.save.isChapterDone('bab2')) {
       // Free roam: every power on (not written to the save), the child may switch Glen <-> Superglen.
@@ -204,14 +219,25 @@ export class KotaLevel implements Level {
 
     // D4: Chapter 3 (the market) follows Chapter 2. Never in the debug free roam.
     if (!sandbox && ctx.save.isChapterDone('bab2') && !ctx.save.isChapterDone('bab3')) {
-      this.ch3 = new Chapter3(ctx, {
-        setGoal: (g) => this.setGoal(g),
-        dropMission: () => this.d3?.people.drop(),
-        finished: () => this.d3?.people.onChange?.(),
-        placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
-        afterParty: () => this.startCh4(),
-      });
-      this.ch3.start();
+      try {
+        if ((window as unknown as { __SG_BREAK_CH3?: boolean }).__SG_BREAK_CH3 === true) throw new Error('test: Chapter 3 broken on purpose');
+        this.ch3 = new Chapter3(ctx, {
+          setGoal: (g) => this.setGoal(g),
+          dropMission: () => this.d3?.people.drop(),
+          finished: () => this.d3?.people.onChange?.(),
+          placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
+          afterParty: () => this.startCh4(),
+        });
+        this.ch3.start();
+      } catch (err) {
+        // Safety net: whatever goes wrong inside the chapter, the city still finishes building and the child is pointed to the market.
+        const planned = (window as unknown as { __SG_BREAK_CH3?: boolean }).__SG_BREAK_CH3 === true;
+        (planned ? console.warn : console.error)('Chapter 3 failed to start:', err);
+        this.ch3 = null;
+        this.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
+        ctx.objectives.set(new THREE.Vector3(MARKET.hub.x, 0, MARKET.hub.z));
+        ctx.game.debugInfo.ch3Fallback = true;
+      }
     } else if (!sandbox && ctx.save.isChapterDone('bab3') && !ctx.save.isChapterDone('bab4')) {
       this.startCh4();
     }
@@ -250,6 +276,7 @@ export class KotaLevel implements Level {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
       placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
+      onDone: () => this.setGoal(null),
     }, this.lit);
     this.ch4.start();
   }

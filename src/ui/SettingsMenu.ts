@@ -1,6 +1,7 @@
 import type { SaveStore } from '../core/Save';
 import { QuizIcons } from './QuizIcons';
 import { MenuIcons } from './MenuIcons';
+import { versionGuard } from '../core/VersionGuard';
 
 export interface SettingsDeps {
   ui: HTMLElement;
@@ -143,7 +144,8 @@ export class SettingsMenu {
     q.append(row);
     this.confirm.append(q);
 
-    card.append(head, sliders, grid, this.confirm);
+    const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
+    card.append(head, sliders, grid, this.confirm, ver);
     this.panel.append(card);
     ui.appendChild(this.panel);
 

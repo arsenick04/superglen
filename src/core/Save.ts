@@ -1,5 +1,6 @@
 import type { PlayerMode } from '../player/PlayerConfig';
 import { Parkour } from '../config/parkour';
+import { Combat } from '../config/combat';
 import { CATEGORIES, isCategory, type Category } from '../quiz/types';
 
 /**
@@ -25,6 +26,8 @@ export interface SaveData {
   settings: {
     /** Easy jump mode: holding the jump button bounces by itself (see config/parkour.ts). */
     easyJump: boolean;
+    /** Easy fight (parents' page): the small rats need 2 hits and attack more slowly. Default off. */
+    easyFight: boolean;
     /** Sound on/off (voice, effects and the synthesized drum; off also silences the music). */
     sound: boolean;
     /** Background music on/off (default on). */
@@ -55,9 +58,11 @@ export interface SaveData {
   bab3: { step: string; tamed: number[] };
   /**
    * Chapter 4 ("Sosok Misterius", detective mode) progress in the city: `step` is '' (not started), 'school', 'aara', 'park',
-   * 'figure' or 'lab' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
+   * 'track' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
    */
   bab4: { step: string; clue: number };
+  /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
+  hearts: number;
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -119,7 +124,7 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, sound: true, music: true, musicVol: 1, sfxVol: 1 },
+    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, sound: true, music: true, musicVol: 1, sfxVol: 1 },
     slot: null,
     discovered: { lab: false },
     where: '',
@@ -128,6 +133,7 @@ function defaults(): SaveData {
     city: { coins: [], missions: [] },
     bab3: { step: '', tamed: [] },
     bab4: { step: '', clue: 0 },
+    hearts: Combat.hearts.max,
   };
 }
 
@@ -186,12 +192,14 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.bab4 === 'object' && r.bab4 !== null) {
     const b = r.bab4 as Record<string, unknown>;
-    if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step;
+    if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'track', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step === 'figure' || b.step === 'lab' ? 'track' : b.step; // old saves: the figure/lab steps are gone
     if (typeof b.clue === 'number' && Number.isInteger(b.clue) && b.clue >= 0 && b.clue <= 3) out.bab4.clue = b.clue;
   }
+  if (typeof r.hearts === 'number' && Number.isInteger(r.hearts) && r.hearts >= 1 && r.hearts <= Combat.hearts.max) out.hearts = r.hearts;
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
+    if (typeof st.easyFight === 'boolean') out.settings.easyFight = st.easyFight;
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
     if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
@@ -285,6 +293,29 @@ export class SaveStore {
     if (this.data.lastMode === mode) return;
     this.data.lastMode = mode;
     this.persist();
+  }
+
+  /** Glen's hearts (clamped to 1..max: running out is handled by refilling). */
+  setHearts(n: number): void {
+    const v = Math.max(1, Math.min(Combat.hearts.max, Math.round(n)));
+    if (this.data.hearts === v) return;
+    this.data.hearts = v;
+    this.persist();
+  }
+
+  /** Parents' page: easy fight mode (default off). */
+  setEasyFight(on: boolean): void {
+    if (this.data.settings.easyFight === on) return;
+    this.data.settings.easyFight = on;
+    this.persist();
+  }
+
+  /** Spend coins (healing). Returns false and changes nothing when there are not enough. */
+  spendCoins(n: number): boolean {
+    if (this.data.quiz.coins < n) return false;
+    this.data.quiz.coins -= n;
+    this.persist();
+    return true;
   }
 
   /** Parents' page: easy jump mode (default on). */

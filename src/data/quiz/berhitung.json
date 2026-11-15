@@ -302,5 +302,589 @@
       { "id": "c", "text": "8" }
     ],
     "answer": "b"
+  },
+  {
+    "id": "hitung_021",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa jeruk?",
+    "audio_id": "quiz_hitung_021",
+    "display": { "kind": "count", "item": "jeruk", "count": 3 },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_022",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa anggur?",
+    "audio_id": "quiz_hitung_022",
+    "display": { "kind": "count", "item": "anggur", "count": 7 },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_023",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa topi?",
+    "audio_id": "quiz_hitung_023",
+    "display": { "kind": "count", "item": "topi", "count": 4 },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_024",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa burung?",
+    "audio_id": "quiz_hitung_024",
+    "display": { "kind": "count", "item": "burung", "count": 9 },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_025",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa kue?",
+    "audio_id": "quiz_hitung_025",
+    "display": { "kind": "count", "item": "kue", "count": 2 },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_026",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa mobil?",
+    "audio_id": "quiz_hitung_026",
+    "display": { "kind": "count", "item": "mobil", "count": 6 },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_027",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa sepatu?",
+    "audio_id": "quiz_hitung_027",
+    "display": { "kind": "count", "item": "sepatu", "count": 4 },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_028",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Ada berapa stroberi?",
+    "audio_id": "quiz_hitung_028",
+    "display": { "kind": "count", "item": "stroberi", "count": 8 },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_029",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Segitiga punya berapa sisi?",
+    "audio_id": "quiz_hitung_029",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "2" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_030",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Persegi punya berapa sisi?",
+    "audio_id": "quiz_hitung_030",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_031",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Merah, biru, merah, biru, ... Apa selanjutnya?",
+    "audio_id": "quiz_hitung_031",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "kuning" },
+      { "id": "b", "text": "merah" },
+      { "id": "c", "text": "biru" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_032",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Mana yang lebih banyak, 6 atau 3?",
+    "audio_id": "quiz_hitung_032",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_033",
+    "category": "berhitung",
+    "level": 1,
+    "prompt": "Mana yang lebih sedikit, 8 atau 5?",
+    "audio_id": "quiz_hitung_033",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_034",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Kuning, kuning, biru, kuning, kuning, ... Lalu?",
+    "audio_id": "quiz_hitung_034",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "hijau" },
+      { "id": "b", "text": "biru" },
+      { "id": "c", "text": "kuning" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_035",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa pisang semuanya?",
+    "audio_id": "quiz_hitung_035",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "pisang", "count": 3 },
+      "b": { "item": "pisang", "count": 4 }
+    },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "7" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_036",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa buku semuanya?",
+    "audio_id": "quiz_hitung_036",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "buku", "count": 2 },
+      "b": { "item": "buku", "count": 5 }
+    },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_037",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa kue semuanya?",
+    "audio_id": "quiz_hitung_037",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "kue", "count": 4 },
+      "b": { "item": "kue", "count": 2 }
+    },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_038",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa anggur semuanya?",
+    "audio_id": "quiz_hitung_038",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "anggur", "count": 3 },
+      "b": { "item": "anggur", "count": 4 }
+    },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_039",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa stroberi semuanya?",
+    "audio_id": "quiz_hitung_039",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "stroberi", "count": 5 },
+      "b": { "item": "stroberi", "count": 3 }
+    },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_040",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa topi semuanya?",
+    "audio_id": "quiz_hitung_040",
+    "display": {
+      "kind": "sum",
+      "a": { "item": "topi", "count": 6 },
+      "b": { "item": "topi", "count": 1 }
+    },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "9" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_041",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_041",
+    "display": { "kind": "equation", "text": "7 - 3" },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_042",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_042",
+    "display": { "kind": "equation", "text": "9 - 4" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_043",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_043",
+    "display": { "kind": "equation", "text": "8 - 5" },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_044",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_044",
+    "display": { "kind": "equation", "text": "10 - 6" },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_045",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_045",
+    "display": { "kind": "equation", "text": "6 - 2" },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_046",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Berapa hasil kurangnya?",
+    "audio_id": "quiz_hitung_046",
+    "display": { "kind": "equation", "text": "9 - 6" },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "2" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_047",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_047",
+    "display": { "kind": "equation", "text": "2 + 5" },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_048",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_048",
+    "display": { "kind": "equation", "text": "5 + 3" },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_049",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_049",
+    "display": { "kind": "equation", "text": "2 + 7" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_050",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_050",
+    "display": { "kind": "equation", "text": "4 + 4" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "9" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_051",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_051",
+    "display": { "kind": "equation", "text": "1 + 6" },
+    "choices": [
+      { "id": "a", "text": "9" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_052",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_052",
+    "display": { "kind": "equation", "text": "2 + 4" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_053",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_053",
+    "display": { "kind": "equation", "text": "3 + 2" },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "7" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_054",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Berapa hasil tambahnya?",
+    "audio_id": "quiz_hitung_054",
+    "display": { "kind": "equation", "text": "9 + 1" },
+    "choices": [
+      { "id": "a", "text": "8" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "10" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_055",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Ada 6 balon. 2 terbang pergi. Sisa berapa?",
+    "audio_id": "quiz_hitung_055",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_056",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Ada 5 kucing, 2 pergi. Sisa berapa?",
+    "audio_id": "quiz_hitung_056",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "5" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hitung_057",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Ada 4 apel. Nino tambah 3 apel. Jadi berapa?",
+    "audio_id": "quiz_hitung_057",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_058",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Di kolam ada 2 bebek. Datang 5 lagi. Jadi berapa?",
+    "audio_id": "quiz_hitung_058",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "3" },
+      { "id": "c", "text": "9" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hitung_059",
+    "category": "berhitung",
+    "level": 2,
+    "prompt": "Ada 9 permen. Glen makan 4. Sisa berapa?",
+    "audio_id": "quiz_hitung_059",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "4" },
+      { "id": "b", "text": "6" },
+      { "id": "c", "text": "5" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hitung_060",
+    "category": "berhitung",
+    "level": 3,
+    "prompt": "Nino punya 8 stiker. Beri 3 ke Aara. Sisa?",
+    "audio_id": "quiz_hitung_060",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "5" },
+      { "id": "c", "text": "8" }
+    ],
+    "answer": "b"
   }
 ]

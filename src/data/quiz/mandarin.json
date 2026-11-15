@@ -278,5 +278,565 @@
       { "id": "c", "text": "Taman" }
     ],
     "answer": "a"
+  },
+  {
+    "id": "mandarin_021",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_021",
+    "display": { "kind": "speak", "text": "一", "lang": "zh", "pinyin": "yī", "speak_audio_id": "quiz_mandarin_021_kata" },
+    "choices": [
+      { "id": "a", "text": "3" },
+      { "id": "b", "text": "1" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_022",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_022",
+    "display": { "kind": "speak", "text": "二", "lang": "zh", "pinyin": "èr", "speak_audio_id": "quiz_mandarin_022_kata" },
+    "choices": [
+      { "id": "a", "text": "2" },
+      { "id": "b", "text": "4" },
+      { "id": "c", "text": "6" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_023",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_023",
+    "display": { "kind": "speak", "text": "四", "lang": "zh", "pinyin": "sì", "speak_audio_id": "quiz_mandarin_023_kata" },
+    "choices": [
+      { "id": "a", "text": "7" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "4" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_024",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_024",
+    "display": { "kind": "speak", "text": "六", "lang": "zh", "pinyin": "liù", "speak_audio_id": "quiz_mandarin_024_kata" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "8" },
+      { "id": "c", "text": "9" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_025",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_025",
+    "display": { "kind": "speak", "text": "七", "lang": "zh", "pinyin": "qī", "speak_audio_id": "quiz_mandarin_025_kata" },
+    "choices": [
+      { "id": "a", "text": "1" },
+      { "id": "b", "text": "7" },
+      { "id": "c", "text": "3" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_026",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Angka ini artinya apa?",
+    "audio_id": "quiz_mandarin_026",
+    "display": { "kind": "speak", "text": "九", "lang": "zh", "pinyin": "jiǔ", "speak_audio_id": "quiz_mandarin_026_kata" },
+    "choices": [
+      { "id": "a", "text": "6" },
+      { "id": "b", "text": "9" },
+      { "id": "c", "text": "7" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_027",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_027",
+    "display": { "kind": "speak", "text": "爸爸", "lang": "zh", "pinyin": "bà ba", "speak_audio_id": "quiz_mandarin_027_kata" },
+    "choices": [
+      { "id": "a", "text": "Ayah" },
+      { "id": "b", "text": "Ibu" },
+      { "id": "c", "text": "Kakek" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_028",
+    "category": "mandarin",
+    "level": 1,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_028",
+    "display": { "kind": "speak", "text": "妈妈", "lang": "zh", "pinyin": "mā ma", "speak_audio_id": "quiz_mandarin_028_kata" },
+    "choices": [
+      { "id": "a", "text": "Ayah" },
+      { "id": "b", "text": "Kakak perempuan" },
+      { "id": "c", "text": "Ibu" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_029",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_029",
+    "display": { "kind": "speak", "text": "爷爷", "lang": "zh", "pinyin": "yé ye", "speak_audio_id": "quiz_mandarin_029_kata" },
+    "choices": [
+      { "id": "a", "text": "Nenek" },
+      { "id": "b", "text": "Kakak laki-laki" },
+      { "id": "c", "text": "Kakek" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_030",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_030",
+    "display": { "kind": "speak", "text": "奶奶", "lang": "zh", "pinyin": "nǎi nai", "speak_audio_id": "quiz_mandarin_030_kata" },
+    "choices": [
+      { "id": "a", "text": "Ibu" },
+      { "id": "b", "text": "Kakak perempuan" },
+      { "id": "c", "text": "Nenek" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_031",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_031",
+    "display": { "kind": "speak", "text": "哥哥", "lang": "zh", "pinyin": "gē ge", "speak_audio_id": "quiz_mandarin_031_kata" },
+    "choices": [
+      { "id": "a", "text": "Kakak laki-laki" },
+      { "id": "b", "text": "Adik laki-laki" },
+      { "id": "c", "text": "Ayah" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_032",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_032",
+    "display": { "kind": "speak", "text": "姐姐", "lang": "zh", "pinyin": "jiě jie", "speak_audio_id": "quiz_mandarin_032_kata" },
+    "choices": [
+      { "id": "a", "text": "Adik perempuan" },
+      { "id": "b", "text": "Ibu" },
+      { "id": "c", "text": "Kakak perempuan" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_033",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_033",
+    "display": { "kind": "speak", "text": "弟弟", "lang": "zh", "pinyin": "dì di", "speak_audio_id": "quiz_mandarin_033_kata" },
+    "choices": [
+      { "id": "a", "text": "Kakak laki-laki" },
+      { "id": "b", "text": "Adik laki-laki" },
+      { "id": "c", "text": "Kakek" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_034",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_034",
+    "display": { "kind": "speak", "text": "妹妹", "lang": "zh", "pinyin": "mèi mei", "speak_audio_id": "quiz_mandarin_034_kata" },
+    "choices": [
+      { "id": "a", "text": "Kakak perempuan" },
+      { "id": "b", "text": "Ibu" },
+      { "id": "c", "text": "Adik perempuan" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_035",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_035",
+    "display": { "kind": "speak", "text": "马", "lang": "zh", "pinyin": "mǎ", "speak_audio_id": "quiz_mandarin_035_kata" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_036",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_036",
+    "display": { "kind": "speak", "text": "牛", "lang": "zh", "pinyin": "niú", "speak_audio_id": "quiz_mandarin_036_kata" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "gajah" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_037",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_037",
+    "display": { "kind": "speak", "text": "鸡", "lang": "zh", "pinyin": "jī", "speak_audio_id": "quiz_mandarin_037_kata" },
+    "choices": [
+      { "id": "a", "item": "bebek" },
+      { "id": "b", "item": "ayam" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_038",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_038",
+    "display": { "kind": "speak", "text": "鸭子", "lang": "zh", "pinyin": "yā zi", "speak_audio_id": "quiz_mandarin_038_kata" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_039",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_039",
+    "display": { "kind": "speak", "text": "大象", "lang": "zh", "pinyin": "dà xiàng", "speak_audio_id": "quiz_mandarin_039_kata" },
+    "choices": [
+      { "id": "a", "item": "gajah" },
+      { "id": "b", "item": "harimau" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_040",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_040",
+    "display": { "kind": "speak", "text": "兔子", "lang": "zh", "pinyin": "tù zi", "speak_audio_id": "quiz_mandarin_040_kata" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "kelinci" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_041",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_041",
+    "display": { "kind": "speak", "text": "青蛙", "lang": "zh", "pinyin": "qīng wā", "speak_audio_id": "quiz_mandarin_041_kata" },
+    "choices": [
+      { "id": "a", "item": "burung" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_042",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_042",
+    "display": { "kind": "speak", "text": "老虎", "lang": "zh", "pinyin": "lǎo hǔ", "speak_audio_id": "quiz_mandarin_042_kata" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "harimau" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_043",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_043",
+    "display": { "kind": "speak", "text": "猴子", "lang": "zh", "pinyin": "hóu zi", "speak_audio_id": "quiz_mandarin_043_kata" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "anjing" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_044",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_044",
+    "display": { "kind": "speak", "text": "书", "lang": "zh", "pinyin": "shū", "speak_audio_id": "quiz_mandarin_044_kata" },
+    "choices": [
+      { "id": "a", "item": "pensil" },
+      { "id": "b", "item": "buku" },
+      { "id": "c", "item": "tas" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_045",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_045",
+    "display": { "kind": "speak", "text": "笔", "lang": "zh", "pinyin": "bǐ", "speak_audio_id": "quiz_mandarin_045_kata" },
+    "choices": [
+      { "id": "a", "item": "pensil" },
+      { "id": "b", "item": "kursi" },
+      { "id": "c", "item": "buku" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_046",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_046",
+    "display": { "kind": "speak", "text": "书包", "lang": "zh", "pinyin": "shū bāo", "speak_audio_id": "quiz_mandarin_046_kata" },
+    "choices": [
+      { "id": "a", "item": "meja" },
+      { "id": "b", "item": "topi" },
+      { "id": "c", "item": "tas" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_047",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_047",
+    "display": { "kind": "speak", "text": "球", "lang": "zh", "pinyin": "qiú", "speak_audio_id": "quiz_mandarin_047_kata" },
+    "choices": [
+      { "id": "a", "item": "bola" },
+      { "id": "b", "item": "balon" },
+      { "id": "c", "item": "kue" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_048",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_048",
+    "display": { "kind": "speak", "text": "苹果", "lang": "zh", "pinyin": "píng guǒ", "speak_audio_id": "quiz_mandarin_048_kata" },
+    "choices": [
+      { "id": "a", "item": "jeruk" },
+      { "id": "b", "item": "pisang" },
+      { "id": "c", "item": "apel" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_049",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_049",
+    "display": { "kind": "speak", "text": "香蕉", "lang": "zh", "pinyin": "xiāng jiāo", "speak_audio_id": "quiz_mandarin_049_kata" },
+    "choices": [
+      { "id": "a", "item": "pisang" },
+      { "id": "b", "item": "apel" },
+      { "id": "c", "item": "jeruk" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_050",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_050",
+    "display": { "kind": "speak", "text": "橘子", "lang": "zh", "pinyin": "jú zi", "speak_audio_id": "quiz_mandarin_050_kata" },
+    "choices": [
+      { "id": "a", "item": "apel" },
+      { "id": "b", "item": "jeruk" },
+      { "id": "c", "item": "bola" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_051",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_051",
+    "display": { "kind": "speak", "text": "白色", "lang": "zh", "pinyin": "bái sè", "speak_audio_id": "quiz_mandarin_051_kata" },
+    "choices": [
+      { "id": "a", "item": "hitam" },
+      { "id": "b", "item": "putih" },
+      { "id": "c", "item": "kuning" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_052",
+    "category": "mandarin",
+    "level": 2,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_052",
+    "display": { "kind": "speak", "text": "黑色", "lang": "zh", "pinyin": "hēi sè", "speak_audio_id": "quiz_mandarin_052_kata" },
+    "choices": [
+      { "id": "a", "item": "putih" },
+      { "id": "b", "item": "merah" },
+      { "id": "c", "item": "hitam" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_053",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_053",
+    "display": { "kind": "speak", "text": "市场", "lang": "zh", "pinyin": "shì chǎng", "speak_audio_id": "quiz_mandarin_053_kata" },
+    "choices": [
+      { "id": "a", "item": "rumah" },
+      { "id": "b", "item": "pasar" },
+      { "id": "c", "item": "taman" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_054",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Pilih gambar yang benar, ya?",
+    "audio_id": "quiz_mandarin_054",
+    "display": { "kind": "speak", "text": "公园", "lang": "zh", "pinyin": "gōng yuán", "speak_audio_id": "quiz_mandarin_054_kata" },
+    "choices": [
+      { "id": "a", "item": "sekolah" },
+      { "id": "b", "item": "pasar" },
+      { "id": "c", "item": "taman" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_055",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_055",
+    "display": { "kind": "speak", "text": "早上好", "lang": "zh", "pinyin": "zǎo shang hǎo", "speak_audio_id": "quiz_mandarin_055_kata" },
+    "choices": [
+      { "id": "a", "text": "Selamat malam" },
+      { "id": "b", "text": "Selamat pagi" },
+      { "id": "c", "text": "Selamat siang" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_056",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_056",
+    "display": { "kind": "speak", "text": "晚安", "lang": "zh", "pinyin": "wǎn ān", "speak_audio_id": "quiz_mandarin_056_kata" },
+    "choices": [
+      { "id": "a", "text": "Selamat tidur" },
+      { "id": "b", "text": "Selamat pagi" },
+      { "id": "c", "text": "Selamat siang" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_057",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_057",
+    "display": { "kind": "speak", "text": "对不起", "lang": "zh", "pinyin": "duì bu qǐ", "speak_audio_id": "quiz_mandarin_057_kata" },
+    "choices": [
+      { "id": "a", "text": "Terima kasih" },
+      { "id": "b", "text": "Maaf" },
+      { "id": "c", "text": "Halo" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "mandarin_058",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_058",
+    "display": { "kind": "speak", "text": "不客气", "lang": "zh", "pinyin": "bú kè qi", "speak_audio_id": "quiz_mandarin_058_kata" },
+    "choices": [
+      { "id": "a", "text": "Maaf" },
+      { "id": "b", "text": "Halo" },
+      { "id": "c", "text": "Sama-sama" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "mandarin_059",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_059",
+    "display": { "kind": "speak", "text": "明天见", "lang": "zh", "pinyin": "míng tiān jiàn", "speak_audio_id": "quiz_mandarin_059_kata" },
+    "choices": [
+      { "id": "a", "text": "Sampai besok" },
+      { "id": "b", "text": "Selamat pagi" },
+      { "id": "c", "text": "Terima kasih" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "mandarin_060",
+    "category": "mandarin",
+    "level": 3,
+    "prompt": "Artinya apa, ya?",
+    "audio_id": "quiz_mandarin_060",
+    "display": { "kind": "speak", "text": "大", "lang": "zh", "pinyin": "dà", "speak_audio_id": "quiz_mandarin_060_kata" },
+    "choices": [
+      { "id": "a", "text": "Besar" },
+      { "id": "b", "text": "Kecil" },
+      { "id": "c", "text": "Panjang" }
+    ],
+    "answer": "a"
   }
 ]

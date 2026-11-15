@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { BikeSystem } from './Bike';
+import { CityCare } from './CityCare';
 import { CityCoins } from './CityCoins';
 import type { CityMap } from './CityMap';
 import { CITY_LAYOUT } from './CityData';
@@ -17,6 +18,7 @@ export class CityD3 {
   readonly bike: BikeSystem;
   readonly people: CityPeople;
   readonly signs: Signposts;
+  readonly care: CityCare;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -29,8 +31,9 @@ export class CityD3 {
     this.coins = new CityCoins(ctx, P.coins);
     this.bike = new BikeSystem(ctx, lit, P.bikes);
     this.people = new CityPeople(ctx, lit, P.residents, P.missions, this.bike, canOffer);
+    this.care = new CityCare(ctx, lit);
     // Map: residents with a mission to give (mini map and full map) and parked bikes (full map).
-    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked() };
+    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots() };
     this.bike.onChange = () => map.invalidate();
     this.people.onChange = () => map.invalidate();
     ctx.quiz.coinsChanged();
@@ -54,6 +57,7 @@ export class CityD3 {
     this.bike.fixedUpdate(dt);
     this.people.fixedUpdate(dt);
     this.coins.fixedUpdate(dt);
+    this.care.fixedUpdate();
   }
 
   update(dt: number): void {

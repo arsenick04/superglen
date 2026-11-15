@@ -278,5 +278,565 @@
       { "id": "c", "item": "meja" }
     ],
     "answer": "a"
+  },
+  {
+    "id": "baca_021",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf d?",
+    "audio_id": "quiz_baca_021",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "b" },
+      { "id": "b", "text": "t" },
+      { "id": "c", "text": "d" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_022",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf e?",
+    "audio_id": "quiz_baca_022",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "c" },
+      { "id": "b", "text": "e" },
+      { "id": "c", "text": "o" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_023",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf n?",
+    "audio_id": "quiz_baca_023",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "n" },
+      { "id": "b", "text": "h" },
+      { "id": "c", "text": "u" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_024",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf o?",
+    "audio_id": "quiz_baca_024",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "x" },
+      { "id": "b", "text": "o" },
+      { "id": "c", "text": "w" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_025",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf t?",
+    "audio_id": "quiz_baca_025",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "f" },
+      { "id": "b", "text": "t" },
+      { "id": "c", "text": "l" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_026",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf u?",
+    "audio_id": "quiz_baca_026",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "v" },
+      { "id": "b", "text": "n" },
+      { "id": "c", "text": "u" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_027",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf r?",
+    "audio_id": "quiz_baca_027",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "r" },
+      { "id": "b", "text": "k" },
+      { "id": "c", "text": "h" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_028",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf l?",
+    "audio_id": "quiz_baca_028",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "i" },
+      { "id": "b", "text": "x" },
+      { "id": "c", "text": "l" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_029",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf g?",
+    "audio_id": "quiz_baca_029",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "g" },
+      { "id": "b", "text": "q" },
+      { "id": "c", "text": "y" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_030",
+    "category": "membaca",
+    "level": 1,
+    "prompt": "Mana huruf h?",
+    "audio_id": "quiz_baca_030",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "n" },
+      { "id": "b", "text": "k" },
+      { "id": "c", "text": "h" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_031",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata bi?",
+    "audio_id": "quiz_baca_031",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "be" },
+      { "id": "b", "text": "bu" },
+      { "id": "c", "text": "bi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_032",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata be?",
+    "audio_id": "quiz_baca_032",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "bi" },
+      { "id": "b", "text": "bu" },
+      { "id": "c", "text": "be" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_033",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata ta?",
+    "audio_id": "quiz_baca_033",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "ta" },
+      { "id": "b", "text": "ka" },
+      { "id": "c", "text": "pa" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_034",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata ma?",
+    "audio_id": "quiz_baca_034",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "na" },
+      { "id": "b", "text": "ma" },
+      { "id": "c", "text": "la" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_035",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata na?",
+    "audio_id": "quiz_baca_035",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "ma" },
+      { "id": "b", "text": "ni" },
+      { "id": "c", "text": "na" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_036",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata pa?",
+    "audio_id": "quiz_baca_036",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "ba" },
+      { "id": "b", "text": "pa" },
+      { "id": "c", "text": "ta" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_037",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata la?",
+    "audio_id": "quiz_baca_037",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "da" },
+      { "id": "b", "text": "ka" },
+      { "id": "c", "text": "la" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_038",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata da?",
+    "audio_id": "quiz_baca_038",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "sa" },
+      { "id": "b", "text": "da" },
+      { "id": "c", "text": "ma" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_039",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata si?",
+    "audio_id": "quiz_baca_039",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "ti" },
+      { "id": "b", "text": "si" },
+      { "id": "c", "text": "su" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_040",
+    "category": "membaca",
+    "level": 2,
+    "prompt": "Mana suku kata ti?",
+    "audio_id": "quiz_baca_040",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "tu" },
+      { "id": "b", "text": "te" },
+      { "id": "c", "text": "ti" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_041",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_041",
+    "display": { "kind": "text", "text": "bebek" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "bebek" },
+      { "id": "c", "item": "ikan" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_042",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_042",
+    "display": { "kind": "text", "text": "kursi" },
+    "choices": [
+      { "id": "a", "item": "meja" },
+      { "id": "b", "item": "bola" },
+      { "id": "c", "item": "kursi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_043",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_043",
+    "display": { "kind": "text", "text": "pensil" },
+    "choices": [
+      { "id": "a", "item": "buku" },
+      { "id": "b", "item": "pensil" },
+      { "id": "c", "item": "tas" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_044",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_044",
+    "display": { "kind": "text", "text": "kaki" },
+    "choices": [
+      { "id": "a", "item": "kaki" },
+      { "id": "b", "item": "mata" },
+      { "id": "c", "item": "pohon" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_045",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_045",
+    "display": { "kind": "text", "text": "mata" },
+    "choices": [
+      { "id": "a", "item": "kue" },
+      { "id": "b", "item": "mata" },
+      { "id": "c", "item": "bola" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_046",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_046",
+    "display": { "kind": "text", "text": "baju" },
+    "choices": [
+      { "id": "a", "item": "topi" },
+      { "id": "b", "item": "sepatu" },
+      { "id": "c", "item": "baju" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_047",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_047",
+    "display": { "kind": "text", "text": "nasi" },
+    "choices": [
+      { "id": "a", "item": "nasi" },
+      { "id": "b", "item": "susu" },
+      { "id": "c", "item": "kue" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_048",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_048",
+    "display": { "kind": "text", "text": "lampu" },
+    "choices": [
+      { "id": "a", "item": "bintang" },
+      { "id": "b", "item": "bola" },
+      { "id": "c", "item": "lampu" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_049",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_049",
+    "display": { "kind": "text", "text": "payung" },
+    "choices": [
+      { "id": "a", "item": "payung" },
+      { "id": "b", "item": "topi" },
+      { "id": "c", "item": "tas" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_050",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_050",
+    "display": { "kind": "text", "text": "pohon" },
+    "choices": [
+      { "id": "a", "item": "rumah" },
+      { "id": "b", "item": "pohon" },
+      { "id": "c", "item": "gajah" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_051",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_051",
+    "display": { "kind": "text", "text": "ibu" },
+    "choices": [
+      { "id": "a", "item": "ibu" },
+      { "id": "b", "item": "adik" },
+      { "id": "c", "item": "ayah" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_052",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Pilih gambar yang sesuai kata ini.",
+    "audio_id": "quiz_baca_052",
+    "display": { "kind": "text", "text": "adik" },
+    "choices": [
+      { "id": "a", "item": "kakak" },
+      { "id": "b", "item": "ibu" },
+      { "id": "c", "item": "adik" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "baca_053",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_053",
+    "display": { "kind": "text", "text": "rumah" },
+    "choices": [
+      { "id": "a", "text": "m" },
+      { "id": "b", "text": "r" },
+      { "id": "c", "text": "u" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_054",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_054",
+    "display": { "kind": "text", "text": "mobil" },
+    "choices": [
+      { "id": "a", "text": "m" },
+      { "id": "b", "text": "b" },
+      { "id": "c", "text": "l" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_055",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_055",
+    "display": { "kind": "text", "text": "gula" },
+    "choices": [
+      { "id": "a", "text": "j" },
+      { "id": "b", "text": "g" },
+      { "id": "c", "text": "l" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_056",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_056",
+    "display": { "kind": "text", "text": "sapi" },
+    "choices": [
+      { "id": "a", "text": "p" },
+      { "id": "b", "text": "s" },
+      { "id": "c", "text": "a" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_057",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_057",
+    "display": { "kind": "text", "text": "jeruk" },
+    "choices": [
+      { "id": "a", "text": "j" },
+      { "id": "b", "text": "g" },
+      { "id": "c", "text": "y" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_058",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_058",
+    "display": { "kind": "text", "text": "tangan" },
+    "choices": [
+      { "id": "a", "text": "t" },
+      { "id": "b", "text": "k" },
+      { "id": "c", "text": "d" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "baca_059",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_059",
+    "display": { "kind": "text", "text": "anjing" },
+    "choices": [
+      { "id": "a", "text": "j" },
+      { "id": "b", "text": "a" },
+      { "id": "c", "text": "n" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "baca_060",
+    "category": "membaca",
+    "level": 3,
+    "prompt": "Huruf pertama kata ini apa?",
+    "audio_id": "quiz_baca_060",
+    "display": { "kind": "text", "text": "kue" },
+    "choices": [
+      { "id": "a", "text": "k" },
+      { "id": "b", "text": "h" },
+      { "id": "c", "text": "c" }
+    ],
+    "answer": "a"
   }
 ]

@@ -1584,7 +1584,7 @@ html.pad-ui .pad-focus {
 .ch3-count {
   position: absolute;
   left: 50%;
-  top: calc(env(safe-area-inset-top) + 8px);
+  top: calc(env(safe-area-inset-top) + 52px);
   transform: translateX(-50%);
   display: none;
   gap: 10px;
@@ -1613,4 +1613,141 @@ html.pad-ui .pad-focus {
 .ch3-chip.full {
   background: #c9f2c0;
   color: #2c7a1f;
+}
+
+/* Stale-version note ("Memuat versi baru...") and the small build id in the settings panel. */
+.version-note {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b3a67;
+  font: 700 18px/1.2 system-ui, sans-serif;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.settings-version {
+  margin-top: 6px;
+  text-align: center;
+  font: 500 11px/1.2 ui-monospace, monospace;
+  opacity: 0.55;
+  user-select: text;
+}
+
+/* ---- Glen's hearts: top centre (the gear and the fps pill are left, the coin counter right) ---- */
+.hearts {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 8px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  z-index: 6;
+}
+.hearts[hidden] {
+  display: none;
+}
+.hearts .heart {
+  width: 34px;
+  height: 32px;
+  display: block;
+}
+.hearts .heart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hearts .heart.lost {
+  animation: heart-pop 0.5s ease-out;
+}
+html.touch-ui .hearts {
+  padding: 2px 8px;
+  gap: 2px;
+}
+html.touch-ui .hearts .heart {
+  width: 26px;
+  height: 24px;
+}
+@keyframes heart-pop {
+  0% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hearts .heart.lost { animation: none; }
+}
+
+/* ---- Healing with coins (food stall, Rumah Sakit): big icons, big yes / no, bottom centre between the joystick and the buttons ---- */
+.care-panel {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 9;
+  font-family: ui-rounded, 'Varela Round', 'Trebuchet MS', system-ui, sans-serif;
+}
+.care-panel[hidden] {
+  display: none;
+}
+.care-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #b9740a;
+}
+.care-info .care-heart svg,
+.care-info .care-coin svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+.care-info .care-plus {
+  color: #e8344f;
+  margin-right: 6px;
+}
+.care-btns {
+  display: flex;
+  gap: 10px;
+}
+.care-btn {
+  width: 84px;
+  height: 84px;
+  padding: 14px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  touch-action: none;
+}
+.care-btn svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.care-yes {
+  background: #3dbb6e;
+  color: #fff;
+}
+.care-no {
+  background: #e8798a;
+  color: #fff;
 }
