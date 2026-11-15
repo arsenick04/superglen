@@ -174,5 +174,25 @@
     "pitchSemitones": -1,
     "labels": "id, standard accent, young male, neutral",
     "note": "D5 L5 2026-11-14: Sosok Misterius, tenang dan hangat; nada -1 semiton"
+  },
+  "penjual": {
+    "voice_id": "U3dExJoUNcmTY5H6GMuG",
+    "name": "Maya - Warm, Calm and Soft",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, middle-aged female, warm, advertisement",
+    "note": "D6 2026-11-15: penjual kios makanan pasar, memakai suara Bu Lina"
+  },
+  "dokter": {
+    "voice_id": "RbNgJzKAV7jpYJNtCBpj",
+    "name": "Citra - Gentle, Inviting and Calm",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young female, calm",
+    "note": "D6 2026-11-15: dokter rumah sakit, memakai suara Dokter Ani"
   }
 }
