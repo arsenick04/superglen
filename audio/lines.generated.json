@@ -2983,7 +2983,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "九",
-    "tts": "[cheerful] 九",
+    "tts": "[cheerful] 九！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -3361,7 +3361,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "球",
-    "tts": "[cheerful] 球",
+    "tts": "[cheerful] 球！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -4342,7 +4342,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana huruf n?",
-    "tts": "[cheerful] Mana huruf n?",
+    "tts": "[curious] Mana huruf... en?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4414,7 +4414,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata bi?",
-    "tts": "[curious] Mana suku kata bi?",
+    "tts": "[curious] Mana suku kata... bi?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4423,7 +4423,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata be?",
-    "tts": "[cheerful] Mana suku kata be?",
+    "tts": "[curious] Mana suku kata... be?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4432,7 +4432,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ta?",
-    "tts": "[curious] Mana suku kata ta?",
+    "tts": "[curious] Mana suku kata... ta?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4441,7 +4441,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata ma?",
-    "tts": "[curious] Mana suku kata ma?",
+    "tts": "[curious] Mana suku kata... ma?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4450,7 +4450,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata na?",
-    "tts": "[cheerful] Mana suku kata na?",
+    "tts": "[curious] Mana suku kata... na?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4459,7 +4459,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata pa?",
-    "tts": "[curious] Mana suku kata pa?",
+    "tts": "[curious] Mana suku kata... pa?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4468,7 +4468,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata la?",
-    "tts": "[curious] Mana suku kata la?",
+    "tts": "[curious] Mana suku kata... la?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4477,7 +4477,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata da?",
-    "tts": "[cheerful] Mana suku kata da?",
+    "tts": "[curious] Mana suku kata... da?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
@@ -4486,7 +4486,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Mana suku kata si?",
-    "tts": "[cheerful] Mana suku kata si?",
+    "tts": "[curious] Mana suku kata... si?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
   },
