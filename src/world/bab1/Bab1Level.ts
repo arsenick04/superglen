@@ -14,6 +14,7 @@ import { Atmosphere, Flashlight, type Zone } from './Lighting';
 import { FunnyFx } from './FunnyFx';
 import { LabDoor } from './LabDoor';
 import { Story } from './Story';
+import { LabVisit } from './LabVisit';
 import { StreetFx } from './StreetFx';
 import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
@@ -61,6 +62,8 @@ export class Bab1Level implements Level {
   private streetFx: StreetFx | null = null;
   private leaving = false;
   private terminal!: NinoTerminal;
+  /** Chapter 5: Aara meets Nino here (null otherwise). */
+  private visit: LabVisit | null = null;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -161,6 +164,11 @@ export class Bab1Level implements Level {
         this.atmosphere.snap(2);
       }
       this.story.setupReturning(arrival === 'labFromHangar');
+      const b5 = ctx.save.data.bab5.step;
+      if (lab && !flow.sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5') && (b5 === 'lab' || b5 === 'walk')) {
+        this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 });
+        this.visit.start();
+      }
     } else if (lab) {
       this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
       this.atmosphere.snap(1);
@@ -214,6 +222,7 @@ export class Bab1Level implements Level {
     this.funny.update(dt);
     this.streetFx?.update(dt);
     this.terminal.update(dt);
+    this.visit?.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

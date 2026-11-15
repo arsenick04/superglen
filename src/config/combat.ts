@@ -57,6 +57,45 @@ export const Combat = {
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
     globalGap: 0.9,
   },
+  /** Ular Melar (Chapter 5 mini-boss): 3 stars; the head glows when dizzy and only then does the laser count. */
+  snake: {
+    /** Stars (health). One successful laser hit in a dizzy window takes one. */
+    stars: 3,
+    /** The snake wakes when a child comes this close to its coil (m). */
+    engageRadius: 22,
+    /** Size multiplier on the whole snake (the coil is about 3.2 m tall: clearly bigger than Glen). */
+    scale: 1,
+    /** Seconds the snake waits between two lunges (coiled, looking around). */
+    cooldown: 2.2,
+    cooldownEasy: 3.6,
+    /** Wind-up: coils and wiggles, a red stripe shows the line of the lunge (s). */
+    windup: 1.15,
+    windupEasy: 1.8,
+    /** The stripe's direction is locked after this share of the wind-up (walk or jump aside after that). */
+    lockShare: 0.4,
+    /** The lunge: the head shoots out this far (m) in `lungeTime` s. */
+    reach: 9,
+    lungeTime: 0.32,
+    /** Body hits a child closer than `hitRadius` (m) to the stretched body; his feet must be lower than `touchTop` (a jump clears it). */
+    hitRadius: 1.15,
+    touchTop: 1.05,
+    /** Width of the red stripe on the ground (m). */
+    stripeWidth: 2.2,
+    /** Dizzy time (s) after: a missed lunge, a shield block (longer: the reward), a hit on Glen (short). Head glows meanwhile. */
+    dizzyMiss: 3.4,
+    dizzyBlock: 4.4,
+    dizzyHit: 1.8,
+    dizzyEasyMul: 1.5,
+    /** After a star is lost the snake stays dizzy this long at most (s), then pulls back. */
+    afterHit: 1.0,
+    /** Seconds to pull the stretched body back to the coil. */
+    retract: 0.8,
+    /** Laser aim: the head is big, so the assist cone is generous. */
+    aimRadius: 1.2,
+    assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 22 },
+    /** Hint lines: Nino says them at most this often (s). */
+    hintGap: 25,
+  },
   /** Laser assist: a small cone, generous up close, narrow far away. */
   laser: {
     assistRange: 16,

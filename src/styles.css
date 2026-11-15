@@ -1751,3 +1751,37 @@ html.touch-ui .hearts .heart {
   background: #e8798a;
   color: #fff;
 }
+
+/* Chapter 5: the three stars of the Ular Melar (its health), under the hearts. */
+.ch5-stars {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 52px);
+  transform: translateX(-50%);
+  display: none;
+  gap: 6px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  z-index: 6;
+}
+.ch5-stars.show {
+  display: flex;
+}
+.ch5-star {
+  width: 40px;
+  height: 40px;
+  display: block;
+  transition: transform 0.25s, opacity 0.25s;
+}
+.ch5-star svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ch5-star.lost {
+  opacity: 0.3;
+  filter: grayscale(1);
+  transform: scale(0.8);
+}
