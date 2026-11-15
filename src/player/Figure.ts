@@ -1,9 +1,14 @@
 import * as THREE from 'three';
-import { box, cone, cyl, merge, sph, type Part } from '../world/kota/ColorMesh';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { box, cone, cyl, merge, sph as sphFull, type Part } from '../world/kota/ColorMesh';
+
+/** Spheres with fewer segments (a figure is drawn twice per frame, with the shadow pass; the triangle budget is tight). */
+const sph = (r: number, w = 8, h = 6): THREE.BufferGeometry => (w >= 8 ? sphFull(r, w - 2, Math.max(4, h - 2)) : sphFull(r, w, Math.min(h, 4)));
 
 /**
- * Low-poly child figures for Glen, Superglen and Nino (placeholder until the real models of Phase C). Five merged meshes
- * each (body+head, two arms, two legs), vertex coloured, so a figure is 5 draw calls on one shared material. Feet at y = 0,
+ * Low-poly child figures for Glen, Superglen and Nino (placeholder until the real models of Phase C). One merged mesh
+ * (body+head, two arms, two legs, tagged per vertex with pivot + part id and posed in the vertex shader), vertex coloured, so a
+ * figure is a single draw call (plus one in the shadow pass). Feet at y = 0,
  * about 1.3 m tall without the Superglen lion hat. Facing +Z. Poses are driven from code by `Figure.pose`.
  */
 export type FigureKind = 'glen' | 'superglen' | 'nino';
@@ -132,21 +137,113 @@ function bodyParts(l: Look, kind: FigureKind): Part[] {
   return p;
 }
 
-const cache = new Map<FigureKind, { body: THREE.BufferGeometry; arm: THREE.BufferGeometry; leg: THREE.BufferGeometry }>();
+const PIVOTS: readonly [number, number, number][] = [
+  [0, 0, 0],
+  [-0.27, SHOULDER_Y, 0],
+  [0.27, SHOULDER_Y, 0],
+  [-0.105, HIP_Y, 0],
+  [0.105, HIP_Y, 0],
+];
 
-function geos(kind: FigureKind) {
+/** Move a limb geometry to its pivot and tag every vertex with (pivot xyz, part id): 0 body, 1/2 arms, 3/4 legs. */
+function tag(g: THREE.BufferGeometry, id: number): THREE.BufferGeometry {
+  const [x, y, z] = PIVOTS[id];
+  g.translate(x, y, z);
+  const n = g.getAttribute('position').count;
+  const arr = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) {
+    arr[i * 4] = x;
+    arr[i * 4 + 1] = y;
+    arr[i * 4 + 2] = z;
+    arr[i * 4 + 3] = id;
+  }
+  g.setAttribute('pivotPart', new THREE.BufferAttribute(arr, 4));
+  return g;
+}
+
+const cache = new Map<FigureKind, THREE.BufferGeometry>();
+
+function geos(kind: FigureKind): THREE.BufferGeometry {
   let g = cache.get(kind);
   if (!g) {
     const l = LOOKS[kind];
-    g = { body: merge(bodyParts(l, kind)), arm: merge(armParts(l, kind)), leg: merge(legParts(l, kind)) };
+    const arm = () => merge(armParts(l, kind));
+    const leg = () => merge(legParts(l, kind));
+    const list = [tag(merge(bodyParts(l, kind)), 0), tag(arm(), 1), tag(arm(), 2), tag(leg(), 3), tag(leg(), 4)];
+    const m = mergeGeometries(list, false);
+    for (const x of list) x.dispose();
+    if (!m) throw new Error('Figure: merge failed');
+    m.computeBoundingSphere();
+    g = m;
     cache.set(kind, g);
   }
   return g;
 }
 
+/** Pose uniforms, shared by the lit material and the shadow depth material of one figure. */
+interface PoseU {
+  /** arm L, arm R, leg L, leg R swing (rad). */
+  limb: { value: THREE.Vector4 };
+  /** x: arm spread (rad), y: body bob (m). */
+  zb: { value: THREE.Vector2 };
+}
+
+const GLSL_POSE = `
+attribute vec4 pivotPart;
+uniform vec4 uLimb;
+uniform vec2 uZB;
+mat3 figR(float id) {
+  float ax = id < 1.5 ? uLimb.x : (id < 2.5 ? uLimb.y : (id < 3.5 ? uLimb.z : uLimb.w));
+  float az = id < 0.5 ? 0.0 : (id < 1.5 ? -uZB.x : (id < 2.5 ? uZB.x : 0.0));
+  if (id < 0.5) ax = 0.0;
+  float cx = cos(ax), sx = sin(ax), cz = cos(az), sz = sin(az);
+  mat3 rx = mat3(1.0, 0.0, 0.0, 0.0, cx, sx, 0.0, -sx, cx);
+  mat3 rz = mat3(cz, sz, 0.0, -sz, cz, 0.0, 0.0, 0.0, 1.0);
+  return rx * rz;
+}
+`;
+
+function patch(mat: THREE.Material, u: PoseU): void {
+  mat.userData.poseU = u;
+  mat.customProgramCacheKey = () => 'figure-pose';
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uLimb = u.limb;
+    sh.uniforms.uZB = u.zb;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\n' + GLSL_POSE)
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = figR(pivotPart.w) * objectNormal;')
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\ntransformed = pivotPart.xyz + figR(pivotPart.w) * (position - pivotPart.xyz) + vec3(0.0, pivotPart.w < 0.5 ? uZB.y : 0.0, 0.0);',
+      );
+  };
+}
+
+/** Per-figure state read back by the renderer hook (materials may be shared, uniforms are set right before each draw). */
+function bindPose(mesh: THREE.Mesh, fig: { limb: THREE.Vector4; zb: THREE.Vector2 }): void {
+  mesh.onBeforeRender = (_r, _s, _c, _g, material) => {
+    const u = (material as THREE.Material).userData.poseU as PoseU | undefined;
+    if (!u) return;
+    u.limb.value.copy(fig.limb);
+    u.zb.value.copy(fig.zb);
+    (material as THREE.ShaderMaterial).uniformsNeedUpdate = true;
+  };
+}
+
+let depthMat: THREE.MeshDepthMaterial | null = null;
+function figureDepth(): THREE.MeshDepthMaterial {
+  if (!depthMat) {
+    depthMat = new THREE.MeshDepthMaterial();
+    patch(depthMat, { limb: { value: new THREE.Vector4() }, zb: { value: new THREE.Vector2() } });
+  }
+  return depthMat;
+}
+
 /** One shared vertex-colour material per tint set (Player needs its own so the rhythm glow stays on the player). */
 export function figureMaterial(emissive = 0x000000, emissiveIntensity = 0): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, emissive, emissiveIntensity });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, emissive, emissiveIntensity });
+  patch(m, { limb: { value: new THREE.Vector4() }, zb: { value: new THREE.Vector2() } });
+  return m;
 }
 
 export interface FigureState {
@@ -162,37 +259,20 @@ export interface FigureState {
 /** A posable figure. `root` has its origin at the feet. */
 export class Figure {
   readonly root = new THREE.Group();
-  private readonly body: THREE.Mesh;
-  private readonly armL: THREE.Group;
-  private readonly armR: THREE.Group;
-  private readonly legL: THREE.Group;
-  private readonly legR: THREE.Group;
+  private readonly mesh: THREE.Mesh;
+  /** Current pose, fed to the shader: (arm L, arm R, leg L, leg R) and (arm spread, bob). */
+  readonly limb = new THREE.Vector4();
+  readonly zb = new THREE.Vector2();
   private phase = 0;
   private t = Math.random() * 6;
-  private aL = 0;
-  private aR = 0;
-  private lL = 0;
-  private lR = 0;
-  private aZ = 0;
 
   constructor(kind: FigureKind, mat: THREE.Material, shadows = true) {
-    const g = geos(kind);
-    this.body = new THREE.Mesh(g.body, mat);
-    this.body.castShadow = shadows;
-    this.root.add(this.body);
-    const mk = (geo: THREE.BufferGeometry, x: number, y: number): THREE.Group => {
-      const pivot = new THREE.Group();
-      pivot.position.set(x, y, 0);
-      const m = new THREE.Mesh(geo, mat);
-      m.castShadow = shadows;
-      pivot.add(m);
-      this.root.add(pivot);
-      return pivot;
-    };
-    this.armL = mk(g.arm, -0.27, SHOULDER_Y);
-    this.armR = mk(g.arm, 0.27, SHOULDER_Y);
-    this.legL = mk(g.leg, -0.105, HIP_Y);
-    this.legR = mk(g.leg, 0.105, HIP_Y);
+    this.mesh = new THREE.Mesh(geos(kind), mat);
+    this.mesh.castShadow = shadows;
+    this.mesh.frustumCulled = false;
+    if (shadows) this.mesh.customDepthMaterial = figureDepth();
+    bindPose(this.mesh, this);
+    this.root.add(this.mesh);
   }
 
   /** Advance the code animation (no allocation). Positive x rotation swings a limb backwards (-Z). */
@@ -237,17 +317,12 @@ export class Figure {
       tAR = -tAL;
     }
     const k = Math.min(1, dt * 18);
-    this.lL += (tLL - this.lL) * k;
-    this.lR += (tLR - this.lR) * k;
-    this.aL += (tAL - this.aL) * k;
-    this.aR += (tAR - this.aR) * k;
-    this.aZ += (tZ - this.aZ) * k;
-    this.legL.rotation.x = this.lL;
-    this.legR.rotation.x = this.lR;
-    this.armL.rotation.x = this.aL;
-    this.armR.rotation.x = this.aR;
-    this.armL.rotation.z = -this.aZ;
-    this.armR.rotation.z = this.aZ;
-    this.body.position.y = bob;
+    const L = this.limb;
+    L.z += (tLL - L.z) * k;
+    L.w += (tLR - L.w) * k;
+    L.x += (tAL - L.x) * k;
+    L.y += (tAR - L.y) * k;
+    this.zb.x += (tZ - this.zb.x) * k;
+    this.zb.y = bob;
   }
 }

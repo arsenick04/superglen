@@ -9488,6 +9488,17 @@ async function runScenario(browser, name, ctxOpts, body, query = '?level=test') 
     if (/[?&]level=/.test(q) && !/[?&](story|free)=/.test(q)) history.replaceState(null, '', location.pathname + q + '&free=1' + location.hash);
   });
   const page = await ctx.newPage();
+  // Screenshot artefacts (with `path`) must never fail a scenario (e.g. "waiting for fonts" under load): bounded wait, errors swallowed.
+  const rawShot = page.screenshot.bind(page);
+  page.screenshot = async (opts = {}) => {
+    if (!opts.path) return rawShot(opts);
+    try {
+      return await rawShot({ timeout: 20000, caret: 'hide', ...opts });
+    } catch (e) {
+      console.log(`   [screenshot skipped] ${path.basename(String(opts.path))}: ${String(e.message).split("\n").slice(0, 3).join(" | ")}`);
+      return null;
+    }
+  };
   page.on('console', (m) => {
     if (m.type() === 'error') result.errors.push(`console: ${m.text()}`);
   });

@@ -99,7 +99,7 @@ export function packColor(c: THREE.ColorRepresentation): number {
 }
 
 function tierFor(r: number): 0 | 1 | 2 {
-  return r < 0.3 ? 0 : r < 0.9 ? 1 : 2;
+  return r < 0.35 ? 0 : r < 1.3 ? 1 : 2;
 }
 
 /** A growable list of primitives. Positions are shape centres; size is the full extent (cyl / cone: radius, height, radius). */
