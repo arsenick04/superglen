@@ -384,6 +384,8 @@ export class Chapter5 {
       ctx.fx.sparkles.burst(a.group.position.x, a.group.position.y + 1.9, a.group.position.z, 12, 2, 0xffe27a, { gravity: 0.5, life: 0.8, up: 0.8 });
       await dialog.say(L.aaraSinga, { lockControls: true });
       await dialog.say(L.glenMasuk, { lockControls: true });
+      // The dialog holds its control lock for a short gap after the last line; let it settle before the scene ends.
+      await seq.waitUntil(() => !dialog.active);
       cameraRig.setFraming(null);
       this.setStep('lab');
       ctx.game.setControlsEnabled(true);
