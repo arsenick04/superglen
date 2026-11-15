@@ -59,7 +59,7 @@ const FOOD_COLOR: Record<FoodKind, number> = { bakpao: 0xffffff, kue: 0xffa6c9, 
 /** Per-kind shape of the same bun geometry (x z size, y size): a round bakpao, a flat wide kue, a long thin carrot-ish bun. */
 const FOOD_SHAPE: Record<FoodKind, readonly [number, number]> = { bakpao: [1, 1], kue: [1.25, 0.65], sayur: [0.7, 1.3] };
 
-function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
+export function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
   const pink = 0xf5a3b5;
   const dark = 0x2b1a12;
   return merge([
@@ -87,7 +87,7 @@ function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
 }
 
 /** Flat arrow on the ground (XZ plane, pointing +z, from the origin to 2.4 m): the charge telegraph. */
-function arrowGeo(): THREE.BufferGeometry {
+export function arrowGeo(): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   const pts = [-0.22, 0, 0, 0.22, 0, 0, 0.22, 0, 1.5, -0.22, 0, 0, 0.22, 0, 1.5, -0.22, 0, 1.5, -0.55, 0, 1.5, 0.55, 0, 1.5, 0, 0, 2.4];
   g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
@@ -96,7 +96,7 @@ function arrowGeo(): THREE.BufferGeometry {
 }
 
 /** A small heart (two bumps and a point), for the hit points above a rat. */
-function pipGeo(): THREE.BufferGeometry {
+export function pipGeo(): THREE.BufferGeometry {
   return merge([
     { g: sph(0.07, 5, 3), c: 0xffffff, p: [-0.055, 0.03, 0] },
     { g: sph(0.07, 5, 3), c: 0xffffff, p: [0.055, 0.03, 0] },

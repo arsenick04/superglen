@@ -306,6 +306,8 @@ export class CityLife {
   private readonly sphere = new THREE.Sphere();
   private readonly tc = new THREE.Color();
   private t = 0;
+  /** A boss arena: nobody of the city life is drawn inside this circle (they carry no colliders, so they would drive through the fight). */
+  clearZone: { x: number; z: number; r: number } | null = null;
   /** Counters for tests. */
   simulated = 0;
   shown = 0;
@@ -594,6 +596,8 @@ export class CityLife {
       const ex = a.x - p.x;
       const ez = a.z - p.z;
       if (ex * ex + ez * ez > show2) continue;
+      const cz0 = this.clearZone;
+      if (cz0 && (a.x - cz0.x) * (a.x - cz0.x) + (a.z - cz0.z) * (a.z - cz0.z) < cz0.r * cz0.r) continue;
       this.sphere.center.set(a.x, 0.8, a.z);
       this.sphere.radius = 2.2;
       if (!this.frustum.intersectsSphere(this.sphere)) continue;

@@ -66,6 +66,8 @@ export interface SaveData {
    * 'city' (to the school field), 'fight' (the snake was met) (finished = 'bab5' in `chaptersDone`).
    */
   bab5: { step: string };
+  /** Chapter 6 ("Tikus Rakus") progress: `step` is '' (not started), 'city' (to the Gudang Pasar), 'fight' (the big rat was met) (finished = 'bab6' in `chaptersDone`). */
+  bab6: { step: string };
   /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
   hearts: number;
 }
@@ -139,6 +141,7 @@ function defaults(): SaveData {
     bab3: { step: '', tamed: [] },
     bab4: { step: '', clue: 0 },
     bab5: { step: '' },
+    bab6: { step: '' },
     hearts: Combat.hearts.max,
   };
 }
@@ -204,6 +207,10 @@ function sanitize(raw: unknown): SaveData {
   if (typeof r.bab5 === 'object' && r.bab5 !== null) {
     const b = r.bab5 as Record<string, unknown>;
     if (typeof b.step === 'string' && ['', 'walk', 'lab', 'city', 'fight'].includes(b.step)) out.bab5.step = b.step;
+  }
+  if (typeof r.bab6 === 'object' && r.bab6 !== null) {
+    const b = r.bab6 as Record<string, unknown>;
+    if (typeof b.step === 'string' && ['', 'city', 'fight'].includes(b.step)) out.bab6.step = b.step;
   }
   if (typeof r.hearts === 'number' && Number.isInteger(r.hearts) && r.hearts >= 1 && r.hearts <= Combat.hearts.max) out.hearts = r.hearts;
   if (typeof r.settings === 'object' && r.settings !== null) {
@@ -396,6 +403,12 @@ export class SaveStore {
   /** Chapter 5 progress (see `SaveData.bab5`). */
   setBab5(step: string): void {
     this.data.bab5 = { step };
+    this.persist();
+  }
+
+  /** Chapter 6 progress (see `SaveData.bab6`). */
+  setBab6(step: string): void {
+    this.data.bab6 = { step };
     this.persist();
   }
 
