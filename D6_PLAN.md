@@ -38,6 +38,15 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 - Misi dan tantangan kecil dibuat berjarak lebih jauh supaya anak menjelajah kota (sekarang beberapa selesai dalam beberapa langkah).
 - Di latihan, pujian Nino bervariasi (jangan "Hebat, Glen!" terus).
 
+**Nama dan sifat musuh (keputusan pemilik proyek):**
+- **Curut Cemberut** (tikus kecil; wajahnya cemberut).
+- **Ular Melar** (badannya memanjang saat menyerang).
+- **Tikus Rakus** (makin besar setiap kali makan).
+- **Elang Jahat** (nama belum diganti pemilik proyek).
+- **Gorilla Gembira**: sebenarnya bukan musuh. Ia gorila yang kehilangan hutan tempat tinggalnya, yang terbakar oleh ulah Sosok Misterius. Chapter-nya diselesaikan dengan menolong, bukan mengalahkan, dan menjadi jembatan ke kemunculan Sosok Misterius di akhir.
+
+**Sinematik (disetujui pemilik proyek):** semua adegan dibuat di dalam game (kamera sinematik, bilah hitam, tombol Lewati). Untuk pembuka, boleh ditambah gambar/video dari Higgsfield memakai model yang paling hemat kredit tetapi tetap bagus: buat 1 contoh dulu dan minta persetujuan. Remotion/Blender tidak dipakai (lihat catatan di PROGRESS).
+
 ## Langkah tambahan
 
 - [ ] **L7 Bug pasar kosong di alamat biasa** (masih terbuka; agen sedang mengerjakan, perubahan belum di-commit di KotaLevel.ts dan smoke-test.cjs).
