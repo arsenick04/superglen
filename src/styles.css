@@ -1035,7 +1035,7 @@ html.touch-ui .drums {
 /* Kota Botanica: district / place name pill (top centre). Shown on change only (a few DOM writes per minute). */
 .city-toast {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 10px);
+  top: calc(env(safe-area-inset-top) + 104px);
   left: 50%;
   transform: translate(-50%, -8px);
   display: flex;
@@ -1048,6 +1048,8 @@ html.touch-ui .drums {
   font-weight: 800;
   font-size: 20px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 5;
   opacity: 0;
   transition: opacity 0.35s ease, transform 0.35s ease;
   white-space: nowrap;
@@ -1784,4 +1786,42 @@ html.touch-ui .hearts .heart {
   opacity: 0.3;
   filter: grayscale(1);
   transform: scale(0.8);
+}
+
+/* ---- HUD layout, top centre (nothing overlaps; see the hud-layout smoke group) ----
+   Desktop stack: hearts 8..50, boss stars / food counter 52..96, place pill 104..
+   Touch: smaller rows; while a dialog bubble (top, 8..92) is open the rows drop below it and the pill hides. */
+html.touch-ui .city-toast {
+  top: calc(env(safe-area-inset-top) + 90px);
+  padding: 4px 14px 4px 8px;
+  font-size: 17px;
+}
+html.touch-ui .ch5-stars,
+html.touch-ui .ch3-count {
+  top: calc(env(safe-area-inset-top) + 44px);
+}
+html.touch-ui .ch5-stars {
+  padding: 1px 10px;
+}
+html.touch-ui .ch5-star {
+  width: 34px;
+  height: 34px;
+}
+html.touch-ui:has(.dlg:not([hidden])) .hearts {
+  top: calc(env(safe-area-inset-top) + 98px);
+}
+html.touch-ui:has(.dlg:not([hidden])) .ch5-stars,
+html.touch-ui:has(.dlg:not([hidden])) .ch3-count {
+  top: calc(env(safe-area-inset-top) + 134px);
+}
+html.touch-ui:has(.dlg:not([hidden])) .city-toast {
+  opacity: 0;
+  visibility: hidden;
+}
+/* The coin counter sits under the star button (top right), not on it. */
+html.touch-ui .coin-hud {
+  top: calc(env(safe-area-inset-top) + 100px);
+  right: calc(env(safe-area-inset-right) + 20px);
+  font-size: 20px;
+  padding: 1px 12px 1px 4px;
 }
