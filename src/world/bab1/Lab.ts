@@ -273,6 +273,7 @@ export class Lab {
     // --- Nino ---
     this.ninoFig = new Avatar('nino', figureMaterial(0x2a74c8, 0.08), false);
     this.dialog = ctx.dialog;
+    ctx.onDispose(() => this.ninoFig.dispose());
     this.ninoGlow = new THREE.Mesh(
       new THREE.SphereGeometry(0.85, 16, 12),
       new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),

@@ -39,6 +39,7 @@ export class NinoActor {
     this.pos.set(x, 0, z);
     this.group.position.set(x, 0.3, z);
     ctx.root.add(this.group);
+    ctx.onDispose(() => this.fig.dispose());
   }
 
   /** Smooth glide to (x, z); resolves on arrival. */

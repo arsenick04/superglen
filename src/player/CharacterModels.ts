@@ -107,9 +107,6 @@ class CharacterModels {
         const gltf = await loader.parseAsync(buf, `${base}models/`);
         const clips = new Map<string, THREE.AnimationClip>();
         for (const c of gltf.animations) clips.set(c.name, c);
-        gltf.scene.traverse((o) => {
-          if ((o as THREE.SkinnedMesh).isSkinnedMesh) o.frustumCulled = false;
-        });
         this.templates.set(kind, { scene: gltf.scene, clips });
       } catch (err) {
         this.failed.push(kind);
@@ -205,7 +202,13 @@ export class CharacterRig {
     });
     if (!mesh) throw new Error(`model ${kind} has no skinned mesh`);
     const m: THREE.SkinnedMesh = mesh;
-    m.frustumCulled = false;
+    // Frustum culling stays on (an off-screen model must cost nothing); the bounding sphere is padded so a flip or a raised arm never pops.
+    m.frustumCulled = true;
+    m.computeBoundingSphere();
+    if (m.boundingSphere) {
+      m.boundingSphere.center.y += 0.1;
+      m.boundingSphere.radius = Math.max(m.boundingSphere.radius * 1.5, 0.9);
+    }
     // The phone preset has no skinned shadow (the city's triangle budget counts a caster twice): the blob shadow under the player stays.
     m.castShadow = shadows && Quality.level === 'high';
     m.receiveShadow = false;
@@ -333,7 +336,9 @@ export class CharacterRig {
 
   dispose(): void {
     this.mixer.stopAllAction();
+    this.mixer.uncacheRoot(this.mixer.getRoot());
     this.root.removeFromParent();
+    this.mesh.skeleton.dispose();
     this.material.dispose();
   }
 }
