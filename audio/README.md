@@ -77,6 +77,8 @@ Semua 300 soal quiz (5 kategori x 60) dan 16 variasi Nino (`nino_pujian_01..08`,
 ## Warga Kota Botanica (D3, 2026-11-14)
 Delapan warga punya suara sendiri (speaker `res_sari`, `res_joko`, `res_dimas`, `res_guru`, `res_lala`, `res_pos`, `res_ani`, `res_bima` di `audio/voices.json`, nada 0, eleven_v4, stability 0.3). Nama suara ada di `CREDITS.md`. Id klip: `kota_<misi>_<offer|remind|done>`, `kota_<warga>_<halo|terima>` (salam per warga), `kota_glen_ketemu`, `kota_glen_semua` (Glen, Finn +2 st). Kalimat `surat_done` diucapkan Dokter Ani. "Ganti tugas?" adalah judul tombol Ya/Tidak, bukan dialog, jadi tanpa suara. Kategori manifest: `lainnya`. Id dikirim dari `CityPeople.say(speaker, text, id)`.
 
+Bab 6 (2026-11-15): 21 klip `bab6_*` (glen, nino, rakus, warga). `warga` kini memakai suara Mbak Lala (eleven_v4), Rakus tetap Clowny +3. Dicek Scribe (ind): semua kata terbaca; tawa "hihi" dan "Hore" terbaca sebagai [tertawa], tanpa ulang.
+
 ## Aturan hemat kredit
 - Selalu `--dry-run` dulu, lalu `--sample`, minta persetujuan, baru batch.
 - Jangan `--force` tanpa alasan. Satu karakter teks = satu kredit.

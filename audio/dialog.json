@@ -1195,5 +1195,152 @@
     "lang": "id",
     "text": "Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.",
     "delivery": "[thoughtful] Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu."
+  },
+  {
+    "id": "bab6_nino_laporan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, ada laporan! Semua makanan di Gudang Pasar hilang!",
+    "delivery": "[urgent] Superglen, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!"
+  },
+  {
+    "id": "bab6_nino_cari",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mungkin tikus besar itu pelakunya. Ayo kita cari di Gudang Pasar!",
+    "delivery": "[thoughtful] Mungkin tikus besar itu pelakunya. [determined] Ayo kita cari di Gudang Pasar!"
+  },
+  {
+    "id": "bab6_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Siap, Nino! Ayo ke gudang!",
+    "delivery": "[excited] Siap, Nino! Ayo ke gudang!"
+  },
+  {
+    "id": "bab6_rakus_makan",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hihihi! Makin banyak kumakan, makin besar aku!",
+    "delivery": "[greedy giggle] Hihihi! [playful] Makin banyak kumakan, makin besar aku!"
+  },
+  {
+    "id": "bab6_glen_kembali",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hei, Tikus Rakus! Kembalikan makanan kota!",
+    "delivery": "[brave] Hei, Tikus Rakus! [firm] Kembalikan makanan kota!"
+  },
+  {
+    "id": "bab6_rakus_raja",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Tidak mau! Lihat mahkotaku! Curut-curut, jaga makananku!",
+    "delivery": "[cheeky] Tidak mau! [proudly] Lihat mahkotaku! [bossy] Curut-curut, jaga makananku!"
+  },
+  {
+    "id": "bab6_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. Tembak makanannya dulu!",
+    "delivery": "[urgent] Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. [urgent] Tembak makanannya dulu!"
+  },
+  {
+    "id": "bab6_nino_makan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Makanannya bersinar! Tembak atau hentak sebelum dia makan!",
+    "delivery": "[urgent] Makanannya bersinar! Tembak atau hentak sebelum dia makan!"
+  },
+  {
+    "id": "bab6_nino_selamat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bagus! Makanannya selamat!",
+    "delivery": "[proud] Bagus! Makanannya selamat!"
+  },
+  {
+    "id": "bab6_nino_besar",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia makin besar! Awas cincin merah di tanah!",
+    "delivery": "[alarmed] Dia makin besar! Awas cincin merah di tanah!"
+  },
+  {
+    "id": "bab6_nino_cincin",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada cincin merah! Lompat atau pakai perisai!",
+    "delivery": "[urgent] Ada cincin merah! Lompat atau pakai perisai!"
+  },
+  {
+    "id": "bab6_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia kehabisan napas! Tembak laser sekarang!",
+    "delivery": "[urgent] Dia kehabisan napas! Tembak laser sekarang!"
+  },
+  {
+    "id": "bab6_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai dia kehabisan napas.",
+    "delivery": "[calm] Belum. Tunggu sampai dia kehabisan napas."
+  },
+  {
+    "id": "bab6_nino_kecil",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kena! Dia mengecil lagi, hihi!",
+    "delivery": "[proud] Kena! [giggle] Dia mengecil lagi, hihi!"
+  },
+  {
+    "id": "bab6_nino_curut",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
+    "delivery": "[urgent] Curut Cemberut datang membantu! Tembak tiga kali atau hentak!"
+  },
+  {
+    "id": "bab6_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tikus Rakus masih di jalan depan gudang. Kamu pasti bisa!",
+    "delivery": "[encouraging] Tikus Rakus masih di jalan depan gudang. [warm] Kamu pasti bisa!"
+  },
+  {
+    "id": "bab6_rakus_sendawa",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hik! Sendawa... Perutku sakit. Sekarang aku kecil lagi.",
+    "delivery": "[burp] Hik! [silly] Sendawa... [groaning] Perutku sakit. [sad] Sekarang aku kecil lagi."
+  },
+  {
+    "id": "bab6_rakus_maaf",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Maaf ya, aku rakus sekali. Makanannya kukembalikan.",
+    "delivery": "[sorry] Maaf ya, aku rakus sekali. [sheepish] Makanannya kukembalikan."
+  },
+  {
+    "id": "bab6_rakus_bagi",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Aku janji, mulai sekarang makanan kita bagi bersama!",
+    "delivery": "[cheerful] Aku janji, mulai sekarang makanan kita bagi bersama!"
+  },
+  {
+    "id": "bab6_warga_hore",
+    "speaker": "warga",
+    "lang": "id",
+    "text": "Hore! Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "delivery": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, Superglen!"
+  },
+  {
+    "id": "bab6_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "delivery": "[proud] Hebat, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
   }
 ]

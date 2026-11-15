@@ -38,12 +38,14 @@
     "note": "sementara, pilihan otomatis"
   },
   "warga": {
-    "voice_id": "fpsPI3vlnQ0anCTPiHk5",
-    "stability": 0.5,
-    "similarity_boost": 0.7,
-    "style": 0.3,
-    "name": "Serena - Heartfelt Indonesian Voice",
-    "note": "sementara, pilihan otomatis"
+    "voice_id": "JaUVfDrFcfwGIsv8X2kN",
+    "name": "Defasyalala - Warm, Expressive and Clear",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young female, excited",
+    "note": "Bab 6 2026-11-15: warga/kerumunan ceria (\"Hore!\"), memakai suara Mbak Lala"
   },
   "mandarin": {
     "voice_id": "APSIkVZudNbPAwyPoeVO",

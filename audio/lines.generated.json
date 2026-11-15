@@ -1539,6 +1539,195 @@
     "category": "bab5"
   },
   {
+    "id": "bab6_nino_laporan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, ada laporan! Semua makanan di Gudang Pasar hilang!",
+    "tts": "[urgent] Superglen, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_cari",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mungkin tikus besar itu pelakunya. Ayo kita cari di Gudang Pasar!",
+    "tts": "[thoughtful] Mungkin tikus besar itu pelakunya. [determined] Ayo kita cari di Gudang Pasar!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Siap, Nino! Ayo ke gudang!",
+    "tts": "[excited] Siap, Nino! Ayo ke gudang!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_rakus_makan",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hihihi! Makin banyak kumakan, makin besar aku!",
+    "tts": "[greedy giggle] Hihihi! [playful] Makin banyak kumakan, makin besar aku!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_glen_kembali",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hei, Tikus Rakus! Kembalikan makanan kota!",
+    "tts": "[brave] Hei, Tikus Rakus! [firm] Kembalikan makanan kota!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_rakus_raja",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Tidak mau! Lihat mahkotaku! Curut-curut, jaga makananku!",
+    "tts": "[cheeky] Tidak mau! [proudly] Lihat mahkotaku! [bossy] Curut-curut, jaga makananku!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. Tembak makanannya dulu!",
+    "tts": "[urgent] Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. [urgent] Tembak makanannya dulu!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_makan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Makanannya bersinar! Tembak atau hentak sebelum dia makan!",
+    "tts": "[urgent] Makanannya bersinar! Tembak atau hentak sebelum dia makan!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_selamat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bagus! Makanannya selamat!",
+    "tts": "[proud] Bagus! Makanannya selamat!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_besar",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia makin besar! Awas cincin merah di tanah!",
+    "tts": "[alarmed] Dia makin besar! Awas cincin merah di tanah!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_cincin",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada cincin merah! Lompat atau pakai perisai!",
+    "tts": "[urgent] Ada cincin merah! Lompat atau pakai perisai!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia kehabisan napas! Tembak laser sekarang!",
+    "tts": "[urgent] Dia kehabisan napas! Tembak laser sekarang!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai dia kehabisan napas.",
+    "tts": "[calm] Belum. Tunggu sampai dia kehabisan napas.",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_kecil",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kena! Dia mengecil lagi, hihi!",
+    "tts": "[proud] Kena! [giggle] Dia mengecil lagi, hihi!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_curut",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
+    "tts": "[urgent] Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tikus Rakus masih di jalan depan gudang. Kamu pasti bisa!",
+    "tts": "[encouraging] Tikus Rakus masih di jalan depan gudang. [warm] Kamu pasti bisa!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_rakus_sendawa",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hik! Sendawa... Perutku sakit. Sekarang aku kecil lagi.",
+    "tts": "[burp] Hik! [silly] Sendawa... [groaning] Perutku sakit. [sad] Sekarang aku kecil lagi.",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_rakus_maaf",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Maaf ya, aku rakus sekali. Makanannya kukembalikan.",
+    "tts": "[sorry] Maaf ya, aku rakus sekali. [sheepish] Makanannya kukembalikan.",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_rakus_bagi",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Aku janji, mulai sekarang makanan kita bagi bersama!",
+    "tts": "[cheerful] Aku janji, mulai sekarang makanan kita bagi bersama!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_warga_hore",
+    "speaker": "warga",
+    "lang": "id",
+    "text": "Hore! Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "tts": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
+    "id": "bab6_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "tts": "[proud] Hebat, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "source": "audio/dialog.json",
+    "category": "bab6"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
