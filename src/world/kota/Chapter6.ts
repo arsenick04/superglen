@@ -91,6 +91,8 @@ export class Chapter6 {
         setLevel: (n: number) => this.boss?.setLevelNow(n),
         cue: (i: number) => this.boss?.beginCue(i),
         slam: () => this.boss?.beginWind(),
+        idle: () => this.boss?.testIdle(),
+        endRound: () => this.boss?.testEndRound(),
         spawnHelpers: (n: number) => this.helpers?.spawn(n),
         helperHit: (i: number) => this.helpers?.testHit(i),
         helperAttack: (i: number, crumb: boolean) => this.helpers?.forceAttack(i, crumb),

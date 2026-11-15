@@ -591,7 +591,7 @@ export class RakusBoss {
 
   // ---- updates -----------------------------------------------------------------------------------------------
 
-  private moveToward(tx: number, tz: number, speed: number, dt: number): number {
+  private moveToward(tx: number, tz: number, speed: number, dt: number, inArena = true): number {
     const dx = tx - this.x;
     const dz = tz - this.z;
     const d = Math.hypot(dx, dz) || 1;
@@ -600,6 +600,7 @@ export class RakusBoss {
     this.z += (dz / d) * step;
     this.yaw = turnTo(this.yaw, Math.atan2(dx, dz), dt * 7);
     // Stay inside the arena.
+    if (!inArena) return d - step;
     const ox = this.x - this.cx;
     const oz = this.z - this.cz;
     const od = Math.hypot(ox, oz);
@@ -946,7 +947,7 @@ export class RakusBoss {
     const sc0 = this.scaleNow;
     let guard = 0;
     while (guard++ < 600) {
-      const d = this.moveToward(RAKUS_GUDANG.x, RAKUS_GUDANG.z - 0.6, 3.2, 1 / 30);
+      const d = this.moveToward(RAKUS_GUDANG.x, RAKUS_GUDANG.z - 0.6, 3.2, 1 / 30, false);
       this.y = Math.abs(Math.sin(this.t * 10)) * 0.15;
       if (d < 0.3) break;
       await seq.wait(1 / 30);
@@ -962,6 +963,24 @@ export class RakusBoss {
   /** Where the camera looks while he talks. */
   get headAt(): THREE.Vector3 {
     return this.aimPt;
+  }
+
+  /** Test: stop whatever he does and wait (no new round for a long time). */
+  testIdle(): void {
+    this.phase = 'idle';
+    this.vulnerable = false;
+    this.cool = 1e6;
+    this.pile = -1;
+    this.waveT = 99;
+    this.waveDone = true;
+    this.ringOut.visible = this.ringFill.visible = false;
+    this.syncTargets();
+  }
+
+  /** Test: the round ends now (the chapter may send helpers). */
+  testEndRound(): void {
+    this.endRound();
+    this.cool = 1e6;
   }
 
   /** Test: his size step, instantly. */
