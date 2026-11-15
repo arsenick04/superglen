@@ -2511,7 +2511,7 @@ async function flowSavesScenario(page, check) {
   check('continue: Chapter 1 done, last in the city -> the city at the hill door, map star on the door, switch allowed, no flying yet', s.level === 'kota' && at(s, HILL[0], HILL[1]) && !!s.map.goal && !s.skills.unlocked.fly && s.levelInfo.storyStep === undefined, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} fly ${s.skills.unlocked.fly}`);
   s = await open({ version: 1, where: 'bab2', chaptersDone: ['bab1'], lastMode: 'superglen', discovered: { lab: true } });
   check('continue: Chapter 2 begun (hangar) -> the lab, Nino starts Chapter 2 again', s.level === 'lab', s.level);
-  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: NOW - 5000 } });
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: NOW - 5000 } });
   check('continue: Chapters 2 and 3 done -> the city at the hill door, every power, Lab on the map, no beam', s.level === 'kota' && at(s, HILL[0], HILL[1]) && s.skills.unlocked.fly && !!s.map.secret && !s.objective.active, `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)}`);
   s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, discovered: { lab: true }, doneAt: { bab2: NOW - 5000 }, slot: { level: 'kota', x: -50, y: 0, z: 30, yaw: 0, mode: 'glen', t: NOW } });
   check('continue: Chapter 2 done and a newer manual save -> that save (level, spot, mode)', s.level === 'kota' && at(s, -50, 30) && s.mode === 'glen', `${s.level} ${s.player.x.toFixed(1)},${s.player.z.toFixed(1)} ${s.mode}`);
@@ -8579,7 +8579,7 @@ async function kotaD3StoryScenario(page, check) {
   await d3Adv(page, 6);
   const t = await page.evaluate(() => ({ line: document.querySelector('.dlg-text') ? document.querySelector('.dlg-text').textContent : '', m: window.__superglen.levelInfo.d3Mission, obj: window.__superglen.objective.active }));
   check('kota-d3 story: a resident only waves then ("Halo, Glen!"), no mission, the story beam stays', t.line === 'Halo, Glen!' && t.m === '' , JSON.stringify(t));
-  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } });
+  s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } });
   check('kota-d3 story: after Chapter 3 every resident has a mission to give', s.people.length >= 6 && s.people.every((p) => p.available), JSON.stringify(s.people.map((p) => p.available)));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
@@ -8668,7 +8668,7 @@ async function bab3FlowScenario(page, check) {
   s = await ch3Info(page);
   check('bab3-flow: arriving at the market crossing clears the beam and Nino speaks', s.ch3.arrived === true && s.obj === false && /Tembak/.test(s.line), JSON.stringify([s.ch3, s.obj, s.line]));
   // A save with Chapter 3 done: no chapter, residents offer again.
-  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'] }));
+  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'] }));
   s = await ch3Info(page);
   const ppl2 = await page.evaluate(() => window.__d3.people());
   check('bab3-flow: with Chapter 3 done there is no chapter and the residents offer missions again', s.ch3 === null && ppl2.every((p) => p.available), JSON.stringify([s.ch3, ppl2.map((p) => p.available)]));
@@ -9064,7 +9064,7 @@ async function bab4FlowScenario(page, check) {
   s = await ch4Info(page);
   check('bab4-flow: arriving at Aara clears the beam', s.ch4.arrived === true && s.obj === false, JSON.stringify([s.ch4, s.obj]));
   // Chapter 4 done: nothing, residents offer.
-  await ch3Open(page, ch4Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'] }));
+  await ch3Open(page, ch4Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'] }));
   s = await ch4Info(page);
   const ppl2 = await page.evaluate(() => window.__d3.people());
   check('bab4-flow: with Chapter 4 done there is no chapter and the residents offer missions again', s.ch4 === null && ppl2.every((p) => p.available), JSON.stringify([s.ch4, ppl2.map((p) => p.available)]));
@@ -9202,7 +9202,7 @@ async function bab4CluesScenario(page, check, touch) {
 const CLUE_GLOW = [[-108.5, -104.5], [-118.5, -120.3], [-107.12, -119.88]];
 
 /** Watch a scene frame by frame: dialog lines (in order), scene markers, controls locked frames, the chapter star, screenshots by scene. */
-async function ch4Watch(page, frames, key, shots = null) {
+async function ch4Watch(page, frames, key, shots = null, lvl = 'kota', stop = '') {
   const seen = [];
   const scenes = [];
   let star = false;
@@ -9227,7 +9227,8 @@ async function ch4Watch(page, frames, key, shots = null) {
         await page.screenshot({ path: path.join(OUT, shots[r.scene] + '.png') });
       }
     }
-    if (r.level !== 'kota') break;
+    if (r.level !== lvl) break;
+    if (stop && r.scene === stop) break;
   }
   return { seen, scenes, star, locked };
 }
@@ -9244,7 +9245,8 @@ async function bab4EndScenario(page, check, touch) {
   const s = await ch4Info(page);
   check(`bab4-end ${tag}: Chapter 4 is done and saved (bab4 in chaptersDone, step cleared)`, s.save.chaptersDone.includes('bab4') && s.save.bab4.step === '', JSON.stringify([s.save.chaptersDone, s.save.bab4]));
   const ppl = await page.evaluate(() => window.__d3.people());
-  check(`bab4-end ${tag}: the residents offer missions again`, ppl.length >= 6 && ppl.every((p) => p.available), JSON.stringify(ppl.map((p) => p.available)));
+  const c5 = await page.evaluate(() => (window.__ch5 ? window.__ch5.step() : null));
+  check(`bab4-end ${tag}: Chapter 5 starts right after (step "walk"); the residents' missions wait for it`, c5 === 'walk' && ppl.length >= 6 && ppl.every((p) => !p.available), JSON.stringify([c5, ppl.map((p) => p.available)]));
   // An old save at 'lab' or 'figure' is moved to the track scene.
   await ch3Open(page, ch4Save({ bab4: { step: 'lab', clue: 3 } }), touch);
   const s2 = await ch4Info(page);
@@ -9461,12 +9463,383 @@ async function combatEasyScenario(page, check) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+// ---- Chapter 5 "Ular Melar" (package L11b, src/world/kota/Chapter5.ts, SnakeBoss.ts, bab1/LabVisit.ts): groups `bab5-flow`, `bab5-fight` ----------
+
+const ch5Save = (extra = {}) => ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'], doneAt: { bab2: Date.now() - 9000, bab3: Date.now() - 8000, bab4: Date.now() - 5000 }, ...extra });
+const ch5Info = (page) => page.evaluate(() => ({
+  li: { ...window.__superglen.levelInfo, roofSamples: undefined },
+  level: window.__superglen.level,
+  step: window.__ch5 ? window.__ch5.step() : null,
+  obj: window.__superglen.objective.active,
+  objXZ: [window.__superglen.objective.x, window.__superglen.objective.z],
+  mode: window.__superglen.mode,
+  ctl: window.__superglen.controlsEnabled,
+  save: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}'),
+  line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '',
+}));
+const ch5Aara = (page) => page.evaluate(() => (window.__ch5 ? window.__ch5.aara() : null));
+const ch5Shot = async (page, name) => { await page.evaluate(() => window.__superglen.advance(1, true)); await shot(page, name); };
+const BOSS = { x: -72.5, z: -72.5 };
+const ch5Boss = (page) => page.evaluate(() => window.__ch5.boss());
+async function bossUntil(page, cond, max = 600, step = 2) {
+  for (let f = 0; f <= max; f += step) {
+    const b = await ch5Boss(page);
+    if (cond(b)) return { f, b };
+    await d3Adv(page, step);
+  }
+  return null;
+}
+/** Stand at (px, pz) on the ground, face the boss (or a point) with the camera behind. */
+const ch5Stand = (page, px, pz, tx = BOSS.x, tz = BOSS.z) => page.evaluate(([px, pz, tx, tz]) => {
+  const g = window.__superglen;
+  g.placePlayer(px, pz);
+  const y = Math.atan2(tx - px, tz - pz);
+  g.health.face(y);
+  g.setCameraYaw(y + Math.PI);
+}, [px, pz, tx, tz]);
+const ch5Face = (page, px, pz, tx, tz) => page.evaluate(([px, pz, tx, tz]) => {
+  const y = Math.atan2(tx - px, tz - pz);
+  window.__superglen.health.face(y);
+  window.__superglen.setCameraYaw(y + Math.PI);
+}, [px, pz, tx, tz]);
+const EAST = [-64.5, -72.5];
+const SIDE = [-64.5, -65];
+const ch5Draw = (page, x, z) => page.evaluate(([x, z]) => {
+  const g = window.__superglen;
+  g.placePlayer(x, z);
+  g.advance(20, false);
+  let calls = 0;
+  let tris = 0;
+  for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+    g.setCameraYaw(yaw);
+    g.advance(2, false);
+    g.advance(1, true);
+    const c = g.debugCounts();
+    calls = Math.max(calls, c.calls);
+    tris = Math.max(tris, c.triangles);
+  }
+  return { calls, tris };
+}, [x, z]);
+
+async function bab5FlowScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?level=kota&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(800);
+  check(`bab5-flow ${tag}: the debug free roam (?level=kota) has no Chapter 5`, await page.evaluate(() => !window.__ch5));
+  // ---- Chapter 4 done: Glen asks Aara to come along; the beam and star lead to the old building ----
+  await ch3Open(page, ch5Save({ lastMode: 'glen', slot: { level: 'kota', x: -107.1, y: 0, z: -115.8, yaw: 0, mode: 'glen', t: Date.now() } }), touch);
+  let s = await ch5Info(page);
+  const door = [100.5, -100.4];
+  check(`bab5-flow ${tag}: after Chapter 4 the city starts Chapter 5 (step "walk" saved)`, s.step === 'walk' && s.save.bab5.step === 'walk', JSON.stringify([s.step, s.save.bab5]));
+  check(`bab5-flow ${tag}: Glen's line takes Aara to the old building`, /Aara/.test(s.line) && /gedung tua/.test(s.line), s.line);
+  const ppl = await page.evaluate(() => window.__d3.people());
+  check(`bab5-flow ${tag}: the residents offer no mission during Chapter 5`, ppl.length >= 6 && ppl.every((p) => !p.available), JSON.stringify(ppl.map((p) => p.available)));
+  // The beam points to the old building (once the child is away from it).
+  await d3Go(page, 0, 0, 10);
+  await d3Adv(page, 700);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: the beam leads to the old building's door`, s.obj === true && Math.abs(s.objXZ[0] - door[0]) < 2 && Math.abs(s.objXZ[1] - door[1]) < 2, JSON.stringify([s.obj, s.objXZ]));
+  // ---- Aara follows: she reaches him on the street and keeps up while he walks; far behind she appears beside him ----
+  await d3Go(page, 40, 0, 10);
+  let a = await ch5Aara(page);
+  check(`bab5-flow ${tag}: left far behind, Aara appears at his side (teleports)`, a && a.teleports >= 1 && Math.hypot(a.x - 40, a.z - 0) < 6, JSON.stringify(a));
+  const a0 = await ch5Aara(page);
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await page.keyboard.down('w');
+  await d3Adv(page, 240);
+  await page.keyboard.up('w');
+  const pl = await d3Player(page);
+  a = await ch5Aara(page);
+  const walked = Math.hypot(pl.x - 40, pl.z - 0);
+  check(`bab5-flow ${tag}: walking ${walked.toFixed(0)} m, Aara follows close behind (<= 6 m, no teleport needed)`, walked > 15 && Math.hypot(a.x - pl.x, a.z - pl.z) <= 6 && a.teleports === a0.teleports, JSON.stringify([pl, a0, a]));
+  // ---- Reload mid-walk: the chapter resumes at "walk" (the child stands at the hill door, so the door scene plays) without Glen's opening line ----
+  await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: after a reload the chapter resumes at "walk" with no repeated opening line`, s.step === 'walk' && !/Aara, ikut/.test(s.line), JSON.stringify([s.step, s.line]));
+  // ---- At the old building: Aara gasps at the lion head ----
+  await page.evaluate(() => window.__superglen.teleportFeet(100.5, 6.1, -95.8));
+  await d3Adv(page, 20);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: near the building the scene starts (controls locked, Aara "Kepala singa")`, s.ctl === false && /Kepala singa/.test(s.line), JSON.stringify([s.ctl, s.line]));
+  await ch5Shot(page, `bab5-door${touch ? '-touch' : ''}`);
+  const w = await ch4Watch(page, 900, 'ch5Scene', null, 'kota', 'lab');
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: Glen then says to go in; step "lab" is saved; controls are back`, w.seen.some((l) => /Ayo masuk/.test(l)) && s.save.bab5.step === 'lab' && s.ctl !== false, JSON.stringify([w.seen, s.save.bab5, s.ctl]));
+  // ---- Reload at "lab": still on the way to the door ----
+  await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: after a reload at "lab" the chapter stays at "lab" (no new scene)`, s.step === 'lab' && s.save.bab5.step === 'lab' && s.ctl !== false, JSON.stringify([s.step, s.obj, s.ctl]));
+  // ---- Through the door into the Lab: Aara and Nino meet ----
+  await page.evaluate(() => window.__superglen.teleportFeet(100.5, 6.1, -98.9));
+  await d3Adv(page, 20);
+  await d3Press(page, 'e', 3);
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(1200);
+  await d3Adv(page, 30);
+  const lv = await page.evaluate(() => ({ v: !!window.__labVisit, nino: window.__labVisit && window.__labVisit.nino(), mode: window.__superglen.mode }));
+  check(`bab5-flow ${tag}: inside the Lab the visit starts (Aara with Glen, beam to Nino)`, lv.v && (await ch5Info(page)).obj === true, JSON.stringify(lv));
+  await page.evaluate(() => window.__superglen.placePlayer(0, -50));
+  await d3Adv(page, 90);
+  await page.evaluate(() => window.__superglen.placePlayer(0, -66));
+  await d3Adv(page, 20);
+  if (!touch) await d3Adv(page, 30);
+  const w2 = await ch4Watch(page, 2600, 'ch5Lab', { meet: `bab5-lab-meet${touch ? '-touch' : ''}` }, 'lab', 'done');
+  const lines = ['Selamat datang', 'Aku Aara', 'Aku Nino', 'kulit ular', 'Ular Melar', 'rahasia', 'Glen itu Superglen', 'lapangan sekolah'];
+  check(`bab5-flow ${tag}: Aara and Nino meet: greeting, Aara amazed, Nino calls her translator clever, the skin, "Ular Melar", Glen is Superglen, the field (8 lines, in order)`, orderOk(w2.seen, lines) && w2.seen.length <= 9, JSON.stringify(w2.seen));
+  check(`bab5-flow ${tag}: Nino's analysis says the snake's body can stretch ("memanjang")`, w2.seen.some((l) => /Badannya bisa memanjang/.test(l)), '');
+  await d3Adv(page, 40);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: afterwards Glen is Superglen, step "city" is saved, the beam leads out of the front door, controls are back`, s.mode === 'superglen' && s.save.bab5.step === 'city' && s.obj === true && s.ctl !== false, JSON.stringify([s.mode, s.save.bab5, s.obj, s.ctl]));
+  // ---- Out through the front door: the city, Aara waits at the door, the star leads to the field ----
+  await page.evaluate(() => window.__superglen.placePlayer(0, -40.8));
+  await d3Adv(page, 40);
+  for (let i = 0; i < 80 && (await page.evaluate(() => window.__superglen.level)) !== 'kota'; i++) {
+    await d3Adv(page, 20);
+    await sleep(100);
+  }
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(1200);
+  await d3Adv(page, 120);
+  s = await ch5Info(page);
+  a = await ch5Aara(page);
+  check(`bab5-flow ${tag}: back in the city at step "city": Aara waits by the old building's door`, s.step === 'city' && a && Math.hypot(a.x - 103.7, a.z + 96) < 1.5 && Math.abs(a.y - 6) < 0.5, JSON.stringify([s.step, a]));
+  const mapGoal = await page.evaluate(() => { const m = window.__superglen.map; return m && m.goal ? m.goal : null; });
+  check(`bab5-flow ${tag}: the beam / map star lead to the school field (-72, -72)`, s.obj === true && Math.abs(s.objXZ[0] + 72.5) < 2 && Math.abs(s.objXZ[1] + 72.5) < 2, JSON.stringify([s.objXZ, mapGoal]));
+  // ---- Reload at "city" ----
+  await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
+  s = await ch5Info(page);
+  check(`bab5-flow ${tag}: after a reload at "city" the chapter continues at "city" (no lab scene again)`, s.step === 'city' && s.level === 'kota', JSON.stringify([s.step, s.level]));
+  // ---- Chapter 5 done: no chapter, the residents offer missions again ----
+  await ch3Open(page, ch5Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'] }), touch);
+  s = await ch5Info(page);
+  const ppl2 = await page.evaluate(() => window.__d3.people());
+  check(`bab5-flow ${tag}: with Chapter 5 done there is no chapter and the residents offer missions again`, s.step === null && ppl2.every((p) => p.available), JSON.stringify([s.step, ppl2.map((p) => p.available)]));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+async function bab5FightScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
+  await d3Adv(page, 30);
+  let h = await hSt(page);
+  let b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: step "city": the snake is coiled in the school field, full stars (3), not awake yet`, b.stars === 3 && b.phase === 'idle' && b.enabled === false && Math.abs(b.pos.x - BOSS.x) < 0.1 && Math.abs(b.pos.z - BOSS.z) < 0.1, JSON.stringify(b));
+  check(`bab5-fight ${tag}: the star counter is hidden until the fight`, await page.evaluate(() => !document.querySelector('.ch5-stars.show')), '');
+  // ---- Perf at the fight spot (coiled, engaged) ----
+  await page.evaluate(() => window.__ch5.mute(true));
+  const d0 = await ch5Draw(page, -62, -62);
+  console.log(`   [bab5-fight ${tag}] fight spot (coiled): ${d0.calls} draw calls, ${d0.tris} triangles`);
+  check(`bab5-fight ${tag}: at the fight spot <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  // ---- Intro (first time near): Nino explains the pattern; then the fight starts ----
+  const wi = await ch4Watch(page, 700, 'ch5Scene', null, 'kota', 'fight');
+  check(`bab5-fight ${tag}: coming close: Nino announces "melar lurus", jump aside or shield`, wi.seen.some((l) => /melar lurus/.test(l) && /perisai/.test(l)), JSON.stringify(wi.seen));
+  h = await ch5Info(page);
+  b = await ch5Boss(page);
+  const eng = await page.evaluate(() => ({ e: window.__ch5.engaged(), hud: (() => { const e = document.querySelector('.ch5-stars'); if (!e) return null; const r = e.getBoundingClientRect(); const hr = window.__superglen.health.rect; return { shown: e.classList.contains('show'), n: e.querySelectorAll('.ch5-star:not(.lost)').length, r: { x: r.left, y: r.top, w: r.width, h: r.height }, hr }; })() }));
+  check(`bab5-fight ${tag}: after the intro step "fight" is saved, the snake is awake, 3 stars show under the hearts without overlap`, h.step === 'fight' && h.save.bab5.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 3 && eng.hud.r.y >= eng.hud.hr.y + eng.hud.hr.h - 2 && eng.hud.r.x >= 0 && eng.hud.r.x + eng.hud.r.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
+  // Mastered by hand from here: no attack starts on its own.
+  await page.evaluate(() => window.__ch5.mute(true));
+  await d3Adv(page, 420); // the dialog lines are over
+  await page.evaluate(() => window.__superglen.health.fill());
+  // ---- Wind-up: coils and wiggles, the red stripe shows, ~1.15 s ----
+  await ch5Stand(page, ...EAST);
+  await d3Adv(page, 5);
+  await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
+  await page.evaluate(() => window.__ch5.lunge());
+  const w0 = await bossUntil(page, (x) => x.phase === 'wind', 20, 1);
+  await d3Adv(page, 20);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: wind-up: a red stripe lies on the ground toward Glen, the snake has not moved out yet`, w0 && b.phase === 'wind' && b.stripe === true && b.ext === 0 && b.dir.x > 0.9, JSON.stringify(b));
+  if (!touch) await ch5Shot(page, 'bab5-windup'); else await ch5Shot(page, 'bab5-windup-touch');
+  await d3Adv(page, 28); // the line is locked after ~40% of the wind-up
+  const dirLocked = (await ch5Boss(page)).dir;
+  await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), SIDE); // Glen steps aside after the lock
+  await ch5Face(page, SIDE[0], SIDE[1], BOSS.x, BOSS.z);
+  const wl = await bossUntil(page, (x) => x.phase === 'lunge', 120, 1);
+  check(`bab5-fight ${tag}: the wind-up takes about 1.15 s (60-75 frames from the start) with a clear locked stripe`, wl && 20 + 28 + wl.f >= 58 && 20 + 28 + wl.f <= 78 && (await ch5Boss(page)).locked === true, JSON.stringify([w0 && w0.f, wl && wl.f]));
+  const t0 = await bossUntil(page, (x) => x.ext >= 8.99, 80, 1);
+  check(`bab5-fight ${tag}: the lunge stretches the body out to ~9 m in about 0.3 s along the locked line`, t0 && t0.f <= 26 && Math.abs(t0.b.dir.x - dirLocked.x) < 0.05 && Math.abs(t0.b.dir.z - dirLocked.z) < 0.05, JSON.stringify([t0, dirLocked]));
+  if (!touch) await ch5Shot(page, 'bab5-lunge'); else await ch5Shot(page, 'bab5-lunge-touch');
+  b = (await bossUntil(page, (x) => x.phase === 'dizzy', 60, 1)).b;
+  h = await hSt(page);
+  check(`bab5-fight ${tag}: Glen stepped aside: the lunge misses (no heart lost), the snake is dizzy at the far end and its head glows`, h.hearts === 5 && b.dizzyKind === 'miss' && b.vulnerable === true && b.glow === true && b.missed >= 1, JSON.stringify([h.hearts, b]));
+  if (!touch) await ch5Shot(page, 'bab5-dizzy'); else await ch5Shot(page, 'bab5-dizzy-touch');
+  // ---- Laser counts only when dizzy ----
+  const hx = b.head.x;
+  const hz = b.head.z;
+  await ch5Stand(page, -62, -74.5, hx, hz);
+  await d3Adv(page, 6);
+  let k0 = await sk(page);
+  await d3Press(page, 'j', 4);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: a laser hit on the glowing head takes one star (3 -> 2)`, b.stars === 2 && b.laserCounted === 1 && (await sk(page)).hits === k0.hits + 1 && b.vulnerable === false, JSON.stringify([b.stars, b.laserCounted, await sk(page)]));
+  check(`bab5-fight ${tag}: the star counter shows 2 full stars`, (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 2, '');
+  await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
+  const e0 = (await ch5Boss(page)).laserEarly;
+  await ch5Stand(page, -64.5, -72.5);
+  await d3Adv(page, 10);
+  const hd = (await ch5Boss(page)).head;
+  await ch5Face(page, -64.5, -72.5, hd.x, hd.z);
+  await d3Adv(page, 4);
+  k0 = await sk(page);
+  await d3Press(page, 'j', 4);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: a laser hit on the head while it does NOT glow takes no star (still 2) and Nino says to wait`, b.stars === 2 && b.laserEarly === e0 + 1 && (await sk(page)).hits === k0.hits + 1, JSON.stringify([b.stars, b.laserEarly, e0]));
+  let sawBelum = false;
+  for (let i = 0; i < 40 && !sawBelum; i++) {
+    await d3Adv(page, 20);
+    sawBelum = /Tunggu sampai kepalanya bersinar/.test((await ch5Info(page)).line);
+  }
+  check(`bab5-fight ${tag}: Nino: "Belum. Tunggu sampai kepalanya bersinar."`, sawBelum, (await ch5Info(page)).line);
+  await d3Adv(page, 400);
+  // ---- A lunge that touches Glen: one heart (existing invulnerability), the snake is only briefly dizzy ----
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch5Stand(page, ...EAST);
+  await d3Adv(page, 5);
+  const hp0 = (await ch5Boss(page)).hurtGlen;
+  await page.evaluate(() => window.__ch5.lunge());
+  const hit = await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
+  h = await hSt(page);
+  check(`bab5-fight ${tag}: standing in the stripe the lunge costs one heart (5 -> 4), stars and boing, then he is safe for 1.5 s`, hit && h.hearts === 4 && h.inv && hit.b.hurtGlen === hp0 + 1 && hit.b.dizzyKind === 'hit', JSON.stringify([h, hit && hit.b.dizzyKind]));
+  check(`bab5-fight ${tag}: after a hit on Glen the snake's dizzy window is short (<= 2 s), after a miss it is longer`, hit && hit.b.dizzyLeft <= 1.85, JSON.stringify(hit && hit.b.dizzyLeft));
+  await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
+  // ---- Shield: the lunge is blocked, the snake bonks its nose, dizzy longer ----
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch5Stand(page, ...EAST);
+  await d3Adv(page, 5);
+  await page.keyboard.down('k');
+  await d3Adv(page, 14);
+  const bl0 = (await sk(page)).blocks;
+  await page.evaluate(() => window.__ch5.lunge());
+  const blk = await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
+  h = await hSt(page);
+  check(`bab5-fight ${tag}: with the shield up the lunge is blocked: no heart lost, the snake stops short and is dizzy (longer window)`, blk && h.hearts === 5 && blk.b.dizzyKind === 'block' && blk.b.ext < 8.5 && blk.b.dizzyLeft > 4 && (await sk(page)).blocks > bl0, JSON.stringify([h.hearts, blk && blk.b, await sk(page)]));
+  await page.keyboard.up('k');
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
+  // ---- Jumping / flying over the stripe: feet above the body = no touch ----
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch5Stand(page, ...EAST);
+  await page.evaluate(() => window.__ch5.lunge());
+  const hp1 = (await ch5Boss(page)).hurtGlen;
+  for (let i = 0; i < 140; i++) {
+    await page.evaluate(([x, z]) => window.__superglen.teleportFeet(x, 2.4, z), EAST);
+    await d3Adv(page, 1);
+    if ((await ch5Boss(page)).phase === 'dizzy') break;
+  }
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: airborne (feet above the snake's body) the lunge passes under: no heart lost`, b.phase === 'dizzy' && b.hurtGlen === hp1 && (await hSt(page)).hearts === 5 && b.dizzyKind === 'miss', JSON.stringify([b.phase, b.hurtGlen, hp1]));
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
+  // ---- All hearts gone: rest at the Rumah Sakit, the fight starts over ----
+  await page.evaluate(() => { window.__ch5.takeStar(); });
+  await d3Adv(page, 60);
+  b = await ch5Boss(page);
+  const starsBefore = b.stars;
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
+  await ch5Stand(page, ...EAST);
+  await page.evaluate(() => window.__superglen.health.setHearts(1));
+  await d3Adv(page, 5);
+  await page.evaluate(() => window.__ch5.lunge());
+  await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
+  await d3Adv(page, 90);
+  await sleep(900);
+  await d3Adv(page, 30);
+  let sawSemangat = false;
+  let sawLagi = false;
+  for (let i = 0; i < 80 && !(sawSemangat && sawLagi); i++) {
+    await d3Adv(page, 20);
+    const ln = (await ch5Info(page)).line;
+    if (/Semangat/.test(ln)) sawSemangat = true;
+    if (/masih menunggu/.test(ln)) sawLagi = true;
+  }
+  h = await hSt(page);
+  b = await ch5Boss(page);
+  const pp = await d3Player(page);
+  const resets = await page.evaluate(() => window.__ch5.counts().resets);
+  check(`bab5-fight ${tag}: at zero hearts he rests at the Rumah Sakit with full hearts (was ${starsBefore} stars) and the fight resets: snake back to 3 stars, asleep until he returns`, h.exh === 1 && h.hearts === 5 && b.stars === 3 && b.enabled === false && resets === 1 && Math.hypot(pp.x - BOSS.x, pp.z - BOSS.z) > 40, JSON.stringify([h, b.stars, b.enabled, resets, pp]));
+  check(`bab5-fight ${tag}: Nino encourages after the rest and says the snake still waits`, sawSemangat && sawLagi, JSON.stringify([sawSemangat, sawLagi]));
+  check(`bab5-fight ${tag}: the star counter is hidden again (3 full stars when he is back)`, await page.evaluate(() => !document.querySelector('.ch5-stars.show')), '');
+  // ---- Back at the field: awake again, no second intro ----
+  await ch5Stand(page, ...EAST);
+  await d3Adv(page, 60);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: coming back the snake is awake again with 3 stars (no second intro scene)`, b.enabled === true && b.stars === 3 && (await page.evaluate(() => window.__ch5.engaged())), JSON.stringify(b));
+  // ---- Reload at "fight" ----
+  await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
+  const r = await ch5Info(page);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: after a reload at "fight" the snake has full stars again, the step stays "fight"`, r.step === 'fight' && b.stars === 3 && r.save.bab5.step === 'fight', JSON.stringify([r.step, b.stars]));
+  // ---- Perf with the body stretched out and the glow on ----
+  await page.evaluate(() => { window.__ch5.mute(true); });
+  await ch5Stand(page, ...SIDE);
+  await d3Adv(page, 420);
+  await page.evaluate(() => { window.__ch5.lunge(); });
+  await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
+  await d3Adv(page, 10);
+  const d1 = await page.evaluate(([x, z]) => {
+    const g = window.__superglen;
+    let calls = 0;
+    let tris = 0;
+    for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      g.setCameraYaw(yaw);
+      g.advance(2, false);
+      g.advance(1, true);
+      const c = g.debugCounts();
+      calls = Math.max(calls, c.calls);
+      tris = Math.max(tris, c.triangles);
+    }
+    return { calls, tris };
+  }, SIDE);
+  console.log(`   [bab5-fight ${tag}] fight spot (stretched, dizzy, glow): ${d1.calls} draw calls, ${d1.tris} triangles`);
+  check(`bab5-fight ${tag}: with the body stretched, the glow and particles still <= 60 draw calls and <= 65000 triangles`, d1.calls <= 60 && d1.tris <= 65000, JSON.stringify(d1));
+  // ---- The last star: tamed, sorry, slithers off, chapter done ----
+  await page.evaluate(() => { window.__ch5.takeStar(); window.__ch5.takeStar(); });
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: with one star left the counter shows 1`, b.stars === 1 && (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 1, JSON.stringify(b.stars));
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
+  await ch5Stand(page, ...SIDE);
+  await page.evaluate(() => window.__ch5.lunge());
+  const bd = (await bossUntil(page, (x) => x.phase === 'dizzy' && x.vulnerable, 300, 1));
+  const hh = (await ch5Boss(page)).head;
+  await ch5Stand(page, -62, -74.5, hh.x, hh.z);
+  await d3Adv(page, 6);
+  const coins0 = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).quiz.coins);
+  await d3Press(page, 'j', 3);
+  const wt = await ch4Watch(page, 2100, 'ch5Scene', { tamed: `bab5-tamed${touch ? '-touch' : ''}` });
+  check(`bab5-fight ${tag}: the third star tames it: it says sorry (hissy), Nino cheers, it slithers off, Nino hints at the big rats (in order)`, bd && orderOk(wt.seen, ['Sssssori', 'Hebat, Superglen', 'aku pulang ke hutan', 'tikus besar']), JSON.stringify(wt.seen));
+  check(`bab5-fight ${tag}: controls were locked during the scene; "Chapter 5 selesai!" star shown`, wt.locked > 5 && wt.star, JSON.stringify([wt.locked, wt.star]));
+  await d3Adv(page, 120);
+  const fin = await ch5Info(page);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: Chapter 5 is done and saved (bab5 in chaptersDone, step cleared), 12 coins, the snake is gone`, fin.save.chaptersDone.includes('bab5') && fin.save.bab5.step === '' && fin.save.quiz.coins === coins0 + 12 && b.phase === 'gone', JSON.stringify([fin.save.chaptersDone, fin.save.bab5, fin.save.quiz.coins, coins0, b.phase]));
+  const ppl3 = await page.evaluate(() => window.__d3.people());
+  check(`bab5-fight ${tag}: the residents offer missions again and the city is free (switch allowed, star counter hidden)`, ppl3.every((p) => p.available) && (await page.evaluate(() => !document.querySelector('.ch5-stars.show'))), JSON.stringify(ppl3.map((p) => p.available)));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+async function bab5EasyScenario(page, check) {
+  await ch3Open(page, ch5Save({ bab5: { step: 'fight' }, settings: { easyJump: true, easyFight: true, sound: true, music: true, musicVol: 1, sfxVol: 1 } }));
+  await page.evaluate(() => window.__ch5.mute(true));
+  await ch5Stand(page, ...SIDE);
+  await d3Adv(page, 420);
+  await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
+  await page.evaluate(() => window.__ch5.lunge());
+  const w = await bossUntil(page, (x) => x.phase === 'wind', 20, 1);
+  const l = await bossUntil(page, (x) => x.phase === 'lunge', 300, 1);
+  check('bab5-easy: with "Mode mudah" the wind-up is slower (about 1.8 s = 108 frames)', w && l && l.f >= 100 && l.f <= 118, JSON.stringify([w && w.f, l && l.f]));
+  const d = await bossUntil(page, (x) => x.phase === 'dizzy', 100, 1);
+  check('bab5-easy: the dizzy window is longer (3.4 s x 1.5 = 5.1 s after a miss)', d && d.b.dizzyKind === 'miss' && d.b.dizzyLeft > 4.9, JSON.stringify(d && d.b.dizzyLeft));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 // ---- Healing with coins (package L5): food stall in the Pasar and the Rumah Sakit: group `care` ------------------------------------
 const careSt = (page) => page.evaluate(() => { const h = window.__superglen.health; return { hearts: h.hearts, coins: JSON.parse(localStorage.getItem('superglen.save.v1')).quiz.coins, panel: window.__care.panel(), counts: window.__care.counts(), line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '' }; });
 async function careScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   const quiz = { cats: {}, coins: 12, stickers: [], challenges: 0, fragments: 0, recent: [] };
-  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'], quiz, hearts: 3 }), touch);
+  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'], quiz, hearts: 3 }), touch);
   await d3Adv(page, 60);
   const spots = await page.evaluate(() => window.__care.spots());
   const press = async () => {
@@ -9793,6 +10166,11 @@ async function main() {
     results.push(await runScenario(browser, 'bab4-clues-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4CluesScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab5-flow', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FlowScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab5-flow-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FlowScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab5-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab5-fight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FightScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab5-easy', { viewport: { width: 1280, height: 720 } }, bab5EasyScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 

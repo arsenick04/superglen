@@ -56,7 +56,7 @@ export class AaraFollower {
     this.distance = dp;
     if (dp > FOLLOW.teleportDist || Math.abs(g.position.y - fy) > 14) {
       // Left far behind: she is at the child's last ground spot.
-      const c = this.trail.length > 0 ? this.trail[Math.max(0, this.trail.length - 4)] : { x: p.x, y: fy, z: p.z };
+      const c = this.trail.length > 0 ? this.trail[this.trail.length - 1] : { x: p.x, y: fy, z: p.z };
       g.position.set(c.x, c.y, c.z);
       this.trail.length = 0;
       this.teleports++;

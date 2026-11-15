@@ -135,6 +135,10 @@ export class Chapter5 {
         this.setStep('walk');
         await ctx.dialog.say(L.glenAjak);
         await ctx.dialog.say(L.aaraIkut);
+      } else if (this.step === 'city') {
+        // Just out of the old building: Aara waits by the door and wishes him luck.
+        const p = ctx.player.position;
+        if (Math.hypot(p.x - BAB5_DOOR.wait.x, p.z - BAB5_DOOR.wait.z) < 15) await ctx.dialog.say(L.aaraTunggu);
       }
     });
   }
