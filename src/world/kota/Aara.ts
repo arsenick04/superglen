@@ -88,7 +88,7 @@ export class AaraActor {
     this.orbMat = new THREE.MeshBasicMaterial({ color: LEVELS[0].color, toneMapped: false, fog: false });
     this.orb = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), this.orbMat);
     this.orb.position.copy(ORB_AT);
-    this.avatar = new Avatar('aara', null, true, 0, this.body);
+    this.avatar = new Avatar('aara', null, false, 0, this.body);
     this.avatar.whenRig((rig) => this.grabOrb(rig));
     this.group.add(this.avatar.root);
     if (!this.inHand) this.group.add(this.orb);

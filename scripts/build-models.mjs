@@ -14,8 +14,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(root, 'art/models/source');
 const OUT = path.join(root, 'public/models');
 const MAX_TRIS = 20000;
-const TARGET_TRIS = 16000;
+// Desktop model (16k) and a lighter `_lo` model for the phone preset (the city's triangle budget counts the figure twice: lit pass + shadow pass).
+const VARIANTS = [
+  { suffix: '', tris: 16000 },
+  { suffix: '_lo', tris: Number(process.env.LO_TRIS) || 0 },
+];
 const TEX_SIZE = 512;
+// Phone triangle target per character (Glen's texture islands pin the simplifier: below ~6.5k his face gets speckled).
+const LO_TRIS = { glen: 5500, superglen: 4800, nino: 4500, aara: 4500 };
 
 // original (Mixamo) clip name -> game clip name
 export const CLIP_MAP = {
@@ -44,7 +50,8 @@ const io = new NodeIO()
 
 mkdirSync(OUT, { recursive: true });
 const only = process.argv.slice(2);
-for (const name of ['glen', 'superglen', 'nino', 'aara']) {
+for (const name of ['glen', 'superglen', 'nino', 'aara']) for (const { suffix, tris } of VARIANTS) {
+  const TARGET_TRIS = suffix ? Number(process.env.LO_TRIS) || LO_TRIS[name] : tris;
   if (only.length && !only.includes(name)) continue;
   const doc = await io.read(path.join(SRC, `${name}.glb`));
   const r = doc.getRoot();
@@ -68,8 +75,35 @@ for (const name of ['glen', 'superglen', 'nino', 'aara']) {
   const count = () => r.listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((q, p) => q + (p.getIndices()?.getCount() ?? 0) / 3, 0), 0);
   const before = count();
   await doc.transform(weld());
-  if (before > MAX_TRIS) {
+  if (before > MAX_TRIS && !suffix) {
     await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: TARGET_TRIS / before, error: 0.02, lockBorder: false }));
+  } else if (before > MAX_TRIS) {
+    // `_lo`: UV-aware simplification (plain position-only collapsing smears the texture across islands). Pass 1 keeps seams,
+    // pass 2 may collapse across seams where the model cannot get lighter otherwise.
+    const run = (target, flags, uvWeight) => {
+      for (const mesh of r.listMeshes()) {
+        for (const prim of mesh.listPrimitives()) {
+          const idx = prim.getIndices();
+          const [out, err] = MeshoptSimplifier.simplifyWithAttributes(
+            new Uint32Array(idx.getArray()),
+            new Float32Array(prim.getAttribute('POSITION').getArray()),
+            3,
+            new Float32Array(prim.getAttribute('TEXCOORD_0').getArray()),
+            2,
+            [uvWeight, uvWeight],
+            null,
+            target * 3,
+            0.5,
+            flags,
+          );
+          if (process.env.DBG) console.log('  simplify', flags.join('+') || '-', 'error', err.toFixed(4));
+          idx.setArray(out);
+        }
+      }
+    };
+    for (let pass = 0; pass < 3 && count() > TARGET_TRIS * 1.05; pass++) run(TARGET_TRIS, ['Sparse'], Number(process.env.UVW) || 100);
+    if (count() > TARGET_TRIS * 1.05) run(TARGET_TRIS, ['Permissive', 'Sparse'], Number(process.env.UVW) || 100);
+    if (process.env.DBG) console.log('  tris after simplify', Math.round(count()));
   }
   await doc.transform(
     textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [TEX_SIZE, TEX_SIZE], quality: 85 }),
@@ -80,9 +114,9 @@ for (const name of ['glen', 'superglen', 'nino', 'aara']) {
     quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 12, quantizeColor: 8, quantizeWeight: 8, quantizeGeneric: 12 }),
   );
   doc.createExtension(EXTMeshoptCompression).setRequired(true).setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-  const out = path.join(OUT, `${name}.glb`);
+  const out = path.join(OUT, `${name}${suffix}.glb`);
   await io.write(out, doc);
   const src = statSync(path.join(SRC, `${name}.glb`)).size;
   const dst = statSync(out).size;
-  console.log(`${name}: ${(src / 1e6).toFixed(2)} MB -> ${(dst / 1e6).toFixed(2)} MB, tris ${Math.round(before)} -> ${Math.round(count())}`);
+  console.log(`${name}${suffix}: ${(src / 1e6).toFixed(2)} MB -> ${(dst / 1e6).toFixed(2)} MB, tris ${Math.round(before)} -> ${Math.round(count())}`);
 }

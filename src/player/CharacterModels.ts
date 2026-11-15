@@ -70,6 +70,8 @@ class CharacterModels {
   bytes = 0;
   loadMs = 0;
   failed: string[] = [];
+  /** Live avatars, for the test handle (`window.__characters`). */
+  readonly avatars = new Set<Avatar>();
 
   has(kind: ModelKind): boolean {
     return this.templates.has(kind);
@@ -145,16 +147,26 @@ class CharacterModels {
   }
 
   /** A fresh animated copy, or null while the model is not loaded. */
-  create(kind: ModelKind, tint = 0x000000): CharacterRig | null {
+  create(kind: ModelKind, tint = 0x000000, shadows = true): CharacterRig | null {
     const t = this.templates.get(kind);
-    return t ? new CharacterRig(kind, t, tint) : null;
+    return t ? new CharacterRig(kind, t, tint, shadows) : null;
   }
 }
 
 /** Kinds that have a `_lo` file for the phone preset (filled by the build script when needed). */
-const LOW_LOD = new Set<ModelKind>();
+const LOW_LOD = new Set<ModelKind>(['glen', 'superglen', 'nino', 'aara']);
 
 export const characterModels = new CharacterModels();
+
+/** Test handle: which avatar plays which clip. */
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__characters = {
+    info: () => ({ bytes: characterModels.bytes, ms: Math.round(characterModels.loadMs), failed: characterModels.failed }),
+    clips: () => [...characterModels.avatars].filter((a) => a.visible).map((a) => `${a.kindName}:${a.rig ? a.rig.clipName : 'figure'}`),
+    /** Force a one-shot on the visible Glen/Superglen avatar. */
+    emote: (c: 'cheer' | 'wave') => [...characterModels.avatars].filter((a) => a.visible).forEach((a) => a.emote(c, 3)),
+  };
+}
 
 /** One-shot clip window: play `clip` from `from` to `to` seconds (to <= 0: the whole clip) at `rate`. */
 export interface Shot {
@@ -184,6 +196,7 @@ export class CharacterRig {
     readonly kind: ModelKind,
     private readonly tpl: Template,
     tint: number,
+    shadows: boolean,
   ) {
     const scene = cloneSkinned(tpl.scene) as THREE.Group;
     let mesh: THREE.SkinnedMesh | null = null;
@@ -193,7 +206,8 @@ export class CharacterRig {
     if (!mesh) throw new Error(`model ${kind} has no skinned mesh`);
     const m: THREE.SkinnedMesh = mesh;
     m.frustumCulled = false;
-    m.castShadow = true;
+    // The phone preset has no skinned shadow (the city's triangle budget counts a caster twice): the blob shadow under the player stays.
+    m.castShadow = shadows && Quality.level === 'high';
     m.receiveShadow = false;
     // Own material per actor (textures stay shared) so the rhythm glow only lights the player.
     this.material = (m.material as THREE.MeshStandardMaterial).clone();
@@ -352,11 +366,12 @@ export class Avatar {
   constructor(
     private readonly kind: ModelKind,
     fallbackMat: THREE.Material | null,
-    shadows: boolean,
+    private readonly shadows: boolean,
     private readonly tint = 0x000000,
     /** Fallback shown instead of a `Figure` (Aara has no procedural Figure). */
     fallbackObj: THREE.Object3D | null = null,
   ) {
+    characterModels.avatars.add(this);
     if (characterModels.has(kind)) this.makeRig();
     else {
       if (fallbackObj) {
@@ -374,7 +389,7 @@ export class Avatar {
   }
 
   private makeRig(): void {
-    const rig = characterModels.create(this.kind, this.tint);
+    const rig = characterModels.create(this.kind, this.tint, this.shadows);
     if (!rig) return;
     if (this.fig) {
       this.fig.root.removeFromParent();
@@ -394,6 +409,20 @@ export class Avatar {
     if (this.rig) cb(this.rig);
   }
 
+  get kindName(): string {
+    return this.kind;
+  }
+
+  /** True when this avatar and all its parents are visible. */
+  get visible(): boolean {
+    let o: THREE.Object3D | null = this.root;
+    while (o) {
+      if (!o.visible) return false;
+      o = o.parent;
+    }
+    return true;
+  }
+
   /** The material that carries the rhythm glow (null while the figure is shown). */
   get material(): THREE.MeshStandardMaterial | null {
     return this.rig?.material ?? null;
@@ -401,9 +430,12 @@ export class Avatar {
 
   /** A short celebration clip ('cheer' or 'wave') of `secs` seconds. */
   emote(clip: 'cheer' | 'wave', secs: number): void {
-    if (!this.rig?.hasClip(clip)) return;
+    if (!this.rig) return;
+    // Superglen has no cheer clip: he waves instead.
+    const c = this.rig.hasClip(clip) ? clip : this.rig.hasClip('wave') ? 'wave' : '';
+    if (!c) return;
     this.emoteLeft = secs;
-    this.rig.shot({ clip, from: 0, to: Math.min(secs, this.rig.clipDuration(clip)), rate: 1 }, 0.2);
+    this.rig.shot({ clip: c, from: 0, to: Math.min(secs, this.rig.clipDuration(c)), rate: 1 }, 0.2);
   }
 
   /** Laser shot: the first moments of the shoot clip. */
@@ -492,6 +524,7 @@ export class Avatar {
 
   dispose(): void {
     this.disposed = true;
+    characterModels.avatars.delete(this);
     this.rig?.dispose();
     this.root.removeFromParent();
   }
