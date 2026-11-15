@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
-import { CITY, CITY_LAYOUT, districtAt } from './CityData';
+import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
 
 /**
@@ -20,13 +20,15 @@ export const LifeConfig = {
   /** Agents closer than this to the player are simulated (m); the others are frozen. */
   simRadius: 70,
   /** Hard cap of simulated agents per frame. */
-  maxSim: 60,
+  maxSim: 120,
   /** Agents closer than this (and in view) are drawn (m). */
   showRadius: 48,
-  cars: 18,
-  motos: 8,
-  bikes: 8,
-  walkers: 40,
+  cars: 56,
+  motos: 30,
+  bikes: 30,
+  walkers: 250,
+  /** People standing about (shop fronts, plaza). */
+  idlers: 50,
   /** A vehicle stops this far in front of Glen (m), and starts braking `brakeDist` further out. */
   carStopGap: 3.2,
   brakeDist: 9,
@@ -42,7 +44,7 @@ export const LifeConfig = {
   walkSpeed: [1.0, 1.6],
 } as const;
 
-const MAX_PED = 72;
+const MAX_PED = 200;
 const SIDE = { main: { off: 2.5, walk: 6.5 }, local: { off: 1.75, walk: 4.75 } } as const;
 
 // ---- Data -------------------------------------------------------------------------------------------------------------------
@@ -418,7 +420,8 @@ export class CityLife {
         this.agents.push(a);
         return a;
       };
-      const game = si++ % 3;
+      si++;
+      const game: number = 2;
       if (game === 0 || game === 2) {
         // Two children chasing each other round a spot.
         for (let k = 0; k < 2; k++) {
@@ -451,6 +454,33 @@ export class CityLife {
       }
     }
 
+    // Idle people: round the plaza and in front of shops (they sway a little, facing the street or the shop).
+    {
+      const fronts: { x: number; z: number; yaw: number }[] = [];
+      for (let i = 0; i < 10; i++) {
+        const an = (i / 10) * Math.PI * 2;
+        fronts.push({ x: Math.cos(an) * 12, z: Math.sin(an) * 12, yaw: an + Math.PI * 0.5 });
+      }
+      const shops = CITY_LAYOUT.buildings.filter((b) => b.kind === 'kiosk' || b.kind === 'ruko');
+      for (const b of shops) {
+        const f = FACE_VEC[b.face];
+        const half = b.face < 2 ? b.d / 2 : b.w / 2;
+        fronts.push({ x: b.x + f[0] * (half + 3.3), z: b.z + f[1] * (half + 3.3), yaw: Math.atan2(-f[0], -f[1]) });
+      }
+      for (let i = 0; i < LifeConfig.idlers && fronts.length > 0; i++) {
+        const f = fronts[Math.floor(rnd() * fronts.length)];
+        const a = this.blank(4);
+        a.mode = 3;
+        a.cx = f.x + (rnd() - 0.5) * 1.6;
+        a.cz = f.z + (rnd() - 0.5) * 1.6;
+        a.yaw = f.yaw;
+        a.a0 = rnd() * 6;
+        a.color = pick(PALETTE);
+        a.sx = a.sy = a.sz = 0.92 + rnd() * 0.2;
+        this.agents.push(a);
+      }
+    }
+
     // Meshes.
     const carMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.1 });
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
@@ -469,9 +499,9 @@ export class CityLife {
     this.anim.setUsage(THREE.DynamicDrawUsage);
     pedGeo.setAttribute('aAnim', this.anim);
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
-    this.cars = mk(carGeo(), carMat, 24);
-    this.motos = mk(motoGeo(), carMat, 16);
-    this.bikes = mk(bikeGeo(), carMat, 16);
+    this.cars = mk(carGeo(), carMat, 70);
+    this.motos = mk(motoGeo(), carMat, 40);
+    this.bikes = mk(bikeGeo(), carMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
@@ -721,6 +751,13 @@ export class CityLife {
       a.y = mine && cyc % 1 < 0.2 ? 0.25 * Math.sin((cyc % 1) * Math.PI * 5) : 0;
       a.amp = mine ? 0.5 : 0.1;
       a.phase = t * 7;
+      a.v = 1;
+    } else if (a.mode === 3) {
+      a.x = a.cx;
+      a.z = a.cz;
+      a.y = 0;
+      a.amp = 0;
+      a.phase = 0;
       a.v = 1;
     } else {
       a.x = a.cx;

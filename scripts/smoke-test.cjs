@@ -7444,7 +7444,7 @@ async function kotaLifeScenario(page, check, touch) {
   fs.mkdirSync(dir, { recursive: true });
   await kotaBoot(page, touch);
   const total = await page.evaluate(() => window.__life.total());
-  check(`kota-life ${tag}: about 70-120 ambient agents exist (${total})`, total >= 70 && total <= 120, String(total));
+  check(`kota-life ${tag}: about 250-650 ambient agents exist (${total})`, total >= 250 && total <= 650, String(total));
   // Agents near the plaza move; at most 60 are simulated; some are drawn.
   const r = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7458,7 +7458,7 @@ async function kotaLifeScenario(page, check, touch) {
     for (let i = 0; i < a0.length; i++) if (Math.hypot(a0[i].x - a1[i].x, a0[i].z - a1[i].z) > 1) moved++;
     return { moved, sim: g.levelInfo.lifeSim, shown: g.levelInfo.lifeShown };
   });
-  check(`kota-life ${tag}: agents move (${r.moved} moved over 4 s), 0 < simulated <= 60 (${r.sim})`, r.moved >= 10 && r.sim > 0 && r.sim <= 60, JSON.stringify(r));
+  check(`kota-life ${tag}: agents move (${r.moved} moved over 4 s), 0 < simulated <= 120 (${r.sim})`, r.moved >= 10 && r.sim > 0 && r.sim <= 120, JSON.stringify(r));
   // Most agents far away are frozen: simulated count stays bounded at every district.
   const spots = [[0, 26], [-93, 20], [-50, -100], [100, 50], [0, 93], [50, 50], [-50, -50]];
   const sims = await page.evaluate((spots) => {
@@ -7472,7 +7472,7 @@ async function kotaLifeScenario(page, check, touch) {
     }
     return out;
   }, spots);
-  check(`kota-life ${tag}: simulated agents <= 60 everywhere; some are drawn near the player in most districts`, sims.every((x) => x[0] <= 60) && sims.filter((x) => x[1] > 0).length >= 4, JSON.stringify(sims));
+  check(`kota-life ${tag}: simulated agents <= 120 everywhere; some are drawn near the player in most districts`, sims.every((x) => x[0] <= 120) && sims.filter((x) => x[1] > 0).length >= 4, JSON.stringify(sims));
   // A car stops for Glen standing in its lane and goes on when he leaves.
   const stop = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7514,6 +7514,7 @@ async function kotaLifeScenario(page, check, touch) {
   });
   console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
   check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 65000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 65000, JSON.stringify(busy));
+  check(`kota-life ${tag}: a busy street view shows at least 20 agents (${busy.n})`, busy.n >= 20, String(busy.n));
   await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
   await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
 }
