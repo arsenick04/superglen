@@ -57,13 +57,13 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 - [ ] **L9 Pujian Nino bervariasi.** 6-8 variasi pujian dan 3-4 variasi "coba lagi" untuk latihan dan kuis, dipilih acak tanpa mengulang berturut-turut. Teks dulu, suara di langkah suara.
 - [ ] **L10 Jarak misi.** Tujuan misi warga dan tantangan dipindah supaya tiap misi menempuh sedikitnya sekitar 80-150 m dan melewati distrik lain; hadiah koin disesuaikan. check:reach lulus.
 - [ ] **L11 Susun ulang cerita.** Chapter 3 = Tikus Kecil (tanpa Sosok Misterius di akhir; Tikus Rakus boleh tampil sekilas lalu kabur sebagai pancingan musuh ke-3). Chapter 4 ditulis ulang: Glen dan Aara mencari petunjuk (alat penerjemah, papan baca tetap dipakai) yang mengarah ke Ular Besar, Glen mengajak Aara ke Lab, Aara dan Nino berkenalan, lalu pertarungan Ular Besar (musuh ke-2). Hapus semua kemunculan Sosok Misterius dan kalimat Nino yang menyebut Aara sebelum perkenalan. Catat rencana Chapter 5 (Tikus Raksasa), 6 (Elang Jahat), 7 (Gorila Pemarah), penutup (Sosok Misterius, pancingan Superglen 2) di CLAUDE.md.
-- [ ] **L12 Sistem sinematik.** Sutradara cutscene di dalam game (kamera berpindah, bilah hitam, tokoh bergerak sesuai naskah, teks/suara, tombol Lewati yang besar; jalan di PC, sentuh, gamepad). Sinematik pembuka kisah awal Glen sebelum "Ketuk untuk mulai" selesai. Adegan pendek sebelum dialog cerita utama tiap Chapter. (Video sungguhan lewat Higgsfield: menunggu keputusan pemilik proyek.)
+- [ ] **L12 Sistem sinematik — DITUNDA ke Fase C** (keputusan pemilik proyek: dibuat bersama model 3D tokoh dan peta). **Semula:** Sutradara cutscene di dalam game (kamera berpindah, bilah hitam, tokoh bergerak sesuai naskah, teks/suara, tombol Lewati yang besar; jalan di PC, sentuh, gamepad). Sinematik pembuka kisah awal Glen sebelum "Ketuk untuk mulai" selesai. Adegan pendek sebelum dialog cerita utama tiap Chapter. (Video sungguhan lewat Higgsfield: menunggu keputusan pemilik proyek.)
 - [ ] **L13 Suara** untuk semua kalimat baru/berubah dari L3, L9, L11, L12.
 
 - [ ] **L14 Kota ramai.** Banyak warga latar yang lalu lalang: berjalan di trotoar, naik sepeda, motor, dan mobil di jalan, anak-anak bermain di taman/lapangan. Tidak perlu bisa diajak bicara. Hemat: instanced, mengikuti jalur jalan dari CityData, dimuat per potongan, tanpa collider yang menjebak pemain (kendaraan melambat/berhenti bila Glen di depannya, tidak menabrak). Jaga anggaran grafis kota (bila perlu naikkan anggaran dengan bukti fps, atau kurangi isi lain).
 - **Suara (keputusan pemilik proyek 15 November):** langsung buat semua suara tanpa contoh persetujuan dulu.
 
-Urutan kerja yang disarankan: L7 → (L1, L8, L9 paralel) → L11 → L4/L5 (pertarungan, termasuk Ular Besar) → L12 → L2 → L10 → L3/L13 → L6.
+Urutan kerja yang disarankan (lama; lihat PR bertahap): L7 → (L1, L8, L9 paralel) → L11 → L4/L5 (pertarungan, termasuk Ular Besar) → L12 → L2 → L10 → L3/L13 → L6.
 
 ## Catatan antar sesi
 
