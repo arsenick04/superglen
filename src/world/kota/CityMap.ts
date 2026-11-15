@@ -43,7 +43,7 @@ export class CityMap implements MapSource {
   })();
 
   /** D3: residents with a mission to give (both maps) and parked bikes (full map only). Null: nothing of that yet. */
-  d3: { residents(): { x: number; z: number }[]; bikes(): { x: number; z: number }[] } | null = null;
+  d3: { residents(): { x: number; z: number }[]; bikes(): { x: number; z: number }[]; care?(): { x: number; z: number; kind: 'stall' | 'rs' }[] } | null = null;
 
   /** Objective star (set by the level); undefined = follow the objective beam. */
   goal: (() => { x: number; z: number } | null) | undefined = undefined;
@@ -121,6 +121,7 @@ export class CityMap implements MapSource {
     if (this.d3) {
       for (const b of big ? this.d3.bikes() : []) this.bikeGlyph(g, X(b.x), Z(b.z), R * 0.9);
       for (const q of this.d3.residents()) this.questGlyph(g, X(q.x), Z(q.z), R * (big ? 0.95 : 0.8));
+      for (const c of this.d3.care?.() ?? []) this.careGlyph(g, X(c.x), Z(c.z), R * (big ? 1.0 : 0.85), c.kind);
     }
 
     if (big) {
@@ -172,6 +173,23 @@ export class CityMap implements MapSource {
     g.fillRect(x - r * 0.13, y - r * 0.6, r * 0.26, r * 0.7);
     g.beginPath();
     g.arc(x, y + r * 0.5, r * 0.17, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  /** Healing places: a white disc with a red heart (food stall: orange ring; Rumah Sakit: red ring and a small cross). */
+  private careGlyph(g: CanvasRenderingContext2D, x: number, y: number, r: number, kind: 'stall' | 'rs'): void {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fillStyle = '#fff';
+    g.fill();
+    g.lineWidth = Math.max(1.5, r * 0.3);
+    g.strokeStyle = kind === 'stall' ? '#ff9f1c' : '#e53935';
+    g.stroke();
+    g.fillStyle = '#ff4d6d';
+    g.beginPath();
+    g.moveTo(x, y + r * 0.55);
+    g.bezierCurveTo(x - r * 0.9, y - r * 0.05, x - r * 0.5, y - r * 0.7, x, y - r * 0.2);
+    g.bezierCurveTo(x + r * 0.5, y - r * 0.7, x + r * 0.9, y - r * 0.05, x, y + r * 0.55);
     g.fill();
   }
 

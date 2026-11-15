@@ -9379,6 +9379,99 @@ async function combatEasyScenario(page, check) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+// ---- Healing with coins (package L5): food stall in the Pasar and the Rumah Sakit: group `care` ------------------------------------
+const careSt = (page) => page.evaluate(() => { const h = window.__superglen.health; return { hearts: h.hearts, coins: JSON.parse(localStorage.getItem('superglen.save.v1')).quiz.coins, panel: window.__care.panel(), counts: window.__care.counts(), line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '' }; });
+async function careScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const quiz = { cats: {}, coins: 12, stickers: [], challenges: 0, fragments: 0, recent: [] };
+  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4'], quiz, hearts: 3 }), touch);
+  await d3Adv(page, 60);
+  const spots = await page.evaluate(() => window.__care.spots());
+  const press = async () => {
+    if (touch) {
+      const b = await page.evaluate(() => { const e = document.querySelector('[data-action="interact"]') || document.querySelector('[data-action="talk"]'); const r = e && e.getBoundingClientRect(); return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null; });
+      if (b) { await page.touchscreen.tap(b.x, b.y); await d3Adv(page, 4); return; }
+    }
+    await d3Press(page, 'e', 3);
+  };
+  const tapYes = async () => {
+    if (touch) {
+      const b = await page.evaluate(() => { const r = document.querySelector('.care-yes').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height }; });
+      await page.touchscreen.tap(b.x, b.y);
+      await d3Adv(page, 4);
+      return b;
+    }
+    await press();
+    return null;
+  };
+  // ---- Food stall: 1 heart for 5 coins ----
+  const sp = spots.stall;
+  const near = (s) => [s.x + Math.sin(s.yaw) * 1.8, s.z + Math.cos(s.yaw) * 1.8];
+  const [sx, sz] = near(sp);
+  await d3Go(page, sx, sz, 8);
+  let s0 = await careSt(page);
+  check(`care ${tag}: the stall is in the Pasar district and 3 hearts / 12 coins are the start`, s0.hearts === 3 && s0.coins === 12, JSON.stringify(s0));
+  await press();
+  let s1 = await careSt(page);
+  check(`care ${tag}: interacting at the stall opens the small panel (+1 heart, 5 coins), nothing is charged yet`, s1.panel.open && s1.panel.plus === '+1' && s1.panel.cost === '5' && s1.hearts === 3 && s1.coins === 12, JSON.stringify(s1));
+  const bt = await page.evaluate(() => { const r = document.querySelector('.care-yes').getBoundingClientRect(); const n = document.querySelector('.care-no').getBoundingClientRect(); return { yw: r.width, yh: r.height, nw: n.width, nh: n.height }; });
+  check(`care ${tag}: the yes / no buttons are at least 80 x 80`, bt.yw >= 80 && bt.yh >= 80 && bt.nw >= 80 && bt.nh >= 80, JSON.stringify(bt));
+  await shot(page, `care-stall${touch ? '-touch' : ''}`);
+  await tapYes();
+  s1 = await careSt(page);
+  check(`care ${tag}: yes: +1 heart (4) and -5 coins (7), the panel closes`, s1.hearts === 4 && s1.coins === 7 && !s1.panel.open && s1.counts.purchases === 1, JSON.stringify(s1));
+  await d3Adv(page, 400);
+  await press();
+  await tapYes();
+  s1 = await careSt(page);
+  check(`care ${tag}: a second serving: 5 hearts, 2 coins`, s1.hearts === 5 && s1.coins === 2, JSON.stringify(s1));
+  await d3Adv(page, 400);
+  await press();
+  s1 = await careSt(page);
+  check(`care ${tag}: with full hearts the stall only says so (no panel, no charge)`, !s1.panel.open && s1.coins === 2 && /penuh/.test(s1.line), JSON.stringify(s1));
+  await d3Adv(page, 500);
+  await page.evaluate(() => window.__superglen.health.setHearts(2));
+  await press();
+  await tapYes();
+  s1 = await careSt(page);
+  check(`care ${tag}: not enough coins (2 < 5): a friendly line, no charge, hearts unchanged`, s1.hearts === 2 && s1.coins === 2 && s1.counts.refused === 1 && /belum cukup/.test(s1.line), JSON.stringify(s1));
+  await d3Adv(page, 500);
+  // The panel closes when the child walks away.
+  await press();
+  const open1 = (await careSt(page)).panel.open;
+  await d3Go(page, sx + 12, sz + 12, 20);
+  check(`care ${tag}: walking away closes the panel without charging`, open1 && !(await careSt(page)).panel.open, '');
+  // ---- Rumah Sakit: all hearts for 15 coins ----
+  await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('superglen.save.v1')); d.quiz.coins = 20; localStorage.setItem('superglen.save.v1', JSON.stringify(d)); });
+  await page.evaluate(() => window.__superglen.health.setHearts(1));
+  const dc = spots.doctor;
+  await d3Go(page, dc.x + Math.sin(dc.yaw) * 1.8, dc.z + Math.cos(dc.yaw) * 1.8, 8);
+  await page.evaluate(() => window.__superglen.save.data.quiz.coins = 20);
+  await d3Adv(page, 10);
+  s0 = await careSt(page);
+  await press();
+  s1 = await careSt(page);
+  check(`care ${tag}: at the Rumah Sakit the panel offers the missing hearts (+4) for 15 coins`, s1.panel.open && s1.panel.kind === 'rs' && s1.panel.plus === '+4' && s1.panel.cost === '15', JSON.stringify([s0, s1]));
+  await tapYes();
+  s1 = await careSt(page);
+  check(`care ${tag}: yes: full hearts (5), 15 coins paid`, s1.hearts === 5 && !s1.panel.open && (await page.evaluate(() => window.__superglen.save.data.quiz.coins)) === 5, JSON.stringify(s1));
+  await d3Adv(page, 500);
+  await page.evaluate(() => window.__superglen.health.setHearts(2));
+  await press();
+  await tapYes();
+  s1 = await careSt(page);
+  check(`care ${tag}: Rumah Sakit with too few coins (5 < 15): friendly line, nothing charged`, s1.hearts === 2 && (await page.evaluate(() => window.__superglen.save.data.quiz.coins)) === 5 && /belum cukup/.test(s1.line), JSON.stringify(s1));
+  // ---- Map icons ----
+  const icons = await page.evaluate(() => { const c = window.__care.spots(); return [c.stall, c.doctor].every((p) => Math.abs(p.x) < 150 && Math.abs(p.z) < 150 && (p.x !== 0 || p.z !== 0)); });
+  check(`care ${tag}: the stall and the Rumah Sakit have places inside the city (map icons drawn there, see care-map.png)`, icons, '');
+  await page.evaluate(() => window.__superglen.settings.show());
+  await d3Adv(page, 4);
+  await page.evaluate(() => { const b = document.querySelector('.set-map'); b && b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+  await d3Adv(page, 10);
+  await shot(page, `care-map${touch ? '-touch' : ''}`);
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -9598,6 +9691,8 @@ async function main() {
     results.push(await runScenario(browser, 'combat', { viewport: { width: 1280, height: 720 } }, (p, c) => combatScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'combat-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => combatScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'combat-easy', { viewport: { width: 1280, height: 720 } }, combatEasyScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'care', { viewport: { width: 1280, height: 720 } }, (p, c) => careScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'care-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => careScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4AaraScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4AaraScenario(p, c, true), '?level=kota&fps=0&reset=1'));

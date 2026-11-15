@@ -331,7 +331,7 @@ class Gen {
     spawn: { x: 0, y: 0, z: 22, yaw: Math.PI },
     greenLinks: [],
     chapter1: { start: { x: 0, y: 0, z: 0, yaw: 0 }, route: [], seeIndex: 0, fenceIndex: 0, bar: { x: 0, z: 0, w: 0, d: 0, h: 0 } },
-    places: { coins: [], bikes: [], residents: [], missions: [], signs: [], signDests: [], reachCoins: [] },
+    places: { coins: [], bikes: [], residents: [], missions: [], signs: [], signDests: [], care: { stall: { x: 0, z: 0, yaw: 0 }, doctor: { x: 0, z: 0, yaw: 0 } }, reachCoins: [] },
   };
   readonly rng: () => number;
   private n = 0;

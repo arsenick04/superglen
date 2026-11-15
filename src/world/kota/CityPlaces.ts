@@ -103,6 +103,8 @@ export interface CityPlaces {
   missions: CityMission[];
   signs: CitySign[];
   signDests: SignDest[];
+  /** Healing with coins (L5): the food stall in the Pasar and the doctor in front of the Rumah Sakit. */
+  care: { stall: { x: number; z: number; yaw: number }; doctor: { x: number; z: number; yaw: number } };
   /** Coins and mission items for the reach checker. */
   reachCoins: ReachCoin[];
 }
@@ -443,5 +445,13 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
     addSign(`p${qx}_${qz}`, c);
   }
 
-  return { coins, bikes, residents, missions, signs, signDests, reachCoins: reach };
+  // ---- Healing: a food stall on the Pasar plaza (next to the kiosks, off the rat streets) and the doctor at the hospital door ----
+  const stallAt = findFree(pc.x + 6, pc.z + 10, 2.2, 14);
+  const stall = { x: stallAt.x, z: stallAt.z, yaw: r2(Math.atan2(pc.x - stallAt.x, pc.z - stallAt.z)) };
+  const hf = frontOf(hosp, 4.2);
+  const [hfx, hfz] = FACE[hosp.face];
+  const docAt = findFree(hf.x - hfz * 2.6, hf.z + hfx * 2.6, 1.0, 6);
+  const doctor = { x: docAt.x, z: docAt.z, yaw: r2(Math.atan2(hfx, hfz)) };
+
+  return { coins, bikes, residents, missions, signs, signDests, care: { stall, doctor }, reachCoins: reach };
 }

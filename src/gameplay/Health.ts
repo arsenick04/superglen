@@ -9,7 +9,7 @@ import type { Sfx } from '../audio/Sfx';
 
 export type HurtResult = 'hit' | 'blocked' | 'ignored';
 
-const HEART =
+export const HEART =
   '<svg viewBox="0 0 32 30" aria-hidden="true"><path d="M16 28C5 20 2 14 2 9.5 2 5 5.5 2 9.5 2 12.4 2 14.9 3.6 16 6 17.1 3.6 19.6 2 22.5 2 26.5 2 30 5 30 9.5 30 14 27 20 16 28Z" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>';
 
 /**
