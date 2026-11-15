@@ -3,10 +3,10 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { AaraActor } from './Aara';
-import { personGeo } from './CityPeople';
-import { CITY_LAYOUT } from './CityData';
+import { Celebration } from '../Celebration';
+import { box, merge, type Part } from './ColorMesh';
 import { ClueProps } from './ClueProps';
-import { AARA, AARA_QUESTIONS, BAB4_LINES as L, CLUE_ARRIVE, CLUE_HELP_AFTER, CLUE_PAPER0, CLUE_PRAISE, CLUES, FIGURE, PARK } from './Bab4Data';
+import { AARA, AARA_QUESTIONS, BAB4_LINES as L, CLUE_ARRIVE, CLUE_HELP_AFTER, CLUE_PAPER0, CLUE_PRAISE, CLUES, PARK, TRACK } from './Bab4Data';
 
 /** What the level gives Chapter 4 (so this file does not need to know the level class). */
 export interface Chapter4Hooks {
@@ -16,21 +16,23 @@ export interface Chapter4Hooks {
   dropMission(): void;
   /** Put the player on the ground at (x, z) facing `yaw` (colliders made ready, the camera snaps behind). */
   placePlayer(x: number, z: number, yaw: number): void;
+  /** Chapter 4 is over (the city is free again). Hook for the next chapter (Ular Melar, the Lab with Aara). */
+  onDone(): void;
 }
 
 /** Chapter 4 steps, in order. '' = not started; the chapter is over when 'bab4' is in `chaptersDone`. */
-export type Ch4Step = '' | 'school' | 'aara' | 'park' | 'figure' | 'lab';
+export type Ch4Step = '' | 'school' | 'aara' | 'park' | 'track';
 
 /**
- * CHAPTER 4 "Sosok Misterius" in the city (package D5). Built by KotaLevel only when Chapter 3 is done and Chapter 4 is not.
+ * CHAPTER 4 "Aara dan Alat Penerjemah" in the city (package D5). Built by KotaLevel only when Chapter 3 is done and Chapter 4 is not.
  *
  *   ''       (Chapter 3 just ended) Glen takes off the costume (a detective), Nino sends him to Aara; the beam and the map star
  *            point to the school -> 'school'
  *   'school' walk to Aara on the school street; arriving starts the meeting -> 'aara'
  *   'aara'   Aara's translator and the English words (L2) -> 'park'
- *   'park'   three written clues in the town park (L3) -> 'figure'
- *   'figure' the friendly silhouette in the park (L4) -> 'lab'
- *   'lab'    back to the old building: Nino has news (L4); the chapter is done
+ *   'park'   three written clues in the town park (L3) -> 'track'
+ *   'track'  a long shed snake skin by the pond (L4, teaser for the Ular Melar): Glen says he knows someone who can help;
+ *            Chapter 4 is done (celebration, `hooks.onDone`). NEXT CHAPTER: the Lab introduction + Ular Melar fight.
  *
  * The step (and the clue count) is saved in `save.data.bab4`: after a reload the chapter goes on from there. The residents'
  * missions are paused meanwhile (CityPeople `canOffer`). Glen stays Glen (no switch) until the chapter is over.
@@ -52,7 +54,7 @@ export class Chapter4 {
   private reading = false;
   private saidTaman = false;
   private saidBaca = false;
-  private figureScene = false;
+  private trackScene = false;
   private idle = 0;
   private beamTick = 0;
   /** Test counters. */
@@ -64,7 +66,8 @@ export class Chapter4 {
     private readonly hooks: Chapter4Hooks,
     private readonly lit: THREE.Material,
   ) {
-    this.step = ctx.save.data.bab4.step as Ch4Step;
+    const saved = ctx.save.data.bab4.step;
+    this.step = (saved === 'figure' || saved === 'lab' ? 'track' : saved) as Ch4Step;
     ctx.onDispose(() => {
       this.disposed = true;
     });
@@ -108,14 +111,13 @@ export class Chapter4 {
     if (this.step === '' || this.step === 'school') this.pointToSchool();
     if (this.step === 'aara') this.runAara();
     if (this.step === 'park') this.enterPark();
-    if (this.step === 'figure') this.runFigure();
-    if (this.step === 'lab') this.pointToLab();
+    if (this.step === 'track') this.runTrack();
     if (this.step === '' || this.step === 'school' || this.step === 'aara') this.putAara(AARA.pos.x, AARA.pos.z, AARA.pos.yaw);
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
       if (this.step === '') {
         this.setStep('school');
-        await ctx.dialog.say(L.ninoMulai);
+        await ctx.dialog.say(L.glenMulai);
       }
     });
   }
@@ -128,8 +130,7 @@ export class Chapter4 {
     if (step === 'school') this.pointToSchool();
     if (step === 'aara') this.runAara();
     if (step === 'park') this.enterPark();
-    if (step === 'figure') this.runFigure();
-    if (step === 'lab') this.pointToLab();
+    if (step === 'track') this.runTrack();
   }
 
   private putAara(x: number, z: number, yaw: number): void {
@@ -321,7 +322,7 @@ export class Chapter4 {
     });
   }
 
-  /** Arrived at the glowing place: the beacon fades, the next board shows up here (or, after the last clue, the figure). */
+  /** Arrived at the glowing place: the beacon fades, the next board shows up here (or, after the last clue, the track scene). */
   private arrivedAtPlace(): void {
     const { ctx } = this;
     const c = CLUES[this.clue - 1];
@@ -332,7 +333,7 @@ export class Chapter4 {
     ctx.objectives.clear();
     if (this.clue >= CLUES.length) {
       this.phase = '';
-      this.setStep('figure');
+      this.setStep('track');
       return;
     }
     this.startPaper();
@@ -340,76 +341,71 @@ export class Chapter4 {
     void ctx.dialog.say(L.aaraLagi);
   }
 
+  /** The shed skin: a long flat strip that wiggles along its length (one merged mesh, vertex colours). */
+  private makeSkin(): THREE.Mesh {
+    const parts: Part[] = [];
+    const n = 18;
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1);
+      const w = 0.55 + 0.5 * Math.sin(Math.PI * Math.min(1, t * 1.15)); // thin tail, fat middle, head end
+      parts.push({ g: box(w, 0.05, TRACK.length / n + 0.05), c: i % 2 ? 0xb9d6a0 : 0x9cc58a, p: [Math.sin(t * Math.PI * 3) * 0.9, 0.04, (t - 0.5) * TRACK.length] });
+      if (i % 3 === 1) parts.push({ g: box(w * 0.4, 0.06, 0.5), c: 0x6fa05f, p: [Math.sin(t * Math.PI * 3) * 0.9, 0.06, (t - 0.5) * TRACK.length] });
+    }
+    const m = new THREE.Mesh(merge(parts), this.lit);
+    m.castShadow = false;
+    m.position.set(TRACK.pos.x, 0, TRACK.pos.z);
+    m.rotation.y = TRACK.yaw;
+    return m;
+  }
+
   /**
-   * The Sosok Misterius: across the pond a soft dark-blue silhouette fades in, waves, says "Aku sudah lama mengawasimu...
-   * Superglen." and is gone in a sparkle (friendly, nothing to fear). Aara asks Glen to report to Nino in the lab.
+   * The last clue (the pond) leads to a long, pale track on the lawn: a shed snake skin. Aara and Glen wonder about it, Glen says he
+   * knows someone who can help (the Lab and Nino come in the next chapter). Chapter 4 ends here with a celebration.
    */
-  private runFigure(): void {
-    if (this.figureScene) return;
-    this.figureScene = true;
+  private runTrack(): void {
+    if (this.trackScene) return;
+    this.trackScene = true;
     const { ctx } = this;
     const { seq, dialog, cameraRig, fx } = ctx;
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
       const info = ctx.game.debugInfo;
-      info.ch4Scene = 'figure';
+      info.ch4Scene = 'track';
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       this.hooks.setGoal(null);
       this.props?.hideBeacon();
-      this.stage(FIGURE.stage, 5);
+      this.props?.hidePaper();
+      this.stage(TRACK.stage, 5);
       this.putAara(PARK.aara.x, PARK.aara.z, PARK.aara.yaw);
-      const f = FIGURE.pos;
-      const geo = personGeo(0x34406a, 0x34406a);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x34406a, transparent: true, opacity: 0, fog: true });
-      const fig = new THREE.Mesh(geo, mat);
-      fig.position.set(f.x, 0, f.z);
-      fig.rotation.y = Math.atan2(FIGURE.stage.x - f.x, FIGURE.stage.z - f.z);
-      fig.scale.setScalar(1.2);
-      fig.castShadow = false;
-      ctx.root.add(fig);
-      cameraRig.setFraming(this.tmp.set(f.x, 1.2, f.z), { weight: 0.45, distance: 3 });
-      await seq.tween(0.9, (t) => (mat.opacity = 0.8 * t));
-      let t = 0;
-      const wave = (): boolean => {
-        t += 1 / 60;
-        fig.rotation.z = Math.sin(t * 7) * 0.12;
-        return false;
-      };
-      seq.run(() => seq.waitUntil(wave));
-      await dialog.say(L.aaraLihat, { lockControls: true });
-      await dialog.say(L.misteriusAwas, { lockControls: true });
-      await seq.tween(0.7, (u) => (mat.opacity = 0.8 * (1 - u)));
-      fx.sparkles.burst(f.x, 1, f.z, 22, 2.6, 0xbcd0ff, { gravity: 0.5, life: 1.1, up: 0.6 });
-      fig.removeFromParent();
-      geo.dispose();
-      mat.dispose();
-      await dialog.say(L.glenTahu, { lockControls: true });
-      await dialog.say(L.aaraLapor, { lockControls: true });
+      const skin = this.makeSkin();
+      skin.scale.setScalar(0.01);
+      ctx.root.add(skin);
+      ctx.onDispose(() => {
+        skin.removeFromParent();
+        skin.geometry.dispose();
+      });
+      cameraRig.setFraming(this.tmp.set(TRACK.pos.x, 0.6, TRACK.pos.z), { weight: 0.45, distance: 4 });
+      ctx.sfx.bling();
+      fx.sparkles.burst(TRACK.pos.x, 0.5, TRACK.pos.z, 18, 2.6, 0xdfeccd, { gravity: 0.8, life: 1, up: 0.6 });
+      await seq.tween(0.7, (t) => skin.scale.setScalar(0.01 + 0.99 * t));
+      await dialog.say(L.aaraKulit, { lockControls: true });
+      await dialog.say(L.glenKulit, { lockControls: true });
+      await dialog.say(L.aaraBantuan, { lockControls: true });
+      await dialog.say(L.glenKenal, { lockControls: true });
       cameraRig.setFraming(null);
-      this.setStep('lab');
+      // Chapter 4 is done: stars, confetti, a few coins. The skin stays as a hint for what comes next.
+      this.over = true;
+      ctx.save.markChapterDone('bab4');
+      ctx.save.setBab4('', 0);
+      ctx.save.finishCityMission('bab4', 5);
+      ctx.quiz.coinsChanged();
       ctx.game.setControlsEnabled(true);
-      info.ch4Scene = 'lab';
+      info.ch4Scene = 'done';
+      await new Celebration(ctx, 'Chapter 4 selesai!', fx.sparkles).play();
+      ctx.game.setTransformAllowed(true);
+      this.hooks.onDone();
     });
-  }
-
-  /** Back to the old building: the beam and the star lead to its door; inside, Nino has news (Story.chapter4Finale). */
-  private pointToLab(): void {
-    const d = CITY_LAYOUT.lab.door;
-    this.hooks.setGoal({ x: d.x, z: d.z });
-    this.ctx.objectives.set(this.tmp.set(d.x, d.y, d.z + 0.9));
-    this.props?.hidePaper();
-    this.props?.hideBeacon();
-    this.putAara(PARK.aara.x, PARK.aara.z, PARK.aara.yaw);
-  }
-
-  private labBeam(): void {
-    if (++this.beamTick % 20 !== 0) return;
-    const d = CITY_LAYOUT.lab.door;
-    const p = this.ctx.player.position;
-    const dist = Math.hypot(p.x - d.x, p.z - d.z);
-    if (dist < 6 && this.ctx.objectives.active) this.ctx.objectives.clear();
-    else if (dist >= 10 && !this.ctx.objectives.active) this.ctx.objectives.set(this.tmp.set(d.x, d.y, d.z + 0.9));
   }
 
   /** Clue help: nobody gets stuck (Aara says what to do again; the beam leads back when the child wandered off). */
@@ -445,7 +441,6 @@ export class Chapter4 {
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
     if (this.step === 'park') this.clueTick(dt);
-    if (this.step === 'lab') this.labBeam();
     const p = this.ctx.player.position;
     if (this.step === 'school' && !this.arrived && Math.hypot(p.x - AARA.pos.x, p.z - AARA.pos.z) < AARA.arriveRadius) {
       this.arrived = true;

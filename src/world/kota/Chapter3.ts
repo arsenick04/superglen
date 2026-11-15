@@ -4,7 +4,6 @@ import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
 import { MarketRats } from './MarketRats';
-import { personGeo } from './CityPeople';
 import { Celebration } from '../Celebration';
 import { Easings } from '../../gameplay/Sequence';
 
@@ -51,7 +50,7 @@ export type Ch3Step = '' | 'chase' | 'count' | 'rakus' | 'closing';
  *   'chase'   the 7 little rats (MarketRats.ts) run around the market; each one tamed drops its food
  *   'count'   Bu Lina: "Bakpaoku hilang 3, kue hilang 2." collect the 5 foods, then "Totalnya berapa?" (quiz card)
  *   'rakus'   Si Tikus Rakus laughs and runs down the drain (a scene, no fight)
- *   'closing' a figure waves in the shade of the pagoda and is gone; the chapter is done, the city is free again
+ *   'closing' Nino cheers; the chapter is done, the city is free again
  *
  * The step and the tamed rats are saved (`save.data.bab3`): after a reload the chapter goes on from there (the alarm is not
  * repeated; the beam shows the way). The residents' missions are paused meanwhile (CityPeople `canOffer`).
@@ -240,7 +239,7 @@ export class Chapter3 {
   /** While counting: the beam shows the nearest fallen food. */
   /**
    * Si Tikus Rakus (a scene, no fight): he pops up at the crossing, laughs "Hihihi, semua makanan ini milikku!", runs to a drain
-   * shouting that he will be KING one day. Then the closing: a figure waves in the shade of the pagoda and is gone.
+   * shouting that he will be KING one day. Then the closing: Nino cheers.
    */
   private runRakus(skipRakus: boolean): void {
     if (this.scene) return;
@@ -288,42 +287,17 @@ export class Chapter3 {
         await dialog.say(L.ninoRakus, { lockControls: true });
         this.setStep('closing');
       }
-      info.ch3Scene = 'figure';
+      info.ch3Scene = 'closing';
       await this.closing();
       info.ch3Scene = 'end';
     });
   }
 
-  /** The figure in the shade: waves, then vanishes in a soft sparkle. Then the chapter is done. */
+  /** The end: Nino cheers (Tikus Rakus fled), then the chapter is done with stars and confetti. */
   private async closing(): Promise<void> {
     const { ctx } = this;
-    const { seq, dialog, game, cameraRig } = ctx;
-    const f = MARKET.figure;
-    this.stage(MARKET.stage.figure, 12);
-    const geo = personGeo(0x34406a, 0x34406a);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x34406a, transparent: true, opacity: 0, fog: true });
-    const fig = new THREE.Mesh(geo, mat);
-    fig.position.set(f.x, 0, f.z);
-    fig.rotation.y = Math.atan2(MARKET.hub.x - f.x, MARKET.hub.z - f.z);
-    fig.scale.setScalar(1.15);
-    fig.castShadow = false;
-    ctx.root.add(fig);
-    cameraRig.setFraming(this.tmp.set(f.x, 1.3, f.z), { weight: 0.55, distance: 4 });
-    await seq.tween(0.8, (t) => (mat.opacity = 0.8 * t));
-    void dialog.say(L.glenSiapa, { lockControls: true });
-    let t = 0;
-    // A friendly wave: the whole silhouette sways side to side for a few seconds.
-    await seq.waitUntil(() => {
-      t += 1 / 60;
-      fig.rotation.z = Math.sin(t * 7) * 0.12;
-      return t > 3.2;
-    });
-    await seq.tween(0.7, (u) => (mat.opacity = 0.8 * (1 - u)));
-    ctx.fx.sparkles.burst(f.x, 1, f.z, 20, 2.6, 0xbcd0ff, { gravity: 0.5, life: 1.1, up: 0.6 });
-    fig.removeFromParent();
-    geo.dispose();
-    mat.dispose();
-    await dialog.say(L.ninoSiapa, { lockControls: true });
+    const { dialog, game, cameraRig } = ctx;
+    await dialog.say(L.ninoHebat, { lockControls: true });
     cameraRig.setFraming(null);
     game.setControlsEnabled(true);
     // The chapter is done: stars and confetti, a few coins, the city is free again.

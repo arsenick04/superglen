@@ -1,5 +1,5 @@
 /**
- * CHAPTER 4 "Sosok Misterius" (detective mode): where things stand in the city and the dialog lines (PURE DATA, no three.js).
+ * CHAPTER 4 "Aara dan Alat Penerjemah" (detective mode): where things stand in the city and the dialog lines (PURE DATA, no three.js).
  * Positions are on streets or open ground (nothing here needs a collider, so the reach checker has nothing new to prove).
  */
 
@@ -39,11 +39,14 @@ export const CLUE_ARRIVE = 4.5;
 export const CLUE_HELP_AFTER = 22;
 
 /**
- * The Sosok Misterius (friendly silhouette) shows on the lawn west of the pond: the child stands at the pond spot facing it. A soft dark-blue
- * shape that waves, says one line and is gone in a sparkle (no fear, no chase).
+ * The shed snake skin ("kulit ular") by the pond: a long pale-green track lying on the lawn west of the pond, the teaser for the
+ * Ular Melar. The child stands at `stage` (the pond spot) facing it.
  */
-export const FIGURE = {
+export const TRACK = {
   pos: { x: -114.5, z: -119.5 },
+  /** Heading of the skin's long axis (radians) and its length (m). */
+  yaw: 0.35,
+  length: 9,
   stage: { x: -107.1, z: -115.8, yaw: Math.atan2(-114.5 + 107.1, -119.5 + 115.8) },
 } as const;
 
@@ -52,7 +55,7 @@ export const AARA_QUESTIONS = ['inggris_008', 'inggris_007', 'inggris_001'] as c
 
 /** Dialog lines of Chapter 4 (text only for now; the ids are stable so the voice can be added later in audio/dialog.json). */
 export const BAB4_LINES = {
-  ninoMulai: { id: 'bab4_nino_mulai', speaker: 'nino', text: 'Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!' },
+  glenMulai: { id: 'bab4_glen_mulai', speaker: 'glen', text: 'Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!' },
   aaraHalo: { id: 'bab4_aara_halo', speaker: 'aara', text: 'Glen! Aku membuat alat penerjemah. Mau coba?' },
   glenMau: { id: 'bab4_glen_mau', speaker: 'glen', text: 'Mau! Aku siap menjawab.' },
   aaraBenar1: { id: 'bab4_aara_benar1', speaker: 'aara', text: 'Benar! Alatnya mulai menyala.' },
@@ -68,14 +71,10 @@ export const BAB4_LINES = {
   aaraKolam: { id: 'bab4_aara_kolam', speaker: 'aara', text: 'Kolam! Kolamnya berkilau. Ayo ke sana!' },
   aaraLagi: { id: 'bab4_aara_lagi', speaker: 'aara', text: 'Ada papan lagi di sini! Baca, yuk.' },
   aaraAyo: { id: 'bab4_aara_ayo', speaker: 'aara', text: 'Ayo, ke tempat yang berkilau!' },
-  aaraLihat: { id: 'bab4_aara_lihat', speaker: 'aara', text: 'Glen, lihat! Siapa itu di dekat pohon?' },
-  misteriusAwas: { id: 'bab4_misterius_awas', speaker: 'misterius', text: 'Aku sudah lama mengawasimu... Superglen.' },
-  glenTahu: { id: 'bab4_glen_tahu', speaker: 'glen', text: 'Dia tahu namaku! Dia siapa, ya?' },
-  aaraLapor: { id: 'bab4_aara_lapor', speaker: 'aara', text: 'Ayo lapor ke Nino di lab!' },
-  ninoTemu: { id: 'bab4_nino_temu', speaker: 'nino', text: 'Glen! Aku menemukan sesuatu di komputer lab.' },
-  ninoAlat: { id: 'bab4_nino_alat', speaker: 'nino', text: 'Pasukan tikus memakai alat curian dari lab lama kita!' },
-  glenCuri: { id: 'bab4_glen_curi', speaker: 'glen', text: 'Wah! Kita harus mengambilnya kembali.' },
-  ninoSiap: { id: 'bab4_nino_siap', speaker: 'nino', text: 'Betul. Petualangan berikutnya menunggu. Siap, Superglen?' },
+  aaraKulit: { id: 'bab4_aara_kulit', speaker: 'aara', text: 'Glen, lihat! Apa ini? Panjang sekali!' },
+  glenKulit: { id: 'bab4_glen_kulit', speaker: 'glen', text: 'Ini kulit ular yang ganti kulit! Besar sekali!' },
+  aaraBantuan: { id: 'bab4_aara_bantuan', speaker: 'aara', text: 'Ularnya pasti besar. Kita butuh bantuan.' },
+  glenKenal: { id: 'bab4_glen_kenal', speaker: 'glen', text: 'Aku kenal seseorang yang bisa membantu!' },
 } as const;
 
 /** Aara's praise after a clue is read right, by the clue's index. */

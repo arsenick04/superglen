@@ -66,6 +66,11 @@ function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
     { g: sph(0.085, 6, 4), c: pink, p: [0.15, 0.55, 0.275], s: [1, 1, 0.4] },
     { g: sph(0.035, 5, 4), c: dark, p: [-0.075, 0.41, 0.45] },
     { g: sph(0.035, 5, 4), c: dark, p: [0.075, 0.41, 0.45] },
+    // Curut Cemberut: a cute-grumpy frown (angled brows, down-turned mouth).
+    { g: box(0.09, 0.022, 0.03), c: dark, p: [-0.08, 0.465, 0.445], r: [0, 0, -0.5] },
+    { g: box(0.09, 0.022, 0.03), c: dark, p: [0.08, 0.465, 0.445], r: [0, 0, 0.5] },
+    { g: box(0.05, 0.016, 0.02), c: dark, p: [-0.03, 0.29, 0.462], r: [0, 0, 0.55] },
+    { g: box(0.05, 0.016, 0.02), c: dark, p: [0.03, 0.29, 0.462], r: [0, 0, -0.55] },
     { g: cyl(0.025, 0.04, 0.55, 5), c: pink, p: [0, 0.2, -0.5], r: [-1.2, 0, 0] },
     { g: sph(0.06, 5, 4), c: fur, p: [-0.13, 0.06, 0.2] },
     { g: sph(0.06, 5, 4), c: fur, p: [0.13, 0.06, 0.2] },
@@ -114,7 +119,7 @@ export interface RatHooks {
 }
 
 /**
- * The seven Tikus Kecil of Chapter 3 and what they carry, plus Bu Lina and the drains. Everything is cute and slow: a rat circles
+ * The seven Curut Cemberut (small rats) of Chapter 3 and what they carry, plus Bu Lina and the drains. Everything is cute and slow: a rat circles
  * on the market street, trots away from a close child (never toward), and is tamed by ONE laser hit or a landing stomp: it
  * spins dizzily with stars, a soft "boing", drops its food and runs down a drain (nobody gets hurt, nothing dies). Draw calls:
  * rats (1 instanced), food (1 instanced), props (1 merged); no shadows.

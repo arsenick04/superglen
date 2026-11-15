@@ -55,7 +55,7 @@ export interface SaveData {
   bab3: { step: string; tamed: number[] };
   /**
    * Chapter 4 ("Sosok Misterius", detective mode) progress in the city: `step` is '' (not started), 'school', 'aara', 'park',
-   * 'figure' or 'lab' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
+   * 'track' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
    */
   bab4: { step: string; clue: number };
 }
@@ -186,7 +186,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.bab4 === 'object' && r.bab4 !== null) {
     const b = r.bab4 as Record<string, unknown>;
-    if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step;
+    if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'track', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step === 'figure' || b.step === 'lab' ? 'track' : b.step; // old saves: the figure/lab steps are gone
     if (typeof b.clue === 'number' && Number.isInteger(b.clue) && b.clue >= 0 && b.clue <= 3) out.bab4.clue = b.clue;
   }
   if (typeof r.settings === 'object' && r.settings !== null) {

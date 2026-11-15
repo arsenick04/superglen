@@ -8928,11 +8928,11 @@ async function ch3Watch(page, frames, shots = null) {
 async function bab3EndScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   await ch3Open(page, ch3Save({ bab3: { step: 'rakus', tamed: [0, 1, 2, 3, 4, 5, 6] } }), touch);
-  const w = await ch3Watch(page, 2600, { rakus: `bab3-end-rakus${touch ? '-touch' : ''}`, figure: `bab3-end-figure${touch ? '-touch' : ''}` });
+  const w = await ch3Watch(page, 2600, { rakus: `bab3-end-rakus${touch ? '-touch' : ''}`, closing: `bab3-end-closing${touch ? '-touch' : ''}` });
   const has = (t) => w.seen.some((l) => l.indexOf(t) >= 0);
-  const order = ['milikku', 'jangan lari', 'RAJA', 'Tikus Rakus', 'bayangan', 'cari tahu'].map((t) => w.seen.findIndex((l) => l.indexOf(t) >= 0));
-  check(`bab3-end ${tag}: Si Tikus Rakus laughs, runs off shouting about being KING, Nino reacts, then the figure line, in that order`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify(order) + JSON.stringify(w.seen));
-  check(`bab3-end ${tag}: scene markers rakus -> figure -> end, controls locked during it`, w.scenes.join('>').indexOf('rakus>figure>end') >= 0 && w.locked > 5, JSON.stringify(w.scenes));
+  const order = ['milikku', 'jangan lari', 'RAJA', 'bertemu lagi', 'Kerja bagus'].map((t) => w.seen.findIndex((l) => l.indexOf(t) >= 0));
+  check(`bab3-end ${tag}: Si Tikus Rakus laughs, runs off shouting about being KING, Nino reacts and cheers (no mysterious figure), in that order`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify(order) + JSON.stringify(w.seen));
+  check(`bab3-end ${tag}: scene markers rakus -> closing -> end, controls locked during it`, w.scenes.join('>').indexOf('rakus>closing>end') >= 0 && w.locked > 5, JSON.stringify(w.scenes));
   const s = await ch3Info(page);
   const ppl = await page.evaluate(() => window.__d3.people());
   check(`bab3-end ${tag}: Chapter 3 is done and saved ("bab3" in chaptersDone, step cleared), celebration shown`, s.save.chaptersDone.includes('bab3') && s.save.bab3.step === '' && w.star, JSON.stringify([s.save.chaptersDone, s.save.bab3, w.star]));
@@ -8944,14 +8944,14 @@ async function bab3EndScenario(page, check, touch) {
   await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
   await sleep(700);
   check(`bab3-end ${tag}: after a reload there is no Chapter 3 scene`, await page.evaluate(() => !window.__ch3), '');
-  // Resume at "closing": only the figure.
+  // Resume at "closing": only Nino's cheer.
   await ch3Open(page, ch3Save({ bab3: { step: 'closing', tamed: [0, 1, 2, 3, 4, 5, 6] } }), touch);
   const w2 = await ch3Watch(page, 1500);
-  check(`bab3-end ${tag}: resuming at "closing" plays only the figure, then ends the chapter`, w2.seen.every((l) => l.indexOf('milikku') < 0) && w2.seen.some((l) => l.indexOf('bayangan') >= 0) && (await ch3Info(page)).save.chaptersDone.includes('bab3'), JSON.stringify(w2.seen));
+  check(`bab3-end ${tag}: resuming at "closing" plays only the cheer, then ends the chapter`, w2.seen.every((l) => l.indexOf('milikku') < 0 && l.indexOf('bayangan') < 0) && w2.seen.some((l) => l.indexOf('Kerja bagus') >= 0) && (await ch3Info(page)).save.chaptersDone.includes('bab3'), JSON.stringify(w2.seen));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
-// ---- Chapter 4 "Sosok Misterius" (package D5, src/world/kota/Chapter4.ts) --------------------------------------------------------
+// ---- Chapter 4 "Aara dan Alat Penerjemah" (package D5, src/world/kota/Chapter4.ts) --------------------------------------------------------
 
 const ch4Save = (extra = {}) => ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3'], doneAt: { bab2: Date.now() - 9000, bab3: Date.now() - 5000 }, ...extra });
 const ch4Info = (page) => page.evaluate(() => ({ li: { ...window.__superglen.levelInfo, roofSamples: undefined }, ch4: window.__ch4 ? { step: window.__ch4.step(), arrived: window.__ch4.arrived() } : null, obj: window.__superglen.objective.active, objXZ: [window.__superglen.objective.x, window.__superglen.objective.z], mode: window.__superglen.mode || (window.__superglen.player && window.__superglen.player.mode), save: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}'), line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '', open: window.__superglen.dialog.open }));
@@ -8967,7 +8967,7 @@ async function bab4FlowScenario(page, check) {
   await ch3Open(page, ch4Save({ lastMode: 'superglen' }));
   let s = await ch4Info(page);
   check('bab4-flow: after Chapter 3 the city starts Chapter 4 (step "school" saved)', s.ch4 && s.ch4.step === 'school' && s.save.bab4.step === 'school', JSON.stringify([s.ch4, s.save.bab4]));
-  check('bab4-flow: Nino\'s line names Aara and the school', /Aara/.test(s.line) && /sekolah/.test(s.line), s.line);
+  check('bab4-flow: Glen\'s own line mentions the school and nobody named Nino or Aara', /sekolah/.test(s.line) && !/Aara|Nino/.test(s.line), s.line);
   check('bab4-flow: the beam and map star lead to the school street (Aara)', s.obj === true && Math.abs(s.objXZ[0] + 17) < 1 && Math.abs(s.objXZ[1] + 93) < 1, JSON.stringify(s.objXZ));
   check('bab4-flow: Glen is a detective: mode glen, no switch', await page.evaluate(() => window.__superglen.mode === 'glen' || (window.__superglen.player ? window.__superglen.player.mode === 'glen' : false)), '');
   const ppl = await page.evaluate(() => window.__d3.people());
@@ -9111,7 +9111,7 @@ async function bab4CluesScenario(page, check, touch) {
   }
   await d3Adv(page, 60);
   const s = await ch4Info(page);
-  check(`bab4-clues ${tag}: after the third clue (kolam) the step becomes "figure" (saved), three clues counted`, s.ch4.step === 'figure' && s.save.bab4.step === 'figure' && s.save.bab4.clue === 3, JSON.stringify([s.ch4, s.save.bab4]));
+  check(`bab4-clues ${tag}: after the third clue (kolam) the step becomes "track" (saved), three clues counted`, s.ch4.step === 'track' && s.save.bab4.step === 'track' && s.save.bab4.clue === 3, JSON.stringify([s.ch4, s.save.bab4]));
   // Resume mid-way: 2 clues read -> board 3 stands at the tree place.
   await ch3Open(page, ch4Save({ bab4: { step: 'park', clue: 2 } }), touch);
   c = await ch4Clues(page);
@@ -9154,67 +9154,20 @@ const orderOk = (seen, parts) => { const idx = parts.map((t) => seen.findIndex((
 
 async function bab4EndScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
-  await ch3Open(page, ch4Save({ bab4: { step: 'figure', clue: 3 } }), touch);
-  const w = await ch4Watch(page, 1500, 'ch4Scene', { figure: `bab4-end-figure${touch ? '-touch' : ''}` });
-  check(`bab4-end ${tag}: the figure scene: Aara notices, the silhouette says "Aku sudah lama mengawasimu... Superglen.", Glen and Aara react, in order`, orderOk(w.seen, ['Siapa itu', 'mengawasimu... Superglen', 'tahu namaku', 'lapor ke Nino']), JSON.stringify(w.seen));
-  check(`bab4-end ${tag}: controls locked during the scene, then free; markers figure -> lab`, w.locked > 5 && w.scenes.join('>').indexOf('figure>lab') >= 0 && (await page.evaluate(() => window.__superglen.controlsEnabled !== false)), JSON.stringify([w.locked, w.scenes]));
-  let s = await ch4Info(page);
-  const lx = s.li.labX;
-  check(`bab4-end ${tag}: afterwards step "lab" is saved and the beam leads to the old building's door`, s.ch4.step === 'lab' && s.save.bab4.step === 'lab' && s.obj === true && Math.abs(s.objXZ[0] - lx) < 2, JSON.stringify([s.ch4, s.save.bab4, s.obj, s.objXZ, lx]));
-  check(`bab4-end ${tag}: the residents still offer no mission and Glen is still Glen`, (await page.evaluate(() => window.__d3.people())).every((p) => !p.available) && (await page.evaluate(() => window.__superglen.mode)) === 'glen', '');
-  // Reload at 'lab': still the beam, no scene again.
-  await ch3Open(page, JSON.parse(await page.evaluate(() => localStorage.getItem('superglen.save.v1'))), touch);
-  s = await ch4Info(page);
-  check(`bab4-end ${tag}: a reload at "lab" resumes at "lab" (at the hill door the beam is off) and plays no figure scene`, s.ch4.step === 'lab' && s.li.ch4Scene !== 'figure', JSON.stringify([s.ch4, s.obj, s.li.ch4Scene]));
-  // Into the old building.
-  const door = { x: s.li.labX, y: s.li.labY, z: s.li.labZ };
-  await page.evaluate(([x, y, z]) => window.__superglen.teleportFeet(x, y + 2, z + 1.2), [door.x, door.y, door.z]);
+  await ch3Open(page, ch4Save({ bab4: { step: 'track', clue: 3 } }), touch);
+  const w = await ch4Watch(page, 1500, 'ch4Scene', { track: `bab4-end-track${touch ? '-touch' : ''}` });
+  check(`bab4-end ${tag}: the track scene: Aara and Glen wonder about the long skin, need help, Glen knows someone, in order`, orderOk(w.seen, ['Panjang sekali', 'kulit ular', 'butuh bantuan', 'kenal seseorang']), JSON.stringify(w.seen));
+  check(`bab4-end ${tag}: no Sosok Misterius, no Nino/Lab lines in Chapter 4`, !w.seen.some((l) => /mengawasimu|Nino|alat curian|lab/i.test(l)), JSON.stringify(w.seen));
+  check(`bab4-end ${tag}: controls locked during the scene, then free; chapter star shown`, w.locked > 5 && w.star && (await page.evaluate(() => window.__superglen.controlsEnabled !== false)), JSON.stringify([w.locked, w.star, w.scenes]));
   await d3Adv(page, 60);
-  const pr = await page.evaluate(() => ({ ...window.__superglen.prompt }));
-  await d3Press(page, 'e', 3);
-  await page.evaluate(() => window.__superglen.pause(false));
-  if (process.env.DBG) console.log('DBG door', JSON.stringify(pr), await page.evaluate(() => window.__superglen.level));
-  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
-  await page.evaluate(() => window.__superglen.pause(true));
-  await d3Adv(page, 60);
-  s = await ch4Info(page);
-  check(`bab4-end ${tag}: in the lab the beam leads to Nino`, s.obj === true, JSON.stringify([s.obj, s.objXZ]));
-  await page.evaluate(() => window.__superglen.teleportFeet(3.2, -0.9 + 0.3, -68.3));
-  await d3Adv(page, 40);
-  await d3Adv(page, 20);
-  if (process.env.DBG) console.log('DBG nino', JSON.stringify(await page.evaluate(() => ({ p: window.__superglen.prompt, pos: window.__superglen.player }))));
-  await d3Press(page, 'e', 3);
-  const seen = [];
-  let star = false;
-  let lvl = 'lab';
-  let fin = '';
-  for (let f = 0; f < 4200 && lvl === 'lab'; f += fin === 'done' ? 4 : 20) {
-    const r = await page.evaluate(async (n) => { await window.__superglen.advanceAsync(n, false); const g = window.__superglen; const st = [...document.querySelectorAll('.chapter-star')].find((e) => e.classList.contains('show')); return { line: g.dialog.open ? g.dialog.text : '', star: !!st, level: g.level, fin: g.levelInfo.ch4Finale || '' }; }, fin === 'done' ? 4 : 20);
-    fin = r.fin;
-    if (process.env.DBG && fin) console.log('DBG fin', f, JSON.stringify(r));
-    if (r.line && seen[seen.length - 1] !== r.line) seen.push(r.line);
-    star = star || r.star;
-    if (r.fin === 'done' && f % 200 === 0 && !touch) { /* celebration running */ }
-    lvl = r.level;
-    if (r.fin === 'done' && star) break;
-  }
-  check(`bab4-end ${tag}: Nino's news in order (found something, rats use stolen tools, take them back, next adventure)`, orderOk(seen, ['komputer lab', 'alat curian', 'mengambilnya kembali', 'Petualangan berikutnya']), JSON.stringify(seen));
-  s = await ch4Info(page);
-  check(`bab4-end ${tag}: Chapter 4 is done and saved (bab4 in chaptersDone, step cleared), the star celebration was shown`, s.save.chaptersDone.includes('bab4') && s.save.bab4.step === '' && star, JSON.stringify([s.save.chaptersDone, s.save.bab4, star]));
-  // Back to the city: free again.
-  // Frames advance by hand while paused (a loaded machine runs the real-time loop slowly; the celebration is frame-timed).
-  for (let i = 0; i < 400; i++) {
-    await d3Adv(page, 30);
-    await page.evaluate(() => window.__superglen.pause(false));
-    await sleep(60);
-    await page.evaluate(() => window.__superglen.pause(true));
-    if (await page.evaluate(() => window.__superglen.level === 'kota' && !window.__superglen.loading)) break;
-  }
-  await sleep(300);
-  await d3Adv(page, 40);
-  s = await ch4Info(page);
+  const s = await ch4Info(page);
+  check(`bab4-end ${tag}: Chapter 4 is done and saved (bab4 in chaptersDone, step cleared)`, s.save.chaptersDone.includes('bab4') && s.save.bab4.step === '', JSON.stringify([s.save.chaptersDone, s.save.bab4]));
   const ppl = await page.evaluate(() => window.__d3.people());
-  check(`bab4-end ${tag}: back in the city there is no chapter any more, the residents offer missions again`, s.ch4 === null && ppl.length >= 6 && ppl.every((p) => p.available), JSON.stringify([s.ch4, ppl.map((p) => p.available)]));
+  check(`bab4-end ${tag}: the residents offer missions again`, ppl.length >= 6 && ppl.every((p) => p.available), JSON.stringify(ppl.map((p) => p.available)));
+  // An old save at 'lab' or 'figure' is moved to the track scene.
+  await ch3Open(page, ch4Save({ bab4: { step: 'lab', clue: 3 } }), touch);
+  const s2 = await ch4Info(page);
+  check(`bab4-end ${tag}: an old save at "lab" resumes at "track"`, s2.ch4 && s2.ch4.step === 'track', JSON.stringify(s2.ch4));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
