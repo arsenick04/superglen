@@ -122,7 +122,7 @@ export class Chapter5 {
   start(): void {
     const { ctx } = this;
     this.hooks.dropMission();
-    this.aara = new AaraActor(this.lit);
+    this.aara = new AaraActor(this.lit, ctx.dialog);
     this.aara.setLevel(3);
     ctx.root.add(this.aara.group);
     ctx.onDispose(() => this.aara?.dispose());

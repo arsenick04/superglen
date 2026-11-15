@@ -5,7 +5,8 @@ import { Kit, C, basic } from './Kit';
 import { Z, LAB, LAB_FLOOR, DOOR_HALF } from './Layout';
 import type { Sparkles } from './Fx';
 import { addRoofBox } from '../kits/Roofs';
-import { Figure, figureMaterial } from '../../player/Figure';
+import { figureMaterial } from '../../player/Figure';
+import { Avatar, type AvatarState } from '../../player/CharacterModels';
 
 const F = LAB_FLOOR;
 const WALL_C = 0xe8f0fa;
@@ -58,9 +59,10 @@ export class Lab {
   private readonly spill: THREE.Mesh;
   private readonly spillMat: THREE.MeshBasicMaterial;
   private readonly ninoGlow: THREE.Mesh;
-  private readonly ninoFig: Figure;
+  private readonly ninoFig: Avatar;
   private lastDt = 0;
-  private readonly ninoSt = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
+  private readonly ninoSt: AvatarState = { speed: 0, airborne: false, vy: 0, flying: true, riding: false, talking: false };
+  private readonly dialog: LevelContext['dialog'];
   private readonly costumeBody: THREE.Group;
   private readonly belt: THREE.Mesh;
   private readonly beltMat: THREE.MeshStandardMaterial;
@@ -269,7 +271,8 @@ export class Lab {
     root.add(this.sweepMesh);
 
     // --- Nino ---
-    this.ninoFig = new Figure('nino', figureMaterial(0x2a74c8, 0.08), false);
+    this.ninoFig = new Avatar('nino', figureMaterial(0x2a74c8, 0.08), false);
+    this.dialog = ctx.dialog;
     this.ninoGlow = new THREE.Mesh(
       new THREE.SphereGeometry(0.85, 16, 12),
       new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
@@ -436,6 +439,11 @@ export class Lab {
     this.bars.instanceMatrix.needsUpdate = true;
   }
 
+  /** Nino waves or cheers for a moment. */
+  ninoEmote(clip: 'cheer' | 'wave', secs = 2.5): void {
+    this.ninoFig.emote(clip, secs);
+  }
+
   private updateDetails(t: number): void {
     // Head details.
     const pulse = 0.5 + 0.5 * Math.sin(t * 3);
@@ -445,6 +453,7 @@ export class Lab {
     this.buttonMat.emissiveIntensity = Math.max(this.buttonMat.emissiveIntensity, 0.4 + 0.3 * pulse);
     // Nino hovers; costume floats and turns.
     if (this.nino.visible) {
+      this.ninoSt.talking = this.dialog.speaker === 'nino';
       this.ninoFig.pose(this.lastDt, this.ninoSt);
       this.nino.position.y = this.ninoPos.y + 0.12 + 0.06 * Math.sin(t * 2.2);
       this.ninoGlow.scale.setScalar(1 + 0.08 * Math.sin(t * 3) + 0.25 * this.chaos * Math.sin(t * 25));

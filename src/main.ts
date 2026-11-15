@@ -1,6 +1,7 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './core/Game';
 import { versionGuard } from './core/VersionGuard';
+import { characterModels } from './player/CharacterModels';
 
 function showFatal(): void {
   const ui = document.getElementById('ui');
@@ -12,6 +13,8 @@ function showFatal(): void {
 }
 
 async function boot(): Promise<void> {
+  // The animated characters download while Rapier starts and the start screen shows (the low-poly figures stand in until then).
+  void characterModels.load();
   // No top-level await (Safari iOS 16 build target): init Rapier inside an async function.
   await RAPIER.init();
   const container = document.getElementById('game');

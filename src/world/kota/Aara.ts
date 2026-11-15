@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { box, cone, cyl, merge, sph } from './ColorMesh';
+import { Avatar, MODEL_SCALE, type AvatarState, type CharacterRig } from '../../player/CharacterModels';
 
 const SKIN = 0xf1c9a0;
 const ORANGE = 0xf58a1f;
@@ -57,27 +58,52 @@ const LEVELS = [
 ];
 
 /**
- * Aara in the world: the person mesh (shared city `lit` material), the glowing orb of her translator (2 draw calls in all).
- * `setLevel(n)` makes the translator more advanced (bigger, brighter orb and a pop of sparkles by the caller).
+ * Aara in the world: the animated model (the low-poly mesh with the shared city `lit` material until the model has loaded) and the
+ * glowing orb of her translator, which floats in her hand. `setLevel(n)` makes the translator more advanced (bigger, brighter
+ * orb and a pop of sparkles by the caller). She stands idle, walks when moved, talks while her line is on screen, and waves or
+ * cheers on `emote`.
  */
 export class AaraActor {
   readonly group = new THREE.Group();
   private readonly body: THREE.Mesh;
+  private readonly avatar: Avatar;
   private readonly orb: THREE.Mesh;
   private readonly orbMat: THREE.MeshBasicMaterial;
   private level = 0;
   private t = 0;
-  /** 0 = idle sway, 1 = big wave (arm swing is the whole body tilt: one mesh). */
+  /** 0 = idle sway, 1 = big wave (arm swing is the whole body tilt: one mesh). Only the low-poly fallback uses it. */
   waving = true;
+  private inHand = false;
+  private readonly st: AvatarState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, talking: false };
+  private px = NaN;
+  private pz = NaN;
+  private smooth = 0;
 
-  constructor(lit: THREE.Material) {
+  constructor(
+    lit: THREE.Material,
+    private readonly dialog: { readonly speaker: string } | null = null,
+  ) {
     this.body = new THREE.Mesh(aaraGeo(), lit);
     this.body.castShadow = false;
     this.orbMat = new THREE.MeshBasicMaterial({ color: LEVELS[0].color, toneMapped: false, fog: false });
     this.orb = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), this.orbMat);
     this.orb.position.copy(ORB_AT);
-    this.group.add(this.body, this.orb);
+    this.avatar = new Avatar('aara', null, true, 0, this.body);
+    this.avatar.whenRig((rig) => this.grabOrb(rig));
+    this.group.add(this.avatar.root);
+    if (!this.inHand) this.group.add(this.orb);
     this.setLevel(0);
+  }
+
+  /** With the animated model the orb floats just above her hand (it follows the swinging arm). */
+  private grabOrb(rig: CharacterRig): void {
+    const hand = rig.root.getObjectByName('mixamorigRightHand');
+    if (!hand) return;
+    this.orb.removeFromParent();
+    this.orb.position.set(0, ORB_HAND_UP, 0);
+    hand.add(this.orb);
+    this.inHand = true;
+    this.setLevel(this.level);
   }
 
   get translatorLevel(): number {
@@ -91,8 +117,13 @@ export class AaraActor {
   setLevel(n: number): void {
     this.level = Math.max(0, Math.min(3, n));
     const l = LEVELS[this.level];
-    this.orb.scale.setScalar(l.r);
+    this.orb.scale.setScalar(this.orbScale(l.r));
     this.orbMat.color.setHex(l.color);
+  }
+
+  /** Orb radius in the parent's space: the hand bone sits inside the scaled model. */
+  private orbScale(r: number): number {
+    return this.inHand ? r / MODEL_SCALE.aara : r;
   }
 
   place(x: number, z: number, yaw: number): void {
@@ -100,19 +131,42 @@ export class AaraActor {
     this.group.rotation.y = yaw;
   }
 
+  /** A short wave or cheer. */
+  emote(clip: 'cheer' | 'wave', secs = 2.5): void {
+    this.avatar.emote(clip, secs);
+  }
+
   update(dt: number): void {
     this.t += dt;
-    // A friendly bounce and sway; the orb pulses faster the more advanced the translator is.
+    const k = 1 + 0.25 * Math.sin(this.t * (3 + this.level * 2));
+    this.orb.scale.setScalar(this.orbScale(LEVELS[this.level].r) * k);
+    if (this.avatar.rig) {
+      // Ground speed from how far the group moved (smoothed: the follower moves in fixed steps).
+      const p = this.group.position;
+      if (dt > 0 && !Number.isNaN(this.px)) {
+        const inst = Math.hypot(p.x - this.px, p.z - this.pz) / dt;
+        this.smooth += (Math.min(inst, 8) - this.smooth) * Math.min(1, dt * 10);
+      }
+      this.px = p.x;
+      this.pz = p.z;
+      this.st.speed = this.smooth > 0.3 ? this.smooth : 0;
+      this.st.talking = !!this.dialog && this.dialog.speaker === 'aara';
+      this.avatar.pose(dt, this.st);
+      return;
+    }
+    // Low-poly fallback: a friendly bounce and sway.
     this.body.position.y = Math.abs(Math.sin(this.t * 3)) * 0.03;
     this.body.rotation.z = this.waving ? Math.sin(this.t * 5) * 0.07 : 0;
-    const k = 1 + 0.25 * Math.sin(this.t * (3 + this.level * 2));
-    this.orb.scale.setScalar(LEVELS[this.level].r * k);
   }
 
   dispose(): void {
     this.group.removeFromParent();
+    this.avatar.dispose();
     this.body.geometry.dispose();
     this.orb.geometry.dispose();
     this.orbMat.dispose();
   }
 }
+
+/** Distance (model units) from the hand bone to the orb. */
+const ORB_HAND_UP = 0.1;

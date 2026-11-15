@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
-import { Figure, figureMaterial } from '../../player/Figure';
+import { figureMaterial } from '../../player/Figure';
+import { Avatar, type AvatarState } from '../../player/CharacterModels';
 import { Easings } from '../../gameplay/Sequence';
 
 /**
@@ -12,8 +13,8 @@ export class NinoActor {
   /** Ground position (the visible group floats a little above it). */
   readonly pos = new THREE.Vector3();
   private readonly glow: THREE.Mesh;
-  private readonly fig: Figure;
-  private readonly st = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
+  private readonly fig: Avatar;
+  private readonly st: AvatarState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, talking: false };
   private t = 0;
   private yaw = 0;
   /** 0 = hovering, 1 = sitting on the ground. */
@@ -28,7 +29,7 @@ export class NinoActor {
     x: number,
     z: number,
   ) {
-    this.fig = new Figure('nino', figureMaterial(0x2a74c8, 0.08), false);
+    this.fig = new Avatar('nino', figureMaterial(0x2a74c8, 0.08), false);
     this.glow = new THREE.Mesh(
       new THREE.SphereGeometry(0.85, 16, 12),
       new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
@@ -65,6 +66,11 @@ export class NinoActor {
     this.hopT = 0;
   }
 
+  /** Wave or cheer for a moment. */
+  emote(clip: 'cheer' | 'wave', secs = 2.5): void {
+    this.fig.emote(clip, secs);
+  }
+
   faceTowards(p: THREE.Vector3 | null): void {
     this.looking = p !== null;
     if (p) this.lookAt.copy(p);
@@ -87,6 +93,8 @@ export class NinoActor {
     this.group.position.set(this.pos.x, hover * (1 - this.sit) + 0.0 * this.sit, this.pos.z);
     this.glow.scale.setScalar(1 + 0.08 * Math.sin(this.t * 3));
     this.st.airborne = this.sit < 0.5;
+    this.st.flying = this.sit < 0.5;
+    this.st.talking = this.ctx.dialog.speaker === 'nino';
     this.st.vy = 0;
     this.fig.pose(dt, this.st);
   }

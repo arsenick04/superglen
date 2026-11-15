@@ -77,6 +77,11 @@ export class Dialog {
     this.register(dialogData as DialogLine[]);
   }
 
+  /** Speaker id of the line on screen now ('' when none): lets a character play its talking clip. */
+  get speaker(): string {
+    return this.current?.info.speaker ?? '';
+  }
+
   /** Add or replace table lines (the JSON from audio/dialog.json is loaded automatically). */
   register(lines: readonly DialogLine[]): void {
     for (const l of lines) if (l.lang === undefined || l.lang === 'id') this.table.set(l.id, l);

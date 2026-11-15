@@ -28,7 +28,7 @@ export class LabVisit {
     lit: THREE.Material,
     private readonly exit: { x: number; z: number },
   ) {
-    this.aara = new AaraActor(lit);
+    this.aara = new AaraActor(lit, ctx.dialog);
     this.aara.setLevel(3);
     ctx.root.add(this.aara.group);
     ctx.onDispose(() => {
