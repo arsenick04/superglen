@@ -89,7 +89,7 @@ export class ChunkStreamer {
     this.bodies = city.chunks.map(() => []);
     // Always-drawn layers.
     for (const r of city.far) {
-      const m = bakeStatic(r, lit, Quality.shadows, true);
+      const m = bakeStatic(r, lit, false, true); // far layer: no shadow casting (outside the shadow area; saves a second pass over it)
       if (m) {
         root.add(m);
         this.farMeshes.push(m);

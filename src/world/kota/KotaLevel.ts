@@ -12,6 +12,7 @@ import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
 import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
+import { CityLife } from './CityLife';
 import { Chapter3 } from './Chapter3';
 import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
@@ -57,6 +58,8 @@ export class KotaLevel implements Level {
   private cityMap!: CityMap;
   /** Package D3 (coins, bikes, people, signposts): null during the Chapter 1 walk. */
   d3: CityD3 | null = null;
+  /** D6 L14: ambient pedestrians, children and traffic (always, also during the Chapter 1 walk). */
+  life: CityLife | null = null;
   /** Package D4: Chapter 3 (the market) while it is on: Chapter 2 done, Chapter 3 not (null otherwise). */
   ch3: Chapter3 | null = null;
   /** Package D5: Chapter 4 (Aara, the park clues, the figure) while it is on: Chapter 3 done, Chapter 4 not (null otherwise). */
@@ -196,6 +199,7 @@ export class KotaLevel implements Level {
     // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
     if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false));
 
+    this.life = new CityLife(ctx);
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
@@ -332,6 +336,7 @@ export class KotaLevel implements Level {
     }
     this.hud.update(dt, p.x, p.z);
     this.d3?.update(dt);
+    this.life?.update(dt);
     this.ch3?.update(dt);
     this.ch4?.update(dt);
     const info = this.ctx.game.debugInfo;

@@ -6,7 +6,7 @@ const http = require('http');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const PORT = 4173;
+const PORT = Number(process.env.SMOKE_PORT) || 4173;
 const URL = `http://localhost:${PORT}/`;
 const OUT = path.join(ROOT, 'test-results');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -7437,6 +7437,87 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
+/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen, nothing blocks him, perf holds. */
+async function kotaLifeScenario(page, check, touch) {
+  const tag = touch ? 'touch' : 'desktop';
+  const dir = process.env.UI_SHOTS || OUT;
+  fs.mkdirSync(dir, { recursive: true });
+  await kotaBoot(page, touch);
+  const total = await page.evaluate(() => window.__life.total());
+  check(`kota-life ${tag}: about 70-120 ambient agents exist (${total})`, total >= 70 && total <= 120, String(total));
+  // Agents near the plaza move; at most 60 are simulated; some are drawn.
+  const r = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(0, 20);
+    g.advance(30, true);
+    const a0 = window.__life.agents();
+    for (let i = 0; i < 240; i++) g.advance(1, false);
+    const a1 = window.__life.agents();
+    g.advance(1, true);
+    let moved = 0;
+    for (let i = 0; i < a0.length; i++) if (Math.hypot(a0[i].x - a1[i].x, a0[i].z - a1[i].z) > 1) moved++;
+    return { moved, sim: g.levelInfo.lifeSim, shown: g.levelInfo.lifeShown };
+  });
+  check(`kota-life ${tag}: agents move (${r.moved} moved over 4 s), 0 < simulated <= 60 (${r.sim})`, r.moved >= 10 && r.sim > 0 && r.sim <= 60, JSON.stringify(r));
+  // Most agents far away are frozen: simulated count stays bounded at every district.
+  const spots = [[0, 26], [-93, 20], [-50, -100], [100, 50], [0, 93], [50, 50], [-50, -50]];
+  const sims = await page.evaluate((spots) => {
+    const g = window.__superglen;
+    const out = [];
+    for (const [x, z] of spots) {
+      g.placePlayer(x, z);
+      for (let i = 0; i < 40; i++) g.advance(1, false);
+      g.advance(1, true);
+      out.push([g.levelInfo.lifeSim, g.levelInfo.lifeShown]);
+    }
+    return out;
+  }, spots);
+  check(`kota-life ${tag}: simulated agents <= 60 everywhere; some are drawn near the player in most districts`, sims.every((x) => x[0] <= 60) && sims.filter((x) => x[1] > 0).length >= 4, JSON.stringify(sims));
+  // A car stops for Glen standing in its lane and goes on when he leaves.
+  const stop = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(52.5, 20);
+    g.advance(20, false);
+    const info = window.__life.carOnLane('z', 52.5, 20, 16);
+    if (!info) return null;
+    let minGap = 99;
+    for (let i = 0; i < 360; i++) {
+      g.advance(1, false);
+      const a = window.__life.agent(info.index);
+      minGap = Math.min(minGap, (20 - a.s) * info.dir);
+    }
+    const a = window.__life.agent(info.index);
+    const gap = (20 - a.s) * info.dir;
+    const vStop = a.v;
+    g.placePlayer(40, 20);
+    for (let i = 0; i < 300; i++) g.advance(1, false);
+    return { gap, minGap, vStop, vGo: window.__life.agent(info.index).v };
+  });
+  check(`kota-life ${tag}: a car stops 2.5-5 m before Glen in its lane, never closer, and drives on when he steps aside`, !!stop && stop.vStop < 0.3 && stop.gap > 2.5 && stop.gap < 5 && stop.minGap > 2.5 && stop.vGo > 2, JSON.stringify(stop));
+  // Nothing blocks the player: walk across the avenue and along the road through the traffic.
+  const w = await kotaTravel(page, 50, -20, 900);
+  check(`kota-life ${tag}: Glen walks 70 m through the busy avenue crossing to the goal`, Math.hypot(w.x - 50, w.z + 20) < 2, JSON.stringify({ x: w.x.toFixed(1), z: w.z.toFixed(1) }));
+  // Perf at the busiest spot and one screenshot of the busy city.
+  const busy = await page.evaluate(() => {
+    const g = window.__superglen;
+    let best = null;
+    for (const [x, z, yaw] of [[0, 30, 0], [-50, 40, 1.57], [50, 40, 3.14], [-90, 30, 0], [0, -48, 3.14], [100, 45, 1.57], [-48, -95, 0], [0, 90, 0]]) {
+      g.placePlayer(x, z);
+      g.setCameraYaw(yaw);
+      for (let i = 0; i < 90; i++) g.advance(1, false);
+      g.advance(1, true);
+      const n = g.levelInfo.lifeShown;
+      const c = g.debugCounts();
+      if (!best || n > best.n) best = { x, z, yaw, n, calls: c.calls, tris: c.triangles };
+    }
+    return best;
+  });
+  console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
+  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 65000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 65000, JSON.stringify(busy));
+  await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
+  await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
+}
+
 // ---- Settings panel (gear) and the maps ---------------------------------------------------------------------------------------
 
 /** Screenshots of the settings / map checks go to $UI_SHOTS when set (else test-results). */
@@ -9760,6 +9841,10 @@ async function main() {
     results.push(await runScenario(browser, 'sfx-noaudio', { viewport: { width: 1280, height: 720 }, initScript: () => { window.AudioContext = undefined; window.webkitAudioContext = undefined; } }, sfxNoAudioScenario, '?level=test&fps=0&reset=1'));
 
     results.push(await runScenario(browser, 'perf', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, perfScenario, '?level=test&fps=0'));
+
+    // D6 L14: the living city
+    results.push(await runScenario(browser, 'kota-life', { viewport: { width: 1280, height: 720 } }, (p, c) => kotaLifeScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-life-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => kotaLifeScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 
     results.push(
       await runScenario(
