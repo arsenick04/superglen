@@ -51,7 +51,7 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 
 ## Langkah tambahan
 
-- [ ] **L7 Bug pasar kosong di alamat biasa** (masih terbuka; agen sedang mengerjakan, perubahan belum di-commit di KotaLevel.ts dan smoke-test.cjs).
+- [x] **L7 Bug pasar kosong di alamat biasa**: tidak bisa direproduksi di jalur biasa (lihat laporan); jaring pengaman + tes bab3-plain dan bab3-broken ditambahkan.
 - [ ] **L8 Stok kuis.** Tambah soal di src/data/quiz/*.json (target sekitar 3 kali lipat per kategori, tingkat anak 5-6 tahun, tanpa gambar baru bila bisa; pakai item/emoji yang ada atau tambah item). `npm run check:quiz` lulus. Suara soal baru: daftar dulu, generate setelah pemilik proyek setuju anggarannya.
 - [ ] **L9 Pujian Nino bervariasi.** 6-8 variasi pujian dan 3-4 variasi "coba lagi" untuk latihan dan kuis, dipilih acak tanpa mengulang berturut-turut. Teks dulu, suara di langkah suara.
 - [ ] **L10 Jarak misi.** Tujuan misi warga dan tantangan dipindah supaya tiap misi menempuh sedikitnya sekitar 80-150 m dan melewati distrik lain; hadiah koin disesuaikan. check:reach lulus.

@@ -8672,6 +8672,71 @@ async function bab3StartScenario(page, check, touch) {
   check(`bab3-start ${tag}: rats are at the market around the child`, vis >= 3, `${vis}`);
 }
 
+/**
+ * Regression (owner report, plain URL, no ?level=): the whole real path in one page. Chapter 1 done, the lab door, the
+ * Chapter 2 story, the hangar door, the lab, the front door: the city must run Chapter 3. The save goes through the
+ * game's own writes only (the first save is just "Chapter 1 done, in the lab").
+ */
+async function bab3PlainScenario(page, check) {
+  await page.evaluate(() => { localStorage.setItem('superglen.save.v1', JSON.stringify({ version: 1, where: 'lab', chaptersDone: ['bab1'], skills: { laser: false, shield: false, fly: false }, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab1: Date.now() - 100000 } })); });
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+  await sleep(1500);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const d = makeStoryDriver(page, check);
+  const inp = makeBab2Inputs(page, 'kbd');
+  await d.adv(30);
+  await d.walk(-5.2, -69.25, 900);
+  await d.adv(10);
+  await d.tap('e');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'bab2' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
+  await playBab2(page, check, d, inp, 'desktop', async () => {});
+  // exit
+  await d.adv(20);
+  await d.walk(0, 1.5, 900);
+  await d.walk(0, 10.2, 900);
+  await d.adv(10);
+  await d.press('hand', 'exit: the hangar door');
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d.adv(20);
+  await d.walk(0, -60, 900);
+  await d.walk(0, -50, 900);
+  await d.walk(0, -43.5, 600);
+  await page.evaluate(() => window.__superglen.walkTo(0, -38));
+  await page.evaluate(() => window.__superglen.pause(false));
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 60000 });
+  await page.evaluate(() => { const g = window.__superglen; g.cancelWalk(); g.pause(true); });
+  await d.adv(120);
+  const s = await d.st();
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')));
+  check('bab3-plain: after training and the way out (plain URL, no ?level=) the city runs Chapter 3: step chase, beam to the market, Nino says cepat', s.level === 'kota' && s.levelInfo.ch3Step === 'chase' && s.objective.active && s.objective.x === 93 && s.dialog.id === 'bab3_nino_cepat' && save.bab3.step === 'chase' && save.where === 'kota', JSON.stringify({ l: s.level, ch3: s.levelInfo.ch3Step, o: s.objective, d: s.dialog.id, b3: save.bab3, w: save.where }));
+}
+
+
+
+/** Safety net: if Chapter 3 throws while the city builds, the city still finishes (player placed, HUD) and the beam points to the market. */
+async function bab3BrokenScenario(page, check) {
+  const base = { version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: { laser: true, shield: true, fly: true }, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 } };
+  await page.evaluate((b) => { localStorage.setItem('superglen.save.v1', JSON.stringify(b)); window.sessionStorage.setItem('x', '1'); }, base);
+  await page.addInitScript(() => { window.__SG_BREAK_CH3 = true; });
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 40);
+  const s = await page.evaluate(state);
+  check('bab3-broken: a failing Chapter 3 does not break the city: it is built, the beam points to the market', s.level === 'kota' && s.levelInfo.ch3Fallback === true && s.objective.active && s.objective.x === 93 && s.levelInfo.buildings > 0, JSON.stringify({ l: s.level, fb: s.levelInfo.ch3Fallback, o: s.objective, b: s.levelInfo.buildings }));
+  await page.evaluate(() => window.__superglen.pause(false));
+}
+
 const ch3Rats = (page) => page.evaluate(() => window.__ch3.rats());
 const ch3Counts = (page) => page.evaluate(() => window.__ch3.counts());
 /** Draw calls and triangles at the market from four view directions. */
@@ -9315,6 +9380,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-start', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3StartScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-start-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3StartScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-plain', { viewport: { width: 1280, height: 720 } }, bab3PlainScenario, '?fps=0'));
+    results.push(await runScenario(browser, 'bab3-broken', { viewport: { width: 1280, height: 720 } }, bab3BrokenScenario, '?fps=0'));
     results.push(await runScenario(browser, 'bab3-rats', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3RatsScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3RatsScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-glen', { viewport: { width: 1280, height: 720 } }, bab3GlenScenario, '?level=kota&fps=0&reset=1'));

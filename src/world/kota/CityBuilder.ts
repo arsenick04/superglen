@@ -122,15 +122,6 @@ function lighten(c: number, k = 50): number {
   return (r << 16) | (g << 8) | bb;
 }
 
-function fade(c: number, k: number): number {
-  // Mix toward a dusty grey-brown (abandoned look).
-  const r = (c >> 16) & 255;
-  const g = (c >> 8) & 255;
-  const b = c & 255;
-  const m = (v: number, t: number): number => Math.round(v + (t - v) * k);
-  return (m(r, 0x9a) << 16) | (m(g, 0x8c) << 8) | m(b, 0x7a);
-}
-
 // ---- Climbing pieces (same look as kits/ParkourKit: body, lighter cap, bright edge strip) -----------------------------------------
 
 function edge(B: Builder, x: number, z: number, w: number, d: number, top: number): void {
@@ -321,20 +312,150 @@ function drawOld(B: Builder, b: CityBuilding): void {
     B.ch.deco.box(fs(b, 0.35, 0.08, h), fp(b, at, 0.05, top - h / 2), i % 2 ? 0x4f8f3a : 0x5fa34a);
   }
   for (let i = 0; i < 10; i++) {
+    if (i === 3) continue; // keep the mouth (the door) clear
     const a = (i / 10) * Math.PI * 2;
     B.ch.deco.sph(0.7 + (i % 3) * 0.2, [b.x + Math.cos(a) * (b.w / 2 + 0.6), b.base + 0.4, b.z + Math.sin(a) * (b.d / 2 + 0.6)], i % 2 ? 0x4f8f3a : 0x6aa84f, [1, 0.7, 1]);
   }
-  B.ch.deco.box([b.w + 0.4, 0.15, 0.6], [b.x, top + 0.05, b.z + b.d / 2], 0x5f8f3a);
-  // Faded name board over the door and two weathered lion statues.
-  const door = fp(b, -1.5, 0.05, b.base + 1.2);
-  B.ch.deco.box(fs(b, 1.6, 0.1, 2.4), door, 0x3a2a22);
-  B.ch.deco.box(fs(b, 3.4, 0.12, 0.6), fp(b, -1.5, 0.08, b.base + 2.9), 0xa08a5a);
-  for (const s of [-1, 1]) {
-    const [x, , z] = fp(b, -1.5 + s * 1.6, 0.9, 0);
-    B.ch.lit.cyl(0.4, 0.8, [x, b.base + 0.4, z], 0xb8ad94);
-    B.ch.lit.sph(0.45, [x, b.base + 1.2, z], fade(C.RED, 0.55));
-    B.ch.deco.sph(0.3, [x + 0.2, b.base + 1.45, z], 0x5fa34a);
+  if (b.face === 0) barongsaiFacade(B, b, 1.5);
+}
+
+// Faded Barongsai colours (the same red / gold / cream / orange as the lion-head computer in the Lab, washed out by years).
+const OF = { red: 0xa84a3c, redDark: 0x7a3a30, gold: 0xc4a458, cream: 0xd8cdb0, teeth: 0xe4dcc4, mane: 0xc08a4c, dark: 0x24160f, tile: 0x7b5a4a, vine: 0x4f8f3a, leaf: 0x6aa84f, wood: 0x6b4a32 };
+
+/**
+ * The old building's face (south-facing only: the data builds it with face 0): a big Barongsai lion head, the door being its open
+ * mouth (`c` = the door's distance along the facade), round pillars, faded lanterns and a two-tier klenteng roof with upturned
+ * corners. Everything is boxes, squashed spheres, cones and a few cylinders in the streamed chunk layers (about 1.4 k triangles).
+ * Abandoned: faded paint, cracks, boards, vines and leaves, missing fur and roof tiles, only a dim glow in the eyes.
+ */
+function barongsaiFacade(B: Builder, b: CityBuilding, c: number): void {
+  const y0 = b.base;
+  const top = b.base + b.wall;
+  const P = (at: number, out: number, y: number): Vec3 => fp(b, c + at, out, y0 + y);
+  const sz = (len: number, h: number, thick: number): Vec3 => [len, h, thick];
+  const lit = B.ch.lit;
+  const deco = B.ch.deco;
+  // Mane behind the face (orange, peeks out round the plate) and the red face plate.
+  lit.sph(1, P(0, 0.1, 3.5), OF.mane, [3.0, 3.0, 0.3]);
+  lit.box(sz(5.0, 5.6, 0.3), P(0, 0.15, 3.0), OF.red);
+  // Fur fringe round the plate (cream blocks, some missing).
+  for (let i = -4; i <= 4; i++) {
+    if (i === 2) continue;
+    deco.box(sz(0.55, 0.7, 0.3), P(i * 0.6, 0.3, 5.9 - Math.abs(i) * 0.08), OF.cream, [0, 0, i * 0.14]);
   }
+  for (const s of [-1, 1]) for (let k = 0; k < 5; k++) {
+    if (s > 0 && k === 3) continue;
+    deco.box(sz(0.6, 0.45, 0.3), P(s * 2.65, 0.3, 1.2 + k * 0.95), OF.cream, [0, 0, s * (0.5 + k * 0.05)]);
+  }
+  // Beard: cream fringe hanging beside the mouth.
+  for (const s of [-1, 1]) for (let k = 0; k < 3; k++) deco.box(sz(0.34, 0.9 - k * 0.1, 0.2), P(s * (1.65 + k * 0.32), 0.38, 0.6), OF.cream, [0, 0, s * 0.12]);
+  // The mouth: the door. Dark red frame, black inside, gold lip, teeth, a faded red tongue carpet on the ground.
+  deco.box(sz(2.5, 2.7, 0.12), P(0, 0.26, 1.35), OF.redDark);
+  deco.box(sz(1.6, 2.35, 0.1), P(0, 0.34, 1.18), OF.dark);
+  deco.box(sz(2.9, 0.2, 0.22), P(0, 0.34, 2.8), OF.gold);
+  for (const s of [-1, 1]) deco.box(sz(0.16, 2.7, 0.2), P(s * 1.4, 0.34, 1.35), OF.gold);
+  for (let k = -2; k <= 2; k++) deco.box(sz(0.26, k % 2 ? 0.42 : 0.3, 0.14), P(k * 0.3, 0.42, 2.4 - (k % 2 ? 0.1 : 0)), OF.teeth);
+  for (const s of [-1, 1]) deco.cone(0.15, 0.7, P(s * 0.78, 0.42, 2.05), OF.teeth, [Math.PI, 0, 0]); // fangs
+  for (let k = -2; k <= 2; k++) if (k !== 1) deco.box(sz(0.22, 0.22, 0.14), P(k * 0.3, 0.42, 0.15), OF.teeth);
+  deco.quad(1.3, 1.4, P(0, 0.9, 0.07), 0x8a4a40);
+  // Nose, gold cheeks with whisker dots.
+  lit.sph(0.42, P(0, 0.5, 3.3), OF.gold, [1.1, 0.9, 0.9]);
+  for (const s of [-1, 1]) {
+    lit.sph(0.62, P(s * 1.95, 0.45, 2.3), OF.gold, [1, 0.8, 0.6]);
+    for (let k = 0; k < 3; k++) deco.sph(0.06, P(s * (1.75 + k * 0.2), 0.8, 2.25 - k * 0.1), OF.redDark);
+  }
+  // Big round eyes: gold ring, pale ball, dark pupil, a dim amber glow (the only light left in the old place).
+  for (const s of [-1, 1]) {
+    const ex = s * 1.45;
+    lit.cyl(0.98, 0.1, P(ex, 0.34, 4.2), OF.gold, [Math.PI / 2, 0, 0]);
+    lit.sph(0.82, P(ex, 0.42, 4.2), 0xe0d6b8, [1, 1, 0.35]);
+    deco.sph(0.42, P(ex - s * 0.08, 0.7, 4.16), OF.dark, [1, 1.1, 0.3]);
+    B.ch.glow.sph(0.2, P(ex - s * 0.08, 0.84, 4.16), 0xb08a30, [1, 1, 0.3]);
+    deco.sph(0.06, P(ex - s * 0.2, 0.86, 4.35), 0xe8dcc0);
+    // Brows: raised at the outer end, gold trim on top.
+    deco.box(sz(1.9, 0.36, 0.3), P(ex, 0.45, 5.2), OF.redDark, [0, 0, -s * 0.28]);
+    deco.box(sz(1.9, 0.12, 0.32), P(ex, 0.45, 5.45), OF.gold, [0, 0, -s * 0.28]);
+    // Ears.
+    lit.sph(0.55, P(s * 2.6, 0.15, 5.4), OF.red);
+    deco.sph(0.3, P(s * 2.6, 0.5, 5.4), OF.gold);
+  }
+  // Horn with its gem seat, forehead gem.
+  lit.cone(0.3, 1.3, P(0, 0.4, 6.4), OF.gold);
+  lit.sph(0.38, P(0, 0.5, 5.75), OF.gold);
+  // Round pillars with gold bands, flanking the door.
+  for (const at of [4.7 - c, -1.2 - c]) {
+    lit.cyl(0.3, 6.3, P(at, 0.35, 3.15), OF.red);
+    for (const y of [0.35, 5.9]) deco.cyl(0.36, 0.22, P(at, 0.35, y), OF.gold);
+  }
+  // Faded lanterns hanging from the eave, a dim amber glow inside.
+  for (const at of [-2.3, 2.3]) {
+    deco.cyl(0.02, 0.6, P(at, 1.15, 6.95), 0x5a4a3a);
+    lit.sph(0.38, P(at, 1.15, 6.4), 0xb5605a, [1, 1.25, 1]);
+    deco.cyl(0.2, 0.1, P(at, 1.15, 6.88), OF.gold);
+    deco.cyl(0.14, 0.1, P(at, 1.15, 5.9), OF.gold);
+    B.ch.glow.sph(0.17, P(at, 1.15, 6.4), 0xa98a3c);
+  }
+  // Boards: two planks nailed across the left cheek, one leaning at the mouth, cracks in the paint.
+  deco.box(sz(2.2, 0.22, 0.1), P(1.8, 0.55, 3.4), OF.wood, [0, 0, 0.55]);
+  deco.box(sz(2.0, 0.2, 0.1), P(1.7, 0.6, 2.7), 0x5a3a2a, [0, 0, -0.4]);
+  deco.box(sz(0.22, 1.8, 0.1), P(-1.55, 0.5, 1.0), OF.wood, [0, 0, -0.25]);
+  for (const [at, y, r] of [[-1.9, 3.9, 0.4], [0.7, 4.8, -0.5], [1.0, 3.0, 0.2]]) deco.box(sz(0.05, 0.9, 0.05), P(at, 0.34, y), OF.redDark, [0, 0, r]);
+  // Vines over the face and leaf clumps.
+  for (let i = 0; i < 6; i++) {
+    const at = -2.2 + i * 0.9;
+    const h = 1.2 + ((i * 37) % 4) * 0.6;
+    deco.box(sz(0.14, h, 0.06), P(at, 0.5, 5.8 - h / 2), i % 2 ? OF.vine : OF.leaf);
+    deco.sph(0.2, P(at, 0.52, 5.8 - h), OF.leaf, [1, 0.6, 0.7]);
+  }
+  for (const [at, y] of [[2.0, 5.55], [-2.7, 5.1], [-1.9, 0.5], [2.3, 0.4]]) deco.sph(0.4, P(at, 0.55, y), OF.vine, [1.3, 0.7, 0.7]);
+
+  // ---- Roof: a curved skirt round the walls (steep, flatter, upturned lip), gold edge, flared corners, then a smaller upper tier.
+  const hw = b.w / 2;
+  const hd = b.d / 2;
+  const segs: [number, number][] = [[0.5, 0.55], [0.5, 0.22], [0.4, -0.3]]; // [out length, slope (down = +)]
+  const sides: { n: [number, number]; len: number; rot: (t: number) => Vec3; off: number }[] = [
+    { n: [0, 1], len: b.w + 2.8, rot: (t) => [t, 0, 0], off: hd },
+    { n: [0, -1], len: b.w + 2.8, rot: (t) => [-t, 0, 0], off: hd },
+    { n: [1, 0], len: b.d, rot: (t) => [0, 0, -t], off: hw },
+    { n: [-1, 0], len: b.d, rot: (t) => [0, 0, t], off: hw },
+  ];
+  sides.forEach((sd, si) => {
+    let o = 0;
+    let y = top - 0.05;
+    segs.forEach(([ol, sl], k) => {
+      const dy = -Math.tan(sl) * ol;
+      const mid = o + ol / 2;
+      const [nx, nz] = sd.n;
+      const pos: Vec3 = [b.x + nx * (sd.off + mid), y + dy / 2, b.z + nz * (sd.off + mid)];
+      const lenPlane = ol / Math.cos(sl);
+      lit.box(nx ? [lenPlane, 0.16, sd.len] : [sd.len, 0.16, lenPlane], pos, OF.tile, sd.rot(sl));
+      // Cracked / missing tiles (dark patches) and moss on the lower slope.
+      if (k === 1 && si < 2) {
+        deco.box([0.7, 0.05, 0.36], [pos[0] - 1.9, pos[1] + 0.1, pos[2]], 0x2e201a, sd.rot(sl));
+        deco.box([0.5, 0.05, 0.3], [pos[0] + 2.4, pos[1] + 0.1, pos[2]], 0x2e201a, sd.rot(sl));
+        deco.sph(0.45, [pos[0] + 0.6, pos[1] + 0.12, pos[2]], OF.vine, [1.4, 0.2, 0.9]);
+      }
+      o += ol;
+      y += dy;
+    });
+    const [nx, nz] = sd.n;
+    deco.box(nx ? [0.18, 0.14, sd.len] : [sd.len, 0.14, 0.18], [b.x + nx * (sd.off + o), y + 0.06, b.z + nz * (sd.off + o)], OF.gold);
+  });
+  for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) {
+    // One corner tip is broken off.
+    if (sx > 0 && sz2 < 0) continue;
+    lit.cone(0.2, 1.0, [b.x + sx * (hw + 1.45), top - 0.1, b.z + sz2 * (hd + 1.45)], OF.red, [sz2 * 0.4, 0, -sx * 0.4]);
+  }
+  // Upper tier: a collar, a wider pyramid with an upturned lip at the corners, a gold finial.
+  lit.box([3.8, 0.9, 3.0], [b.x, top + 0.5, b.z], OF.red);
+  lit.pyr(6.8, 1.3, 5.4, [b.x, top + 1.1 + 0.65, b.z], OF.tile);
+  deco.box([6.9, 0.14, 5.5], [b.x, top + 1.12, b.z], OF.gold);
+  for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) {
+    if (sx < 0 && sz2 > 0) continue;
+    lit.cone(0.16, 0.8, [b.x + sx * 3.45, top + 1.3, b.z + sz2 * 2.75], OF.red, [sz2 * 0.4, 0, -sx * 0.4]);
+  }
+  lit.sph(0.28, [b.x, top + 2.5, b.z], OF.gold);
+  lit.cone(0.1, 0.5, [b.x, top + 2.95, b.z], OF.gold);
 }
 
 function drawTower(B: Builder, b: CityBuilding): void {

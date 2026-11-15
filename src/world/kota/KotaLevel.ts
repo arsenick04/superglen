@@ -13,6 +13,7 @@ import { Chapter1Walk } from './Chapter1Walk';
 import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { Chapter3 } from './Chapter3';
+import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
@@ -204,14 +205,25 @@ export class KotaLevel implements Level {
 
     // D4: Chapter 3 (the market) follows Chapter 2. Never in the debug free roam.
     if (!sandbox && ctx.save.isChapterDone('bab2') && !ctx.save.isChapterDone('bab3')) {
-      this.ch3 = new Chapter3(ctx, {
-        setGoal: (g) => this.setGoal(g),
-        dropMission: () => this.d3?.people.drop(),
-        finished: () => this.d3?.people.onChange?.(),
-        placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
-        afterParty: () => this.startCh4(),
-      });
-      this.ch3.start();
+      try {
+        if ((window as unknown as { __SG_BREAK_CH3?: boolean }).__SG_BREAK_CH3 === true) throw new Error('test: Chapter 3 broken on purpose');
+        this.ch3 = new Chapter3(ctx, {
+          setGoal: (g) => this.setGoal(g),
+          dropMission: () => this.d3?.people.drop(),
+          finished: () => this.d3?.people.onChange?.(),
+          placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
+          afterParty: () => this.startCh4(),
+        });
+        this.ch3.start();
+      } catch (err) {
+        // Safety net: whatever goes wrong inside the chapter, the city still finishes building and the child is pointed to the market.
+        const planned = (window as unknown as { __SG_BREAK_CH3?: boolean }).__SG_BREAK_CH3 === true;
+        (planned ? console.warn : console.error)('Chapter 3 failed to start:', err);
+        this.ch3 = null;
+        this.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
+        ctx.objectives.set(new THREE.Vector3(MARKET.hub.x, 0, MARKET.hub.z));
+        ctx.game.debugInfo.ch3Fallback = true;
+      }
     } else if (!sandbox && ctx.save.isChapterDone('bab3') && !ctx.save.isChapterDone('bab4')) {
       this.startCh4();
     }
