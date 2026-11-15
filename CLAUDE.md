@@ -102,6 +102,10 @@ Pemilik proyek biasanya memberi instruksi malam hari lalu tidur. Setiap sesi mal
 - D4: Chapter 3: pasar dan Tikus Kecil.
 - D5: Chapter 4: mode detektif.
 
+- D6: Masukan pemilik proyek setelah Chapter 3-4 (lihat `D6_PLAN.md`, daftar langkah yang bisa dilanjutkan).
+
+**Arah cerita (berlaku di atas design doc):** seri ini melawan monster hewan, urutan musuh: Tikus Kecil, Ular Besar, Tikus Raksasa, Elang Jahat, Gorila Pemarah. Sosok Misterius baru muncul di akhir sekali game (pancingan Superglen 2). Aara dan Nino baru saling kenal saat Glen mengajak Aara ke Lab sebelum musuh ke-2. Ada sinematik pembuka yang bisa dilewati dan adegan sinematik sebelum dialog cerita. Pertarungan menantang: tikus dan Glen punya energi (hati), tikus melawan, pemulihan dengan koin di pasar atau rumah sakit.
+
 Fase berikutnya dipecah dengan cara yang sama saat fase itu dimulai: satu paket kira-kira 2 sampai 4 jam kerja agen.
 
 ## Format laporan di setiap checkpoint

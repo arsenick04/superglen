@@ -25,4 +25,29 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 - [ ] **L5 Pemulihan dengan koin.** Kios makanan di pasar dan rumah sakit: dekati, tekan tombol, bayar koin, hati pulih; ikon di peta; teks/suara pendek (pakai klip yang ada atau teks dulu).
 - [ ] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D6 + "Untuk dicoba besok pagi".
 
+## Masukan tambahan pemilik proyek (15 November 2026, saat batas pemakaian habis)
+
+**Arah cerita baru (berlaku di atas SUPERGLEN_GAME_DESIGN.md bagian 5 dan 8):**
+- Seri ini fokus melawan monster hewan. Urutan musuh: 1) Tikus Kecil, 2) Ular Besar, 3) Tikus Raksasa (Si Tikus Rakus), 4) Elang Jahat, 5) Gorila Pemarah.
+- **Sosok Misterius tidak muncul** sampai akhir sekali game (pancingan ke Superglen 2). Hapus dari akhir Chapter 3 dan dari Chapter 4.
+- **Aara dan Nino belum saling kenal di awal.** Mereka baru berkenalan saat Glen mengajak Aara ke Lab sebelum melawan musuh ke-2 (Ular Besar). Sebelum itu Nino tidak boleh menyebut Aara, dan Aara tidak tahu soal Lab/Superglen.
+- **Sinematik:** sebelum game mulai ada video sinematik kisah awal Glen yang bisa dilewati. Setiap dialog cerita didahului adegan sinematik pendek (seperti cutscene di game Spider-Man): kamera sinematik, bilah hitam atas-bawah, tokoh beraksi, bisa dilewati.
+
+**Perbaikan isi:**
+- Stok kuis diperbanyak supaya soal tidak itu-itu saja.
+- Misi dan tantangan kecil dibuat berjarak lebih jauh supaya anak menjelajah kota (sekarang beberapa selesai dalam beberapa langkah).
+- Di latihan, pujian Nino bervariasi (jangan "Hebat, Glen!" terus).
+
+## Langkah tambahan
+
+- [ ] **L7 Bug pasar kosong di alamat biasa** (masih terbuka; agen sedang mengerjakan, perubahan belum di-commit di KotaLevel.ts dan smoke-test.cjs).
+- [ ] **L8 Stok kuis.** Tambah soal di src/data/quiz/*.json (target sekitar 3 kali lipat per kategori, tingkat anak 5-6 tahun, tanpa gambar baru bila bisa; pakai item/emoji yang ada atau tambah item). `npm run check:quiz` lulus. Suara soal baru: daftar dulu, generate setelah pemilik proyek setuju anggarannya.
+- [ ] **L9 Pujian Nino bervariasi.** 6-8 variasi pujian dan 3-4 variasi "coba lagi" untuk latihan dan kuis, dipilih acak tanpa mengulang berturut-turut. Teks dulu, suara di langkah suara.
+- [ ] **L10 Jarak misi.** Tujuan misi warga dan tantangan dipindah supaya tiap misi menempuh sedikitnya sekitar 80-150 m dan melewati distrik lain; hadiah koin disesuaikan. check:reach lulus.
+- [ ] **L11 Susun ulang cerita.** Chapter 3 = Tikus Kecil (tanpa Sosok Misterius di akhir; Tikus Rakus boleh tampil sekilas lalu kabur sebagai pancingan musuh ke-3). Chapter 4 ditulis ulang: Glen dan Aara mencari petunjuk (alat penerjemah, papan baca tetap dipakai) yang mengarah ke Ular Besar, Glen mengajak Aara ke Lab, Aara dan Nino berkenalan, lalu pertarungan Ular Besar (musuh ke-2). Hapus semua kemunculan Sosok Misterius dan kalimat Nino yang menyebut Aara sebelum perkenalan. Catat rencana Chapter 5 (Tikus Raksasa), 6 (Elang Jahat), 7 (Gorila Pemarah), penutup (Sosok Misterius, pancingan Superglen 2) di CLAUDE.md.
+- [ ] **L12 Sistem sinematik.** Sutradara cutscene di dalam game (kamera berpindah, bilah hitam, tokoh bergerak sesuai naskah, teks/suara, tombol Lewati yang besar; jalan di PC, sentuh, gamepad). Sinematik pembuka kisah awal Glen sebelum "Ketuk untuk mulai" selesai. Adegan pendek sebelum dialog cerita utama tiap Chapter. (Video sungguhan lewat Higgsfield: menunggu keputusan pemilik proyek.)
+- [ ] **L13 Suara** untuk semua kalimat baru/berubah dari L3, L9, L11, L12.
+
+Urutan kerja yang disarankan: L7 → (L1, L8, L9 paralel) → L11 → L4/L5 (pertarungan, termasuk Ular Besar) → L12 → L2 → L10 → L3/L13 → L6.
+
 ## Catatan antar sesi
