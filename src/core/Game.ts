@@ -39,6 +39,7 @@ import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
 import { PadDebug } from '../ui/PadDebug';
 import { startGate } from './StartGate';
+import { versionGuard } from './VersionGuard';
 import { touchMode } from './TouchMode';
 import { FrameClock } from './FrameClock';
 import { ShadowFollower } from './ShadowSnap';
@@ -752,6 +753,7 @@ export class Game {
       },
       onLoadingChange: (loading) => {
         this.fading = loading;
+        if (loading) versionGuard.applyIfPending(); // a level change is a safe moment for a stale-build reload
         this.updateControls();
       },
       onBeforeUnload: () => {
@@ -1184,6 +1186,7 @@ export class Game {
   private setMenuOpen(open: boolean): void {
     this.menuOpen = open;
     if (open) {
+      versionGuard.applyIfPending();
       this.sfx.stopAll();
       this.input.reset();
       this.menuReleasedLock = !!document.pointerLockElement && typeof document.exitPointerLock === 'function';

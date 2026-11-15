@@ -9256,6 +9256,47 @@ async function runScenario(browser, name, ctxOpts, body, query = '?level=test') 
   return result;
 }
 
+// ---- Stale-version guard (group `version`): fetch of version.json stubbed per scenario ------------------------------------------
+const versionStub = (mode) => `(() => {
+  const real = window.fetch.bind(window);
+  window.fetch = (u, o) => {
+    if (String(u).includes('version.json')) {
+      if ('${mode}' === 'error') return Promise.reject(new TypeError('offline'));
+      return Promise.resolve(new Response(JSON.stringify({ id: '${mode}' === 'same' || ('${mode}' === 'late' && !window.__verOther) ? window.__sgVersion.buildId : 'other-build' }), { status: 200 }));
+    }
+    return real(u, o);
+  };
+})();`;
+
+async function versionScenario(page, check, mode) {
+  await sleep(1500);
+  const r = await page.evaluate(() => ({ n: window.__sgReloads || 0, note: !!document.querySelector('.version-note'), id: window.__sgVersion && window.__sgVersion.buildId }));
+  if (mode === 'other') {
+    check('start screen: newer build -> reload requested + friendly note', r.n === 1 && r.note, JSON.stringify(r));
+    return;
+  }
+  check(`start screen (${mode}): no reload, no note`, r.n === 0 && !r.note, JSON.stringify(r));
+  if (mode === 'error') await page.evaluate(() => window.__sgVersion.check());
+  check('build id is known', !!r.id);
+}
+
+async function versionInGameScenario(page, check) {
+  await sleep(800);
+  await page.mouse.click(640, 360);
+  await sleep(600);
+  const r0 = await page.evaluate(async () => {
+    window.__verOther = true;
+    const found = await window.__sgVersion.check();
+    return { found, pending: window.__sgVersion.isPending, n: window.__sgReloads || 0 };
+  });
+  check('in game: newer build is only pending, no reload mid-play', r0.found && r0.pending && r0.n === 0, JSON.stringify(r0));
+  await page.evaluate(() => window.__superglen.settings.show());
+  await sleep(300);
+  const r1 = await page.evaluate(() => ({ n: window.__sgReloads || 0, txt: document.querySelector('.settings-version')?.textContent || '' }));
+  check('in game: opening the menu applies the reload', r1.n === 1, JSON.stringify(r1));
+  check('settings panel shows the build id', /^Versi \S+/.test(r1.txt), r1.txt);
+}
+
 async function main() {
   if (!fs.existsSync(path.join(ROOT, 'dist', 'index.html'))) {
     console.error('dist/ not found. Run `npm run build` first.');
@@ -9325,6 +9366,11 @@ async function main() {
         check('hold D 1 s changes x/z', d2 > 0.5, `${d2.toFixed(2)} m`);
       }),
     );
+
+    results.push(await runScenario(browser, 'version-new', { viewport: { width: 1280, height: 720 }, initScript: versionStub('other') }, (p, c) => versionScenario(p, c, 'other'), '?fps=0'));
+    results.push(await runScenario(browser, 'version-same', { viewport: { width: 1280, height: 720 }, initScript: versionStub('same') }, (p, c) => versionScenario(p, c, 'same'), '?fps=0'));
+    results.push(await runScenario(browser, 'version-error', { viewport: { width: 1280, height: 720 }, initScript: versionStub('error') }, (p, c) => versionScenario(p, c, 'error'), '?fps=0'));
+    results.push(await runScenario(browser, 'version-ingame', { viewport: { width: 1280, height: 720 }, initScript: versionStub('late') }, versionInGameScenario, '?level=test&fps=0'));
 
     results.push(await runScenario(browser, 'framework', { viewport: { width: 1280, height: 720 } }, frameworkDesktopScenario, '?level=demo&fps=0'));
     for (const h of [390, 281]) {

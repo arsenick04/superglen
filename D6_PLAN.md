@@ -65,3 +65,5 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 Urutan kerja yang disarankan: L7 → (L1, L8, L9 paralel) → L11 → L4/L5 (pertarungan, termasuk Ular Besar) → L12 → L2 → L10 → L3/L13 → L6.
 
 ## Catatan antar sesi
+
+- [x] **L7b Penjaga versi basi** (selesai; owner bilang bug pasar kosong = cache, tapi kodenya sudah jadi dan lulus). `__BUILD_ID__` (vite define) + `dist/version.json` (vite.version.mjs); src/core/VersionGuard.ts: cek di layar mulai (reload langsung) dan setelah >10 mnt tersembunyi; di game reload hanya saat ganti level / menu dibuka. ID tampil di Pengaturan. Tes grup smoke `version`.

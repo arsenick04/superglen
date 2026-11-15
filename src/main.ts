@@ -1,5 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './core/Game';
+import { versionGuard } from './core/VersionGuard';
 
 function showFatal(): void {
   const ui = document.getElementById('ui');
@@ -17,6 +18,7 @@ async function boot(): Promise<void> {
   if (!container) throw new Error('#game container missing');
   const game = new Game(container);
   if (!document.hidden) game.start();
+  void versionGuard.check(); // on the start screen a newer build reloads right away
 }
 
 boot().catch((err: unknown) => {

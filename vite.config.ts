@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import { audioIndexPlugin } from './vite.audio-index.mjs';
+import { makeBuildId, versionPlugin } from './vite.version.mjs';
+
+const BUILD_ID = makeBuildId();
 
 export default defineConfig({
   // Relative base works both for local dev and for GitHub Pages (/superglen/).
   base: './',
-  plugins: [audioIndexPlugin()],
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
+  plugins: [audioIndexPlugin(), versionPlugin(BUILD_ID)],
   server: { host: true },
   preview: { host: true },
   build: {

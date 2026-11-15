@@ -1614,3 +1614,26 @@ html.pad-ui .pad-focus {
   background: #c9f2c0;
   color: #2c7a1f;
 }
+
+/* Stale-version note ("Memuat versi baru...") and the small build id in the settings panel. */
+.version-note {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b3a67;
+  font: 700 18px/1.2 system-ui, sans-serif;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.settings-version {
+  margin-top: 6px;
+  text-align: center;
+  font: 500 11px/1.2 ui-monospace, monospace;
+  opacity: 0.55;
+  user-select: text;
+}
