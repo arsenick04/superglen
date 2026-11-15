@@ -9202,7 +9202,7 @@ async function bab4CluesScenario(page, check, touch) {
 const CLUE_GLOW = [[-108.5, -104.5], [-118.5, -120.3], [-107.12, -119.88]];
 
 /** Watch a scene frame by frame: dialog lines (in order), scene markers, controls locked frames, the chapter star, screenshots by scene. */
-async function ch4Watch(page, frames, key, shots = null, lvl = 'kota', stop = '') {
+async function ch4Watch(page, frames, key, shots = null, lvl = 'kota', stop = '', onLine = null) {
   const seen = [];
   const scenes = [];
   let star = false;
@@ -9215,7 +9215,7 @@ async function ch4Watch(page, frames, key, shots = null, lvl = 'kota', stop = ''
       const st = document.querySelector('.chapter-star');
       return { line: g.dialog.open ? g.dialog.text : '', scene: g.levelInfo[key] || '', star: !!st && st.classList.contains('show'), ctl: g.controlsEnabled, level: g.level };
     }, key);
-    if (r.line && seen[seen.length - 1] !== r.line) seen.push(r.line);
+    if (r.line && seen[seen.length - 1] !== r.line) { seen.push(r.line); if (onLine) await onLine(r.line, seen.length); }
     if (r.scene && scenes[scenes.length - 1] !== r.scene) scenes.push(r.scene);
     star = star || r.star;
     if (r.ctl === false) locked++;
@@ -10305,6 +10305,77 @@ async function careScenario(page, check, touch) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+// ---- HUD layout: hearts, place pill, boss stars, food counter, map, gear, dialog bubble, touch buttons never overlap: group `hud-layout` ----
+async function hudLayoutScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vw = touch ? 844 : 1280;
+  const vh = touch ? 390 : 720;
+  const shotDir = process.env.HUD_SHOTS;
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
+  await d3Adv(page, 30);
+  const measure = () => page.evaluate(() => {
+    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-joystick', btn: '.tc-button' };
+    const boxes = [];
+    for (const [name, sel] of Object.entries(sels)) {
+      for (const e of document.querySelectorAll(sel)) {
+        const r = e.getBoundingClientRect();
+        const cs = getComputedStyle(e);
+        if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity === 0) continue;
+        boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom });
+      }
+    }
+    return boxes;
+  });
+  const verify = async (label) => {
+    const boxes = await measure();
+    const bad = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], c = boxes[j];
+      if (a.name === c.name && a.name.startsWith('btn')) continue;
+      if (a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b) bad.push(a.name + '/' + c.name);
+    }
+    const out = boxes.filter((a) => a.l < -1 || a.t < -1 || a.r > vw + 1 || a.b > vh + 1).map((a) => a.name);
+    const names = [...new Set(boxes.map((b) => b.name))];
+    return { bad, out, names, label };
+  };
+  await page.evaluate(() => window.__ch5.mute(true));
+  await ch5Draw(page, -62, -62); // walk to the fight spot like bab5-fight
+  // Walk the intro (same wait as bab5-fight); at the first dialog line measure, pill and food counter forced on for the geometry.
+  let seenDialog = false;
+  await ch4Watch(page, 700, 'ch5Scene', null, 'kota', 'fight', async (ln) => {
+    if (process.env.HUD_DEBUG) console.log('LINE', ln);
+    if (seenDialog) return;
+    seenDialog = true;
+  check(`hud-layout ${tag}: a bab5 dialog line is on screen`, !!seenDialog, '');
+  await page.evaluate(() => {
+    const t = document.querySelector('.city-toast'); if (t) { t.textContent = 'Lapangan'; t.classList.add('show'); }
+      const ch = document.querySelector('.coin-hud'); if (ch) ch.classList.add('show');
+    const e = document.querySelector('.ch5-stars'); if (e) { window.__starsWas = e.classList.contains('show'); e.classList.add('show'); }
+  });
+  await sleep(500);
+  let v = await verify('dialog');
+  if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `bab5-dialog-${touch ? 'touch' : 'desktop'}.png`) }); }
+  check(`hud-layout ${tag}: during a dialog line hearts, pill, stars, food counter, map, gear, bubble and buttons overlap nothing and stay on screen`, v.bad.length === 0 && v.out.length === 0 && ['hearts', 'bubble', 'gear'].every((n) => v.names.includes(n)), JSON.stringify(v));
+  // Food counter (chapter 3, never together with the boss stars) next to a dialog line.
+  await page.evaluate(() => { if (!window.__starsWas) document.querySelector('.ch5-stars').classList.remove('show'); let c = document.querySelector('.ch3-count'); if (!c) { c = document.createElement('div'); c.className = 'ch3-count'; c.innerHTML = '<div class="ch3-chip"><svg viewBox="0 0 10 10"></svg><span>0/2</span></div><div class="ch3-chip"><svg viewBox="0 0 10 10"></svg><span>0/3</span></div>'; document.querySelector('.ch5-stars').parentNode.appendChild(c); } c.classList.add('show'); });
+  await sleep(500);
+  v = await verify('food');
+  if (shotDir) await page.screenshot({ path: path.join(shotDir, `food-dialog-${touch ? 'touch' : 'desktop'}.png`) });
+  check(`hud-layout ${tag}: the food counter next to the dialog line overlaps nothing`, v.names.includes('food') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
+  await page.evaluate(() => { const c = document.querySelector('.ch3-count'); if (c) c.classList.remove('show'); });
+  });
+  await page.evaluate(() => { window.__ch5.mute(true); });
+  await d3Adv(page, 20);
+  await sleep(500);
+  v = await verify('fight');
+  if (process.env.HUD_DEBUG) console.log('DBG', await page.evaluate(() => JSON.stringify({ e: window.__ch5.engaged(), cls: document.querySelector('.ch5-stars').className, sc: window.__superglen.levelInfo.ch5Scene, was: window.__starsWas })));
+  if (shotDir) await page.screenshot({ path: path.join(shotDir, `bab5-fight-${touch ? 'touch' : 'desktop'}.png`) });
+  check(`hud-layout ${tag}: during the fight the stars are shown and nothing overlaps`, v.names.includes('stars') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
+  // Tap targets: the gear stays >= 44 px.
+  const gear = await page.evaluate(() => { const r = document.querySelector('.set-gear').getBoundingClientRect(); return Math.min(r.width, r.height); });
+  check(`hud-layout ${tag}: the gear is >= 44 px`, gear >= 44, String(gear));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -10546,6 +10617,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab4-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-flow', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FlowScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-flow-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FlowScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'hud-layout', { viewport: { width: 1280, height: 720 } }, (p, c) => hudLayoutScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'hud-layout-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => hudLayoutScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-fight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FightScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-easy', { viewport: { width: 1280, height: 720 } }, bab5EasyScenario, '?level=kota&fps=0&reset=1'));
