@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Figure, figureMaterial } from './Figure';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
@@ -48,6 +49,8 @@ import { WallKick } from './WallKick';
  */
 
 const CAPSULE_HALF_HEIGHT = (C.height - 2 * C.radius) / 2; // half length of the cylinder part
+/** Warm fill so skin does not look grey-green under the grass-tinted hemisphere light. */
+const FILL_COLOR = 0x4a3a2e;
 const CENTER_TO_FEET = C.height / 2;
 
 /** Shortest signed difference between two angles (radians). */
@@ -191,8 +194,10 @@ export class Player {
   private readonly squashGroup = new THREE.Group();
   private readonly spinGroup = new THREE.Group();
   private bodyMat!: THREE.MeshStandardMaterial;
-  private faceMat!: THREE.MeshStandardMaterial;
-  private belt!: THREE.Mesh;
+  private glowing = false;
+  private glenFig!: Figure;
+  private superFig!: Figure;
+  private figState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
   private shadow!: THREE.Mesh;
   private shadowMat!: THREE.MeshBasicMaterial;
   private aura!: THREE.Mesh;
@@ -325,9 +330,8 @@ export class Player {
       this.autoJumps = 0;
       this.idleTimer = 0;
     }
-    this.bodyMat.color.setHex(this.tuning.color);
-    this.faceMat.color.setHex(this.tuning.faceColor);
-    this.belt.visible = mode === 'superglen';
+    this.glenFig.root.visible = mode === 'glen';
+    this.superFig.root.visible = mode === 'superglen';
     if (changed) {
       this.popVel = 7;
       // A spin that belongs to Superglen's air jump must not linger after switching away.
@@ -1003,8 +1007,14 @@ export class Player {
         const sc = tableAt(f.auraScale, al);
         this.aura.scale.setScalar(sc);
         this.auraMat.opacity = tableAt(f.auraOpacity, al);
+        this.bodyMat.emissive.setHex(0xffc94d);
         this.bodyMat.emissiveIntensity = tableAt(f.glow, al);
-      } else if (this.bodyMat.emissiveIntensity !== 0) this.bodyMat.emissiveIntensity = 0;
+        this.glowing = true;
+      } else if (this.glowing) {
+        this.glowing = false;
+        this.bodyMat.emissive.setHex(FILL_COLOR);
+        this.bodyMat.emissiveIntensity = 1;
+      }
     }
     const sy = (1 + this.squash) * (1 - 0.32 * this.crouch);
     const sxz = (1 - this.squash * 0.5) * (1 + 0.1 * this.crouch);
@@ -1014,6 +1024,15 @@ export class Player {
     // Flight visuals: flames, trail, lean and hover bob (the spin flip shares the same group).
     const F = this.flight;
     F.updateVisual(dt, this.visualPosition, this.velocity.x, this.velocity.z, this.object.rotation.y, this.verticalVelocity);
+    if (dt > 0) {
+      const fs = this.figState;
+      fs.speed = Math.hypot(this.velocity.x, this.velocity.z);
+      fs.airborne = !this.grounded;
+      fs.vy = this.verticalVelocity;
+      fs.flying = F.isFlying;
+      fs.riding = this.rideLift > 0.01;
+      (this._mode === 'superglen' ? this.superFig : this.glenFig).pose(dt, fs);
+    }
     this.spinGroup.rotation.set(this.spinAngle + F.tiltX, 0, F.tiltZ);
     this.spinGroup.position.y = CENTER_TO_FEET + F.bob + this.rideLift;
 
@@ -1140,35 +1159,19 @@ export class Player {
    * feet, squash/stretch) > spinGroup (pivot at the capsule center, flip) > meshes.
    */
   private buildPlaceholderMesh(): void {
-    this.bodyMat = new THREE.MeshStandardMaterial({ color: ModeTunings.glen.color, roughness: 0.6, emissive: 0xffc94d, emissiveIntensity: 0 });
-    this.faceMat = new THREE.MeshStandardMaterial({ color: ModeTunings.glen.faceColor, roughness: 0.7 });
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2b1a12, roughness: 0.5 });
-    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc94d, roughness: 0.35, metalness: 0.2 });
-
+    this.bodyMat = figureMaterial(FILL_COLOR, 1);
     this.squashGroup.position.y = -CENTER_TO_FEET;
     this.spinGroup.position.y = CENTER_TO_FEET;
     this.squashGroup.add(this.spinGroup);
     this.object.add(this.squashGroup);
 
-    const capsule = new THREE.Mesh(new THREE.CapsuleGeometry(C.radius, CAPSULE_HALF_HEIGHT * 2, 6, 16), this.bodyMat);
-    capsule.castShadow = true;
-    capsule.receiveShadow = true;
-    capsule.name = 'body';
-    this.spinGroup.add(capsule);
-
-    // Nose marker on the +Z side (local forward) at about eye height.
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), this.faceMat);
-    nose.position.set(0, C.height * 0.18, C.radius * 0.95);
-    nose.castShadow = true;
-    nose.name = 'nose';
-    this.spinGroup.add(nose);
-
-    const eyeGeo = new THREE.SphereGeometry(0.045, 8, 6);
-    for (const sx of [-1, 1]) {
-      const eye = new THREE.Mesh(eyeGeo, eyeMat);
-      eye.position.set(sx * 0.12, C.height * 0.27, C.radius * 0.9);
-      this.spinGroup.add(eye);
-    }
+    // Human figures (feet at the bottom of the capsule); the capsule collider itself is unchanged.
+    this.glenFig = new Figure('glen', this.bodyMat);
+    this.superFig = new Figure('superglen', this.bodyMat);
+    this.superFig.root.visible = false;
+    this.glenFig.root.position.y = -CENTER_TO_FEET;
+    this.superFig.root.position.y = -CENTER_TO_FEET;
+    this.spinGroup.add(this.glenFig.root, this.superFig.root);
 
     // Golden aura: a slightly larger translucent shell, thicker per rhythm level (Superglen only).
     this.auraMat = new THREE.MeshBasicMaterial({
@@ -1184,12 +1187,6 @@ export class Player {
     this.aura.frustumCulled = false;
     this.aura.renderOrder = 3;
     this.spinGroup.add(this.aura);
-
-    this.belt = new THREE.Mesh(new THREE.TorusGeometry(C.radius * 1.02, 0.04, 8, 28), goldMat);
-    this.belt.rotation.x = Math.PI / 2;
-    this.belt.position.y = -C.height * 0.08;
-    this.belt.visible = false;
-    this.spinGroup.add(this.belt);
 
     this.shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,

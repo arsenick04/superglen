@@ -5,6 +5,7 @@ import { Kit, C, basic } from './Kit';
 import { Z, LAB, LAB_FLOOR, DOOR_HALF } from './Layout';
 import type { Sparkles } from './Fx';
 import { addRoofBox } from '../kits/Roofs';
+import { Figure, figureMaterial } from '../../player/Figure';
 
 const F = LAB_FLOOR;
 const WALL_C = 0xe8f0fa;
@@ -57,6 +58,9 @@ export class Lab {
   private readonly spill: THREE.Mesh;
   private readonly spillMat: THREE.MeshBasicMaterial;
   private readonly ninoGlow: THREE.Mesh;
+  private readonly ninoFig: Figure;
+  private lastDt = 0;
+  private readonly ninoSt = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
   private readonly costumeBody: THREE.Group;
   private readonly belt: THREE.Mesh;
   private readonly beltMat: THREE.MeshStandardMaterial;
@@ -265,29 +269,13 @@ export class Lab {
     root.add(this.sweepMesh);
 
     // --- Nino ---
-    const nBody = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.28, 0.4, 6, 14),
-      new THREE.MeshStandardMaterial({ color: 0x4dabf7, emissive: 0x2a74c8, emissiveIntensity: 0.7, roughness: 0.4 }),
-    );
-    nBody.position.y = 0.48;
-    const eyeM = new THREE.MeshBasicMaterial({ color: 0x0b2a4a });
-    const eyeG = new THREE.SphereGeometry(0.05, 8, 6);
-    for (const sx of [-1, 1]) {
-      const e = new THREE.Mesh(eyeG, eyeM);
-      e.position.set(sx * 0.1, 0.62, 0.25);
-      this.nino.add(e);
-    }
-    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.05), new THREE.MeshStandardMaterial({ color: 0x2f6fd6, emissive: 0x1a4fa8, emissiveIntensity: 0.4 }));
-    cape.position.set(0, 0.4, -0.3);
-    cape.rotation.x = 0.25;
-    const clasp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc94d }));
-    clasp.position.set(0, 0.7, -0.16);
+    this.ninoFig = new Figure('nino', figureMaterial(0x2a74c8, 0.08), false);
     this.ninoGlow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.62, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      new THREE.SphereGeometry(0.85, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
     );
-    this.ninoGlow.position.y = 0.5;
-    this.nino.add(nBody, cape, clasp, this.ninoGlow);
+    this.ninoGlow.position.y = 0.65;
+    this.nino.add(this.ninoFig.root, this.ninoGlow);
     this.nino.position.copy(this.ninoPos);
     this.nino.rotation.y = Math.atan2(-this.ninoPos.x, 7);
     this.nino.visible = false;
@@ -424,6 +412,7 @@ export class Lab {
   /** `near` = the player is in the hall or the lab (the street never sees the animated bars: skip their upload). */
   update(dt: number, near = true): void {
     this.time += dt;
+    this.lastDt = dt;
     const t = this.time;
     if (near || !this.barsInit) this.updateBars(t);
     this.updateDetails(t);
@@ -456,6 +445,7 @@ export class Lab {
     this.buttonMat.emissiveIntensity = Math.max(this.buttonMat.emissiveIntensity, 0.4 + 0.3 * pulse);
     // Nino hovers; costume floats and turns.
     if (this.nino.visible) {
+      this.ninoFig.pose(this.lastDt, this.ninoSt);
       this.nino.position.y = this.ninoPos.y + 0.12 + 0.06 * Math.sin(t * 2.2);
       this.ninoGlow.scale.setScalar(1 + 0.08 * Math.sin(t * 3) + 0.25 * this.chaos * Math.sin(t * 25));
     }

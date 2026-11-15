@@ -111,6 +111,7 @@ export class Bab1Level implements Level {
     this.exterior = new BuildingExterior(building, root, this.sparkles);
     this.hall = new Hall(ctx, hallKit, this.sparkles);
     this.lab = new Lab(ctx, labKit, this.sparkles);
+    if (this.testInfo) (window as unknown as { __lab?: Lab }).__lab = this.lab;
     this.door = new LabDoor(ctx, labKit, this.sparkles);
     if (!lab) this.streetFx = new StreetFx(ctx, this.sparkles);
     if (lab) this.buildExit(ctx);
