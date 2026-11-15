@@ -12,7 +12,7 @@ Kunci tidak pernah dicetak atau dimasukkan ke kode game. Di mesin yang memakai p
 ## Perintah
 - `npm run audio -- --dry-run` : tampilkan rencana (jumlah baris, karakter, porsi kuota) tanpa memakai kredit. Juga menulis `audio/lines.generated.json`, daftar semua kalimat yang akan diucapkan.
 - `npm run audio -- --sample` : tepat satu baris per kategori (yang terpendek).
-- `npm run audio -- --category=bab1,quiz_hitung` : kategori tertentu. Pilihan: bab1, bab2, bab3, quiz_nino, quiz_hitung, quiz_inggris, quiz_mandarin, quiz_hewan, quiz_baca, speak_en, speak_zh.
+- `npm run audio -- --category=bab1,quiz_hitung` : kategori tertentu. Pilihan: bab1, bab2, bab3, bab4, quiz_nino, quiz_hitung, quiz_inggris, quiz_mandarin, quiz_hewan, quiz_baca, speak_en, speak_zh.
 - `npm run audio -- --limit=10` : paling banyak 10 file.
 - `npm run audio -- --only=bab1_glen_pulang` : hanya id itu (dibuat ulang walau sudah ada).
 - `npm run audio -- --force` : buat ulang semuanya (boros kredit).
@@ -35,6 +35,8 @@ Model: `eleven_v4` (paling ekspresif yang tersedia di paket ini, 1 karakter = 1 
 | nino | Pratama - Clear, Confident and Warm (`q8qwd1jY2jS3AWOBeq25`), Indonesia aksen standar | stability 0.35, similarity 0.8 | +2 semiton |
 | lina | Maya - Warm, Calm and Soft (`U3dExJoUNcmTY5H6GMuG`), Bu Lina penjual kue (D4 L5) | stability 0.3, similarity 0.8 | 0 |
 | rakus | Clowny - Funny and Cheerful (`UafGxvF2q1XMC9Qy4tPR`), Si Tikus Rakus, cempreng dan jenaka | stability 0.3, similarity 0.8 | +3 semiton |
+| aara | Kak Ceria - Cute Kids Storyteller (`d15jrIAARvF899pDoC6T`), Aara di Chapter 4 (D5 L5) | stability 0.3, similarity 0.8 | 0 |
+| misterius | Den - expressive, clear, smooth (`HmwgE8AfbDbaZpgAi4Bn`), Sosok Misterius, tenang dan hangat (D5 L5) | stability 0.45, similarity 0.8 | -1 semiton |
 | english | Josh - Teacher for Kids (`nzFihrBIvB34imQBuxub`), kata bahasa Inggris di quiz | stability 0.35 | 0 |
 | mandarin | Sage (`APSIkVZudNbPAwyPoeVO`) | stability 0.4, similarity 0.8 | 0 |
 

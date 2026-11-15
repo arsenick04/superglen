@@ -49,5 +49,7 @@
   "bank": { "id": "bank", "label": "bank", "emoji": "🏦", "en": "bank", "zh": "银行", "pinyin": "yín háng" },
   "rumah_sakit": { "id": "rumah_sakit", "label": "rumah sakit", "emoji": "🏥", "en": "hospital", "zh": "医院", "pinyin": "yī yuàn" },
   "pasar": { "id": "pasar", "label": "pasar", "emoji": "🏪" },
+  "pohon": { "id": "pohon", "label": "pohon", "emoji": "🌳" },
+  "kolam": { "id": "kolam", "label": "kolam", "emoji": "🏞️" },
   "taman": { "id": "taman", "label": "taman", "emoji": "🌳" }
 }

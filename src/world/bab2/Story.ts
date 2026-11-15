@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { startGate } from '../../core/StartGate';
 import type { SkillName } from '../../core/Save';
 import { Celebration } from '../Celebration';
-import { HALL_DOOR_TARGET, travel } from '../progress';
+import { HALL_DOOR_TARGET, marketPending, sandboxActive, travel } from '../progress';
 import { SKILL_GATES } from '../../quiz/gates';
 import { QuizLines } from '../../quiz/lines';
 import { FLY_MAX, HALL, NINO_SPOT, PADS } from './Layout';
@@ -135,6 +135,7 @@ export class Story {
             if (id !== this.runId) return;
             this.p.env.row.hide();
             this.current = null;
+            this.marketBeam();
           });
         },
       });
@@ -143,6 +144,14 @@ export class Story {
     zone(this.p.laser, PADS.laser.x, PADS.laser.z, 2.4);
     zone(this.p.shield, PADS.shield.x, PADS.shield.z, 3.2);
     player.markSafe(0, 0, 0);
+    this.marketBeam();
+  }
+
+  /** Free play while the market waits (Chapter 3 not done): the beam shows the way out, after every exercise too. */
+  private marketBeam(): void {
+    const { ctx, hangar } = this.p.env;
+    if (!marketPending(ctx.save) || sandboxActive(ctx.save)) return;
+    ctx.objectives.set(new THREE.Vector3(hangar.doorPos.x, 0, hangar.doorPos.z));
   }
 
   start(): void {

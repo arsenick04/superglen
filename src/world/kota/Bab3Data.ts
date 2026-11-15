@@ -39,6 +39,11 @@ export const MARKET = {
   rakus: { x: 93, z: 0, drain: 2 },
   /** The mysterious figure: at the edge of the plaza in the shade of the pagoda tower, 21 m from the crossing. */
   figure: { x: 84.5, z: -20 },
+  /** Where the child stands for the two closing scenes (on the streets, facing the action; yaw 0 = +z). */
+  stage: {
+    rakus: { x: 93, z: 9, yaw: Math.PI },
+    figure: { x: 92, z: -8, yaw: Math.atan2(84.5 - 92, -20 + 8) },
+  },
 } as const;
 
 /** Seven little rats: 3 with bakpao, 2 with kue, 2 with vegetables (those go back to the stall by themselves). */
