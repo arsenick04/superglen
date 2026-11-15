@@ -278,5 +278,565 @@
       { "id": "c", "item": "bebek" }
     ],
     "answer": "b"
+  },
+  {
+    "id": "hewan_021",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku punya dua sayap dan bisa terbang. Siapa aku?",
+    "audio_id": "quiz_hewan_021",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "burung" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_022",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku terbang dari bunga ke bunga. Siapa aku?",
+    "audio_id": "quiz_hewan_022",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kupu_kupu" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_023",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Rumahku di kolam. Aku suka melompat. Siapa aku?",
+    "audio_id": "quiz_hewan_023",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "burung" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_024",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku hidup di laut dan menyemprotkan air. Siapa aku?",
+    "audio_id": "quiz_hewan_024",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "paus" },
+      { "id": "b", "item": "kelinci" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_025",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku pintar dan suka melompat di laut. Siapa aku?",
+    "audio_id": "quiz_hewan_025",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "lumba_lumba" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_026",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku punya dua capit di pantai. Siapa aku?",
+    "audio_id": "quiz_hewan_026",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "kepiting" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_027",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku pelan dan punya rumah di punggung. Siapa aku?",
+    "audio_id": "quiz_hewan_027",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kelinci" },
+      { "id": "b", "item": "kura_kura" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_028",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku hitam putih dan tinggal di kutub. Siapa aku?",
+    "audio_id": "quiz_hewan_028",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "penguin" },
+      { "id": "b", "item": "singa" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_029",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku suka mengejar bola benang. Siapa aku?",
+    "audio_id": "quiz_hewan_029",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_030",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Aku sahabat manusia dan menjaga rumah. Siapa aku?",
+    "audio_id": "quiz_hewan_030",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "anjing" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_031",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Hewan mana yang paling besar?",
+    "audio_id": "quiz_hewan_031",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "semut" },
+      { "id": "b", "item": "gajah" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_032",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Hewan mana yang paling kecil?",
+    "audio_id": "quiz_hewan_032",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "gajah" },
+      { "id": "b", "item": "semut" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_033",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku hitam putih dan suka makan bambu. Siapa aku?",
+    "audio_id": "quiz_hewan_033",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "bebek" },
+      { "id": "b", "item": "panda" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_034",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Leherku panjang, makan daun pohon tinggi. Siapa aku?",
+    "audio_id": "quiz_hewan_034",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "jerapah" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "gajah" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_035",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku membuat madu manis di sarangku. Siapa aku?",
+    "audio_id": "quiz_hewan_035",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "semut" },
+      { "id": "b", "item": "kupu_kupu" },
+      { "id": "c", "item": "lebah" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_036",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku suka makan wortel dan melompat. Siapa aku?",
+    "audio_id": "quiz_hewan_036",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "singa" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_037",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku suka madu dan tidur panjang. Siapa aku?",
+    "audio_id": "quiz_hewan_037",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "beruang" },
+      { "id": "b", "item": "monyet" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_038",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku hidup di gurun dan punya punuk. Siapa aku?",
+    "audio_id": "quiz_hewan_038",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "unta" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_039",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Tubuhku bergaris hitam dan putih. Siapa aku?",
+    "audio_id": "quiz_hewan_039",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "zebra" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_040",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku melompat jauh dan punya kantung. Siapa aku?",
+    "audio_id": "quiz_hewan_040",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kangguru" },
+      { "id": "b", "item": "kelinci" },
+      { "id": "c", "item": "katak" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_041",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku makan daun eukaliptus di pohon. Siapa aku?",
+    "audio_id": "quiz_hewan_041",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "koala" },
+      { "id": "c", "item": "beruang" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_042",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku memberi bulu lembut. Siapa aku?",
+    "audio_id": "quiz_hewan_042",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "domba" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "ayam" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_043",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku berjanggut dan suka mengembik. Siapa aku?",
+    "audio_id": "quiz_hewan_043",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "bebek" },
+      { "id": "b", "item": "kambing" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_044",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku berlari cepat dan punya surai. Siapa aku?",
+    "audio_id": "quiz_hewan_044",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kura_kura" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_045",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku disebut raja hutan. Siapa aku?",
+    "audio_id": "quiz_hewan_045",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_046",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku memberi susu dan makan rumput. Siapa aku?",
+    "audio_id": "quiz_hewan_046",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_047",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku punya paruh tajam dan terbang tinggi. Siapa aku?",
+    "audio_id": "quiz_hewan_047",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "elang" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_048",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Aku berenang di kolam dan punya paruh lebar. Siapa aku?",
+    "audio_id": "quiz_hewan_048",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "katak" },
+      { "id": "b", "item": "ayam" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_049",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Aku suka makan pisang dan panjat pohon. Siapa aku?",
+    "audio_id": "quiz_hewan_049",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "kelinci" },
+      { "id": "c", "item": "gajah" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_050",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Hewan mana yang paling pelan?",
+    "audio_id": "quiz_hewan_050",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kuda" },
+      { "id": "b", "item": "burung" },
+      { "id": "c", "item": "kura_kura" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_051",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Hewan mana yang tidak punya kaki?",
+    "audio_id": "quiz_hewan_051",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "bebek" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_052",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Hewan mana yang bertelur di kandang?",
+    "audio_id": "quiz_hewan_052",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_053",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Hewan mana yang lebih besar, kucing atau sapi?",
+    "audio_id": "quiz_hewan_053",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kelinci" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_054",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Hewan mana yang lebih besar, ikan atau paus?",
+    "audio_id": "quiz_hewan_054",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "ikan" },
+      { "id": "b", "item": "semut" },
+      { "id": "c", "item": "paus" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_055",
+    "category": "hewan",
+    "level": 1,
+    "prompt": "Hewan mana yang punya dua kaki dan bisa berenang?",
+    "audio_id": "quiz_hewan_055",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "bebek" },
+      { "id": "b", "item": "sapi" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_056",
+    "category": "hewan",
+    "level": 2,
+    "prompt": "Hewan mana yang suka makan ikan?",
+    "audio_id": "quiz_hewan_056",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "kucing" },
+      { "id": "c", "item": "kuda" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_057",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Hewan mana yang punya kaki paling banyak?",
+    "audio_id": "quiz_hewan_057",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "kucing" },
+      { "id": "b", "item": "ikan" },
+      { "id": "c", "item": "kepiting" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "hewan_058",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Hewan mana yang punya tanduk?",
+    "audio_id": "quiz_hewan_058",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "monyet" },
+      { "id": "b", "item": "kambing" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "hewan_059",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Hewan mana yang bisa hidup di air dan di darat?",
+    "audio_id": "quiz_hewan_059",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "katak" },
+      { "id": "b", "item": "singa" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "hewan_060",
+    "category": "hewan",
+    "level": 3,
+    "prompt": "Hewan mana yang paling tinggi?",
+    "audio_id": "quiz_hewan_060",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "item": "semut" },
+      { "id": "b", "item": "katak" },
+      { "id": "c", "item": "jerapah" }
+    ],
+    "answer": "c"
   }
 ]

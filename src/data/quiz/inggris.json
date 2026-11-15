@@ -278,5 +278,565 @@
       { "id": "c", "item": "tas" }
     ],
     "answer": "b"
+  },
+  {
+    "id": "inggris_021",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya ayam?",
+    "audio_id": "quiz_inggris_021",
+    "display": { "kind": "picture", "item": "ayam" },
+    "choices": [
+      { "id": "a", "text": "cow", "lang": "en" },
+      { "id": "b", "text": "chicken", "lang": "en" },
+      { "id": "c", "text": "duck", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_022",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya bebek?",
+    "audio_id": "quiz_inggris_022",
+    "display": { "kind": "picture", "item": "bebek" },
+    "choices": [
+      { "id": "a", "text": "duck", "lang": "en" },
+      { "id": "b", "text": "horse", "lang": "en" },
+      { "id": "c", "text": "frog", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_023",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya kuda?",
+    "audio_id": "quiz_inggris_023",
+    "display": { "kind": "picture", "item": "kuda" },
+    "choices": [
+      { "id": "a", "text": "dog", "lang": "en" },
+      { "id": "b", "text": "cow", "lang": "en" },
+      { "id": "c", "text": "horse", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_024",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya sapi?",
+    "audio_id": "quiz_inggris_024",
+    "display": { "kind": "picture", "item": "sapi" },
+    "choices": [
+      { "id": "a", "text": "cow", "lang": "en" },
+      { "id": "b", "text": "tiger", "lang": "en" },
+      { "id": "c", "text": "bird", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_025",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya singa?",
+    "audio_id": "quiz_inggris_025",
+    "display": { "kind": "picture", "item": "singa" },
+    "choices": [
+      { "id": "a", "text": "rabbit", "lang": "en" },
+      { "id": "b", "text": "lion", "lang": "en" },
+      { "id": "c", "text": "fish", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_026",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya gajah?",
+    "audio_id": "quiz_inggris_026",
+    "display": { "kind": "picture", "item": "gajah" },
+    "choices": [
+      { "id": "a", "text": "frog", "lang": "en" },
+      { "id": "b", "text": "monkey", "lang": "en" },
+      { "id": "c", "text": "elephant", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_027",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya monyet?",
+    "audio_id": "quiz_inggris_027",
+    "display": { "kind": "picture", "item": "monyet" },
+    "choices": [
+      { "id": "a", "text": "monkey", "lang": "en" },
+      { "id": "b", "text": "tiger", "lang": "en" },
+      { "id": "c", "text": "dog", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_028",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya kelinci?",
+    "audio_id": "quiz_inggris_028",
+    "display": { "kind": "picture", "item": "kelinci" },
+    "choices": [
+      { "id": "a", "text": "cat", "lang": "en" },
+      { "id": "b", "text": "rabbit", "lang": "en" },
+      { "id": "c", "text": "frog", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_029",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_029",
+    "display": { "kind": "speak", "text": "Cow!", "lang": "en", "speak_audio_id": "quiz_inggris_029_kata" },
+    "choices": [
+      { "id": "a", "item": "kuda" },
+      { "id": "b", "item": "ayam" },
+      { "id": "c", "item": "sapi" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_030",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_030",
+    "display": { "kind": "speak", "text": "Horse!", "lang": "en", "speak_audio_id": "quiz_inggris_030_kata" },
+    "choices": [
+      { "id": "a", "item": "sapi" },
+      { "id": "b", "item": "kuda" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_031",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_031",
+    "display": { "kind": "speak", "text": "Lion!", "lang": "en", "speak_audio_id": "quiz_inggris_031_kata" },
+    "choices": [
+      { "id": "a", "item": "singa" },
+      { "id": "b", "item": "gajah" },
+      { "id": "c", "item": "monyet" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_032",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_032",
+    "display": { "kind": "speak", "text": "Duck!", "lang": "en", "speak_audio_id": "quiz_inggris_032_kata" },
+    "choices": [
+      { "id": "a", "item": "ayam" },
+      { "id": "b", "item": "bebek" },
+      { "id": "c", "item": "kucing" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_033",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Nino bilang apa? Pilih gambarnya!",
+    "audio_id": "quiz_inggris_033",
+    "display": { "kind": "speak", "text": "Rabbit!", "lang": "en", "speak_audio_id": "quiz_inggris_033_kata" },
+    "choices": [
+      { "id": "a", "item": "katak" },
+      { "id": "b", "item": "harimau" },
+      { "id": "c", "item": "kelinci" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_034",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya biru?",
+    "audio_id": "quiz_inggris_034",
+    "display": { "kind": "picture", "item": "biru" },
+    "choices": [
+      { "id": "a", "text": "yellow", "lang": "en" },
+      { "id": "b", "text": "red", "lang": "en" },
+      { "id": "c", "text": "blue", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_035",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya kuning?",
+    "audio_id": "quiz_inggris_035",
+    "display": { "kind": "picture", "item": "kuning" },
+    "choices": [
+      { "id": "a", "text": "yellow", "lang": "en" },
+      { "id": "b", "text": "green", "lang": "en" },
+      { "id": "c", "text": "blue", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_036",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya hijau?",
+    "audio_id": "quiz_inggris_036",
+    "display": { "kind": "picture", "item": "hijau" },
+    "choices": [
+      { "id": "a", "text": "red", "lang": "en" },
+      { "id": "b", "text": "yellow", "lang": "en" },
+      { "id": "c", "text": "green", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_037",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya pisang?",
+    "audio_id": "quiz_inggris_037",
+    "display": { "kind": "picture", "item": "pisang" },
+    "choices": [
+      { "id": "a", "text": "apple", "lang": "en" },
+      { "id": "b", "text": "banana", "lang": "en" },
+      { "id": "c", "text": "orange", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_038",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya anggur?",
+    "audio_id": "quiz_inggris_038",
+    "display": { "kind": "picture", "item": "anggur" },
+    "choices": [
+      { "id": "a", "text": "grapes", "lang": "en" },
+      { "id": "b", "text": "orange", "lang": "en" },
+      { "id": "c", "text": "apple", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_039",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya semangka?",
+    "audio_id": "quiz_inggris_039",
+    "display": { "kind": "picture", "item": "semangka" },
+    "choices": [
+      { "id": "a", "text": "orange", "lang": "en" },
+      { "id": "b", "text": "milk", "lang": "en" },
+      { "id": "c", "text": "watermelon", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_040",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya stroberi?",
+    "audio_id": "quiz_inggris_040",
+    "display": { "kind": "picture", "item": "stroberi" },
+    "choices": [
+      { "id": "a", "text": "strawberry", "lang": "en" },
+      { "id": "b", "text": "ball", "lang": "en" },
+      { "id": "c", "text": "banana", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_041",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya mata?",
+    "audio_id": "quiz_inggris_041",
+    "display": { "kind": "picture", "item": "mata" },
+    "choices": [
+      { "id": "a", "text": "ear", "lang": "en" },
+      { "id": "b", "text": "eye", "lang": "en" },
+      { "id": "c", "text": "nose", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_042",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya hidung?",
+    "audio_id": "quiz_inggris_042",
+    "display": { "kind": "picture", "item": "hidung" },
+    "choices": [
+      { "id": "a", "text": "nose", "lang": "en" },
+      { "id": "b", "text": "hand", "lang": "en" },
+      { "id": "c", "text": "mouth", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_043",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya mulut?",
+    "audio_id": "quiz_inggris_043",
+    "display": { "kind": "picture", "item": "mulut" },
+    "choices": [
+      { "id": "a", "text": "foot", "lang": "en" },
+      { "id": "b", "text": "mouth", "lang": "en" },
+      { "id": "c", "text": "ear", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_044",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya telinga?",
+    "audio_id": "quiz_inggris_044",
+    "display": { "kind": "picture", "item": "telinga" },
+    "choices": [
+      { "id": "a", "text": "ear", "lang": "en" },
+      { "id": "b", "text": "eye", "lang": "en" },
+      { "id": "c", "text": "foot", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_045",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya tangan?",
+    "audio_id": "quiz_inggris_045",
+    "display": { "kind": "picture", "item": "tangan" },
+    "choices": [
+      { "id": "a", "text": "foot", "lang": "en" },
+      { "id": "b", "text": "hat", "lang": "en" },
+      { "id": "c", "text": "hand", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_046",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya kaki?",
+    "audio_id": "quiz_inggris_046",
+    "display": { "kind": "picture", "item": "kaki" },
+    "choices": [
+      { "id": "a", "text": "hand", "lang": "en" },
+      { "id": "b", "text": "foot", "lang": "en" },
+      { "id": "c", "text": "nose", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_047",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya tas?",
+    "audio_id": "quiz_inggris_047",
+    "display": { "kind": "picture", "item": "tas" },
+    "choices": [
+      { "id": "a", "text": "bag", "lang": "en" },
+      { "id": "b", "text": "table", "lang": "en" },
+      { "id": "c", "text": "bank", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_048",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya kursi?",
+    "audio_id": "quiz_inggris_048",
+    "display": { "kind": "picture", "item": "kursi" },
+    "choices": [
+      { "id": "a", "text": "table", "lang": "en" },
+      { "id": "b", "text": "chair", "lang": "en" },
+      { "id": "c", "text": "hat", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_049",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya topi?",
+    "audio_id": "quiz_inggris_049",
+    "display": { "kind": "picture", "item": "topi" },
+    "choices": [
+      { "id": "a", "text": "school", "lang": "en" },
+      { "id": "b", "text": "house", "lang": "en" },
+      { "id": "c", "text": "hat", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_050",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya penggaris?",
+    "audio_id": "quiz_inggris_050",
+    "display": { "kind": "picture", "item": "penggaris" },
+    "choices": [
+      { "id": "a", "text": "ruler", "lang": "en" },
+      { "id": "b", "text": "pencil", "lang": "en" },
+      { "id": "c", "text": "bag", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_051",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya penghapus?",
+    "audio_id": "quiz_inggris_051",
+    "display": { "kind": "picture", "item": "penghapus" },
+    "choices": [
+      { "id": "a", "text": "pencil", "lang": "en" },
+      { "id": "b", "text": "book", "lang": "en" },
+      { "id": "c", "text": "eraser", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_052",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya nenek?",
+    "audio_id": "quiz_inggris_052",
+    "display": { "kind": "picture", "item": "nenek" },
+    "choices": [
+      { "id": "a", "text": "grandfather", "lang": "en" },
+      { "id": "b", "text": "mother", "lang": "en" },
+      { "id": "c", "text": "grandmother", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_053",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya kakek?",
+    "audio_id": "quiz_inggris_053",
+    "display": { "kind": "picture", "item": "kakek" },
+    "choices": [
+      { "id": "a", "text": "grandfather", "lang": "en" },
+      { "id": "b", "text": "father", "lang": "en" },
+      { "id": "c", "text": "grandmother", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_054",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya mobil?",
+    "audio_id": "quiz_inggris_054",
+    "display": { "kind": "picture", "item": "mobil" },
+    "choices": [
+      { "id": "a", "text": "bicycle", "lang": "en" },
+      { "id": "b", "text": "car", "lang": "en" },
+      { "id": "c", "text": "ball", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_055",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya sepeda?",
+    "audio_id": "quiz_inggris_055",
+    "display": { "kind": "picture", "item": "sepeda" },
+    "choices": [
+      { "id": "a", "text": "bicycle", "lang": "en" },
+      { "id": "b", "text": "car", "lang": "en" },
+      { "id": "c", "text": "balloon", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_056",
+    "category": "inggris",
+    "level": 1,
+    "prompt": "Apa bahasa Inggrisnya susu?",
+    "audio_id": "quiz_inggris_056",
+    "display": { "kind": "picture", "item": "susu" },
+    "choices": [
+      { "id": "a", "text": "cat", "lang": "en" },
+      { "id": "b", "text": "milk", "lang": "en" },
+      { "id": "c", "text": "star", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_057",
+    "category": "inggris",
+    "level": 2,
+    "prompt": "Apa bahasa Inggrisnya balon?",
+    "audio_id": "quiz_inggris_057",
+    "display": { "kind": "picture", "item": "balon" },
+    "choices": [
+      { "id": "a", "text": "star", "lang": "en" },
+      { "id": "b", "text": "balloon", "lang": "en" },
+      { "id": "c", "text": "house", "lang": "en" }
+    ],
+    "answer": "b"
+  },
+  {
+    "id": "inggris_058",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya tujuh?",
+    "audio_id": "quiz_inggris_058",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "nine", "lang": "en" },
+      { "id": "b", "text": "six", "lang": "en" },
+      { "id": "c", "text": "seven", "lang": "en" }
+    ],
+    "answer": "c"
+  },
+  {
+    "id": "inggris_059",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya tiga?",
+    "audio_id": "quiz_inggris_059",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "three", "lang": "en" },
+      { "id": "b", "text": "two", "lang": "en" },
+      { "id": "c", "text": "five", "lang": "en" }
+    ],
+    "answer": "a"
+  },
+  {
+    "id": "inggris_060",
+    "category": "inggris",
+    "level": 3,
+    "prompt": "Apa bahasa Inggrisnya lima?",
+    "audio_id": "quiz_inggris_060",
+    "display": { "kind": "none" },
+    "choices": [
+      { "id": "a", "text": "nine", "lang": "en" },
+      { "id": "b", "text": "five", "lang": "en" },
+      { "id": "c", "text": "four", "lang": "en" }
+    ],
+    "answer": "b"
   }
 ]
