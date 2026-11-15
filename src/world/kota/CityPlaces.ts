@@ -322,13 +322,13 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
     return out;
   };
 
-  // 1. Kitten: Bu Sari (Perumahan park) lost it; it sits in the playground park to the south.
+  // 1. Kitten: Bu Sari (Perumahan park) lost it; it sits in the north-west park of the Sekolah quarter (about 145 m away).
   {
     const home = parkIn(-1, 0);
-    const far = parkIn(-1, 1);
+    const far = parkIn(-1, -1);
     const kit = findFree(far.x + 4, far.z - 3, 1.2, 8);
     person('sari', 'Bu Sari', { x: home.x + 4, z: home.z + 4 }, 0xe8577e, 0x3a2a22, 'kucing');
-    missions.push({ id: 'kucing', giver: 'sari', icon: 'cat', kind: 'collect', items: [{ x: kit.x, y: 0.5, z: kit.z }], returns: true, offer: 'Kucingku hilang! Tolong cari.', remind: 'Cari kucing di taman, ya.', done: 'Kucingku pulang! Terima kasih!', reward: 5 });
+    missions.push({ id: 'kucing', giver: 'sari', icon: 'cat', kind: 'collect', items: [{ x: kit.x, y: 0.5, z: kit.z }], returns: true, offer: 'Kucingku hilang! Tolong cari.', remind: 'Cari kucing di taman, ya.', done: 'Kucingku pulang! Terima kasih!', reward: 9 });
   }
   // 2. Apples: Pak Joko (Pasar park) wants 5 from the market stalls.
   {
@@ -340,9 +340,9 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
     const front = kiosks.map((b) => findFree(frontOf(b, 2.9).x, frontOf(b, 2.9).z, 0.9, 3));
     const items = spots(5, front).map((p) => ({ x: p.x, y: 0.8, z: p.z }));
     person('joko', 'Pak Joko', { x: home.x - 4, z: home.z + 4 }, 0xf0a020, 0x222222, 'apel');
-    missions.push({ id: 'apel', giver: 'joko', icon: 'apple', kind: 'collect', items, returns: true, offer: 'Aku mau 5 apel dari pasar.', remind: 'Ambil apel di pasar, ya.', done: 'Apel segar! Terima kasih!', reward: 5 });
+    missions.push({ id: 'apel', giver: 'joko', icon: 'apple', kind: 'collect', items, returns: true, offer: 'Aku mau 5 apel dari pasar.', remind: 'Ambil apel di pasar, ya.', done: 'Apel segar! Terima kasih!', reward: 8 });
   }
-  // 3. Balloons on three roofs in the school quarter.
+  // 3. Balloons on three roofs in the school quarter; Kak Dimas waits at the west edge of the Pasar (about 80-125 m away).
   {
     const houses = L.buildings.filter((b) => b.kind === 'house' && b.district === 'sekolah').filter((b) => {
       const [ci, cj] = cellOf(b.x, b.z);
@@ -353,26 +353,28 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
       const b = houses.find((h) => h.x === c.x && h.z === c.z) as CityBuilding;
       return { x: b.x, y: r2(roofTop(b) + 1.1), z: b.z, roof: b.roofId };
     });
-    const start = findFree(chosen[0].x + 3, chosen[0].z + 10, 1.4, 8);
+    const start = findFree(58, -30, 1.4, 8);
     person('dimas', 'Kak Dimas', start, 0x3b8fe0, 0x6b3f1d, 'balon');
-    missions.push({ id: 'balon', giver: 'dimas', icon: 'balloon', kind: 'collect', items: items.map(({ x, y, z }) => ({ x, y, z })), returns: false, offer: 'Ada 3 balon di atap! Carikan?', remind: 'Balonnya ada di atap rumah.', done: 'Hore! Semua balon ketemu!', reward: 6 });
+    missions.push({ id: 'balon', giver: 'dimas', icon: 'balloon', kind: 'collect', items: items.map(({ x, y, z }) => ({ x, y, z })), returns: false, offer: 'Ada 3 balon di atap! Carikan?', remind: 'Balonnya ada di atap rumah.', done: 'Hore! Semua balon ketemu!', reward: 9 });
     items.forEach((it, i) => reach.push({ id: `m.balon.${i}`, pos: [it.x, it.y, it.z], on: it.roof }));
   }
   // 4. The bell on the top of Menara Lonceng.
   {
     const t = towerOf('bell');
     const [fx, fz] = FACE[t.face];
-    person('guru', 'Pak Guru', { x: t.x + fx * 10.5 + 3, z: t.z + fz * 10.5 }, 0x2f7fd1, 0x888888, 'lonceng');
+    void fx;
+    void fz;
+    person('guru', 'Pak Guru', { x: 4, z: -20 }, 0x2f7fd1, 0x888888, 'lonceng'); // north edge of the plaza, about 100 m from the tower
     const y = r2(roofTop(t) + 0.95);
-    missions.push({ id: 'lonceng', giver: 'guru', icon: 'bell', kind: 'reach', items: [{ x: t.x, y, z: t.z }], returns: false, offer: 'Bunyikan lonceng di menara!', remind: 'Loncengnya di atas menara.', done: 'Ding dong! Bagus sekali!', reward: 8 });
+    missions.push({ id: 'lonceng', giver: 'guru', icon: 'bell', kind: 'reach', items: [{ x: t.x, y, z: t.z }], returns: false, offer: 'Bunyikan lonceng di menara!', remind: 'Loncengnya di atas menara.', done: 'Ding dong! Bagus sekali!', reward: 10 });
     reach.push({ id: 'm.lonceng.0', pos: [t.x, y, t.z], on: t.roofId });
   }
   // 5. Bike race to the fountain of the plaza.
   {
-    const start = findFree(-18, 15, 1.4, 6);
+    const start = findFree(-62, -26, 1.4, 6); // Perumahan, near the parked bike of Rumah Glen; the fountain is about 90 m away
     const goal = findFree(26, 8.5, 1.2, 4);
     person('lala', 'Mbak Lala', start, 0xf2b632, 0x2a1a14, 'balap');
-    missions.push({ id: 'balap', giver: 'lala', icon: 'bike', kind: 'ride', items: [], target: goal, returns: false, offer: 'Balapan! Naik sepeda ke air mancur.', remind: 'Naik sepeda ke air mancur!', done: 'Kamu cepat sekali!', reward: 6 });
+    missions.push({ id: 'balap', giver: 'lala', icon: 'bike', kind: 'ride', items: [], target: goal, returns: false, offer: 'Balapan! Naik sepeda ke air mancur.', remind: 'Naik sepeda ke air mancur!', done: 'Kamu cepat sekali!', reward: 9 });
   }
   // 6. + 7. A letter from Pak Pos (bank) to Dokter Ani (hospital); she also lost her ball near the coin tower.
   {
@@ -380,23 +382,24 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
     const hosp = bigOf('hospital');
     const fb = frontOf(bank, 4.5);
     const fh = frontOf(hosp, 4.5);
-    person('pos', 'Pak Pos', { x: fb.x + 4, z: fb.z }, 0x1e9e92, 0x333333, 'surat');
+    void fb;
+    person('pos', 'Pak Pos', { x: 88, z: 2 }, 0x1e9e92, 0x333333, 'surat'); // Pasar; the hospital is about 90 m away
     person('ani', 'Dokter Ani', { x: fh.x - 4, z: fh.z }, 0xffffff, 0x3a2a22, 'bola');
-    missions.push({ id: 'surat', giver: 'pos', icon: 'letter', kind: 'deliver', items: [], deliverTo: 'ani', returns: false, offer: 'Tolong antar surat ke dokter.', remind: 'Surat untuk Dokter Ani.', done: 'Suratnya sampai! Terima kasih!', reward: 5 });
+    missions.push({ id: 'surat', giver: 'pos', icon: 'letter', kind: 'deliver', items: [], deliverTo: 'ani', returns: false, offer: 'Tolong antar surat ke dokter.', remind: 'Surat untuk Dokter Ani.', done: 'Suratnya sampai! Terima kasih!', reward: 8 });
     const ct = towerOf('coin');
-    const ball = findFree(ct.x + 8, ct.z + 2, 1.2, 8);
-    missions.push({ id: 'bola', giver: 'ani', icon: 'ball', kind: 'collect', items: [{ x: ball.x, y: 0.5, z: ball.z }], returns: true, offer: 'Bolaku hilang! Bisa cari?', remind: 'Bolanya dekat menara koin.', done: 'Bolaku ketemu! Terima kasih!', reward: 5 });
+    const ball = findFree(ct.x - 10, ct.z + 6, 1.2, 8);
+    missions.push({ id: 'bola', giver: 'ani', icon: 'ball', kind: 'collect', items: [{ x: ball.x, y: 0.5, z: ball.z }], returns: true, offer: 'Bolaku hilang! Bisa cari?', remind: 'Bolanya dekat menara koin.', done: 'Bolaku ketemu! Terima kasih!', reward: 8 });
   }
-  // 8. Flowers on the school field for Kak Bima.
+  // 8. Flowers on the school field for Kak Bima (he waits on the west side of the plaza, about 95 m away).
   {
-    const home = parkIn(-1, -1);
+    const home = { x: -26, z: 2 };
     const field = L.pois.find((p) => p.name === 'Lapangan' && cellOf(p.x, p.z)[0] === -1 && cellOf(p.x, p.z)[1] === -1) ?? { x: home.x + 40, z: home.z + 40 };
     const items = [[-5, -4], [5, -4], [-5, 4], [5, 4]].map(([dx, dz]) => {
       const p = findFree(field.x + dx, field.z + dz, 1.0, 4);
       return { x: p.x, y: 0.5, z: p.z };
     });
-    person('bima', 'Kak Bima', { x: home.x - 4, z: home.z + 3 }, 0x7bc96f, 0x1b1b1b, 'bunga');
-    missions.push({ id: 'bunga', giver: 'bima', icon: 'flower', kind: 'collect', items, returns: true, offer: 'Aku mau 4 bunga. Bantu?', remind: 'Bunganya ada di lapangan.', done: 'Cantik sekali! Terima kasih!', reward: 5 });
+    person('bima', 'Kak Bima', { x: home.x, z: home.z }, 0x7bc96f, 0x1b1b1b, 'bunga');
+    missions.push({ id: 'bunga', giver: 'bima', icon: 'flower', kind: 'collect', items, returns: true, offer: 'Aku mau 4 bunga. Bantu?', remind: 'Bunganya ada di lapangan.', done: 'Cantik sekali! Terima kasih!', reward: 8 });
   }
   // Ground items of every mission are proven reachable like coins.
   for (const m of missions) {
