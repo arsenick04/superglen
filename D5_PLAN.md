@@ -16,7 +16,7 @@ Pola yang sudah ada: Chapter 3 di src/world/kota/Chapter3.ts + Bab3Data.ts + D4_
 - [x] **L3 Petunjuk di taman.** 3 papan/kertas petunjuk bertuliskan satu kata ("bola", "pohon", "kolam"), dibacakan bila anak menekan tombol pengeras suara. Anak memilih tempat yang cocok (atau berjalan ke sana), tempat itu berkilau, petunjuk berikutnya muncul. Tanpa jalan buntu: bantuan muncul setelah beberapa detik. Tes `bab4-clues`.
 - [x] **L4 Sosok Misterius + penutup.** Siluet muncul di taman: "Aku sudah lama mengawasimu... Superglen." lalu menghilang (ramah, tidak menakutkan). Kembali ke Lab: Nino menemukan pasukan tikus memakai alat curian dari lab lama; misi berikutnya dimulai (teaser). Chapter 4 selesai, perayaan, kota bebas lagi dan misi warga aktif. Tes `bab4-end`.
 - [x] **L5 Suara.** Semua kalimat baru Chapter 4 ke audio/dialog.json dengan ekspresi per kalimat. Aara: pilih suara anak perempuan/remaja putri yang ceria, berbeda dari warga lain. Sosok Misterius: tenang, misterius-ramah, tidak menakutkan. Glen = Finn +2, Nino = Pratama +2. Kata-kata soal dan petunjuk (bola, pohon, kolam, kata Inggris) pakai klip yang sudah ada bila ada. Anggaran sekitar 1.000 karakter.
-- [ ] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D5 + "Untuk dicoba besok pagi".
+- [x] **L6 QA dan laporan.** build, check:reach, check:quiz, smoke penuh sekali; PROGRESS.md bagian D5 + "Untuk dicoba besok pagi".
 
 ## Catatan antar sesi
 (tulis di sini keputusan, masalah, dan apa yang setengah jadi)
@@ -83,3 +83,5 @@ Kalimat baru L3 (teks saja):
 - Klip kartu baca (bukan dialog; belum ada di public/audio): `bab4_kata_bola`, `bab4_kata_pohon`, `bab4_kata_kolam`. Soal Aara memakai klip bank yang sudah ada (`quiz_inggris_008`, `_007`, `_001`).
 
 **L5 selesai.** 27 klip `bab4_*` (24 baris dialog + `bab4_kata_bola/pohon/kolam`, Nino membaca satu kata pelan) di `audio/dialog.json` dengan `delivery`, `public/audio/`. Suara baru di `audio/voices.json`: `aara` = Kak Ceria (d15jrIAARvF899pDoC6T, sudah di akun), `misterius` = Den (HmwgE8AfbDbaZpgAi4Bn, -1 semiton). Lunetta dihapus dari akun (slot bebas). Cek Scribe (ind): semua cocok kecuali perbedaan ejaan nama (Ara, Super Glenn, Tutut) dan `bab4_nino_temu` yang dibaca "computer lab" oleh Scribe setelah 1 ulang (kemungkinan ejaan STT; dengarkan). Tanpa perubahan kode src: semua `dialog.say` dan kartu baca (`audio_id` `bab4_kata_*`) sudah memakai id.
+
+- L6 selesai: QA penuh, bug pasar kosong (?level= sandbox) diperbaiki di 867ea4e.

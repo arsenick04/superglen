@@ -719,17 +719,36 @@ Dikerjakan per langkah (`D4_PLAN.md`) supaya bisa dilanjutkan bila batas pemakai
 ### Kredit
 ElevenLabs: 786 karakter untuk Chapter 3; akun sekitar 12.100 dari 40.000. Higgsfield: 0.
 
+## Paket D5: Chapter 4 "Sosok Misterius" (15 November 2026): selesai
+
+Per langkah (`D5_PLAN.md`). Kode oleh `gameplay-dev` (sonnet), suara oleh `asset-pipeline` (sonnet), QA oleh `qa-tester` (haiku).
+
+### Yang selesai
+- Chapter 4 setelah Chapter 3: Glen tanpa kostum menemui Aara di sekolah; 3 soal bahasa Inggris membuat alat penerjemah Aara makin canggih; sinyal ke taman.
+- Taman: 3 papan petunjuk "bola", "pohon", "kolam" (latihan membaca, tombol pengeras suara, bantuan Aara setelah 22 detik).
+- Sosok Misterius (siluet biru ramah) muncul lalu hilang. Di Lab, Nino menemukan tikus memakai alat curian (pancingan petualangan berikutnya). Perayaan, kota bebas lagi.
+- Kamera adegan akhir Chapter 3 diperbaiki (tidak terhalang pohon).
+- Suara 27 klip baru: Aara = Kak Ceria, Sosok Misterius = Den -1 semiton, kata papan oleh Nino.
+- **Perbaikan bug**: pemilik proyek melaporkan pasar kosong setelah latihan. Penyebab yang ditemukan: alamat dengan `?level=` membuat seluruh sesi menjadi mode jelajah bebas tanpa cerita. Sekarang cerita yang menunggu (Chapter 3) selalu jalan; jelajah bebas paksa hanya dengan `&free=1`. Hangar juga menunjukkan arah keluar selama pasar menunggu.
+
+### Hasil tes
+- build, typecheck, `check:quiz`, `check:reach`, dry-run audio (0 dari 259): lulus.
+- Smoke test penuh: sekitar 1.820 pemeriksaan, 0 error console; satu kegagalan waktu di `bab4-end` (desktop) karena mesin sibuk, tesnya diperkuat dan lulus 3 kali berturut-turut. Tes bab2 sampai bab4 dan alur lulus setelah perbaikan bug.
+
+### Masalah yang diketahui
+- Bug pasar kosong ditemukan lewat alamat `?level=`; bila pemilik proyek membuka alamat biasa, penyebab lain belum ditemukan.
+- Tikus terlihat kecil di layar HP.
+- Kamera adegan Sosok Misterius baru disetel dari layar PC.
+
+### Kredit
+ElevenLabs: 1.370 karakter untuk Chapter 4; akun sekitar 12.250 dari 40.000. Suara cadangan Lunetta dihapus. Higgsfield: 0.
+
 ## Pengingat untuk pemilik proyek
 - **Suara Glen:** masih suara ElevenLabs. Rekam sendiri kalau sudah sempat.
 - **Nada Mandarin:** minta penutur asli memeriksa 18 kata.
 
 ## Untuk dicoba besok pagi
-Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
-1. **Chapter 3**: lanjutkan save yang sudah menamatkan Chapter 2 (atau mainkan dari https://arsenick04.github.io/superglen/?reset=1). Kejar tikus di pasar dengan laser atau hentakan. Apakah mudah dan lucu untuk anak?
-2. **Berhitung**: kumpulkan bakpao dan kue, lalu jawab "Totalnya berapa?".
-3. **Adegan akhir**: apakah Si Tikus Rakus dan sosok misterius terlihat jelas, dan suara Tikus Rakus lucu (tidak menakutkan)?
-
-## Perbaikan: Chapter 3 (pasar) kosong setelah latihan
-- Penyebab: `?level=...` menyalakan mode bebas (`flow.sandbox`) untuk seluruh sesi, termasuk saat keluar hangar -> lab -> kota. Dengan save "Chapter 2 selesai, Chapter 3 belum", kota jadi jalan bebas tanpa tikus dan tanpa penunjuk.
-- Sekarang: `sandboxActive(save)` (progress.ts). Jika bab2 selesai dan bab3 belum, cerita jalan walau alamatnya `?level=`. `?level=kota&free=1` tetap jalan bebas murni.
-- Hangar (setelah latihan atau muat slot) menunjukkan sinar ke pintu keluar selama pasar menunggu.
+Setelah PR di-merge dan deploy selesai. Buka alamat biasa https://arsenick04.github.io/superglen/ (tanpa `?level=`). Di iPhone: Safari, landscape.
+1. **Chapter 3**: dengan save yang sudah menamatkan latihan, keluar dari Lab. Nino harus berseru "Cepat, ke pasar!" dan tikus ada di pasar.
+2. **Chapter 4**: temui Aara di sekolah, jawab 3 soal bahasa Inggris, baca papan di taman.
+3. **Akhir Chapter 4**: Sosok Misterius dan penutup di Lab.
