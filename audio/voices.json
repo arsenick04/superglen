@@ -194,5 +194,15 @@
     "pitchSemitones": 0,
     "labels": "id, standard accent, young female, calm",
     "note": "D6 2026-11-15: dokter rumah sakit, memakai suara Dokter Ani"
+  },
+  "ular": {
+    "voice_id": "oEOMTAySmTfDmVF6zZ2i",
+    "name": "Ami - Expressive, Friendly and Clear",
+    "model": "eleven_v4",
+    "stability": 0.25,
+    "similarity_boost": 0.8,
+    "pitchSemitones": -1,
+    "labels": "id, standard accent, young female, neutral, characters",
+    "note": "L11b 2026-11-15: Ular Melar, lucu dan mendesis, tidak menakutkan; Ami (Voice Library) nada -1 semiton"
   }
 }

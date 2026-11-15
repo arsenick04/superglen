@@ -1332,6 +1332,213 @@
     "category": "lainnya"
   },
   {
+    "id": "bab5_glen_ajak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "tts": "[excited] Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_ikut",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Gedung tua? Wah, seru! Aku ikut!",
+    "tts": "[excited] Gedung tua? Wah, seru! Aku ikut!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_singa",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Wow! Kepala singa yang besar! Keren sekali!",
+    "tts": "[amazed] Wow! Kepala singa yang besar! Keren sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_glen_masuk",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "tts": "[cheerful] Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_halo",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang, Glen! Siapa temanmu ini?",
+    "tts": "[warm] Selamat datang, Glen! Siapa temanmu ini?",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_kagum",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Halo! Aku Aara. Wah, ruangan ini canggih sekali!",
+    "tts": "[amazed] Halo! Aku Aara. Wah, ruangan ini canggih sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_alat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku Nino. Alat penerjemahmu pintar sekali, Aara!",
+    "tts": "[proud] Aku Nino. Alat penerjemahmu pintar sekali, Aara!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_glen_ular",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nino, lihat kulit ular ini. Besar sekali!",
+    "tts": "[amazed] Nino, lihat kulit ular ini. Besar sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_ular",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kupindai dulu... Ular Melar! Badannya bisa memanjang.",
+    "tts": "[curious] Kupindai dulu... Ular Melar! Badannya bisa memanjang.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_glen_super",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ini rahasia. Aku adalah Superglen!",
+    "tts": "[whispering] Aara, ini rahasia. Aku adalah Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_super",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hah? Glen itu Superglen? Hebat sekali!",
+    "tts": "[amazed] Hah? Glen itu Superglen? Hebat sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_lapangan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "tts": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_tunggu",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Aku tunggu di sini. Hati-hati, ya!",
+    "tts": "[caring] Aku tunggu di sini. Hati-hati, ya!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_semangat",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Semangat, Superglen! Kamu pasti bisa!",
+    "tts": "[excited] Semangat, Superglen! Kamu pasti bisa!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!",
+    "tts": "[alarmed] Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_garis",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lihat garis merah di tanah. Minggir sebelum dia melar!",
+    "tts": "[urgent] Lihat garis merah di tanah. Minggir sebelum dia melar!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kepalanya bersinar! Tembak laser sekarang!",
+    "tts": "[excited] Kepalanya bersinar! Tembak laser sekarang!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai kepalanya bersinar.",
+    "tts": "[calm] Belum. Tunggu sampai kepalanya bersinar.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ular Melar masih menunggu di lapangan. Kamu pasti bisa!",
+    "tts": "[encouraging] Ular Melar masih menunggu di lapangan. Kamu pasti bisa!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_ular_maaf",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sssssori ya! Aku tidak mau menakuti. Aku cuma tersesat, sss!",
+    "tts": "[playful] Sssssori ya! [sheepish] Aku tidak mau menakuti. Aku cuma tersesat, sss!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_ular_pergi",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sss... aku pulang ke hutan. Dadah, sss!",
+    "tts": "[teasing] Sss... [cheerful] aku pulang ke hutan. Dadah, sss!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Ular Melar sudah jinak.",
+    "tts": "[proud] Hebat, Superglen! Ular Melar sudah jinak.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_tikus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.",
+    "tts": "[thoughtful] Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",

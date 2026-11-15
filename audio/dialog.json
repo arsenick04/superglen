@@ -1034,5 +1034,166 @@
     "lang": "id",
     "text": "Sudah sehat! Hatimu penuh lagi.",
     "delivery": "[delighted] Sudah sehat! Hatimu penuh lagi."
+  },
+  {
+    "id": "bab5_glen_ajak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "delivery": "[excited] Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!"
+  },
+  {
+    "id": "bab5_aara_ikut",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Gedung tua? Wah, seru! Aku ikut!",
+    "delivery": "[excited] Gedung tua? Wah, seru! Aku ikut!"
+  },
+  {
+    "id": "bab5_aara_singa",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Wow! Kepala singa yang besar! Keren sekali!",
+    "delivery": "[amazed] Wow! Kepala singa yang besar! Keren sekali!"
+  },
+  {
+    "id": "bab5_glen_masuk",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "delivery": "[cheerful] Ayo masuk, Aara. Tekan tombol tangan di pintu."
+  },
+  {
+    "id": "bab5_nino_halo",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang, Glen! Siapa temanmu ini?",
+    "delivery": "[warm] Selamat datang, Glen! Siapa temanmu ini?"
+  },
+  {
+    "id": "bab5_aara_kagum",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Halo! Aku Aara. Wah, ruangan ini canggih sekali!",
+    "delivery": "[amazed] Halo! Aku Aara. Wah, ruangan ini canggih sekali!"
+  },
+  {
+    "id": "bab5_nino_alat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku Nino. Alat penerjemahmu pintar sekali, Aara!",
+    "delivery": "[proud] Aku Nino. Alat penerjemahmu pintar sekali, Aara!"
+  },
+  {
+    "id": "bab5_glen_ular",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nino, lihat kulit ular ini. Besar sekali!",
+    "delivery": "[amazed] Nino, lihat kulit ular ini. Besar sekali!"
+  },
+  {
+    "id": "bab5_nino_ular",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kupindai dulu... Ular Melar! Badannya bisa memanjang.",
+    "delivery": "[curious] Kupindai dulu... Ular Melar! Badannya bisa memanjang."
+  },
+  {
+    "id": "bab5_glen_super",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ini rahasia. Aku adalah Superglen!",
+    "delivery": "[whispering] Aara, ini rahasia. Aku adalah Superglen!"
+  },
+  {
+    "id": "bab5_aara_super",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hah? Glen itu Superglen? Hebat sekali!",
+    "delivery": "[amazed] Hah? Glen itu Superglen? Hebat sekali!"
+  },
+  {
+    "id": "bab5_nino_lapangan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "delivery": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!"
+  },
+  {
+    "id": "bab5_aara_tunggu",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Aku tunggu di sini. Hati-hati, ya!",
+    "delivery": "[caring] Aku tunggu di sini. Hati-hati, ya!"
+  },
+  {
+    "id": "bab5_aara_semangat",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Semangat, Superglen! Kamu pasti bisa!",
+    "delivery": "[excited] Semangat, Superglen! Kamu pasti bisa!"
+  },
+  {
+    "id": "bab5_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!",
+    "delivery": "[alarmed] Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!"
+  },
+  {
+    "id": "bab5_nino_garis",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lihat garis merah di tanah. Minggir sebelum dia melar!",
+    "delivery": "[urgent] Lihat garis merah di tanah. Minggir sebelum dia melar!"
+  },
+  {
+    "id": "bab5_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kepalanya bersinar! Tembak laser sekarang!",
+    "delivery": "[excited] Kepalanya bersinar! Tembak laser sekarang!"
+  },
+  {
+    "id": "bab5_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai kepalanya bersinar.",
+    "delivery": "[calm] Belum. Tunggu sampai kepalanya bersinar."
+  },
+  {
+    "id": "bab5_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ular Melar masih menunggu di lapangan. Kamu pasti bisa!",
+    "delivery": "[encouraging] Ular Melar masih menunggu di lapangan. Kamu pasti bisa!"
+  },
+  {
+    "id": "bab5_ular_maaf",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sssssori ya! Aku tidak mau menakuti. Aku cuma tersesat, sss!",
+    "delivery": "[playful] Sssssori ya! [sheepish] Aku tidak mau menakuti. Aku cuma tersesat, sss!"
+  },
+  {
+    "id": "bab5_ular_pergi",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sss... aku pulang ke hutan. Dadah, sss!",
+    "delivery": "[teasing] Sss... [cheerful] aku pulang ke hutan. Dadah, sss!"
+  },
+  {
+    "id": "bab5_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Ular Melar sudah jinak.",
+    "delivery": "[proud] Hebat, Superglen! Ular Melar sudah jinak."
+  },
+  {
+    "id": "bab5_nino_tikus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.",
+    "delivery": "[thoughtful] Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu."
   }
 ]

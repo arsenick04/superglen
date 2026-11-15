@@ -17,6 +17,7 @@ Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi sep
 | Kak Bima | Aldo - Youth, Friendly, Natural | `H7dnu83omjrDrtfihMsb` | Indonesia, laki-laki muda, ceria |
 | Bu Lina (penjual kue pasar) | Maya - Warm, Calm and Soft | `U3dExJoUNcmTY5H6GMuG` | Indonesia, perempuan paruh baya, hangat |
 | Si Tikus Rakus | Clowny - Funny and Cheerful | `UafGxvF2q1XMC9Qy4tPR` | Indonesia, laki-laki muda bernada tinggi jenaka, nada +3 semiton |
+| Ular Melar | Ami - Expressive, Friendly and Clear | `oEOMTAySmTfDmVF6zZ2i` | Indonesia, perempuan muda ramah dan ekspresif, nada -1 semiton, desisan lewat teks penyampaian |
 | Aara (Chapter 4) | Kak Ceria - Cute Kids Storyteller | `d15jrIAARvF899pDoC6T` | Indonesia, perempuan muda/anak, ceria |
 | Kata bahasa Inggris | Josh - Teacher for Kids | `nzFihrBIvB34imQBuxub` | Inggris Amerika |
 | Kata Mandarin | Sage - Soothing & Gentle | `APSIkVZudNbPAwyPoeVO` | Mandarin standar (dipilih pemilik proyek) |
