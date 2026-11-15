@@ -810,24 +810,6 @@
     "category": "bab3"
   },
   {
-    "id": "bab3_glen_lucu",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Hihi, tikusnya lucu sekali!",
-    "tts": "[giggles] Hihi, [amused] tikusnya lucu sekali!",
-    "source": "audio/dialog.json",
-    "category": "bab3"
-  },
-  {
-    "id": "bab3_glen_semua",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Semua tikus kecil sudah kabur!",
-    "tts": "[excited] Semua tikus kecil sudah kabur!",
-    "source": "audio/dialog.json",
-    "category": "bab3"
-  },
-  {
     "id": "bab3_lina_hilang",
     "speaker": "lina",
     "lang": "id",
@@ -900,24 +882,6 @@
     "category": "bab3"
   },
   {
-    "id": "bab3_glen_siapa",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Eh, siapa itu di bayangan?",
-    "tts": "[curious] Eh, siapa itu di bayangan?",
-    "source": "audio/dialog.json",
-    "category": "bab3"
-  },
-  {
-    "id": "bab3_nino_siapa",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Hmm, kita cari tahu nanti. Kerja bagus, Glen!",
-    "tts": "[thoughtful] Hmm, kita cari tahu nanti. [cheerful] Kerja bagus, Glen!",
-    "source": "audio/dialog.json",
-    "category": "bab3"
-  },
-  {
     "id": "bab3_lina_terima",
     "speaker": "lina",
     "lang": "id",
@@ -925,15 +889,6 @@
     "tts": "[grateful] Terima kasih, Superglen!",
     "source": "audio/dialog.json",
     "category": "bab3"
-  },
-  {
-    "id": "bab4_nino_mulai",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!",
-    "tts": "[cheerful] Glen, ayo temui Aara di sekolah. [encouraging] Dia pintar mencari petunjuk!",
-    "source": "audio/dialog.json",
-    "category": "bab4"
   },
   {
     "id": "bab4_aara_halo",
@@ -1067,78 +1022,6 @@
     "lang": "id",
     "text": "Ayo, ke tempat yang berkilau!",
     "tts": "[encouraging] Ayo, ke tempat yang berkilau!",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_aara_lihat",
-    "speaker": "aara",
-    "lang": "id",
-    "text": "Glen, lihat! Siapa itu di dekat pohon?",
-    "tts": "[whispers] Glen, lihat! [surprised] Siapa itu di dekat pohon?",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_misterius_awas",
-    "speaker": "misterius",
-    "lang": "id",
-    "text": "Aku sudah lama mengawasimu... Superglen.",
-    "tts": "[softly] Aku sudah lama mengawasimu... [warmly] Superglen.",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_glen_tahu",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Dia tahu namaku! Dia siapa, ya?",
-    "tts": "[surprised] Dia tahu namaku! [curious] Dia siapa, ya?",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_aara_lapor",
-    "speaker": "aara",
-    "lang": "id",
-    "text": "Ayo lapor ke Nino di lab!",
-    "tts": "[determined] Ayo lapor ke Nino di lab!",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_nino_temu",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Glen! Aku menemukan sesuatu di komputer lab.",
-    "tts": "[serious] Glen! Aku menemukan sesuatu di komputer lab.",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_nino_alat",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Pasukan tikus memakai alat curian dari lab lama kita!",
-    "tts": "[serious] Pasukan tikus memakai alat curian dari lab lama kita!",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_glen_curi",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Wah! Kita harus mengambilnya kembali.",
-    "tts": "[determined] Wah! Kita harus mengambilnya kembali.",
-    "source": "audio/dialog.json",
-    "category": "bab4"
-  },
-  {
-    "id": "bab4_nino_siap",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
-    "tts": "[encouraging] Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
     "source": "audio/dialog.json",
     "category": "bab4"
   },
@@ -1310,6 +1193,141 @@
     "lang": "id",
     "text": "Sedikit lagi, kamu hampir sampai!",
     "tts": "[playful] Sedikit lagi, kamu hampir sampai!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "bab3_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "tts": "[proud] Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_lucu2",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hihi, Curut Cemberutnya lucu sekali!",
+    "tts": "[cheerful] Hihi, Curut Cemberutnya lucu sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab3_glen_semua2",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua Curut Cemberut sudah kabur!",
+    "tts": "[excited] Semua Curut Cemberut sudah kabur!",
+    "source": "audio/dialog.json",
+    "category": "bab3"
+  },
+  {
+    "id": "bab4_glen_mulai",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!",
+    "tts": "[cheerful] Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_kulit",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen, lihat! Apa ini? Panjang sekali!",
+    "tts": "[curious] Glen, lihat! Apa ini? Panjang sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_kulit",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ini kulit ular yang ganti kulit! Besar sekali!",
+    "tts": "[amazed] Ini kulit ular yang ganti kulit! Besar sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_bantuan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ularnya pasti besar. Kita butuh bantuan.",
+    "tts": "[worried] Ularnya pasti besar. Kita butuh bantuan.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_kenal",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku kenal seseorang yang bisa membantu!",
+    "tts": "[hopeful] Aku kenal seseorang yang bisa membantu!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "combat_nino_semangat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!",
+    "tts": "[warm] Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_kios_penuh",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Hatimu sudah penuh. Tidak perlu makan lagi!",
+    "tts": "[cheerful] Hatimu sudah penuh. Tidak perlu makan lagi!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_kios_kurang",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "tts": "[gentle] Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_kios_terima",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Hmm, enak! Hatimu bertambah satu.",
+    "tts": "[delighted] Hmm, enak! Hatimu bertambah satu.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_rs_penuh",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Kamu sehat sekali. Hatimu sudah penuh!",
+    "tts": "[warm] Kamu sehat sekali. Hatimu sudah penuh!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_rs_kurang",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "tts": "[gentle] Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "heal_rs_sehat",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Sudah sehat! Hatimu penuh lagi.",
+    "tts": "[delighted] Sudah sehat! Hatimu penuh lagi.",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
