@@ -65,6 +65,9 @@ Untuk ganti: ubah `mandarin.voice_id` di `audio/voices.json`, lalu `npm run audi
 
 Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Tag emosi membuat nada lebih naik-turun; kalau nada Mandarin terdengar berlebihan, ganti tag di `audio/delivery.json` (`speak_zh`) atau hilangkan. Minta penutur asli mengecek nada sebelum dipakai anak.
 
+## Bank soal 60 per kategori (2026-11-15)
+Semua 300 soal quiz (5 kategori x 60) dan 16 variasi Nino (`nino_pujian_01..08`, `nino_coba_01..04`, `nino_semangat_01..04`, dari `content/nino_variasi.json`) sudah bersuara; total 520 klip di manifest, `--dry-run` = 0 untuk dibuat. Dicek dengan Scribe; klip yang masih meragukan: lihat laporan sesi (suku kata `quiz_baca_031..039` tanpa jeda, beberapa kata Mandarin satu aksara). Perbaiki dengan menambah `_ids` di `audio/delivery.json` (pola `[curious] Mana suku kata... ba?`) lalu `--only=<id>`.
+
 ## Warga Kota Botanica (D3, 2026-11-14)
 Delapan warga punya suara sendiri (speaker `res_sari`, `res_joko`, `res_dimas`, `res_guru`, `res_lala`, `res_pos`, `res_ani`, `res_bima` di `audio/voices.json`, nada 0, eleven_v4, stability 0.3). Nama suara ada di `CREDITS.md`. Id klip: `kota_<misi>_<offer|remind|done>`, `kota_<warga>_<halo|terima>` (salam per warga), `kota_glen_ketemu`, `kota_glen_semua` (Glen, Finn +2 st). Kalimat `surat_done` diucapkan Dokter Ani. "Ganti tugas?" adalah judul tombol Ya/Tidak, bukan dialog, jadi tanpa suara. Kategori manifest: `lainnya`. Id dikirim dari `CityPeople.say(speaker, text, id)`.
 

@@ -2893,7 +2893,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "一",
-    "tts": "[cheerful] 一",
+    "tts": "[cheerful] 一！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -2965,7 +2965,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "七",
-    "tts": "[cheerful] 七",
+    "tts": "[cheerful] 七！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },

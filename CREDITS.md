@@ -1,7 +1,7 @@
 # Kredit
 
 ## Suara (voices)
-Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Nino dinaikkan dan nada Glen dinaikkan 2 semiton di pascaproduksi (ffmpeg rubberband). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
+Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi seperti [excited]) lewat langganan pemilik proyek; nada Nino dinaikkan dan nada Glen dinaikkan 2 semiton di pascaproduksi (ffmpeg rubberband). Per 2026-11-15: 520 klip ucapan (200 soal quiz di 5 kategori x 60 soal minus soal lama sudah termasuk, kata Inggris/Mandarin, 16 variasi pujian/coba lagi/semangat Nino). Suara sementara; akan diganti rekaman keluarga bila ada. Pengaturan: `audio/voices.json`. Semua suara dari ElevenLabs Voice Library (dipakai lewat langganan berbayar), ditambahkan ke akun pemilik proyek 2026-11-14:
 
 | Peran | Suara | ID | Catatan |
 |---|---|---|---|
