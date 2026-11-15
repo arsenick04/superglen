@@ -22,6 +22,12 @@ const FACES: Readonly<Record<string, FaceStyle>> = {
     ring: '#ffffff',
     extra: '<circle cx="10" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="54" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="10" cy="14" r="4" fill="#f5a3b5"/><circle cx="54" cy="14" r="4" fill="#f5a3b5"/>',
   },
+  // Ular Melar: green with purple spots (a silly snake).
+  ular: {
+    bg: '#6cc04a',
+    ring: '#ffffff',
+    extra: '<circle cx="18" cy="48" r="5" fill="#9b6bd6"/><circle cx="46" cy="50" r="4" fill="#9b6bd6"/><circle cx="32" cy="8" r="4" fill="#9b6bd6"/>',
+  },
   // Food stall seller and the hospital doctor.
   penjual: { bg: '#f2b632', ring: '#ffffff' },
   dokter: { bg: '#2ec4b6', ring: '#ffffff' },

@@ -630,20 +630,6 @@
     "delivery": "[excited] Itu mereka! [cheerful] Tembak atau hentakkan, ya!"
   },
   {
-    "id": "bab3_glen_lucu",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Hihi, tikusnya lucu sekali!",
-    "delivery": "[giggles] Hihi, [amused] tikusnya lucu sekali!"
-  },
-  {
-    "id": "bab3_glen_semua",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Semua tikus kecil sudah kabur!",
-    "delivery": "[excited] Semua tikus kecil sudah kabur!"
-  },
-  {
     "id": "bab3_lina_hilang",
     "speaker": "lina",
     "lang": "id",
@@ -700,32 +686,11 @@
     "delivery": "[amused] Itu Si Tikus Rakus! [confident] Kita pasti bertemu lagi."
   },
   {
-    "id": "bab3_glen_siapa",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Eh, siapa itu di bayangan?",
-    "delivery": "[curious] Eh, siapa itu di bayangan?"
-  },
-  {
-    "id": "bab3_nino_siapa",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Hmm, kita cari tahu nanti. Kerja bagus, Glen!",
-    "delivery": "[thoughtful] Hmm, kita cari tahu nanti. [cheerful] Kerja bagus, Glen!"
-  },
-  {
     "id": "bab3_lina_terima",
     "speaker": "lina",
     "lang": "id",
     "text": "Terima kasih, Superglen!",
     "delivery": "[grateful] Terima kasih, Superglen!"
-  },
-  {
-    "id": "bab4_nino_mulai",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!",
-    "delivery": "[cheerful] Glen, ayo temui Aara di sekolah. [encouraging] Dia pintar mencari petunjuk!"
   },
   {
     "id": "bab4_aara_halo",
@@ -831,62 +796,6 @@
     "lang": "id",
     "text": "Ayo, ke tempat yang berkilau!",
     "delivery": "[encouraging] Ayo, ke tempat yang berkilau!"
-  },
-  {
-    "id": "bab4_aara_lihat",
-    "speaker": "aara",
-    "lang": "id",
-    "text": "Glen, lihat! Siapa itu di dekat pohon?",
-    "delivery": "[whispers] Glen, lihat! [surprised] Siapa itu di dekat pohon?"
-  },
-  {
-    "id": "bab4_misterius_awas",
-    "speaker": "misterius",
-    "lang": "id",
-    "text": "Aku sudah lama mengawasimu... Superglen.",
-    "delivery": "[softly] Aku sudah lama mengawasimu... [warmly] Superglen."
-  },
-  {
-    "id": "bab4_glen_tahu",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Dia tahu namaku! Dia siapa, ya?",
-    "delivery": "[surprised] Dia tahu namaku! [curious] Dia siapa, ya?"
-  },
-  {
-    "id": "bab4_aara_lapor",
-    "speaker": "aara",
-    "lang": "id",
-    "text": "Ayo lapor ke Nino di lab!",
-    "delivery": "[determined] Ayo lapor ke Nino di lab!"
-  },
-  {
-    "id": "bab4_nino_temu",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Glen! Aku menemukan sesuatu di komputer lab.",
-    "delivery": "[serious] Glen! Aku menemukan sesuatu di komputer lab."
-  },
-  {
-    "id": "bab4_nino_alat",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Pasukan tikus memakai alat curian dari lab lama kita!",
-    "delivery": "[serious] Pasukan tikus memakai alat curian dari lab lama kita!"
-  },
-  {
-    "id": "bab4_glen_curi",
-    "speaker": "glen",
-    "lang": "id",
-    "text": "Wah! Kita harus mengambilnya kembali.",
-    "delivery": "[determined] Wah! Kita harus mengambilnya kembali."
-  },
-  {
-    "id": "bab4_nino_siap",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
-    "delivery": "[encouraging] Betul. Petualangan berikutnya menunggu. Siap, Superglen?"
   },
   {
     "id": "bab4_kata_bola",
@@ -1020,5 +929,418 @@
     "lang": "id",
     "text": "Sedikit lagi, kamu hampir sampai!",
     "delivery": "[playful] Sedikit lagi, kamu hampir sampai!"
+  },
+  {
+    "id": "bab3_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "delivery": "[proud] Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!"
+  },
+  {
+    "id": "bab3_glen_lucu2",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hihi, Curut Cemberutnya lucu sekali!",
+    "delivery": "[cheerful] Hihi, Curut Cemberutnya lucu sekali!"
+  },
+  {
+    "id": "bab3_glen_semua2",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua Curut Cemberut sudah kabur!",
+    "delivery": "[excited] Semua Curut Cemberut sudah kabur!"
+  },
+  {
+    "id": "bab4_glen_mulai",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!",
+    "delivery": "[cheerful] Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!"
+  },
+  {
+    "id": "bab4_aara_kulit",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen, lihat! Apa ini? Panjang sekali!",
+    "delivery": "[curious] Glen, lihat! Apa ini? Panjang sekali!"
+  },
+  {
+    "id": "bab4_glen_kulit",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ini kulit ular yang ganti kulit! Besar sekali!",
+    "delivery": "[amazed] Ini kulit ular yang ganti kulit! Besar sekali!"
+  },
+  {
+    "id": "bab4_aara_bantuan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ularnya pasti besar. Kita butuh bantuan.",
+    "delivery": "[worried] Ularnya pasti besar. Kita butuh bantuan."
+  },
+  {
+    "id": "bab4_glen_kenal",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku kenal seseorang yang bisa membantu!",
+    "delivery": "[hopeful] Aku kenal seseorang yang bisa membantu!"
+  },
+  {
+    "id": "combat_nino_semangat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!",
+    "delivery": "[warm] Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!"
+  },
+  {
+    "id": "heal_kios_penuh",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Hatimu sudah penuh. Tidak perlu makan lagi!",
+    "delivery": "[cheerful] Hatimu sudah penuh. Tidak perlu makan lagi!"
+  },
+  {
+    "id": "heal_kios_kurang",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "delivery": "[gentle] Koinmu belum cukup. Kumpulkan koin dulu, ya!"
+  },
+  {
+    "id": "heal_kios_terima",
+    "speaker": "penjual",
+    "lang": "id",
+    "text": "Hmm, enak! Hatimu bertambah satu.",
+    "delivery": "[delighted] Hmm, enak! Hatimu bertambah satu."
+  },
+  {
+    "id": "heal_rs_penuh",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Kamu sehat sekali. Hatimu sudah penuh!",
+    "delivery": "[warm] Kamu sehat sekali. Hatimu sudah penuh!"
+  },
+  {
+    "id": "heal_rs_kurang",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Koinmu belum cukup. Kumpulkan koin dulu, ya!",
+    "delivery": "[gentle] Koinmu belum cukup. Kumpulkan koin dulu, ya!"
+  },
+  {
+    "id": "heal_rs_sehat",
+    "speaker": "dokter",
+    "lang": "id",
+    "text": "Sudah sehat! Hatimu penuh lagi.",
+    "delivery": "[delighted] Sudah sehat! Hatimu penuh lagi."
+  },
+  {
+    "id": "bab5_glen_ajak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "delivery": "[excited] Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!"
+  },
+  {
+    "id": "bab5_aara_ikut",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Gedung tua? Wah, seru! Aku ikut!",
+    "delivery": "[excited] Gedung tua? Wah, seru! Aku ikut!"
+  },
+  {
+    "id": "bab5_aara_singa",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Wow! Kepala singa yang besar! Keren sekali!",
+    "delivery": "[amazed] Wow! Kepala singa yang besar! Keren sekali!"
+  },
+  {
+    "id": "bab5_glen_masuk",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "delivery": "[cheerful] Ayo masuk, Aara. Tekan tombol tangan di pintu."
+  },
+  {
+    "id": "bab5_nino_halo",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang, Glen! Siapa temanmu ini?",
+    "delivery": "[warm] Selamat datang, Glen! Siapa temanmu ini?"
+  },
+  {
+    "id": "bab5_aara_kagum",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Halo! Aku Aara. Wah, ruangan ini canggih sekali!",
+    "delivery": "[amazed] Halo! Aku Aara. Wah, ruangan ini canggih sekali!"
+  },
+  {
+    "id": "bab5_nino_alat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aku Nino. Alat penerjemahmu pintar sekali, Aara!",
+    "delivery": "[proud] Aku Nino. Alat penerjemahmu pintar sekali, Aara!"
+  },
+  {
+    "id": "bab5_glen_ular",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nino, lihat kulit ular ini. Besar sekali!",
+    "delivery": "[amazed] Nino, lihat kulit ular ini. Besar sekali!"
+  },
+  {
+    "id": "bab5_nino_ular",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kupindai dulu... Ular Melar! Badannya bisa memanjang.",
+    "delivery": "[curious] Kupindai dulu... Ular Melar! Badannya bisa memanjang."
+  },
+  {
+    "id": "bab5_glen_super",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aara, ini rahasia. Aku adalah Superglen!",
+    "delivery": "[whispering] Aara, ini rahasia. Aku adalah Superglen!"
+  },
+  {
+    "id": "bab5_aara_super",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hah? Glen itu Superglen? Hebat sekali!",
+    "delivery": "[amazed] Hah? Glen itu Superglen? Hebat sekali!"
+  },
+  {
+    "id": "bab5_nino_lapangan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "delivery": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!"
+  },
+  {
+    "id": "bab5_aara_tunggu",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Aku tunggu di sini. Hati-hati, ya!",
+    "delivery": "[caring] Aku tunggu di sini. Hati-hati, ya!"
+  },
+  {
+    "id": "bab5_aara_semangat",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Semangat, Superglen! Kamu pasti bisa!",
+    "delivery": "[excited] Semangat, Superglen! Kamu pasti bisa!"
+  },
+  {
+    "id": "bab5_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!",
+    "delivery": "[alarmed] Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!"
+  },
+  {
+    "id": "bab5_nino_garis",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lihat garis merah di tanah. Minggir sebelum dia melar!",
+    "delivery": "[urgent] Lihat garis merah di tanah. Minggir sebelum dia melar!"
+  },
+  {
+    "id": "bab5_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kepalanya bersinar! Tembak laser sekarang!",
+    "delivery": "[excited] Kepalanya bersinar! Tembak laser sekarang!"
+  },
+  {
+    "id": "bab5_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai kepalanya bersinar.",
+    "delivery": "[calm] Belum. Tunggu sampai kepalanya bersinar."
+  },
+  {
+    "id": "bab5_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ular Melar masih menunggu di lapangan. Kamu pasti bisa!",
+    "delivery": "[encouraging] Ular Melar masih menunggu di lapangan. Kamu pasti bisa!"
+  },
+  {
+    "id": "bab5_ular_maaf",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sssssori ya! Aku tidak mau menakuti. Aku cuma tersesat, sss!",
+    "delivery": "[playful] Sssssori ya! [sheepish] Aku tidak mau menakuti. Aku cuma tersesat, sss!"
+  },
+  {
+    "id": "bab5_ular_pergi",
+    "speaker": "ular",
+    "lang": "id",
+    "text": "Sss... aku pulang ke hutan. Dadah, sss!",
+    "delivery": "[teasing] Sss... [cheerful] aku pulang ke hutan. Dadah, sss!"
+  },
+  {
+    "id": "bab5_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Ular Melar sudah jinak.",
+    "delivery": "[proud] Hebat, Superglen! Ular Melar sudah jinak."
+  },
+  {
+    "id": "bab5_nino_tikus",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.",
+    "delivery": "[thoughtful] Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu."
+  },
+  {
+    "id": "bab6_nino_laporan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, ada laporan! Semua makanan di Gudang Pasar hilang!",
+    "delivery": "[urgent] Superglen, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!"
+  },
+  {
+    "id": "bab6_nino_cari",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mungkin tikus besar itu pelakunya. Ayo kita cari di Gudang Pasar!",
+    "delivery": "[thoughtful] Mungkin tikus besar itu pelakunya. [determined] Ayo kita cari di Gudang Pasar!"
+  },
+  {
+    "id": "bab6_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Siap, Nino! Ayo ke gudang!",
+    "delivery": "[excited] Siap, Nino! Ayo ke gudang!"
+  },
+  {
+    "id": "bab6_rakus_makan",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hihihi! Makin banyak kumakan, makin besar aku!",
+    "delivery": "[greedy giggle] Hihihi! [playful] Makin banyak kumakan, makin besar aku!"
+  },
+  {
+    "id": "bab6_glen_kembali",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hei, Tikus Rakus! Kembalikan makanan kota!",
+    "delivery": "[brave] Hei, Tikus Rakus! [firm] Kembalikan makanan kota!"
+  },
+  {
+    "id": "bab6_rakus_raja",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Tidak mau! Lihat mahkotaku! Curut-curut, jaga makananku!",
+    "delivery": "[cheeky] Tidak mau! [proudly] Lihat mahkotaku! [bossy] Curut-curut, jaga makananku!"
+  },
+  {
+    "id": "bab6_nino_pola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. Tembak makanannya dulu!",
+    "delivery": "[urgent] Awas! Kalau makanannya bersinar, dia akan makan dan jadi besar. [urgent] Tembak makanannya dulu!"
+  },
+  {
+    "id": "bab6_nino_makan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Makanannya bersinar! Tembak atau hentak sebelum dia makan!",
+    "delivery": "[urgent] Makanannya bersinar! Tembak atau hentak sebelum dia makan!"
+  },
+  {
+    "id": "bab6_nino_selamat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bagus! Makanannya selamat!",
+    "delivery": "[proud] Bagus! Makanannya selamat!"
+  },
+  {
+    "id": "bab6_nino_besar",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia makin besar! Awas cincin merah di tanah!",
+    "delivery": "[alarmed] Dia makin besar! Awas cincin merah di tanah!"
+  },
+  {
+    "id": "bab6_nino_cincin",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada cincin merah! Lompat atau pakai perisai!",
+    "delivery": "[urgent] Ada cincin merah! Lompat atau pakai perisai!"
+  },
+  {
+    "id": "bab6_nino_pusing",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dia kehabisan napas! Tembak laser sekarang!",
+    "delivery": "[urgent] Dia kehabisan napas! Tembak laser sekarang!"
+  },
+  {
+    "id": "bab6_nino_belum",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belum. Tunggu sampai dia kehabisan napas.",
+    "delivery": "[calm] Belum. Tunggu sampai dia kehabisan napas."
+  },
+  {
+    "id": "bab6_nino_kecil",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kena! Dia mengecil lagi, hihi!",
+    "delivery": "[proud] Kena! [giggle] Dia mengecil lagi, hihi!"
+  },
+  {
+    "id": "bab6_nino_curut",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
+    "delivery": "[urgent] Curut Cemberut datang membantu! Tembak tiga kali atau hentak!"
+  },
+  {
+    "id": "bab6_nino_lagi",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tikus Rakus masih di jalan depan gudang. Kamu pasti bisa!",
+    "delivery": "[encouraging] Tikus Rakus masih di jalan depan gudang. [warm] Kamu pasti bisa!"
+  },
+  {
+    "id": "bab6_rakus_sendawa",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Hik! Sendawa... Perutku sakit. Sekarang aku kecil lagi.",
+    "delivery": "[burp] Hik! [silly] Sendawa... [groaning] Perutku sakit. [sad] Sekarang aku kecil lagi."
+  },
+  {
+    "id": "bab6_rakus_maaf",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Maaf ya, aku rakus sekali. Makanannya kukembalikan.",
+    "delivery": "[sorry] Maaf ya, aku rakus sekali. [sheepish] Makanannya kukembalikan."
+  },
+  {
+    "id": "bab6_rakus_bagi",
+    "speaker": "rakus",
+    "lang": "id",
+    "text": "Aku janji, mulai sekarang makanan kita bagi bersama!",
+    "delivery": "[cheerful] Aku janji, mulai sekarang makanan kita bagi bersama!"
+  },
+  {
+    "id": "bab6_warga_hore",
+    "speaker": "warga",
+    "lang": "id",
+    "text": "Hore! Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "delivery": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, Superglen!"
+  },
+  {
+    "id": "bab6_nino_hebat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "delivery": "[proud] Hebat, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
   }
 ]

@@ -29,6 +29,7 @@ export class Celebration {
   async play(): Promise<void> {
     const { seq, player: pl } = this.ctx;
     const sparkles = this.sparkles;
+    pl.emote('cheer', 3);
     for (let i = 0; i < 4; i++) {
       const p = pl.visualPosition;
       sparkles.burst(p.x + (i - 1.5) * 1.2, p.y + 2.5, p.z - 1, 40, 5, -1, { gravity: 3, life: 1.6, up: 1 });

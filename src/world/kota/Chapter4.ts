@@ -135,7 +135,7 @@ export class Chapter4 {
 
   private putAara(x: number, z: number, yaw: number): void {
     if (!this.aara) {
-      this.aara = new AaraActor(this.lit);
+      this.aara = new AaraActor(this.lit, this.ctx.dialog);
       this.ctx.root.add(this.aara.group);
       this.ctx.onDispose(() => this.aara?.dispose());
     }

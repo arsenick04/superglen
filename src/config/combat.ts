@@ -57,6 +57,118 @@ export const Combat = {
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
     globalGap: 0.9,
   },
+  /** Ular Melar (Chapter 5 mini-boss): 3 stars; the head glows when dizzy and only then does the laser count. */
+  snake: {
+    /** Stars (health). One successful laser hit in a dizzy window takes one. */
+    stars: 3,
+    /** The snake wakes when a child comes this close to its coil (m). */
+    engageRadius: 22,
+    /** Size multiplier on the whole snake (the coil is about 3.2 m tall: clearly bigger than Glen). */
+    scale: 1,
+    /** Seconds the snake waits between two lunges (coiled, looking around). */
+    cooldown: 2.2,
+    cooldownEasy: 3.6,
+    /** Wind-up: coils and wiggles, a red stripe shows the line of the lunge (s). */
+    windup: 1.15,
+    windupEasy: 1.8,
+    /** The stripe's direction is locked after this share of the wind-up (walk or jump aside after that). */
+    lockShare: 0.4,
+    /** The lunge: the head shoots out this far (m) in `lungeTime` s. */
+    reach: 9,
+    lungeTime: 0.32,
+    /** Body hits a child closer than `hitRadius` (m) to the stretched body; his feet must be lower than `touchTop` (a jump clears it). */
+    hitRadius: 1.15,
+    touchTop: 1.05,
+    /** Width of the red stripe on the ground (m). */
+    stripeWidth: 2.2,
+    /** Dizzy time (s) after: a missed lunge, a shield block (longer: the reward), a hit on Glen (short). Head glows meanwhile. */
+    dizzyMiss: 3.4,
+    dizzyBlock: 4.4,
+    dizzyHit: 1.8,
+    dizzyEasyMul: 1.5,
+    /** After a star is lost the snake stays dizzy this long at most (s), then pulls back. */
+    afterHit: 1.0,
+    /** Seconds to pull the stretched body back to the coil. */
+    retract: 0.8,
+    /** Laser aim: the head is big, so the assist cone is generous. */
+    aimRadius: 1.2,
+    assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 22 },
+    /** Hint lines: Nino says them at most this often (s). */
+    hintGap: 25,
+  },
+  /**
+   * Tikus Rakus (Chapter 6 mini-boss): 3 stars. Pattern, repeated: a food pile glows -> he runs to it and EATS (grows one size step,
+   * `maxLevel` at most; the child can pop the glowing pile with the laser or a stomp first) -> belly-bounce slam (a ring on the ground
+   * shows where, jump / shield / step out) -> out of breath (dizzy): only now the laser takes a star, and he shrinks one step.
+   * Curut Cemberut helpers join between rounds. Everything is silly, nobody is hurt.
+   */
+  rakus: {
+    /** Stars (health). */
+    stars: 3,
+    /** Biggest size step (steps 0..maxLevel). At the biggest size he no longer eats: slower, bigger ring. */
+    maxLevel: 3,
+    /** Height of the body at step 0 (m): Glen is 1.1, so about 1.5 times Glen from the start. */
+    baseHeight: 1.7,
+    /** Size multiplier per step. */
+    sizes: [1, 1.24, 1.48, 1.76],
+    /** Walking speed per step (m/s): the bigger the slower. */
+    speed: [4.4, 3.9, 3.3, 2.4],
+    /** He wakes when a child comes this close to the arena centre (m). */
+    engageRadius: 22,
+    /** Arena: the food piles lie on this ring around the centre (m); he stays inside `arenaRadius`. */
+    pileRadius: 6.6,
+    pileCount: 4,
+    arenaRadius: 8.6,
+    /** A popped or eaten pile comes back after this long (s). */
+    pileRespawn: 5,
+    /** The pile glows this long before he goes for it (s): the clear cue. */
+    cue: 1.7,
+    cueEasy: 2.6,
+    /** Eating takes this long (s); the pile shrinks meanwhile. */
+    eat: 2,
+    eatEasy: 3,
+    /** Growing one step (s). */
+    grow: 0.6,
+    /** After a popped pile he pouts this long (s) before the tantrum slam. */
+    pout: 1.3,
+    /** Laser / stomp aim radius of a pile (m). */
+    pileAim: 1.0,
+    /** Walk toward the child until closer than this share of the ring radius (or `approachMax` s). */
+    approachShare: 0.8,
+    approachMax: 2.4,
+    /** Slam: ring wind-up (s), the hop (s), ring radius per size step (m), the child's feet must be lower than `touchTop` (a jump clears it). */
+    wind: 1.0,
+    windEasy: 1.5,
+    hop: 0.38,
+    ring: [3.0, 3.8, 4.8, 6.0],
+    ringEasyMul: 0.8,
+    touchTop: 0.9,
+    /** Out-of-breath time (s): after a slam that missed, was blocked by the shield (the reward), hit Glen (short). Easy mode multiplies. */
+    dizzyMiss: 3.0,
+    dizzyBlock: 4.2,
+    dizzyHit: 2.2,
+    dizzyEasyMul: 1.5,
+    /** After a star is lost he stays dizzy at most this long (s). */
+    afterHit: 1.0,
+    /** Short get-up before the next round (s). */
+    recover: 0.8,
+    /** Laser aim at his belly: the body is big, so the assist cone is generous. */
+    aimRadius: 1.4,
+    assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 22 },
+    /** Hint lines: Nino says them at most this often (s). */
+    hintGap: 25,
+    /** Curut Cemberut helpers (the small rats of Chapter 3, 3 hits each) join after round 1, 3, 5 ... */
+    helpers: {
+      max: 3,
+      perWave: 2,
+      /** Walking speed while chasing (m/s). */
+      speed: 2.6,
+      /** Seconds between any two helper attacks starting. */
+      gap: 1.6,
+      /** Helper attacks never start while the boss slam ring is up; a boss slam waits at most this long for a helper wind-up (s). */
+      bossWait: 1.5,
+    },
+  },
   /** Laser assist: a small cone, generous up close, narrow far away. */
   laser: {
     assistRange: 16,

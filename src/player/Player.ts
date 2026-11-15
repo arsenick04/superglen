@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Figure, figureMaterial } from './Figure';
+import { figureMaterial } from './Figure';
+import { Avatar } from './CharacterModels';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
@@ -51,6 +52,8 @@ import { WallKick } from './WallKick';
 const CAPSULE_HALF_HEIGHT = (C.height - 2 * C.radius) / 2; // half length of the cylinder part
 /** Warm fill so skin does not look grey-green under the grass-tinted hemisphere light. */
 const FILL_COLOR = 0x4a3a2e;
+/** Strength of the dark fill light on the animated model (the textured model needs far less than the flat figure). */
+const RIG_FILL = 0.3;
 const CENTER_TO_FEET = C.height / 2;
 
 /** Shortest signed difference between two angles (radians). */
@@ -195,9 +198,9 @@ export class Player {
   private readonly spinGroup = new THREE.Group();
   private bodyMat!: THREE.MeshStandardMaterial;
   private glowing = false;
-  private glenFig!: Figure;
-  private superFig!: Figure;
-  private figState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false };
+  private glenFig!: Avatar;
+  private superFig!: Avatar;
+  private figState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, shield: false };
   private shadow!: THREE.Mesh;
   private shadowMat!: THREE.MeshBasicMaterial;
   private aura!: THREE.Mesh;
@@ -310,6 +313,16 @@ export class Player {
   /** A tiny cosmetic hop (about 0.25 m) when standing on the ground; ignored in the air. Not a jump. */
   smallHop(speed: number = Parkour.smallHopSpeed): void {
     this.hopPending = speed;
+  }
+
+  /** The figure of the current mode (animated model, or the low-poly one while it loads). */
+  get avatar(): Avatar {
+    return this._mode === 'superglen' ? this.superFig : this.glenFig;
+  }
+
+  /** A celebration clip on the current figure (the Chapter-done moment). */
+  emote(clip: 'cheer' | 'wave', secs: number): void {
+    this.avatar.emote(clip, secs);
   }
 
   /** Subscribe to Superglen landing stomps. */
@@ -819,6 +832,7 @@ export class Player {
     if (this.teleported) this.teleported = false;
     else this.landTime = this.simTime;
     this.idleTimer = 0;
+    if (impact > 3) this.avatar.land(Math.hypot(this.velocity.x, this.velocity.z));
     this.landedFromFlight = this.flewThisAir;
     this.flewThisAir = false;
     this.flight.clearAfterFlight();
@@ -1038,7 +1052,15 @@ export class Player {
       fs.vy = this.verticalVelocity;
       fs.flying = F.isFlying;
       fs.riding = this.rideLift > 0.01;
-      (this._mode === 'superglen' ? this.superFig : this.glenFig).pose(dt, fs);
+      fs.shield = this.skills.shield.up;
+      const av = this.avatar;
+      av.pose(dt, fs);
+      // The rhythm glow and the dark fill follow the player's own material onto the animated model.
+      const gm = av.material;
+      if (gm) {
+        gm.emissive.copy(this.bodyMat.emissive);
+        gm.emissiveIntensity = this.bodyMat.emissiveIntensity * (this.glowing ? 1 : RIG_FILL);
+      }
     }
     this.spinGroup.rotation.set(this.spinAngle + F.tiltX, 0, F.tiltZ);
     this.spinGroup.position.y = CENTER_TO_FEET + F.bob + this.rideLift;
@@ -1164,6 +1186,7 @@ export class Player {
     this.knockX = (dx / l) * speed;
     this.knockZ = (dz / l) * speed;
     this.knockTime = time;
+    this.avatar.hit();
   }
 
   /** Back to the last safe ground (same floor resolution as a level spawn). */
@@ -1185,8 +1208,11 @@ export class Player {
     this.object.add(this.squashGroup);
 
     // Human figures (feet at the bottom of the capsule); the capsule collider itself is unchanged.
-    this.glenFig = new Figure('glen', this.bodyMat);
-    this.superFig = new Figure('superglen', this.bodyMat);
+    this.glenFig = new Avatar('glen', this.bodyMat, true, FILL_COLOR);
+    this.superFig = new Avatar('superglen', this.bodyMat, true, FILL_COLOR);
+    this.skills.onAlways('laserFire', () => {
+      if (this._mode === 'superglen') this.superFig.shoot();
+    });
     this.superFig.root.visible = false;
     this.glenFig.root.position.y = -CENTER_TO_FEET;
     this.superFig.root.position.y = -CENTER_TO_FEET;

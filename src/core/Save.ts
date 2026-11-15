@@ -61,6 +61,13 @@ export interface SaveData {
    * 'track' (finished = 'bab4' in `chaptersDone`); `clue` is how many park clues were found (0..3).
    */
   bab4: { step: string; clue: number };
+  /**
+   * Chapter 5 ("Ular Melar") progress: `step` is '' (not started), 'walk' (to the old building with Aara), 'lab' (Aara meets Nino),
+   * 'city' (to the school field), 'fight' (the snake was met) (finished = 'bab5' in `chaptersDone`).
+   */
+  bab5: { step: string };
+  /** Chapter 6 ("Tikus Rakus") progress: `step` is '' (not started), 'city' (to the Gudang Pasar), 'fight' (the big rat was met) (finished = 'bab6' in `chaptersDone`). */
+  bab6: { step: string };
   /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
   hearts: number;
 }
@@ -133,6 +140,8 @@ function defaults(): SaveData {
     city: { coins: [], missions: [] },
     bab3: { step: '', tamed: [] },
     bab4: { step: '', clue: 0 },
+    bab5: { step: '' },
+    bab6: { step: '' },
     hearts: Combat.hearts.max,
   };
 }
@@ -194,6 +203,14 @@ function sanitize(raw: unknown): SaveData {
     const b = r.bab4 as Record<string, unknown>;
     if (typeof b.step === 'string' && ['', 'school', 'aara', 'park', 'track', 'figure', 'lab'].includes(b.step)) out.bab4.step = b.step === 'figure' || b.step === 'lab' ? 'track' : b.step; // old saves: the figure/lab steps are gone
     if (typeof b.clue === 'number' && Number.isInteger(b.clue) && b.clue >= 0 && b.clue <= 3) out.bab4.clue = b.clue;
+  }
+  if (typeof r.bab5 === 'object' && r.bab5 !== null) {
+    const b = r.bab5 as Record<string, unknown>;
+    if (typeof b.step === 'string' && ['', 'walk', 'lab', 'city', 'fight'].includes(b.step)) out.bab5.step = b.step;
+  }
+  if (typeof r.bab6 === 'object' && r.bab6 !== null) {
+    const b = r.bab6 as Record<string, unknown>;
+    if (typeof b.step === 'string' && ['', 'city', 'fight'].includes(b.step)) out.bab6.step = b.step;
   }
   if (typeof r.hearts === 'number' && Number.isInteger(r.hearts) && r.hearts >= 1 && r.hearts <= Combat.hearts.max) out.hearts = r.hearts;
   if (typeof r.settings === 'object' && r.settings !== null) {
@@ -380,6 +397,18 @@ export class SaveStore {
   /** Chapter 4 progress (see `SaveData.bab4`). */
   setBab4(step: string, clue: number): void {
     this.data.bab4 = { step, clue };
+    this.persist();
+  }
+
+  /** Chapter 5 progress (see `SaveData.bab5`). */
+  setBab5(step: string): void {
+    this.data.bab5 = { step };
+    this.persist();
+  }
+
+  /** Chapter 6 progress (see `SaveData.bab6`). */
+  setBab6(step: string): void {
+    this.data.bab6 = { step };
     this.persist();
   }
 
