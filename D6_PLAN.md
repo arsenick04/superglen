@@ -57,6 +57,9 @@ Keputusan aman yang diambil orkestrator (ubah bila pemilik proyek minta lain):
 - [ ] **L12 Sistem sinematik.** Sutradara cutscene di dalam game (kamera berpindah, bilah hitam, tokoh bergerak sesuai naskah, teks/suara, tombol Lewati yang besar; jalan di PC, sentuh, gamepad). Sinematik pembuka kisah awal Glen sebelum "Ketuk untuk mulai" selesai. Adegan pendek sebelum dialog cerita utama tiap Chapter. (Video sungguhan lewat Higgsfield: menunggu keputusan pemilik proyek.)
 - [ ] **L13 Suara** untuk semua kalimat baru/berubah dari L3, L9, L11, L12.
 
+- [ ] **L14 Kota ramai.** Banyak warga latar yang lalu lalang: berjalan di trotoar, naik sepeda, motor, dan mobil di jalan, anak-anak bermain di taman/lapangan. Tidak perlu bisa diajak bicara. Hemat: instanced, mengikuti jalur jalan dari CityData, dimuat per potongan, tanpa collider yang menjebak pemain (kendaraan melambat/berhenti bila Glen di depannya, tidak menabrak). Jaga anggaran grafis kota (bila perlu naikkan anggaran dengan bukti fps, atau kurangi isi lain).
+- **Suara (keputusan pemilik proyek 15 November):** langsung buat semua suara tanpa contoh persetujuan dulu.
+
 Urutan kerja yang disarankan: L7 → (L1, L8, L9 paralel) → L11 → L4/L5 (pertarungan, termasuk Ular Besar) → L12 → L2 → L10 → L3/L13 → L6.
 
 ## Catatan antar sesi
