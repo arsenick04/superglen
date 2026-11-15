@@ -20,12 +20,14 @@
     "note": "v2 2026-11-14: kakak muda yang hangat dan lincah, nada +2 semiton"
   },
   "aara": {
-    "voice_id": "qXOoUJU1h7AiwSe4ltRA",
-    "stability": 0.4,
+    "voice_id": "d15jrIAARvF899pDoC6T",
+    "name": "Kak Ceria - Cute Kids Storyteller",
+    "model": "eleven_v4",
+    "stability": 0.3,
     "similarity_boost": 0.8,
-    "style": 0.5,
-    "name": "Zulfa",
-    "note": "sementara, pilihan otomatis"
+    "pitchSemitones": 0,
+    "labels": "id, standard accent, young female, cute",
+    "note": "D5 L5 2026-11-14: Aara, gadis ceria penemu; suara kakak/anak perempuan, beda dari Serena, Citra, Maya, Defasyalala"
   },
   "tikus": {
     "voice_id": "c7qhpQfip2KUutIXYbRI",
@@ -162,5 +164,15 @@
     "pitchSemitones": 3,
     "labels": "id, standard accent, young male, high-pitched clowny",
     "note": "D4 L5 2026-11-14: Si Tikus Rakus, cempreng dan jenaka, nada +3 semiton"
+  },
+  "misterius": {
+    "voice_id": "HmwgE8AfbDbaZpgAi4Bn",
+    "name": "Den - expressive, clear, smooth",
+    "model": "eleven_v4",
+    "stability": 0.45,
+    "similarity_boost": 0.8,
+    "pitchSemitones": -1,
+    "labels": "id, standard accent, young male, neutral",
+    "note": "D5 L5 2026-11-14: Sosok Misterius, tenang dan hangat; nada -1 semiton"
   }
 }

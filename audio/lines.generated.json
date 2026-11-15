@@ -927,6 +927,249 @@
     "category": "bab3"
   },
   {
+    "id": "bab4_nino_mulai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!",
+    "tts": "[cheerful] Glen, ayo temui Aara di sekolah. [encouraging] Dia pintar mencari petunjuk!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_halo",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen! Aku membuat alat penerjemah. Mau coba?",
+    "tts": "[excited] Glen! Aku membuat alat penerjemah. [proud] Mau coba?",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_mau",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Mau! Aku siap menjawab.",
+    "tts": "[excited] Mau! Aku siap menjawab.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_benar1",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Benar! Alatnya mulai menyala.",
+    "tts": "[cheerful] Benar! Alatnya mulai menyala.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_benar2",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Betul! Alatnya makin canggih.",
+    "tts": "[excited] Betul! Alatnya makin canggih.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_benar3",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hebat! Alatnya sudah canggih sekali!",
+    "tts": "[amazed] Hebat! Alatnya sudah canggih sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_sinyal",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Tuut tuut! Ada sinyal. Menunjuk ke taman kota!",
+    "tts": "[playful] Tuut tuut! [excited] Ada sinyal. Menunjuk ke taman kota!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_taman",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo ke taman, kita selidiki!",
+    "tts": "[brave] Ayo ke taman, kita selidiki!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_taman",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Lihat! Ada papan petunjuk. Ayo kita baca!",
+    "tts": "[excited] Lihat! Ada papan petunjuk. Ayo kita baca!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_baca",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.",
+    "tts": "[cheerful] Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_papan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Dekati papan itu, lalu tekan tombol tangan.",
+    "tts": "[cheerful] Dekati papan itu, lalu tekan tombol tangan.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_bola",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Bola! Tempat bermain berkilau. Ayo ke sana!",
+    "tts": "[excited] Bola! Tempat bermain berkilau. Ayo ke sana!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_pohon",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pohon! Pohonnya berkilau. Ayo ke sana!",
+    "tts": "[excited] Pohon! Pohonnya berkilau. Ayo ke sana!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_kolam",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kolam! Kolamnya berkilau. Ayo ke sana!",
+    "tts": "[excited] Kolam! Kolamnya berkilau. Ayo ke sana!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_lagi",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ada papan lagi di sini! Baca, yuk.",
+    "tts": "[cheerful] Ada papan lagi di sini! Baca, yuk.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_ayo",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ayo, ke tempat yang berkilau!",
+    "tts": "[encouraging] Ayo, ke tempat yang berkilau!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_lihat",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen, lihat! Siapa itu di dekat pohon?",
+    "tts": "[whispers] Glen, lihat! [surprised] Siapa itu di dekat pohon?",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_misterius_awas",
+    "speaker": "misterius",
+    "lang": "id",
+    "text": "Aku sudah lama mengawasimu... Superglen.",
+    "tts": "[softly] Aku sudah lama mengawasimu... [warmly] Superglen.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_tahu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Dia tahu namaku! Dia siapa, ya?",
+    "tts": "[surprised] Dia tahu namaku! [curious] Dia siapa, ya?",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_aara_lapor",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ayo lapor ke Nino di lab!",
+    "tts": "[determined] Ayo lapor ke Nino di lab!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_nino_temu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen! Aku menemukan sesuatu di komputer lab.",
+    "tts": "[serious] Glen! Aku menemukan sesuatu di komputer lab.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_nino_alat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pasukan tikus memakai alat curian dari lab lama kita!",
+    "tts": "[serious] Pasukan tikus memakai alat curian dari lab lama kita!",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_glen_curi",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah! Kita harus mengambilnya kembali.",
+    "tts": "[determined] Wah! Kita harus mengambilnya kembali.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_nino_siap",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
+    "tts": "[encouraging] Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_kata_bola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bola.",
+    "tts": "[calmly] Bola.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_kata_pohon",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pohon.",
+    "tts": "[calmly] Pohon.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
+    "id": "bab4_kata_kolam",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kolam.",
+    "tts": "[calmly] Kolam.",
+    "source": "audio/dialog.json",
+    "category": "bab4"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",

@@ -719,5 +719,194 @@
     "lang": "id",
     "text": "Terima kasih, Superglen!",
     "delivery": "[grateful] Terima kasih, Superglen!"
+  },
+  {
+    "id": "bab4_nino_mulai",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen, ayo temui Aara di sekolah. Dia pintar mencari petunjuk!",
+    "delivery": "[cheerful] Glen, ayo temui Aara di sekolah. [encouraging] Dia pintar mencari petunjuk!"
+  },
+  {
+    "id": "bab4_aara_halo",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen! Aku membuat alat penerjemah. Mau coba?",
+    "delivery": "[excited] Glen! Aku membuat alat penerjemah. [proud] Mau coba?"
+  },
+  {
+    "id": "bab4_glen_mau",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Mau! Aku siap menjawab.",
+    "delivery": "[excited] Mau! Aku siap menjawab."
+  },
+  {
+    "id": "bab4_aara_benar1",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Benar! Alatnya mulai menyala.",
+    "delivery": "[cheerful] Benar! Alatnya mulai menyala."
+  },
+  {
+    "id": "bab4_aara_benar2",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Betul! Alatnya makin canggih.",
+    "delivery": "[excited] Betul! Alatnya makin canggih."
+  },
+  {
+    "id": "bab4_aara_benar3",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hebat! Alatnya sudah canggih sekali!",
+    "delivery": "[amazed] Hebat! Alatnya sudah canggih sekali!"
+  },
+  {
+    "id": "bab4_aara_sinyal",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Tuut tuut! Ada sinyal. Menunjuk ke taman kota!",
+    "delivery": "[playful] Tuut tuut! [excited] Ada sinyal. Menunjuk ke taman kota!"
+  },
+  {
+    "id": "bab4_glen_taman",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo ke taman, kita selidiki!",
+    "delivery": "[brave] Ayo ke taman, kita selidiki!"
+  },
+  {
+    "id": "bab4_aara_taman",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Lihat! Ada papan petunjuk. Ayo kita baca!",
+    "delivery": "[excited] Lihat! Ada papan petunjuk. Ayo kita baca!"
+  },
+  {
+    "id": "bab4_aara_baca",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.",
+    "delivery": "[cheerful] Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya."
+  },
+  {
+    "id": "bab4_aara_papan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Dekati papan itu, lalu tekan tombol tangan.",
+    "delivery": "[cheerful] Dekati papan itu, lalu tekan tombol tangan."
+  },
+  {
+    "id": "bab4_aara_bola",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Bola! Tempat bermain berkilau. Ayo ke sana!",
+    "delivery": "[excited] Bola! Tempat bermain berkilau. Ayo ke sana!"
+  },
+  {
+    "id": "bab4_aara_pohon",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pohon! Pohonnya berkilau. Ayo ke sana!",
+    "delivery": "[excited] Pohon! Pohonnya berkilau. Ayo ke sana!"
+  },
+  {
+    "id": "bab4_aara_kolam",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kolam! Kolamnya berkilau. Ayo ke sana!",
+    "delivery": "[excited] Kolam! Kolamnya berkilau. Ayo ke sana!"
+  },
+  {
+    "id": "bab4_aara_lagi",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ada papan lagi di sini! Baca, yuk.",
+    "delivery": "[cheerful] Ada papan lagi di sini! Baca, yuk."
+  },
+  {
+    "id": "bab4_aara_ayo",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ayo, ke tempat yang berkilau!",
+    "delivery": "[encouraging] Ayo, ke tempat yang berkilau!"
+  },
+  {
+    "id": "bab4_aara_lihat",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen, lihat! Siapa itu di dekat pohon?",
+    "delivery": "[whispers] Glen, lihat! [surprised] Siapa itu di dekat pohon?"
+  },
+  {
+    "id": "bab4_misterius_awas",
+    "speaker": "misterius",
+    "lang": "id",
+    "text": "Aku sudah lama mengawasimu... Superglen.",
+    "delivery": "[softly] Aku sudah lama mengawasimu... [warmly] Superglen."
+  },
+  {
+    "id": "bab4_glen_tahu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Dia tahu namaku! Dia siapa, ya?",
+    "delivery": "[surprised] Dia tahu namaku! [curious] Dia siapa, ya?"
+  },
+  {
+    "id": "bab4_aara_lapor",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ayo lapor ke Nino di lab!",
+    "delivery": "[determined] Ayo lapor ke Nino di lab!"
+  },
+  {
+    "id": "bab4_nino_temu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen! Aku menemukan sesuatu di komputer lab.",
+    "delivery": "[serious] Glen! Aku menemukan sesuatu di komputer lab."
+  },
+  {
+    "id": "bab4_nino_alat",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pasukan tikus memakai alat curian dari lab lama kita!",
+    "delivery": "[serious] Pasukan tikus memakai alat curian dari lab lama kita!"
+  },
+  {
+    "id": "bab4_glen_curi",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah! Kita harus mengambilnya kembali.",
+    "delivery": "[determined] Wah! Kita harus mengambilnya kembali."
+  },
+  {
+    "id": "bab4_nino_siap",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Betul. Petualangan berikutnya menunggu. Siap, Superglen?",
+    "delivery": "[encouraging] Betul. Petualangan berikutnya menunggu. Siap, Superglen?"
+  },
+  {
+    "id": "bab4_kata_bola",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bola.",
+    "delivery": "[calmly] Bola."
+  },
+  {
+    "id": "bab4_kata_pohon",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pohon.",
+    "delivery": "[calmly] Pohon."
+  },
+  {
+    "id": "bab4_kata_kolam",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kolam.",
+    "delivery": "[calmly] Kolam."
   }
 ]
