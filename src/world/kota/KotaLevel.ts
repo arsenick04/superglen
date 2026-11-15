@@ -10,7 +10,7 @@ import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
-import { flow, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
+import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { Chapter3 } from './Chapter3';
 import { Chapter4 } from './Chapter4';
@@ -30,7 +30,7 @@ let BUILT: BuiltCity | null = null;
  *   Chapter 1 done:     the save's powers, the switch allowed; Chapter 2 done: every power.
  *   The door of the old building (`CITY_LAYOUT.lab.door`): reaching it discovers the building (map) and fires
  *   `onLabEntrance`; pressing at it fades into the lab (`enterLab`). Coming out of the lab arrives at `HILL_DOOR_SPOT`.
- *   `?level=kota` (debug, `flow.sandbox`): free roam as before, every power, plaza spawn, no Chapter 1 walk.
+ *   `?level=kota` (debug, `flow.sandbox`): free roam as before (unless the save says Chapter 3 waits: then the story; `&free=1` forces it), every power, plaza spawn, no Chapter 1 walk.
  *
  * EXTENSION POINTS for D3 (coins, bike, people, missions, signposts): build them in `build()` after the streamer (chunk
  * colliders near the spawn are ready then), tick them in `fixedUpdate` / `update`; put static placement data into
@@ -83,7 +83,7 @@ export class KotaLevel implements Level {
     this.cityMap.goal = () => this.goalOverride ?? (ctx.objectives.active ? ctx.objectives.position : null);
     this.map = this.cityMap;
     ctx.audio.music.setScene('jelajah');
-    const sandbox = flow.sandbox;
+    const sandbox = sandboxActive(ctx.save);
     const bab1 = ctx.save.isChapterDone('bab1');
     const arrival = takeArrival('kota');
     if (!sandbox) ctx.save.setWhere('kota');

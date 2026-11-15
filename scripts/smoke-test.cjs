@@ -8593,6 +8593,85 @@ async function bab3FlowScenario(page, check) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+
+/**
+ * Regression (owner report "tantangan pasar kosong"): whenever Chapter 2 is done and Chapter 3 is not, the market is
+ * active from wherever the child is (city, hangar, lab, after a slot load) and `?level=...` (the sticky debug free roam)
+ * no longer hides it. `&free=1` is the only way to the pure free roam.
+ */
+async function bab3StartScenario(page, check, touch) {
+  const tag = touch ? 'touch' : 'desktop';
+  const ALL = { laser: true, shield: true, fly: true };
+  const base = (extra = {}) => ({ version: 1, where: 'kota', chaptersDone: ['bab1', 'bab2'], skills: ALL, lastMode: 'superglen', discovered: { lab: true }, doneAt: { bab2: Date.now() - 5000 }, ...extra });
+  const open = async (query, save) => {
+    await page.goto(URL + '?fps=0&x=1');
+    await page.evaluate((d) => { if (d) localStorage.setItem('superglen.save.v1', JSON.stringify(d)); else localStorage.removeItem('superglen.save.v1'); }, save);
+    await page.goto(URL + query);
+    await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+    await sleep(900);
+    if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
+    await sleep(500);
+    await page.evaluate(() => window.__superglen.pause(true));
+    await d3Adv(page, 30);
+  };
+  const info = () => page.evaluate(() => { const g = window.__superglen; return { level: g.level, mode: g.mode, ch3: window.__ch3 ? { step: window.__ch3.step(), rats: window.__ch3.rats().length } : null, obj: g.objective.active, save: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}') }; });
+  const walk = async (x, z) => {
+    await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), [x, z]);
+    for (let i = 0; i < 40; i++) {
+      await d3Adv(page, 12);
+      if (!(await page.evaluate(() => window.__superglen.walking))) break;
+    }
+    await page.evaluate(() => window.__superglen.cancelWalk());
+  };
+  const waitLevel = async (id) => {
+    await page.evaluate(() => window.__superglen.pause(false));
+    await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, id, { timeout: 60000 });
+    await page.evaluate(() => window.__superglen.pause(true));
+    await d3Adv(page, 40);
+  };
+  let s;
+  // 1) the sticky debug URL with a save "Chapter 2 done": the story runs
+  await open('?level=kota&story=1', base());
+  s = await info();
+  check(`bab3-start ${tag}: ?level=kota with Chapter 2 done and Chapter 3 not starts Chapter 3 (7 rats, beam)`, s.ch3 && s.ch3.step === 'chase' && s.ch3.rats === 7 && s.obj === true && s.mode === 'superglen', JSON.stringify(s));
+  // 2) &free=1 is the pure free roam
+  await open('?level=kota&free=1', base());
+  s = await info();
+  check(`bab3-start ${tag}: ?level=kota&free=1 stays the free roam (no chapter)`, s.ch3 === null && s.obj === false, JSON.stringify(s));
+  // 3) a save written by the previous version (no bab3/bab4/city keys, a slot of the city): the city continues in Chapter 3
+  await open('?fps=0', base({ slot: { level: 'kota', x: 20, y: 0, z: 20, yaw: 0, mode: 'superglen', t: Date.now() } }));
+  s = await info();
+  check(`bab3-start ${tag}: a manual slot in the city after Chapter 2 loads into Chapter 3`, s.level === 'kota' && s.ch3 && s.ch3.step === 'chase' && s.obj === true, JSON.stringify(s));
+  // 4) the hangar after the training (a slot there): free play, the beam shows the way out
+  await open('?fps=0', base({ where: 'bab2', slot: { level: 'bab2', x: 0, y: 0, z: -20, yaw: 0, mode: 'superglen', t: Date.now() } }));
+  s = await info();
+  check(`bab3-start ${tag}: the hangar with Chapter 3 waiting shows the beam to the exit door`, s.level === 'bab2' && s.obj === true, JSON.stringify(s));
+  // 5) the whole way out from ?level=bab2 (sticky URL): hangar door -> lab -> front door -> city with the chapter
+  await open('?level=bab2&story=1', base({ where: 'bab2' }));
+  s = await info();
+  check(`bab3-start ${tag}: ?level=bab2 with Chapter 3 waiting: beam to the door`, s.level === 'bab2' && s.obj === true, JSON.stringify(s));
+  await walk(0, 1.5);
+  await walk(0, 10.2);
+  await d3Adv(page, 10);
+  await page.keyboard.down('e');
+  await d3Adv(page, 2);
+  await page.keyboard.up('e');
+  await waitLevel('lab');
+  s = await info();
+  check(`bab3-start ${tag}: in the lab the beam leads to the front door`, s.level === 'lab' && s.obj === true, JSON.stringify(s));
+  await page.evaluate(() => window.__superglen.teleportFeet(0, 0.1, -37));
+  await d3Adv(page, 10);
+  await walk(0, -41.6);
+  await waitLevel('kota');
+  s = await info();
+  check(`bab3-start ${tag}: out of the lab door the city runs Chapter 3 (rats, beam to the market), even on a sticky ?level=bab2`, s.level === 'kota' && s.ch3 && s.ch3.step === 'chase' && s.ch3.rats === 7 && s.obj === true && s.save.where === 'kota', JSON.stringify(s));
+  // the market shows the rats on screen
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(93, 14); g.advance(40, false); g.setCameraYaw(0); g.advance(3, true); });
+  await shot(page, `bab3-start-market-${tag}`);
+  const vis = await page.evaluate(() => window.__ch3.rats().filter((r) => Math.hypot(r.x - 93, r.z - 14) < 40).length);
+  check(`bab3-start ${tag}: rats are at the market around the child`, vis >= 3, `${vis}`);
+}
+
 const ch3Rats = (page) => page.evaluate(() => window.__ch3.rats());
 const ch3Counts = (page) => page.evaluate(() => window.__ch3.counts());
 /** Draw calls and triangles at the market from four view directions. */
@@ -9058,10 +9137,15 @@ async function bab4EndScenario(page, check, touch) {
   s = await ch4Info(page);
   check(`bab4-end ${tag}: Chapter 4 is done and saved (bab4 in chaptersDone, step cleared), the star celebration was shown`, s.save.chaptersDone.includes('bab4') && s.save.bab4.step === '' && star, JSON.stringify([s.save.chaptersDone, s.save.bab4, star]));
   // Back to the city: free again.
-  await page.evaluate(() => window.__superglen.pause(false));
-  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 60000 });
-  await sleep(700);
-  await page.evaluate(() => window.__superglen.pause(true));
+  // Frames advance by hand while paused (a loaded machine runs the real-time loop slowly; the celebration is frame-timed).
+  for (let i = 0; i < 400; i++) {
+    await d3Adv(page, 30);
+    await page.evaluate(() => window.__superglen.pause(false));
+    await sleep(60);
+    await page.evaluate(() => window.__superglen.pause(true));
+    if (await page.evaluate(() => window.__superglen.level === 'kota' && !window.__superglen.loading)) break;
+  }
+  await sleep(300);
   await d3Adv(page, 40);
   s = await ch4Info(page);
   const ppl = await page.evaluate(() => window.__d3.people());
@@ -9078,6 +9162,12 @@ async function runScenario(browser, name, ctxOpts, body, query = '?level=test') 
   if (initScript) await ctx.addInitScript(initScript);
   // Switches on the test-only debug numbers of the story level (pole cover, camera position).
   await ctx.addInitScript(() => { window.__SG_TEST = true; });
+  // `?level=...` is the debug free roam; with a save that says "Chapter 2 done, Chapter 3 not" the game runs the story instead.
+  // The older scenarios mean the free roam: they get `&free=1` unless the URL asks for the story (`&story=1`).
+  await ctx.addInitScript(() => {
+    const q = location.search;
+    if (/[?&]level=/.test(q) && !/[?&](story|free)=/.test(q)) history.replaceState(null, '', location.pathname + q + '&free=1' + location.hash);
+  });
   const page = await ctx.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error') result.errors.push(`console: ${m.text()}`);
@@ -9223,6 +9313,8 @@ async function main() {
     results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
     // Package D4: Chapter 3 (market)
     results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-start', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3StartScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'bab3-start-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3StartScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3RatsScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3RatsScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-rats-glen', { viewport: { width: 1280, height: 720 } }, bab3GlenScenario, '?level=kota&fps=0&reset=1'));

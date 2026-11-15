@@ -728,3 +728,8 @@ Setelah PR di-merge dan deploy selesai. Di iPhone: Safari, landscape.
 1. **Chapter 3**: lanjutkan save yang sudah menamatkan Chapter 2 (atau mainkan dari https://arsenick04.github.io/superglen/?reset=1). Kejar tikus di pasar dengan laser atau hentakan. Apakah mudah dan lucu untuk anak?
 2. **Berhitung**: kumpulkan bakpao dan kue, lalu jawab "Totalnya berapa?".
 3. **Adegan akhir**: apakah Si Tikus Rakus dan sosok misterius terlihat jelas, dan suara Tikus Rakus lucu (tidak menakutkan)?
+
+## Perbaikan: Chapter 3 (pasar) kosong setelah latihan
+- Penyebab: `?level=...` menyalakan mode bebas (`flow.sandbox`) untuk seluruh sesi, termasuk saat keluar hangar -> lab -> kota. Dengan save "Chapter 2 selesai, Chapter 3 belum", kota jadi jalan bebas tanpa tikus dan tanpa penunjuk.
+- Sekarang: `sandboxActive(save)` (progress.ts). Jika bab2 selesai dan bab3 belum, cerita jalan walau alamatnya `?level=`. `?level=kota&free=1` tetap jalan bebas murni.
+- Hangar (setelah latihan atau muat slot) menunjukkan sinar ke pintu keluar selama pasar menunggu.

@@ -785,6 +785,7 @@ export class Game {
     if (wanted && this.levels.has(wanted)) {
       // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
       flow.sandbox = true;
+      flow.free = new URLSearchParams(window.location.search).get('free') === '1';
       this.levels.loadInstant(wanted);
     } else {
       const plan = startPlanFor(this.save);

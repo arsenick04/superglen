@@ -34,7 +34,20 @@ let pending: { level: string; arrival: Arrival } | null = null;
  * Debug free roam: the page was opened with an explicit `?level=<id>`. The city then plays as before D2 (every power, the
  * plaza spawn, no Chapter 1 walk), whatever the save says. Set once by the Game at startup.
  */
-export const flow = { sandbox: false };
+export const flow = { sandbox: false, /** `?free=1`: the debug free roam even when the save says Chapter 3 is waiting. */ free: false };
+
+/** Chapter 3 (the market) is waiting: Chapter 2 is done, Chapter 3 is not. */
+export function marketPending(save: SaveStore): boolean {
+  return save.isChapterDone('bab2') && !save.isChapterDone('bab3');
+}
+
+/**
+ * True when the story must run even though the page was opened with `?level=...`: a child whose save says "Chapter 2 done,
+ * Chapter 3 not" must never land in a silent free roam (the market waits). `?free=1` keeps the pure free roam for tests.
+ */
+export function sandboxActive(save: SaveStore): boolean {
+  return flow.sandbox && (flow.free || !marketPending(save));
+}
 
 /** Remember where the next build of `level` should put the player. */
 export function setArrival(level: string, arrival: Arrival): void {
