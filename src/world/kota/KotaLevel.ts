@@ -3,7 +3,7 @@ import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
 import { Quality } from '../../core/Quality';
 import { ShadowFollower } from '../../core/ShadowSnap';
-import { CITY, CITY_LAYOUT, KOTA_REACH, districtAt } from './CityData';
+import { CITY, CITY_LAYOUT, FACE_VEC, KOTA_REACH, districtAt } from './CityData';
 import { buildCity, type BuiltCity } from './CityBuilder';
 import { ChunkStreamer, STREAM } from './ChunkStreamer';
 import { CityHud } from './CityHud';
@@ -87,6 +87,20 @@ export class KotaLevel implements Level {
     const sandbox = sandboxActive(ctx.save);
     const bab1 = ctx.save.isChapterDone('bab1');
     const arrival = takeArrival('kota');
+    {
+      // Glen's hearts show in the city once Chapter 1 is behind him. The Rumah Sakit rest spot: on the pavement in front of it.
+      const hb = CITY_LAYOUT.buildings.find((b) => b.kind === 'hospital');
+      if (hb) {
+        const [fx, fz] = FACE_VEC[hb.face];
+        const half = hb.face < 2 ? hb.d / 2 : hb.w / 2;
+        ctx.health.hospital = { x: hb.x + fx * (half + 3.2), z: hb.z + fz * (half + 3.2), yaw: Math.atan2(fx, fz) };
+      }
+      ctx.health.setShown(sandbox || bab1);
+      ctx.onDispose(() => {
+        ctx.health.hospital = null;
+        ctx.health.setShown(false);
+      });
+    }
     if (!sandbox) ctx.save.setWhere('kota');
     if (sandbox || ctx.save.isChapterDone('bab2')) {
       // Free roam: every power on (not written to the save), the child may switch Glen <-> Superglen.

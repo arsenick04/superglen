@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import type { Target } from '../../gameplay/Targets';
 import { clampToStreets, MARKET, RATS, type FoodKind } from './Bab3Data';
-import { box, cyl, merge, sph } from './ColorMesh';
+import { box, cone, cyl, merge, sph } from './ColorMesh';
+import { Combat, CombatRng } from '../../config/combat';
+import type { HitInfo } from '../../gameplay/Targets';
 import { personGeo } from './CityPeople';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -36,11 +38,16 @@ export const RatConfig = {
 
 const GROUND = 0;
 const ST_LOOP = 0;
-const ST_FLEE = 1;
-const ST_BACK = 2;
-const ST_DIZZY = 3;
-const ST_RUN = 4;
-const ST_GONE = 5;
+const ST_WIND = 1; // telegraph: shaking, puffs, an arrow on the ground
+const ST_CHARGE = 2;
+const ST_RECOVER = 3; // panting after an attack: easy to hit
+const ST_BACK = 4;
+const ST_STUN = 5; // hit but not tamed yet: dizzy for a moment
+const ST_DIZZY = 6; // tamed: spin, stars, drop the food
+const ST_RUN = 7;
+const ST_GONE = 8;
+const K_CHARGE = 0;
+const K_CRUMB = 1;
 
 const F_CARRIED = 0;
 const F_FLY = 1;
@@ -76,6 +83,24 @@ function ratGeo(fur = 0xa3a9bd, belly = false): THREE.BufferGeometry {
     { g: sph(0.06, 5, 4), c: fur, p: [0.13, 0.06, 0.2] },
     { g: sph(0.06, 5, 4), c: fur, p: [-0.13, 0.06, -0.15] },
     { g: sph(0.06, 5, 4), c: fur, p: [0.13, 0.06, -0.15] },
+  ]);
+}
+
+/** Flat arrow on the ground (XZ plane, pointing +z, from the origin to 2.4 m): the charge telegraph. */
+function arrowGeo(): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  const pts = [-0.22, 0, 0, 0.22, 0, 0, 0.22, 0, 1.5, -0.22, 0, 0, 0.22, 0, 1.5, -0.22, 0, 1.5, -0.55, 0, 1.5, 0.55, 0, 1.5, 0, 0, 2.4];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  g.setIndex([0, 1, 2, 3, 4, 5, 6, 7, 8]); // the material is double sided
+  return g;
+}
+
+/** A small heart (two bumps and a point), for the hit points above a rat. */
+function pipGeo(): THREE.BufferGeometry {
+  return merge([
+    { g: sph(0.07, 5, 3), c: 0xffffff, p: [-0.055, 0.03, 0] },
+    { g: sph(0.07, 5, 3), c: 0xffffff, p: [0.055, 0.03, 0] },
+    { g: cone(0.1, 0.17, 4), c: 0xffffff, p: [0, -0.06, 0], r: [0, 0, Math.PI] },
   ]);
 }
 
@@ -133,6 +158,24 @@ export class MarketRats {
   private readonly ang = new Float32Array(this.n);
   private readonly timer = new Float32Array(this.n);
   private readonly drain = new Uint8Array(this.n);
+  // The fight: hit points, attack kind and timers, locked charge direction, a sideways slide (dodge), hit squash.
+  private readonly hp = new Uint8Array(this.n);
+  private readonly cool = new Float32Array(this.n);
+  private readonly kind = new Uint8Array(this.n);
+  private readonly dirX = new Float32Array(this.n);
+  private readonly dirZ = new Float32Array(this.n);
+  private readonly slX = new Float32Array(this.n);
+  private readonly slZ = new Float32Array(this.n);
+  private readonly squash = new Float32Array(this.n);
+  private readonly puff = new Float32Array(this.n);
+  private gap = 0;
+  /** Test: no rat starts an attack by itself. */
+  muted = false;
+  private readonly hpMax: number;
+  private readonly windup: number;
+  private readonly cooldown: number;
+  private readonly pipMesh: THREE.InstancedMesh;
+  private readonly arrowMesh: THREE.InstancedMesh;
   // Foods (index = the rat that carried it).
   private readonly fs = new Uint8Array(this.n);
   private readonly fx = new Float32Array(this.n);
@@ -164,6 +207,14 @@ export class MarketRats {
   tamedCount = 0;
   stomps = 0;
   lasers = 0;
+  /** Fight counters for tests. */
+  hitsTaken = 0; // rat hits that did not tame
+  attacks = 0;
+  charges = 0;
+  crumbs = 0;
+  dodges = 0;
+  blocked = 0;
+  hurtGlen = 0;
   /** Foods that lie on the ground now (bakpao and kue only). */
   get dropped(): number {
     let c = 0;
@@ -182,10 +233,24 @@ export class MarketRats {
     const fg = foodGeo();
     const pg = propsGeo();
     this.geos.push(rg, fg, pg);
+    const easy = ctx.save.data.settings.easyFight;
+    this.hpMax = easy ? Combat.rat.hpEasy : Combat.rat.hp;
+    this.windup = easy ? Combat.rat.windupEasy : Combat.rat.windup;
+    this.cooldown = easy ? Combat.rat.cooldownEasy : Combat.rat.cooldown;
+    const ag = arrowGeo();
+    const pgp = pipGeo();
+    this.geos.push(ag, pgp);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xff5a4a, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, fog: false });
+    arrowMat.polygonOffset = true;
+    arrowMat.polygonOffsetFactor = -2;
+    this.mats.push(arrowMat);
+    this.arrowMesh = new THREE.InstancedMesh(ag, arrowMat, this.n);
+    this.pipMesh = new THREE.InstancedMesh(pgp, lit, this.n * this.hpMax);
+    this.arrowMesh.renderOrder = 3;
     this.ratMesh = new THREE.InstancedMesh(rg, lit, this.n);
     this.foodMesh = new THREE.InstancedMesh(fg, lit, this.n);
     this.props = new THREE.Mesh(pg, lit);
-    for (const m of [this.ratMesh, this.foodMesh]) {
+    for (const m of [this.ratMesh, this.foodMesh, this.arrowMesh, this.pipMesh]) {
       m.frustumCulled = false;
       m.castShadow = false;
       m.receiveShadow = false;
@@ -194,7 +259,8 @@ export class MarketRats {
     this.props.receiveShadow = false;
     // A first (hidden) colour per food so instanceColor exists when the shader program is built.
     for (let i = 0; i < this.n; i++) this.foodMesh.setColorAt(i, this.col.setHex(FOOD_COLOR[RATS[i].food]));
-    ctx.root.add(this.ratMesh, this.foodMesh, this.props);
+    for (let k = 0; k < this.n * this.hpMax; k++) this.pipMesh.setColorAt(k, this.col.setHex(0xff4d6d));
+    ctx.root.add(this.ratMesh, this.foodMesh, this.props, this.arrowMesh, this.pipMesh);
 
     const done = new Set(tamed);
     for (let i = 0; i < this.n; i++) {
@@ -207,13 +273,13 @@ export class MarketRats {
           id: `rat${i}`,
           position: () => this.aim[i],
           radius: RatConfig.aimRadius,
-          onHit: () => {
-            this.lasers++;
-            this.tame(i);
-          },
+          assist: { range: Combat.laser.assistRange, near: Combat.laser.nearDist, nearConeDeg: Combat.laser.nearConeDeg, farConeDeg: Combat.laser.farConeDeg },
+          onHit: (h) => this.laserHit(i, h),
         }),
       );
       this.fs[i] = F_CARRIED;
+      this.hp[i] = this.hpMax;
+      this.cool[i] = 1 + (i % 3) * 0.7;
       if (done.has(i)) {
         // Tamed in an earlier session: the rat is gone, its bakpao / kue lie where its loop is.
         this.st[i] = ST_GONE;
@@ -235,7 +301,7 @@ export class MarketRats {
         if (this.st[i] >= ST_DIZZY) continue;
         if (Math.hypot(this.rx[i] - e.x, this.rz[i] - e.z) < e.radius + 0.4 && Math.abs(e.y - GROUND) < 3) {
           this.stomps++;
-          this.tame(i);
+          this.hit(i); // a stomp counts as one hit
         }
       }
     });
@@ -245,13 +311,15 @@ export class MarketRats {
       for (const m of this.mats) m.dispose();
       this.ratMesh.dispose();
       this.foodMesh.dispose();
+      this.arrowMesh.dispose();
+      this.pipMesh.dispose();
     });
     this.writeMatrices();
   }
 
   /** Test helper: `{ i, state, x, z, food, fstate }`. */
-  list(): { i: number; state: number; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number }[] {
-    return RATS.map((r, i) => ({ i, state: this.st[i], x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i] }));
+  list(): { i: number; state: number; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number; hp: number; kind: number }[] {
+    return RATS.map((r, i) => ({ i, state: this.st[i], x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
   }
 
   /** Rats not yet tamed. */
@@ -292,7 +360,7 @@ export class MarketRats {
   /** Hide / show the whole market set (the rats leave when Si Tikus Rakus appears). */
   setVisible(on: boolean): void {
     this.shown = on;
-    this.ratMesh.visible = this.foodMesh.visible = this.props.visible = on;
+    this.ratMesh.visible = this.foodMesh.visible = this.props.visible = this.arrowMesh.visible = this.pipMesh.visible = on;
   }
 
   /** The big rat of the scene (Si Tikus Rakus): one extra mesh, only drawn while he is around. */
@@ -350,8 +418,8 @@ export class MarketRats {
     this.tamedCount++;
     ctx.synth.boing();
     ctx.sfx.pop();
-    this.aim[i].set(this.rx[i], 0.4, this.rz[i]);
-    ctx.fx.stars.show(this.aim[i], 0.75, RatConfig.dizzyTime + 0.3, 0.3);
+    this.aim[i].set(this.rx[i], 0.4 * Combat.rat.scale, this.rz[i]);
+    ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, RatConfig.dizzyTime + 0.3, 0.3);
     ctx.fx.sparkles.burst(this.rx[i], 0.5, this.rz[i], 14, 2.6, 0xffe14d, { gravity: 2, life: 0.7, up: 0.8 });
     ctx.fx.flashes.spawn(this.rx[i], 0.6, this.rz[i], 1.2, 0.5, 0xffd23f);
     // The food falls out of its arms onto the street nearby.
@@ -382,10 +450,130 @@ export class MarketRats {
     this.hooks.onTamed(i, food);
   }
 
+  /** Test helper: rat i starts an attack now (0 = charge, 1 = crumbs) whatever its cooldown. */
+  forceAttack(i: number, kind: 0 | 1): void {
+    if (this.st[i] >= ST_DIZZY) return;
+    this.beginAttack(i, kind === K_CHARGE ? 1 : Combat.rat.chargeMaxDist + 2);
+  }
+
+  /** Test helper: fight counters. */
+  combatCounts(): Record<string, number> {
+    return { hitsTaken: this.hitsTaken, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, dodges: this.dodges, blocked: this.blocked, hurtGlen: this.hurtGlen };
+  }
+
+  /** A laser shot reached rat i. Far away it may hop aside (the shot misses); otherwise it is one hit. */
+  private laserHit(i: number, h: HitInfo): void {
+    this.lasers++;
+    const s = this.st[i];
+    if (s >= ST_DIZZY) return;
+    if (s !== ST_STUN && h.distance > Combat.laser.dodgeMinDist && CombatRng.next() < Combat.laser.dodgeChance) {
+      this.dodge(i, h.dirX, h.dirZ);
+      return;
+    }
+    this.hit(i);
+  }
+
+  /** Hop sideways out of the line of fire ("swish"): the shot is wasted. */
+  private dodge(i: number, dx: number, dz: number): void {
+    this.dodges++;
+    const side = (i % 2 ? 1 : -1) * Combat.laser.dodgeHop;
+    const l = Math.hypot(dx, dz) || 1;
+    this.slX[i] = (-dz / l) * side;
+    this.slZ[i] = (dx / l) * side;
+    this.ctx.sfx.pop();
+    this.ctx.fx.sparkles.burst(this.rx[i], 0.4, this.rz[i], 6, 2, 0xdfe6f2, { gravity: 0.5, life: 0.4, up: 0.3 });
+  }
+
+  /** One hit (laser, stomp or a crumb sent back): the last one tames it, the others only make it dizzy for a moment. */
+  hit(i: number): void {
+    if (this.st[i] >= ST_DIZZY) return;
+    if (this.hp[i] > 1) {
+      this.hp[i]--;
+      this.hitsTaken++;
+      const { ctx } = this;
+      this.st[i] = ST_STUN;
+      this.timer[i] = 0;
+      this.squash[i] = 1;
+      this.cool[i] = Math.max(this.cool[i], this.cooldown * 0.5);
+      ctx.synth.boing();
+      ctx.sfx.pop();
+      this.aim[i].set(this.rx[i], 0.4 * Combat.rat.scale, this.rz[i]);
+      ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, Combat.rat.stun + 0.2, 0.3);
+      ctx.fx.sparkles.burst(this.rx[i], 0.6, this.rz[i], 10, 2.4, 0xffe14d, { gravity: 2, life: 0.6, up: 0.8 });
+      ctx.fx.flashes.spawn(this.rx[i], 0.7, this.rz[i], 1.0, 0.4, 0xffd23f);
+      return;
+    }
+    this.hp[i] = 0;
+    this.tame(i);
+  }
+
+  /** Start an attack: a charge when the child is near, crumbs from farther away. Every attack has a visible wind-up first. */
+  private beginAttack(i: number, dp: number): void {
+    const pl = this.ctx.player.position;
+    this.attacks++;
+    this.gap = Combat.rat.globalGap;
+    this.kind[i] = dp <= Combat.rat.chargeMaxDist ? K_CHARGE : K_CRUMB;
+    this.st[i] = ST_WIND;
+    this.timer[i] = 0;
+    this.puff[i] = 0;
+    const d = Math.hypot(pl.x - this.rx[i], pl.z - this.rz[i]) || 1;
+    this.dirX[i] = (pl.x - this.rx[i]) / d;
+    this.dirZ[i] = (pl.z - this.rz[i]) / d;
+    this.ctx.sfx.blip();
+  }
+
+  /** The wind-up is over: the rat dashes along the locked line, or lets a slow crumb fly. */
+  private launch(i: number): void {
+    const { ctx } = this;
+    if (this.kind[i] === K_CRUMB) {
+      this.crumbs++;
+      const pl = ctx.player.position;
+      const t = Combat.rat;
+      ctx.projectiles.spawn({
+        from: { x: this.rx[i] + this.dirX[i] * 0.5, y: 0.75, z: this.rz[i] + this.dirZ[i] * 0.5 },
+        to: { x: pl.x, y: pl.y, z: pl.z },
+        speed: t.crumbSpeed,
+        radius: t.crumbRadius,
+        color: t.crumbColor,
+        life: t.crumbLife,
+        returnTo: this.aim[i],
+        onHitPlayer: (p) => this.hurtGlenAt(p.pos.x, p.pos.z, i),
+        onReturned: () => this.hit(i), // a crumb sent back by the shield: the thrower gets a bonk
+      });
+      this.st[i] = ST_RECOVER;
+      this.timer[i] = 0;
+      return;
+    }
+    this.charges++;
+    this.st[i] = ST_CHARGE;
+    this.timer[i] = 0;
+  }
+
+  /** The child is touched (charge) or hit (crumb): `Health` decides between a hit, a shield block and the safe seconds. */
+  private hurtGlenAt(x: number, z: number, i: number): 'hit' | 'blocked' | 'ignored' {
+    const r = this.ctx.health.hurt(x, z);
+    if (r === 'hit') this.hurtGlen++;
+    else if (r === 'blocked') {
+      this.blocked++;
+      if (this.st[i] === ST_CHARGE) {
+        // The dome bonks the rat: it is dizzy for a moment.
+        this.st[i] = ST_STUN;
+        this.timer[i] = 0;
+        this.squash[i] = 1;
+        this.ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, Combat.rat.stun, 0.3);
+      }
+    }
+    return r;
+  }
+
   fixedUpdate(dt: number): void {
     this.t += dt;
     const { ctx } = this;
     const pl = ctx.player.position;
+    const C = Combat.rat;
+    this.gap = Math.max(0, this.gap - dt);
+    const calm = this.muted || !ctx.game.controlsEnabled || ctx.dialog.active || ctx.health.resting;
+    const feet = pl.y - 0.55;
     for (let i = 0; i < this.n; i++) {
       const s = this.st[i];
       if (s === ST_GONE) continue;
@@ -393,30 +581,78 @@ export class MarketRats {
       const dx = this.rx[i] - pl.x;
       const dz = this.rz[i] - pl.z;
       const dp = Math.hypot(dx, dz);
+      this.cool[i] = Math.max(0, this.cool[i] - dt);
+      this.squash[i] = Math.max(0, this.squash[i] - dt * 3);
+      // A sideways dodge slides the rat (fast, a quarter of a second).
+      if (this.slX[i] !== 0 || this.slZ[i] !== 0) {
+        const L = Math.hypot(this.slX[i], this.slZ[i]);
+        const step = Math.min(L, 9 * dt);
+        const mx = (this.slX[i] / L) * step;
+        const mz = (this.slZ[i] / L) * step;
+        clampToStreets(this.rx[i] + mx, this.rz[i] + mz, this.tmp);
+        this.rx[i] = this.tmp.x;
+        this.rz[i] = this.tmp.z;
+        this.slX[i] -= mx;
+        this.slZ[i] -= mz;
+        if (L - step < 0.01) this.slX[i] = this.slZ[i] = 0;
+      }
       switch (s) {
         case ST_LOOP: {
           this.ang[i] += (RatConfig.loopSpeed / r.r) * dt;
           this.setLoopPos(i);
-          if (dp < RatConfig.fleeRadius) this.st[i] = ST_FLEE;
+          if (!calm && dp < C.aggroRadius && this.cool[i] <= 0 && this.gap <= 0) this.beginAttack(i, dp);
           break;
         }
-        case ST_FLEE: {
-          // Away from the child, a little sideways so it scurries around the kiosks instead of into a corner.
-          const ux = dx / (dp || 1);
-          const uz = dz / (dp || 1);
-          const side = i % 2 ? 0.45 : -0.45;
-          let vx = ux - uz * side;
-          let vz = uz + ux * side;
-          const vl = Math.hypot(vx, vz) || 1;
-          vx /= vl;
-          vz /= vl;
-          const k = Math.max(0, Math.min(1, (dp - RatConfig.fleeSlowFrom) / (RatConfig.fleeFastAt - RatConfig.fleeSlowFrom)));
-          const sp = RatConfig.fleeNear + (RatConfig.fleeSpeed - RatConfig.fleeNear) * k;
-          clampToStreets(this.rx[i] + vx * sp * dt, this.rz[i] + vz * sp * dt, this.tmp);
-          this.yaw[i] = this.turn(this.yaw[i], Math.atan2(this.tmp.x - this.rx[i], this.tmp.z - this.rz[i]), dt);
+        case ST_WIND: {
+          this.timer[i] += dt;
+          this.yaw[i] = this.turn(this.yaw[i], Math.atan2(this.dirX[i], this.dirZ[i]), dt * 2);
+          // Until the lock the line follows the child (so a child standing still is aimed at); then it is fixed: walk aside or jump.
+          const lock = this.windup * C.lockShare;
+          if (this.timer[i] < lock) {
+            const d = dp || 1;
+            this.dirX[i] = -dx / d;
+            this.dirZ[i] = -dz / d;
+          }
+          this.puff[i] -= dt;
+          if (this.puff[i] <= 0) {
+            this.puff[i] = 0.1;
+            ctx.fx.sparkles.burst(this.rx[i] - this.dirX[i] * 0.5, 0.15, this.rz[i] - this.dirZ[i] * 0.5, 2, 1.1, 0xf4f1e8, { gravity: -0.2, life: 0.4, up: 0.3 });
+          }
+          if (this.timer[i] >= this.windup) this.launch(i);
+          break;
+        }
+        case ST_CHARGE: {
+          this.timer[i] += dt;
+          clampToStreets(this.rx[i] + this.dirX[i] * C.chargeSpeed * dt, this.rz[i] + this.dirZ[i] * C.chargeSpeed * dt, this.tmp);
           this.rx[i] = this.tmp.x;
           this.rz[i] = this.tmp.z;
-          if (dp > RatConfig.calmRadius) this.st[i] = ST_BACK;
+          this.yaw[i] = Math.atan2(this.dirX[i], this.dirZ[i]);
+          if (Math.hypot(this.rx[i] - pl.x, this.rz[i] - pl.z) < C.touchRadius && feet < C.touchTop) {
+            const res = this.hurtGlenAt(this.rx[i], this.rz[i], i);
+            if (res === 'hit' && this.st[i] === ST_CHARGE) {
+              this.st[i] = ST_RECOVER;
+              this.timer[i] = 0;
+              this.cool[i] = this.cooldown;
+            }
+          }
+          if (this.st[i] === ST_CHARGE && this.timer[i] >= C.chargeTime) {
+            this.st[i] = ST_RECOVER;
+            this.timer[i] = 0;
+          }
+          break;
+        }
+        case ST_RECOVER: {
+          this.timer[i] += dt;
+          if (this.timer[i] >= C.recover) {
+            this.st[i] = ST_BACK;
+            this.cool[i] = this.cooldown;
+          }
+          break;
+        }
+        case ST_STUN: {
+          this.timer[i] += dt;
+          this.yaw[i] += dt * 7;
+          if (this.timer[i] >= C.stun) this.st[i] = ST_BACK;
           break;
         }
         case ST_BACK: {
@@ -432,7 +668,6 @@ export class MarketRats {
           this.yaw[i] = this.turn(this.yaw[i], Math.atan2(tx, tz), dt);
           this.rx[i] = this.tmp.x;
           this.rz[i] = this.tmp.z;
-          if (dp < RatConfig.fleeRadius - 1) this.st[i] = ST_FLEE;
           break;
         }
         case ST_DIZZY: {
@@ -463,7 +698,7 @@ export class MarketRats {
         default:
           break;
       }
-      this.aim[i].set(this.rx[i], 0.4, this.rz[i]);
+      this.aim[i].set(this.rx[i], 0.4 * C.scale, this.rz[i]);
     }
     this.foods(dt);
   }
@@ -528,33 +763,85 @@ export class MarketRats {
     const pv = this.ctx.player.visualPosition;
     const near = Math.hypot(pv.x - MARKET.hub.x, pv.z - MARKET.hub.z) < RatConfig.showRadius;
     if (this.shown) this.ratMesh.visible = this.foodMesh.visible = this.props.visible = near;
+    if (!near) this.arrowMesh.visible = this.pipMesh.visible = false;
     if (!near || !this.shown) return;
     this.writeMatrices();
   }
 
   private writeMatrices(): void {
     const t = this.t;
+    let anyArrow = false;
+    let anyPips = false;
     for (let i = 0; i < this.n; i++) {
       const s = this.st[i];
       // ---- rat ----
+      const SC = Combat.rat.scale;
+      let arrow = 0;
       if (s === ST_GONE) {
         this.m4.makeScale(0, 0, 0);
       } else {
         let y = 0;
         let sy = 1;
+        let sxz = 1;
+        let jx = 0;
+        let jz = 0;
         if (s === ST_LOOP || s === ST_BACK) y = Math.abs(Math.sin(t * 9 + i)) * 0.05;
-        else if (s === ST_FLEE || s === ST_RUN) {
+        else if (s === ST_RUN) {
           y = Math.abs(Math.sin(t * 15 + i)) * 0.09;
           sy = 1 + Math.sin(t * 30 + i) * 0.04;
+        } else if (s === ST_WIND) {
+          // Telegraph: the rat shakes harder and crouches (a crumb thrower puffs its cheeks), and a charge shows its arrow.
+          const u = Math.min(1, this.timer[i] / this.windup);
+          jx = Math.sin(t * 70 + i) * 0.05 * (0.4 + u);
+          jz = Math.cos(t * 63 + i) * 0.05 * (0.4 + u);
+          sy = 1 - 0.18 * u;
+          sxz = 1 + (this.kind[i] === K_CRUMB ? 0.3 : 0.12) * u;
+          if (this.kind[i] === K_CHARGE) arrow = 0.75 + 0.25 * Math.sin(t * 20);
+        } else if (s === ST_CHARGE) {
+          y = Math.abs(Math.sin(t * 24 + i)) * 0.06;
+          sy = 0.92;
+        } else if (s === ST_RECOVER) {
+          sy = 1 + Math.sin(t * 16 + i) * 0.05; // panting
+        } else if (s === ST_STUN) {
+          const u = Math.min(1, this.timer[i] / Combat.rat.stun);
+          y = Math.sin(Math.PI * u) * 0.25;
         } else if (s === ST_DIZZY) {
           const u = Math.min(1, this.timer[i] / RatConfig.dizzyTime);
           y = Math.sin(Math.PI * Math.min(1, u * 2)) * 0.5;
           sy = 1 + 0.15 * Math.sin(u * 20);
         }
+        const sq = this.squash[i];
+        sy *= 1 - 0.25 * sq;
+        sxz *= 1 + 0.2 * sq;
         this.q.setFromAxisAngle(this.up, this.yaw[i]);
-        this.m4.compose(this.p.set(this.rx[i], y, this.rz[i]), this.q, this.sc.set(1, sy, 1));
+        this.m4.compose(this.p.set(this.rx[i] + jx, y * SC, this.rz[i] + jz), this.q, this.sc.set(SC * sxz, SC * sy, SC * sxz));
       }
       this.ratMesh.setMatrixAt(i, this.m4);
+      // ---- charge arrow on the ground (in front of the rat, along the locked line) ----
+      if (arrow > 0) {
+        this.q.setFromAxisAngle(this.up, Math.atan2(this.dirX[i], this.dirZ[i]));
+        this.m4.compose(this.p.set(this.rx[i] + this.dirX[i] * 0.7, 0.06, this.rz[i] + this.dirZ[i] * 0.7), this.q, this.sc.set(1.1, 1, arrow * 1.6));
+      } else this.m4.makeScale(0, 0, 0);
+      this.arrowMesh.setMatrixAt(i, this.m4);
+      if (arrow > 0) anyArrow = true;
+      // ---- hit points: little hearts above a rat that is in the fight (camera-aligned row) ----
+      const fighting = s !== ST_GONE && s < ST_DIZZY && (s !== ST_LOOP || this.hp[i] < this.hpMax);
+      const cyaw = this.ctx.cameraRig.yaw;
+      if (fighting) anyPips = true;
+      const rxv = Math.cos(cyaw);
+      const rzv = -Math.sin(cyaw);
+      for (let k = 0; k < this.hpMax; k++) {
+        const idx = i * this.hpMax + k;
+        if (!fighting) this.m4.makeScale(0, 0, 0);
+        else {
+          const off = (k - (this.hpMax - 1) / 2) * 0.32;
+          const full = k < this.hp[i];
+          const z = full ? 1.7 : 0.9;
+          this.m4.compose(this.p.set(this.rx[i] + rxv * off, 1.35 + (full ? Math.sin(t * 5 + k) * 0.03 : 0), this.rz[i] + rzv * off), this.q.identity(), this.sc.set(z, z, z));
+        }
+        this.pipMesh.setMatrixAt(idx, this.m4);
+        this.pipMesh.setColorAt(idx, this.col.setHex(k < this.hp[i] ? 0xff4d6d : 0x9aa0b4));
+      }
       // ---- food ----
       const kind = RATS[i].food;
       const sh = FOOD_SHAPE[kind];
@@ -567,7 +854,7 @@ export class MarketRats {
         // On the rat's back, bouncing with it.
         if (s === ST_GONE) k = 0;
         px = this.rx[i];
-        py = 0.62 + (s === ST_LOOP || s === ST_BACK ? Math.abs(Math.sin(t * 9 + i)) * 0.05 : s === ST_FLEE ? Math.abs(Math.sin(t * 15 + i)) * 0.09 : 0);
+        py = 0.62 * Combat.rat.scale + (s === ST_LOOP || s === ST_BACK ? Math.abs(Math.sin(t * 9 + i)) * 0.05 : 0);
         pz = this.rz[i];
       } else if (fs === F_FLY) {
         const u = this.ft[i];
@@ -592,5 +879,11 @@ export class MarketRats {
     }
     this.ratMesh.instanceMatrix.needsUpdate = true;
     this.foodMesh.instanceMatrix.needsUpdate = true;
+    this.arrowMesh.instanceMatrix.needsUpdate = true;
+    this.pipMesh.instanceMatrix.needsUpdate = true;
+    if (this.pipMesh.instanceColor) this.pipMesh.instanceColor.needsUpdate = true;
+    // No draw call at all while nothing is in the fight.
+    this.arrowMesh.visible = anyArrow;
+    this.pipMesh.visible = anyPips;
   }
 }

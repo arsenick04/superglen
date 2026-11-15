@@ -1,3 +1,4 @@
+import type { Health } from '../gameplay/Health';
 import type * as THREE from 'three';
 import type { Physics } from '../core/Physics';
 import type { SaveStore } from '../core/Save';
@@ -128,6 +129,8 @@ export interface LevelContext {
   readonly audio: AudioManager;
   /** Tantangan Pintar: `await ctx.quiz.run({ category, reason })` shows 3 questions over the game (controls locked meanwhile). */
   readonly quiz: QuizEngine;
+  /** Glen's hearts (see gameplay/Health.ts): hurt, heal, hospital spot. */
+  readonly health: Health;
   /** Register a cleanup that runs when the level unloads (after Level.dispose, in reverse order). */
   onDispose(fn: () => void): void;
 }

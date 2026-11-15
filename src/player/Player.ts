@@ -395,6 +395,13 @@ export class Player {
       if (!this.grounded && this.kickLock > 0) rate = hasInput ? rate * Parkour.wallKick.steerScale : 0;
     }
     // Move velocity toward target by at most rate*dt (frame-rate independent at fixed dt).
+    if (this.knockTime > 0) {
+      // A small push after a hit (config/combat.ts): added to the wanted velocity and followed quickly.
+      this.knockTime -= dt;
+      this.targetVel.x += this.knockX;
+      this.targetVel.z += this.knockZ;
+      rate = Math.max(rate, 60);
+    }
     this.tmp.subVectors(this.targetVel, this.velocity);
     const diff = this.tmp.length();
     const maxDelta = rate * dt;
@@ -1145,6 +1152,18 @@ export class Player {
     this.jumpBufferTimer = Parkour.windows.good;
     this.pressTime = this.simTime;
     this.scriptedPress = true; // a scripted press never judges the rhythm
+  }
+
+  private knockX = 0;
+  private knockZ = 0;
+  private knockTime = 0;
+
+  /** A small push (m/s for `time` seconds) away from a bump (direction need not be normalised). */
+  knock(dx: number, dz: number, speed: number, time: number): void {
+    const l = Math.hypot(dx, dz) || 1;
+    this.knockX = (dx / l) * speed;
+    this.knockZ = (dz / l) * speed;
+    this.knockTime = time;
   }
 
   /** Back to the last safe ground (same floor resolution as a level spawn). */

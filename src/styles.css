@@ -1584,7 +1584,7 @@ html.pad-ui .pad-focus {
 .ch3-count {
   position: absolute;
   left: 50%;
-  top: calc(env(safe-area-inset-top) + 8px);
+  top: calc(env(safe-area-inset-top) + 52px);
   transform: translateX(-50%);
   display: none;
   gap: 10px;
@@ -1636,4 +1636,50 @@ html.pad-ui .pad-focus {
   font: 500 11px/1.2 ui-monospace, monospace;
   opacity: 0.55;
   user-select: text;
+}
+
+/* ---- Glen's hearts: top centre (the gear and the fps pill are left, the coin counter right) ---- */
+.hearts {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 8px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  z-index: 6;
+}
+.hearts[hidden] {
+  display: none;
+}
+.hearts .heart {
+  width: 34px;
+  height: 32px;
+  display: block;
+}
+.hearts .heart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hearts .heart.lost {
+  animation: heart-pop 0.5s ease-out;
+}
+html.touch-ui .hearts {
+  padding: 2px 8px;
+  gap: 2px;
+}
+html.touch-ui .hearts .heart {
+  width: 26px;
+  height: 24px;
+}
+@keyframes heart-pop {
+  0% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hearts .heart.lost { animation: none; }
 }

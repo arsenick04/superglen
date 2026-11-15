@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
+import { CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
 import { Celebration } from '../Celebration';
 import { Easings } from '../../gameplay/Sequence';
@@ -112,6 +113,15 @@ export class Chapter3 {
         done: () => this.over,
         rats: () => this.rats.list(),
         tame: (i: number) => this.rats.tame(i),
+        attack: (i: number, kind: 0 | 1) => this.rats.forceAttack(i, kind),
+        hit: (i: number) => this.rats.hit(i),
+        combat: () => this.rats.combatCounts(),
+        mute: (on: boolean) => {
+          this.rats.muted = on;
+        },
+        setRng: (v: number | null) => {
+          CombatRng.next = v === null ? Math.random : () => v;
+        },
         collect: () => this.rats.collectAll(),
         counts: () => ({ quizRuns: this.quizRuns, countsDone: this.countsDone, ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
       };
@@ -266,7 +276,7 @@ export class Chapter3 {
         ctx.sfx.bling();
         ctx.fx.sparkles.burst(hub.x, 0.8, hub.z, 30, 4, 0xffe6a8, { gravity: 2, life: 0.9, up: 0.8 });
         ctx.fx.flashes.spawn(hub.x, 1.0, hub.z, 3, 0.7, 0xffffff);
-        await seq.tween(0.5, (t) => mesh.scale.setScalar(0.01 + 2.2 * t), Easings.easeOutBack);
+        await seq.tween(0.5, (t) => mesh.scale.setScalar(0.01 + 3.2 * t), Easings.easeOutBack);
         mesh.rotation.y = 0;
         await dialog.say(L.rakusTawa, { lockControls: true });
         await dialog.say(L.glenHei, { lockControls: true });

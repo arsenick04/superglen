@@ -22,8 +22,9 @@ const FACES: Readonly<Record<string, FaceStyle>> = {
     ring: '#ffffff',
     extra: '<circle cx="10" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="54" cy="14" r="8" fill="#8d7a93" stroke="#fff" stroke-width="3"/><circle cx="10" cy="14" r="4" fill="#f5a3b5"/><circle cx="54" cy="14" r="4" fill="#f5a3b5"/>',
   },
-  // The friendly silhouette of Chapter 4: soft dark blue with a pale ring.
-  misterius: { bg: '#4a5a94', ring: '#bcd0ff' },
+  // Food stall seller and the hospital doctor.
+  penjual: { bg: '#f2b632', ring: '#ffffff' },
+  dokter: { bg: '#2ec4b6', ring: '#ffffff' },
   // Red face, gold ring and a gold star on the forehead.
   superglen: {
     bg: '#e8453c',

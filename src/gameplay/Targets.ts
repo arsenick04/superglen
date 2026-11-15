@@ -26,6 +26,11 @@ export interface TargetSpec {
   enabled?: boolean;
   /** Higher wins when two targets are about equally well placed (default 0). */
   priority?: number;
+  /**
+   * Own, smaller aim cone (rats): generous up close (`nearConeDeg` out to `near` m), shrinking to `farConeDeg` at `range` m.
+   * Without it the laser's wide default cone and range apply (practice targets stay easy).
+   */
+  assist?: { range: number; near: number; nearConeDeg: number; farConeDeg: number };
   /** Called when a laser shot hits. Never kills anything: react with stars, a spin, a tame, a run away. */
   onHit: (info: HitInfo) => void;
 }
@@ -41,6 +46,7 @@ export class Target {
     public priority: number,
     readonly onHit: (info: HitInfo) => void,
     private readonly owner: Targets,
+    readonly assist: TargetSpec['assist'] = undefined,
   ) {}
 
   remove(): void {
@@ -91,6 +97,7 @@ export class Targets {
       spec.priority ?? 0,
       spec.onHit,
       this,
+      spec.assist,
     );
     this.list.push(t);
     return t;
@@ -132,7 +139,14 @@ export class Targets {
       const dz = p.z - q.z;
       const dh = Math.hypot(dx, dz);
       const dist = Math.hypot(dh, dy);
-      if (dist < 0.05 || dist - t.radius > q.range) continue;
+      const a = t.assist;
+      const range = a ? Math.min(a.range, q.range) : q.range;
+      if (dist < 0.05 || dist - t.radius > range) continue;
+      let cone = q.cone;
+      if (a) {
+        const k = Math.max(0, Math.min(1, (dist - a.near) / Math.max(0.01, range - a.near)));
+        cone = ((a.nearConeDeg + (a.farConeDeg - a.nearConeDeg) * k) * Math.PI) / 180;
+      }
       if (Math.atan2(Math.abs(dy), dh) > MAX_ELEVATION) continue;
       // Angle to each reference direction, reduced by the angular size of the target.
       let angle = 0;
@@ -142,8 +156,8 @@ export class Targets {
         const a2 = Math.acos(Math.max(-1, Math.min(1, (dx * q.cameraX + dz * q.cameraZ) / dh)));
         angle = Math.max(0, Math.min(a1, a2) - slack);
       }
-      if (angle > q.cone) continue;
-      const score = 0.65 * (angle / q.cone) + 0.35 * (dist / q.range) - 0.12 * t.priority;
+      if (angle > cone) continue;
+      const score = 0.65 * (angle / cone) + 0.35 * (dist / range) - 0.12 * t.priority;
       // Insert into the sorted output.
       let k = n < out.length ? n : out.length - 1;
       if (n >= out.length && score >= out[k].score) continue;

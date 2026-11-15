@@ -6,6 +6,7 @@ export interface ParentsDeps {
   save: SaveStore;
   quiz: QuizEngine;
   setEasyJump: (on: boolean) => void;
+  setEasyFight: (on: boolean) => void;
   setSound: (on: boolean) => void;
   setMusic: (on: boolean) => void;
   /** Called after "reset progres" has cleared the save (the game reloads so every level starts clean). */
@@ -104,6 +105,10 @@ export class ParentsPage {
     const right = el('div', 'parents-col');
     right.append(this.toggle('Lompat mudah (tahan tombol lompat)', 'easy', save.data.settings.easyJump, (on) => {
       this.deps.setEasyJump(on);
+      this.render();
+    }));
+    right.append(this.toggle('Mode mudah (musuh lebih lemah)', 'easyfight', save.data.settings.easyFight, (on) => {
+      this.deps.setEasyFight(on);
       this.render();
     }));
     right.append(this.toggle('Suara', 'sound', save.data.settings.sound, (on) => {

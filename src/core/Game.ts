@@ -26,6 +26,8 @@ import { Hud } from '../ui/Hud';
 import { DialogBubble } from '../ui/DialogBubble';
 import { Fade } from '../ui/Fade';
 import { Dialog } from '../gameplay/Dialog';
+import { Health } from '../gameplay/Health';
+import { HealLines } from '../gameplay/healLines';
 import { Interactions } from '../gameplay/Interactions';
 import { Objectives } from '../gameplay/Objectives';
 import { LevelManager } from '../world/LevelManager';
@@ -165,6 +167,8 @@ export interface DebugHandle {
   parents: { open: boolean; show: () => void; close: () => void };
   /** Settings panel (gear): state and test helpers. `frames` counts rendered game frames, `frozen` = the loop is paused. */
   settings: Record<string, unknown>;
+  /** Glen's hearts (gameplay/Health.ts): counts and test helpers. */
+  health: Record<string, unknown>;
   /** Mini map / full map state (see ui/MapView.ts). */
   map: Record<string, unknown>;
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
@@ -278,6 +282,9 @@ export class Game {
   readonly rings: GroundRings;
   readonly save: SaveStore;
   readonly dialog: Dialog;
+  readonly health: Health;
+  private fadeUi!: Fade;
+  private resting = false;
   readonly interactions: Interactions;
   readonly objectives: Objectives;
   readonly levels: LevelManager;
@@ -372,6 +379,7 @@ export class Game {
     sfx: {},
     parents: undefined as unknown as DebugHandle['parents'],
     settings: {},
+    health: {},
     map: {},
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
@@ -553,6 +561,7 @@ export class Game {
       save: this.save,
       quiz: this.quiz,
       setEasyJump: (on) => this.setEasyJump(on),
+      setEasyFight: (on) => this.save.setEasyFight(on),
       setSound: (on) => this.setSound(on),
       setMusic: (on) => this.setMusic(on),
       afterReset: () => {
@@ -669,6 +678,10 @@ export class Game {
     if (this.touch) this.touch.onButtonPress = (a) => (a === 'jump' ? undefined : this.sfx.pop());
     this.objectives = new Objectives(this.scene, uiRoot, this.cameraRig.camera, this.player);
     const fade = new Fade(uiRoot);
+    this.fadeUi = fade;
+    this.health = new Health(uiRoot, this.save, this.player, { stars: this.stars, sparkles: this.sparkles }, this.synth, this.sfx);
+    this.health.onExhausted = () => void this.rest();
+    this.debug.health = this.health.debugHandle();
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -721,6 +734,7 @@ export class Game {
         sfx: this.sfx,
         audio: this.audio,
         quiz: this.quiz,
+        health: this.health,
       },
       player: this.player,
       cameraRig: this.cameraRig,
@@ -968,6 +982,7 @@ export class Game {
     this.physics.step();
     this.player.postStep();
     this.projectiles.fixedUpdate(dt);
+    this.health.fixedUpdate(dt);
     this.input.endFixedStep();
   }
 
@@ -1205,6 +1220,38 @@ export class Game {
         }
       }
     }
+  }
+
+  /**
+   * Zero hearts: Glen is only tired. Soft fade, rest at the Rumah Sakit (the city) or the last safe ground, hearts full, Nino
+   * encourages. Nothing is lost (coins, chapters and tamed rats stay).
+   */
+  private async rest(): Promise<void> {
+    if (this.resting) return;
+    this.resting = true;
+    const wasControls = this.levelControls;
+    this.levelControls = false;
+    this.updateControls();
+    this.input.reset();
+    this.sfx.stopAll();
+    try {
+      await this.fadeUi.out();
+      const spot = this.health.hospital;
+      if (spot && this.levels.currentId === 'kota') {
+        this.player.velocity.set(0, 0, 0);
+        this.levels.teleport(spot.x, 0, spot.z, spot.yaw);
+      } else {
+        this.player.respawn();
+        this.cameraRig.snapBehind(this.player.facing);
+      }
+      this.health.fill();
+      await this.fadeUi.in();
+    } finally {
+      this.levelControls = wasControls || this.levelControls;
+      this.resting = false;
+      this.updateControls();
+    }
+    await this.dialog.say(HealLines.semangat);
   }
 
   /** "Kembali ke tengah kota" (the city) or "Kembali ke tempat aman" (every other level). */
