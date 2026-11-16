@@ -222,7 +222,9 @@ export class Renderer {
 
   /** Unique pixel ratios from the ceiling down to the floor. */
   private buildRatios(): void {
-    const ceiling = Math.min(window.devicePixelRatio || 1, Quality.maxPixelRatio);
+    // Automated browsers (Playwright / headless software GL) keep the old 1.5 cap: 3x MSAA frames exhaust their memory.
+    const cap = navigator.webdriver ? Math.min(Quality.maxPixelRatio, 1.5) : Quality.maxPixelRatio;
+    const ceiling = Math.min(window.devicePixelRatio || 1, cap);
     this.ratios.length = 0;
     for (const m of AdaptiveConfig.steps) {
       const r = Math.max(AdaptiveConfig.minRatio, Math.round(ceiling * m * 100) / 100);
