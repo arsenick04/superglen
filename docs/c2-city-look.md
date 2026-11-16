@@ -4,6 +4,10 @@ The city uses uniform model scaling, collider-aligned architectural supports, br
 
 Current validation: `npm run build` PASS; `npm run check:reach` PASS (0 errors, 0 warnings). CityData, gameplay, story and audio are unchanged.
 
+Follow-up: quiz validation PASS, kota-touch PASS on isolated port 4191, desktop hud-layout PASS. The first kota run passed functional checks but failed on the missing favicon; the app now explicitly uses its existing logo as the favicon. Desktop kota-life passed behavior checks but exceeded the geometry budget (105 calls / 806,198 triangles). City rendering now skips the extra GTAO/bloom chain to share the touch daylight pipeline; this change still requires a fresh performance run. Touch HUD verification exposed missing map/zoom and dialog DOM at measurement time; a visual frame flush was added before bounds measurement, and its rerun remains required.
+
+The branch `codex/c2-city-look` was pushed successfully. Automatic PR creation failed with GitHub GraphQL `Forbidden`; a PR has not been created.
+
 ## Before / after
 
 Desktop views, ordered bank/hospital, hill, market, housing, plaza, school:

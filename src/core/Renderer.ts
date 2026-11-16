@@ -170,7 +170,9 @@ export class Renderer {
     r.toneMappingExposure = scene.userData.cityDaylight ? 0.95 : 1;
     r.info.autoReset = false;
     r.info.reset();
-    if (!PostConfig.enabled || !(camera instanceof THREE.PerspectiveCamera)) {
+    // City daylight uses the same direct colour pipeline on desktop and touch.
+    // GTAO's extra city geometry pass both darkened facades and doubled their cost.
+    if (scene.userData.cityDaylight || !PostConfig.enabled || !(camera instanceof THREE.PerspectiveCamera)) {
       r.render(scene, camera);
       return;
     }

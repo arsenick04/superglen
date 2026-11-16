@@ -1,5 +1,12 @@
 # PROGRESS Superglen
 
+## C2 city look (16 November 2026): masih dikerjakan
+
+- Branch `codex/c2-city-look`: skala model seragam, dukungan pijakan, pencahayaan kota, podium/jalan/bukit, warga membulat, posisi minimap sentuh dan pemeriksaan zoom. Ringkasan dan gambar sebelum/sesudah: `docs/c2-city-look.md`.
+- Build, check:reach (0 error/warning), check:quiz, kota-touch, hud-layout desktop dan bab1 lulus. Kota-life desktop sebelumnya gagal anggaran grafik; jalur render kota kini disamakan dengan touch dan menunggu tes ulang. HUD touch masih perlu verifikasi setelah sinkronisasi frame pengukuran.
+- Branch sudah dipush. Pembuatan PR otomatis ditolak GitHub API (`Forbidden`); belum ada PR. Tidak ada perubahan gameplay/cerita/audio atau CityData.
+- Untuk dicoba setelah review: bandingkan semua gedung dari dekat; pintu/wajah singa Barongsai; minimap/joystick/zoom di iPhone. C2 belum dinyatakan selesai.
+
 ## Paket malam A1 (11 November 2026): selesai
 
 ### Yang selesai
