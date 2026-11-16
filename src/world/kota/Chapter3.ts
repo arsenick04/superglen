@@ -287,11 +287,16 @@ export class Chapter3 {
         const d = MARKET.drains[MARKET.rakus.drain];
         const x0 = mesh.position.x;
         const z0 = mesh.position.z;
+        mesh.rotation.order = 'YXZ';
         mesh.rotation.y = Math.atan2(d.x - x0, d.z - z0);
         void dialog.say(L.rakusRaja, { lockControls: true });
         const dur = Math.hypot(d.x - x0, d.z - z0) / 8;
         await seq.tween(dur, (t) => {
           mesh.position.set(x0 + (d.x - x0) * t, Math.abs(Math.sin(t * dur * 7)) * 0.22, z0 + (d.z - z0) * t);
+          // Waddling run (the model is static): rocks side to side and leans forward, with a squash on every hop.
+          mesh.rotation.z = Math.sin(t * dur * 7) * 0.1;
+          mesh.rotation.x = 0.16;
+          mesh.scale.set(3.2 * (1 + Math.sin(t * dur * 14) * 0.03), 3.2 * (1 - Math.sin(t * dur * 14) * 0.04), 3.2);
           cameraRig.setFraming(this.tmp.set(mesh.position.x, 1.2, mesh.position.z), { weight: 0.6, distance: 5 });
         });
         ctx.fx.sparkles.burst(d.x, 0.4, d.z, 18, 3, 0xdfe6f2, { gravity: 1.5, life: 0.7, up: 0.7 });

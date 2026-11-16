@@ -90,6 +90,38 @@ for (const name of HEROES) {
 const ENEMIES = ['curut_cemberut', 'ular_melar', 'tikus_rakus', 'elang_belang', 'gorilla_gembira'];
 const LO_ENEMIES = { curut_cemberut: 6000 };
 const ENEMY_OUT = path.join(OUT, 'enemies');
+// The Tripo models stand in a T-pose. For the two rats the arms are bent down (A-pose) by rotating the arm vertices about the shoulder,
+// blended in over a few cm so the shoulder stays smooth: pivot x/y (model units), arm height band, blend start/end |x|, angle (rad).
+const ARMS_DOWN = {
+  curut_cemberut: { px: 0.1, py: 0.53, band: 0.14, x0: 0.12, x1: 0.2, angle: 1.05 },
+  tikus_rakus: { px: 0.21, py: 0.51, band: 0.15, x0: 0.22, x1: 0.32, angle: 1.0 },
+};
+const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function lowerArms(root, c) {
+  for (const mesh of root.listMeshes()) for (const prim of mesh.listPrimitives()) {
+    for (const sem of ['POSITION', 'NORMAL']) {
+      const a = prim.getAttribute(sem);
+      const P = prim.getAttribute('POSITION');
+      const pv = [], el = [];
+      for (let i = 0; i < a.getCount(); i++) {
+        P.getElement(i, pv);
+        const side = Math.sign(pv[0]) || 1;
+        const w = smoothstep(c.x0, c.x1, Math.abs(pv[0])) * (1 - smoothstep(c.band * 0.6, c.band, Math.abs(pv[1] - c.py)));
+        const th = c.angle * w;
+        a.getElement(i, el);
+        const dx = sem === 'POSITION' ? el[0] - side * c.px : el[0];
+        const dy = sem === 'POSITION' ? el[1] - c.py : el[1];
+        const co = Math.cos(th), si = Math.sin(th);
+        // +x arm turns clockwise (tip goes down), -x arm the mirror image.
+        const nx = dx * co + side * dy * si;
+        const ny = -side * dx * si + dy * co;
+        el[0] = sem === 'POSITION' ? nx + side * c.px : nx;
+        el[1] = sem === 'POSITION' ? ny + c.py : ny;
+        a.setElement(i, el);
+      }
+    }
+  }
+}
 mkdirSync(ENEMY_OUT, { recursive: true });
 for (const id of ENEMIES) {
   if (only.length && !only.includes(id)) continue;
@@ -105,6 +137,7 @@ for (const id of ENEMIES) {
     }
     const count = () => r.listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((q, p) => q + (p.getIndices()?.getCount() ?? 0) / 3, 0), 0);
     const before = count();
+    if (ARMS_DOWN[id]) lowerArms(r, ARMS_DOWN[id]);
     if (suffix) {
       await doc.transform(weld(), prune());
       // UV-aware simplification (keeps the painted texture from smearing), then a permissive pass if still above target.
@@ -146,4 +179,61 @@ for (const id of ENEMIES) {
     const f = (a) => a.map((x) => x.toFixed(2)).join(',');
     console.log(`enemies/${id}${suffix}: ${(src / 1e6).toFixed(2)} MB -> ${(statSync(out).size / 1e6).toFixed(2)} MB, tris ${Math.round(before)} -> ${Math.round(count())}, bbox min(${f(b.min)}) max(${f(b.max)})`);
   }
+}
+
+// ---- Ular Melar head: the stretch animation needs the head alone (the body is drawn by the game as a camo-coloured chain of balls) ----
+// Triangles whose centroid is above SNAKE_CUT (fraction of the model height) stay; the origin moves to the neck's centre at the cut,
+// so the game can pivot the head there. `extras.neckWidth` = width of the neck ring at the cut (model units) to match the body balls.
+const SNAKE_CUT = 0.82;
+if (!only.length || only.includes('ular_melar')) {
+  const doc = await io.read(path.join(SRC, 'enemies', 'ular_melar.glb'));
+  const r = doc.getRoot();
+  const mat = r.listMaterials()[0];
+  mat.setMetallicRoughnessTexture(null);
+  mat.setMetallicFactor(0);
+  mat.setRoughnessFactor(0.85);
+  await doc.transform(weld());
+  const prim = r.listMeshes()[0].listPrimitives()[0];
+  const P = prim.getAttribute('POSITION');
+  const idx = prim.getIndices().getArray();
+  const keepTri = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const cy = (P.getElement(idx[i], [])[1] + P.getElement(idx[i + 1], [])[1] + P.getElement(idx[i + 2], [])[1]) / 3;
+    if (cy >= SNAKE_CUT) keepTri.push(idx[i], idx[i + 1], idx[i + 2]);
+  }
+  const remap = new Map();
+  const order = [];
+  for (const v of keepTri) if (!remap.has(v)) (remap.set(v, order.length), order.push(v));
+  // Neck ring at the cut: vertices of kept triangles within 0.02 above the cut.
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (const v of order) {
+    const p = P.getElement(v, []);
+    if (p[1] > SNAKE_CUT + 0.02) continue;
+    x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[2]); z1 = Math.max(z1, p[2]);
+  }
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  for (const sem of prim.listSemantics()) {
+    const a = prim.getAttribute(sem);
+    const out = new (a.getArray().constructor)(order.length * a.getElementSize());
+    const el = [];
+    order.forEach((v, k) => {
+      a.getElement(v, el);
+      if (sem === 'POSITION') { el[0] -= cx; el[1] -= SNAKE_CUT; el[2] -= cz; }
+      for (let c = 0; c < el.length; c++) out[k * el.length + c] = el[c];
+    });
+    a.setArray(out);
+  }
+  prim.getIndices().setArray(new Uint32Array(keepTri.map((v) => remap.get(v))));
+  r.listMeshes()[0].setExtras({ neckWidth: x1 - x0, neckDepth: z1 - z0 });
+  r.listNodes()[0].setExtras({ neckWidth: x1 - x0, neckDepth: z1 - z0 });
+  await doc.transform(
+    dedup(),
+    prune(),
+    reorder({ encoder: MeshoptEncoder }),
+    quantize({ quantizePosition: 16, quantizeNormal: 12, quantizeTexcoord: 16, quantizeColor: 8, quantizeGeneric: 12 }),
+  );
+  doc.createExtension(EXTMeshoptCompression).setRequired(true).setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+  const out = path.join(ENEMY_OUT, 'ular_melar_head.glb');
+  await io.write(out, doc);
+  console.log(`enemies/ular_melar_head: ${(statSync(out).size / 1e6).toFixed(2)} MB, tris ${keepTri.length / 3}, neck ${(x1 - x0).toFixed(3)} x ${(z1 - z0).toFixed(3)}`);
 }

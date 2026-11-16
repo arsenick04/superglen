@@ -48,7 +48,7 @@ Semua diambil dari Wikimedia Commons, hanya berlisensi CC0 atau Domain Publik (d
 Catatan: akses ke commons.wikimedia.org dan upload.wikimedia.org terbuka (dengan pembatasan laju yang ketat). Host sumber lain (bigsoundbank.com, freesound.org, pixabay.com, archive.org) belum dicoba dan sebelumnya diblokir proxy.
 
 ## Model 3D (Tripo, CC BY)
-Diisi di Fase C.
+Diisi di Fase C. Model musuh (Curut Cemberut, Ular Melar, Tikus Rakus, Elang Belang, Gorilla Gembira): buatan pemilik proyek (Tripo), tanpa rig, `art/models/source/enemies/`, dioptimalkan ke `public/models/enemies/` oleh `npm run models`; animasi lewat kode.
 
 ## Musik
 

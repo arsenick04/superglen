@@ -22,8 +22,8 @@ try {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const page = await browser.newPage({ viewport: { width: 1600, height: 400 } });
   for (const id of ids) {
-    const [kind, nm, url] = id.startsWith('face:') ? id.split(':') : [];
-    await page.goto(kind ? `${base}/scripts/enemy-sheet.html?face=1&url=${url}` : `${base}/scripts/enemy-sheet.html?id=${id}`);
+    const [kind, nm, url] = id.startsWith('face:') || id.startsWith('url:') ? id.split(':') : [];
+    await page.goto(kind === 'url' ? `${base}/scripts/enemy-sheet.html?url=${url}` : kind ? `${base}/scripts/enemy-sheet.html?face=1&url=${url}` : `${base}/scripts/enemy-sheet.html?id=${id}`);
     await page.waitForFunction('window.__done === true', null, { timeout: 60000 });
     const err = await page.evaluate('window.__error');
     if (err) throw new Error(`${id}: ${err}`);

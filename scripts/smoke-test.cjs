@@ -9,10 +9,10 @@ const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.SMOKE_PORT) || 4173;
 const URL = `http://localhost:${PORT}/`;
 const OUT = path.join(ROOT, 'test-results');
-// Triangle budget per frame (incl. shadow pass). History: 60k / 65k / 100k; raised after the owner asked for quality-first hero models
-// (full ~92k-triangle Glen/Superglen/Nino/Aara, native-app target; measured kota worst view ~172k with the hero drawn twice) and the
-// full-quality enemy models. Measured peaks: kota 172k. One constant so the next change is a single edit.
-const TRI_MAX = 300000;
+// Triangle budget per frame (incl. shadow pass). History: 60k / 65k / 100k. Raised (native-app target, owner decision) after the full-quality
+// hero models (~92k triangles each, drawn lit + shadow, Aara too) and the Kenney city: measured peaks with them: phone preset market 377k,
+// kota 172k, school-field fight 345k; DESKTOP preset market ~1.0M (shadow cascades of the city + the heroes). One constant: edit here.
+const TRI_MAX = 1200000;
 // L18 Kenney city (owner: native-app target, quality first): the dressed city (one batched draw for every Kenney building, the owner's
 // ~16k-triangle buildings, Kenney greenery merged into the chunks) has its own budget. Phone preset peak measured 365k / 60 calls.
 const KOTA_TRI_MAX = 480000;
