@@ -163,9 +163,13 @@ function gradeAndMask(m, kitId, file) {
       m.C[k * 3 + 1] = Math.max(0, (l + (g - l) * s) * v);
       m.C[k * 3 + 2] = Math.max(0, (l + (b - l) * s) * v);
       // Kenney's leaves are mint / teal: push greens toward a warm sap green (fits the painted characters better).
-      if (g > r && g > b) {
-        m.C[k * 3] *= 1.15;
-        m.C[k * 3 + 2] *= 0.45;
+      const G = m.C[k * 3 + 1], B = m.C[k * 3 + 2], R = m.C[k * 3];
+      if (G > R * 1.2 && G >= B * 0.85) {
+        // Foliage (green to teal): one family of sap / forest greens; teal leaves (pines, "dark" trees) become deep forest green.
+        const teal = B > G * 0.8;
+        m.C[k * 3] = G * (teal ? 0.1 : 0.24);
+        m.C[k * 3 + 1] = G * (teal ? 0.72 : 0.95);
+        m.C[k * 3 + 2] = G * (teal ? 0.2 : 0.08);
       }
     } else if (kitId === 'sub' && file.startsWith('building')) {
       if (g > r * 1.25 && g > b * 1.05 && t > 0.35) m.M[k] = 1; // green roof

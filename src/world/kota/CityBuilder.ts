@@ -220,11 +220,13 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       break;
     }
     case 'bay': {
-      const col = old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
-      block(B, p, b.base, col, old ? 0xb59a62 : C.GOLD, T.plaster);
-      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : C.RED);
+      // L18: next to a Kenney / owner model the bay takes the kit's look (pale wall, slate trim and rails).
+      const kit = dressOf(b) !== null;
+      const col = kit ? (old ? 0xb08a6a : 0xf3ece0) : old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
+      block(B, p, b.base, col, kit ? 0x5a5f70 : old ? 0xb59a62 : C.GOLD, T.plaster);
+      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], kit ? 0x4a4f5e : old ? 0x7a5048 : C.RED);
       // Railing: two rails and thin posts (boxes: a round post is 24 triangles).
-      const rc = old ? 0x8c7a5a : C.GOLD;
+      const rc = kit ? 0x4a4f5e : old ? 0x8c7a5a : C.GOLD;
       if (along) {
         B.ch.deco.boxNB([p.w, 0.07, 0.07], [p.x, p.top + 0.5, p.z + fz * (p.d / 2 - 0.1)], rc);
         B.ch.deco.boxNB([p.w, 0.05, 0.05], [p.x, p.top + 0.2, p.z + fz * (p.d / 2 - 0.1)], rc);
@@ -246,7 +248,8 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       break;
     }
     case 'sign':
-      block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
+      if (dressOf(b) !== null && !old) block(B, p, b.base, 0x4a4f5e, 0xf2b632);
+      else block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
       break;
     case 'podium':
       // Drawn by the tower (far layer); only the bright edge belongs to the chunk.
@@ -784,6 +787,7 @@ function drawProps(B: Builder, L: CityLayout): void {
       }
     }
   }
+  scatterGreen(B, L);
   for (const gl of L.goals) {
     const ch = B.at(gl.x, gl.z);
     const W = 3.2;
@@ -798,6 +802,56 @@ function drawProps(B: Builder, L: CityLayout): void {
     B.far.cyl(0.08, 6.5, [bn.x, 3.25, bn.z], C.GREY);
     B.far.box([0.06, 2.2, 1.1], [bn.x, 5.0, bn.z + 0.6], bn.color);
     B.far.sph(0.16, [bn.x, 6.6, bn.z], C.GOLD);
+  }
+}
+
+/**
+ * L18: Kenney nature kit bushes, flowers and grass tufts (decoration, no collider): in front of every house and shop and scattered
+ * over the grass of the blocks, never on a building, a climbing piece or a path. Deterministic (hash of the position).
+ */
+function scatterGreen(B: Builder, L: CityLayout): void {
+  const bush = ['nat_plant_bushDetailed', 'nat_plant_bushLarge', 'nat_plant_bush'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  const flower = ['nat_flower_redA', 'nat_flower_yellowB', 'nat_flower_purpleA', 'nat_flower_redB', 'nat_flower_purpleC'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  const tuft = ['nat_grass_large', 'nat_grass_leafsLarge'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  if (!bush.length || !flower.length || !tuft.length) return;
+  const blocked = (x: number, z: number, m: number): boolean =>
+    L.buildings.some((b) => Math.abs(x - b.x) < b.w / 2 + m && Math.abs(z - b.z) < b.d / 2 + m) ||
+    L.buildings.some((b) => b.pieces.some((p) => Math.abs(x - p.x) < p.w / 2 + m && Math.abs(z - p.z) < p.d / 2 + m)) ||
+    L.trees.some((t) => Math.abs(x - t.x) < 1 && Math.abs(z - t.z) < 1) ||
+    L.benches.some((t) => Math.abs(x - t.x) < 1.6 && Math.abs(z - t.z) < 1.6) ||
+    L.ponds.some((p) => Math.abs(x - p.x) < p.r + 1 && Math.abs(z - p.z) < p.r + 1);
+  const put = (list: number[], x: number, z: number, size: number, k: number): void => {
+    if (blocked(x, z, 0.4)) return;
+    const h = hsh(x, z, k);
+    const ch = B.at(x, z);
+    ch.deco.add(list[Math.floor(h * 97) % list.length] as Sh, [x, 0, z], [size, size * (0.85 + h * 0.3), size], 0xffffff, [0, h * 6.283, 0]);
+  };
+  // Front gardens: a bush at both front corners, flowers between.
+  for (const b of L.buildings) {
+    if (b.base > 0 || (b.kind !== 'house' && b.kind !== 'ruko' && b.kind !== 'kiosk')) continue;
+    const L2 = facadeLen(b) / 2;
+    for (const s of [-1, 1]) {
+      const [x, , z] = fp(b, s * (L2 - 0.3), 0.75, 0);
+      put(bush, x, z, 2.6, 1);
+      const [fx, , fz] = fp(b, s * (L2 - 1.3), 0.6, 0);
+      put(flower, fx, fz, 3.2, 2);
+    }
+  }
+  // Grass of the blocks: a tuft or a flower every ~9 m (jittered grid).
+  for (const g of L.ground) {
+    if (g.kind !== 'grass' && g.kind !== 'flowers') continue;
+    const step = g.kind === 'flowers' ? 1.6 : 9;
+    for (let x = g.x0 + step / 2; x < g.x1; x += step)
+      for (let z = g.z0 + step / 2; z < g.z1; z += step) {
+        const jx = x + (hsh(x, z, 3) - 0.5) * step * 0.8;
+        const jz = z + (hsh(x, z, 4) - 0.5) * step * 0.8;
+        if (jx < g.x0 + 0.5 || jx > g.x1 - 0.5 || jz < g.z0 + 0.5 || jz > g.z1 - 0.5) continue;
+        const r = hsh(jx, jz, 5);
+        if (g.kind === 'flowers') put(flower, jx, jz, 3.0, 6);
+        else if (r < 0.55) put(tuft, jx, jz, 2.4, 7);
+        else if (r < 0.8) put(flower, jx, jz, 2.8, 8);
+        else put(bush, jx, jz, 2.2, 9);
+      }
   }
 }
 
@@ -854,6 +908,33 @@ function drawGround(B: Builder, L: CityLayout): void {
       }
       if (skip) continue;
       F.quad(alongX ? 1.6 : 0.2, alongX ? 0.2 : 1.6, [x, Y.mark, z], MARK);
+    }
+  }
+  // L18: raised kerbs along the asphalt (Kenney roads look; visual only, 12 cm), broken at the crossings.
+  for (const r of L.roads) {
+    const alongX = r.x1 - r.x0 > r.z1 - r.z0;
+    const len = alongX ? r.x1 - r.x0 : r.z1 - r.z0;
+    const half = r.main ? CITY.main.road : CITY.local.road;
+    const cx = (r.x0 + r.x1) / 2;
+    const cz = (r.z0 + r.z1) / 2;
+    const seg = 2;
+    for (let t = seg / 2; t < len; t += seg) {
+      for (const sd of [-1, 1]) {
+        const x = alongX ? r.x0 + t : cx + sd * (half + 0.1);
+        const z = alongX ? cz + sd * (half + 0.1) : r.z0 + t;
+        let skip = false;
+        for (const o of L.roads) {
+          if (o === r) continue;
+          const oAlongX = o.x1 - o.x0 > o.z1 - o.z0;
+          if (oAlongX === alongX) continue;
+          const oh = (o.main ? CITY.main.road : CITY.local.road) + 0.6;
+          const ocx = (o.x0 + o.x1) / 2;
+          const ocz = (o.z0 + o.z1) / 2;
+          if (oAlongX ? Math.abs(z - ocz) < oh && x > o.x0 && x < o.x1 : Math.abs(x - ocx) < oh && z > o.z0 && z < o.z1) skip = true;
+        }
+        if (skip) continue;
+        F.boxNB(alongX ? [seg, 0.12, 0.2] : [0.2, 0.12, seg], [x, 0.06, z], 0xd9d6cf);
+      }
     }
   }
   for (const h of L.hills) {
