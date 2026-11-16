@@ -152,9 +152,7 @@ export class KotaLevel implements Level {
     this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
     // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
     // the fog takes the horizon colour of the picture.
-    let alive = true;
-    ctx.onDispose(() => (alive = false));
-    applySky(scene, () => alive, () => {
+    applySky(scene, () => {
       hemi.intensity = 0.4;
       hemi.groundColor.setHex(0x9fb86a);
       this.sun.intensity = 2.5;

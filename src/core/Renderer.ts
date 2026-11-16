@@ -98,7 +98,6 @@ export class Renderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = Quality.shadows;
-    this.renderer.localClippingEnabled = true; // L18: custom building models are cut to their lot (CityDressing.ts)
     this.renderer.shadowMap.type = Quality.shadowMapType;
     this.renderer.domElement.tabIndex = 0;
     container.appendChild(this.renderer.domElement);
@@ -207,8 +206,15 @@ export class Renderer {
    */
   prewarm(scene: THREE.Scene, camera: THREE.Camera): void {
     try {
+      // three's compile() skips hidden objects: show them for the compile only (cars that appear later, effects, ...).
+      const hidden: THREE.Object3D[] = [];
+      scene.traverse((o) => {
+        if (!o.visible) hidden.push(o);
+      });
+      for (const o of hidden) o.visible = true;
       this.renderer.compile(scene, camera);
-      this.renderer.render(scene, camera);
+      for (const o of hidden) o.visible = false;
+      this.renderFrame(scene, camera); // also builds the post chain (GTAO normal pass variants, bloom, output)
     } catch (err) {
       console.warn('prewarm failed:', err);
     }

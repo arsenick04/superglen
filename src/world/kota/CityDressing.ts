@@ -87,18 +87,28 @@ function customFit(cb: CustomBuilding, b: CityBuilding, yaw: number, along: numb
   return new THREE.Matrix4().compose(new THREE.Vector3(b.x + rx * shift - bc.x, b.base - bc.y - sink, b.z + rz * shift - bc.z), tmpQ, new THREE.Vector3(sx, sy, sz));
 }
 
-/** Four vertical planes round the lot of `b` (keep inside): `yard` m in front of the facade, 1.2 m on the other sides. */
-function lotPlanes(b: CityBuilding, yard: number): THREE.Plane[] {
+/** The lot of `b` as [x0, z0, x1, z1]: `yard` m in front of the facade, 1.2 m on the other sides. */
+function lotRect(b: CityBuilding, yard: number): THREE.Vector4 {
   const [fx, fz] = FACE_VEC[b.face];
   const m = (sx: number, sz: number): number => (sx === fx && sz === fz ? yard : 1.2);
-  const hx = b.w / 2;
-  const hz = b.d / 2;
-  return [
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), b.x + hx + m(1, 0)),
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(b.x - hx - m(-1, 0))),
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), b.z + hz + m(0, 1)),
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(b.z - hz - m(0, -1))),
-  ];
+  return new THREE.Vector4(b.x - b.w / 2 - m(-1, 0), b.z - b.d / 2 - m(0, -1), b.x + b.w / 2 + m(1, 0), b.z + b.d / 2 + m(0, 1));
+}
+
+/** Copy of a custom building material that discards fragments outside the lot rectangle (world x / z). */
+function lotMaterial(src: THREE.MeshStandardMaterial, lot: THREE.Vector4): THREE.MeshStandardMaterial {
+  const mat = src.clone();
+  const uLot = { value: lot };
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uLot = uLot;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vLotXZ;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvLotXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vLotXZ;\nuniform vec4 uLot;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vLotXZ.x < uLot.x || vLotXZ.y < uLot.y || vLotXZ.x > uLot.z || vLotXZ.y > uLot.w) discard;');
+  };
+  mat.customProgramCacheKey = () => 'sg-custom-lot';
+  return mat;
 }
 
 /** How a building is dressed (null: procedural as before). Pure: same answer for CityBuilder and CityDressing. */
@@ -215,15 +225,13 @@ export class CityDressing {
       if (!cb) continue;
       const o = cb.scene.clone();
       // Cut the model's own yard / ground plate to the building's lot: `yard` m in front, 1.2 m elsewhere (no plate over the
-      // sidewalk or the road). World-space clipping planes on its own material copies.
-      const planes = lotPlanes(b, cb.hint.yard ?? 3);
+      // sidewalk or the road). A world-space discard in the shader (one shared program for every custom building; three's clipping
+      // planes would compile extra program variants after the warm-up).
+      const lot = lotRect(b, cb.hint.yard ?? 3);
       o.traverse((c) => {
         const m = c as THREE.Mesh;
         if (!m.isMesh) return;
-        const mat = (m.material as THREE.MeshStandardMaterial).clone();
-        mat.clippingPlanes = planes;
-        mat.clipShadows = true;
-        m.material = mat;
+        m.material = lotMaterial(m.material as THREE.MeshStandardMaterial, lot);
       });
       o.matrixAutoUpdate = false;
       o.matrix.copy(d.matrix);

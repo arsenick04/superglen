@@ -13,6 +13,10 @@ const OUT = path.join(ROOT, 'test-results');
 // (full ~92k-triangle Glen/Superglen/Nino/Aara, native-app target; measured kota worst view ~172k with the hero drawn twice) and the
 // full-quality enemy models. Measured peaks: kota 172k. One constant so the next change is a single edit.
 const TRI_MAX = 300000;
+// L18 Kenney city (owner: native-app target, quality first): the dressed city (one batched draw for every Kenney building, the owner's
+// ~16k-triangle buildings, Kenney greenery merged into the chunks) has its own budget. Phone preset peak measured 365k / 60 calls.
+const KOTA_TRI_MAX = 480000;
+const KOTA_CALL_MAX = 70;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function ping() {
@@ -7379,8 +7383,8 @@ async function kotaPerfScenario(page, check) {
     return { p0, p1: g.debugCounts().programs, maxCalls, maxTris, out };
   }, spots);
   report('calls/triangles per spot and view', JSON.stringify(r.out));
-  check('kota perf: <= 60 draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= 60, `max ${r.maxCalls}`);
-  check('kota perf: <= TRI_MAX triangles (raised from 65k for richer env models: native-app target, owner decision) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= TRI_MAX, `max ${r.maxTris}`);
+  check('kota perf: <= KOTA_CALL_MAX draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= KOTA_CALL_MAX, `max ${r.maxCalls}`);
+  check('kota perf: <= KOTA_TRI_MAX triangles (L18 dressed city) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= KOTA_TRI_MAX, `max ${r.maxTris}`);
   check('kota perf: no shader program compiled after warm-up while visiting every district', r.p1 === r.p0 && r.p0 > 0, `${r.p0} -> ${r.p1}`);
 
   const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
@@ -7525,7 +7529,7 @@ async function kotaLifeScenario(page, check, touch) {
     return best;
   });
   console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
-  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= TRI_MAX triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= TRI_MAX, JSON.stringify(busy));
+  check(`kota-life ${tag}: busiest spot draws <= KOTA_CALL_MAX calls and <= KOTA_TRI_MAX triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= KOTA_CALL_MAX && busy.tris <= KOTA_TRI_MAX, JSON.stringify(busy));
   check(`kota-life ${tag}: a busy street view shows at least 20 agents (${busy.n})`, busy.n >= 20, String(busy.n));
   await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
   await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
