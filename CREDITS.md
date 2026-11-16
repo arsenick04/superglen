@@ -62,3 +62,10 @@ Diisi di Fase C.
 Dibuat dengan `npm run env-assets` (scripts/build-env-assets.mjs); daftar lengkap di `public/env/manifest.json`.
 - Bangku kayu: "Painted Wooden Bench" oleh Kirill Sannikov, Poly Haven (https://polyhaven.com/a/painted_wooden_bench), CC0 1.0. Tekstur dipanggang ke warna verteks, disederhanakan.
 - Pohon bulat, pohon cemara, lampu jalan, mobil: dibuat oleh proyek Superglen (geometri prosedural), CC0 1.0.
+
+## Kota: Kenney, gedung pemilik proyek, langit (L18)
+Dibuat dengan `npm run env-assets` (scripts/build-env-assets.mjs + scripts/env-kenney.mjs).
+- Model kota dari Kenney (https://kenney.nl), lisensi CC0 1.0 (Creative Commons Zero), file asli di `art/kenney/*.zip` (masing-masing dengan License.txt): City Kit (Suburban) 2.0 (rumah), City Kit (Commercial) 2.1 (ruko, kios, menara), City Kit (Roads) (lampu jalan), Car Kit (mobil), Nature Kit (pohon, semak, bunga, batu). Warna palet dipanggang ke warna verteks; daftar model di `public/env/kenney.json`. Terima kasih, Kenney!
+- Gedung khusus (gedung tua Barongsai, sekolah, pasar, gudang, bank, rumah sakit, rumah Glen): milik pemilik proyek (Higgsfield + Tripo), `art/models/buildings/`, dioptimalkan ke `public/env/buildings/`.
+- Langit dan cahaya: "Kloofendal 48d Partly Cloudy (Pure Sky)" oleh Greg Zaal, Poly Haven (https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky), CC0 1.0. `public/env/sky/`.
+

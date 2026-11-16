@@ -1,0 +1,10 @@
+{
+  "_doc": "Which city building each GLB in this folder replaces (kind: school, bank, hospital, gudang, pasar, oldBarongsai, or glen = Glen's house). body = [x0, x1, z0, z1]: where the building's walls sit inside the model's bounding box (normalised -0.5..0.5, front = +z), so the walls land on the collider. yaw: extra turn (radians) if the front is not +z. shift: metres along the facade. ySquash: height factor. tris: simplification target. Run `npm run env-assets` after a change.",
+  "school": { "kind": "school", "body": [-0.45, 0.45, -0.4, 0.08] },
+  "bank": { "kind": "bank", "body": [-0.4, 0.4, -0.36, 0.18], "yard": 4.5 },
+  "hospital": { "kind": "hospital", "body": [-0.4, 0.22, -0.3, 0.16] },
+  "gudang": { "kind": "gudang", "body": [-0.42, 0.42, -0.42, 0.24] },
+  "pasar": { "kind": "pasar", "body": [-0.44, 0.44, -0.44, 0.38] },
+  "rumah_glen": { "kind": "glen", "body": [-0.24, 0.26, -0.36, 0.12] },
+  "old_barongsai": { "kind": "oldBarongsai", "body": [-0.3, 0.3, -0.3, 0.16], "shift": 0 }
+}

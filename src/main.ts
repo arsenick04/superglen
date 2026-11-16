@@ -3,6 +3,7 @@ import { Game } from './core/Game';
 import { versionGuard } from './core/VersionGuard';
 import { characterModels } from './player/CharacterModels';
 import { envModels } from './world/kota/EnvModels';
+import { cityModels } from './world/kota/CityModels';
 
 function showFatal(): void {
   const ui = document.getElementById('ui');
@@ -18,7 +19,8 @@ async function boot(): Promise<void> {
   void characterModels.load();
   // No top-level await (Safari iOS 16 build target): init Rapier inside an async function. The city's environment models
   // (about 45 KB) load alongside: the city is built from them right after (primitive fallback if they fail).
-  await Promise.all([RAPIER.init(), envModels.load()]);
+  // L18: the Kenney city kit and the owner's buildings (about 6 MB) as well; each building keeps its procedural look if they fail.
+  await Promise.all([RAPIER.init(), envModels.load(), cityModels.load()]);
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
   const game = new Game(container);

@@ -219,6 +219,7 @@ export class LevelManager {
     d.physics.disposeLevelBodies();
     this.scene.background = null;
     this.scene.fog = null;
+    this.scene.environment = null; // L18: the city's sky light (Sky.ts)
     this.level = null;
     this.root = null;
     this.props = null;

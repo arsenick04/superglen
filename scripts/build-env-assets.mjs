@@ -29,6 +29,16 @@ const OUT = path.join(root, 'public', 'env');
 mkdirSync(CACHE, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 
+// `--only=kenney` / `--only=buildings` / `--only=sky` / `--only=env`: one part (default: all).
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
+if (ONLY === 'kenney' || ONLY === 'buildings' || ONLY === 'sky') {
+  const k = await import('./env-kenney.mjs');
+  if (ONLY === 'kenney') await k.buildKenney(root, CACHE);
+  else if (ONLY === 'sky') await k.buildSky(root, CACHE);
+  else await k.buildBuildings(root);
+  process.exit(0);
+}
+
 // ---- small math helpers -------------------------------------------------------------------------------------------------------
 
 /** Deterministic value noise in 3D (smooth, [-1, 1]). */
@@ -435,3 +445,10 @@ await io.write(outFile, doc);
 manifest.bytes = statSync(outFile).size;
 writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 console.log(`public/env/env.glb: ${manifest.bytes} bytes`);
+
+if (ONLY !== 'env') {
+  const k = await import('./env-kenney.mjs');
+  await k.buildKenney(root, CACHE);
+  await k.buildBuildings(root);
+  await k.buildSky(root, CACHE);
+}

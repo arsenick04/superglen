@@ -1,0 +1,1718 @@
+{
+ "generated": "2026-11-16",
+ "file": "kenney.glb",
+ "license": "CC0 1.0 (Kenney, https://kenney.nl)",
+ "models": {
+  "sub_building-type-a": {
+   "tris": 1174,
+   "lod1": 1174,
+   "min": [
+    -0.65,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.65,
+    0.834,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-b": {
+   "tris": 1748,
+   "lod1": 1748,
+   "min": [
+    -0.914,
+    0,
+    -0.57
+   ],
+   "max": [
+    0.914,
+    1.138,
+    0.57
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-c": {
+   "tris": 1196,
+   "lod1": 1196,
+   "min": [
+    -0.643,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.643,
+    1.034,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-d": {
+   "tris": 1757,
+   "lod1": 1757,
+   "min": [
+    -0.878,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.878,
+    1.238,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-e": {
+   "tris": 1731,
+   "lod1": 1731,
+   "min": [
+    -0.65,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.65,
+    1.138,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-f": {
+   "tris": 1616,
+   "lod1": 1616,
+   "min": [
+    -0.714,
+    0,
+    -0.703
+   ],
+   "max": [
+    0.714,
+    1.138,
+    0.703
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-g": {
+   "tris": 1067,
+   "lod1": 1067,
+   "min": [
+    -0.725,
+    0,
+    -0.589
+   ],
+   "max": [
+    0.725,
+    0.768,
+    0.589
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-h": {
+   "tris": 770,
+   "lod1": 770,
+   "min": [
+    -0.65,
+    0,
+    -0.458
+   ],
+   "max": [
+    0.65,
+    0.737,
+    0.458
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-i": {
+   "tris": 800,
+   "lod1": 800,
+   "min": [
+    -0.643,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.643,
+    0.737,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-j": {
+   "tris": 1210,
+   "lod1": 1210,
+   "min": [
+    -0.685,
+    0,
+    -0.458
+   ],
+   "max": [
+    0.685,
+    1.038,
+    0.458
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-k": {
+   "tris": 1024,
+   "lod1": 1024,
+   "min": [
+    -0.46,
+    0,
+    -0.51
+   ],
+   "max": [
+    0.46,
+    1.15,
+    0.51
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-l": {
+   "tris": 1310,
+   "lod1": 1310,
+   "min": [
+    -0.517,
+    0,
+    -0.51
+   ],
+   "max": [
+    0.517,
+    1.049,
+    0.51
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-m": {
+   "tris": 1112,
+   "lod1": 1112,
+   "min": [
+    -0.714,
+    0,
+    -0.714
+   ],
+   "max": [
+    0.714,
+    0.737,
+    0.714
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-n": {
+   "tris": 1612,
+   "lod1": 1612,
+   "min": [
+    -0.892,
+    0,
+    -0.689
+   ],
+   "max": [
+    0.892,
+    1.138,
+    0.689
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-o": {
+   "tris": 1326,
+   "lod1": 1326,
+   "min": [
+    -0.635,
+    0,
+    -0.514
+   ],
+   "max": [
+    0.635,
+    1.138,
+    0.514
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-p": {
+   "tris": 1282,
+   "lod1": 1282,
+   "min": [
+    -0.62,
+    0,
+    -0.495
+   ],
+   "max": [
+    0.62,
+    0.918,
+    0.495
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-q": {
+   "tris": 1140,
+   "lod1": 1140,
+   "min": [
+    -0.62,
+    0,
+    -0.422
+   ],
+   "max": [
+    0.62,
+    0.918,
+    0.464
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-r": {
+   "tris": 1030,
+   "lod1": 1030,
+   "min": [
+    -0.514,
+    0,
+    -0.51
+   ],
+   "max": [
+    0.514,
+    1.141,
+    0.51
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-s": {
+   "tris": 1212,
+   "lod1": 1212,
+   "min": [
+    -0.703,
+    0,
+    -0.543
+   ],
+   "max": [
+    0.703,
+    1.138,
+    0.543
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-t": {
+   "tris": 2062,
+   "lod1": 2062,
+   "min": [
+    -0.664,
+    0,
+    -0.703
+   ],
+   "max": [
+    0.65,
+    1.156,
+    0.703
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_building-type-u": {
+   "tris": 1332,
+   "lod1": 1332,
+   "min": [
+    -0.714,
+    0,
+    -0.543
+   ],
+   "max": [
+    0.714,
+    1.138,
+    0.543
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_fence-1x4": {
+   "tris": 252,
+   "lod1": 148,
+   "min": [
+    -0.838,
+    0,
+    -0.2
+   ],
+   "max": [
+    0.838,
+    0.27,
+    0.238
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_planter": {
+   "tris": 204,
+   "lod1": 204,
+   "min": [
+    -0.2,
+    0,
+    -0.151
+   ],
+   "max": [
+    0.2,
+    0.177,
+    0.149
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_tree-large": {
+   "tris": 42,
+   "lod1": 42,
+   "min": [
+    -0.105,
+    0,
+    -0.121
+   ],
+   "max": [
+    0.105,
+    0.767,
+    0.121
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "sub_tree-small": {
+   "tris": 42,
+   "lod1": 42,
+   "min": [
+    -0.105,
+    0,
+    -0.121
+   ],
+   "max": [
+    0.105,
+    0.567,
+    0.121
+   ],
+   "kit": "Kenney City Kit (Suburban)"
+  },
+  "com_building-a": {
+   "tris": 1252,
+   "lod1": 1252,
+   "min": [
+    -0.442,
+    0,
+    -0.47
+   ],
+   "max": [
+    0.442,
+    1.293,
+    0.47
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-b": {
+   "tris": 1276,
+   "lod1": 1276,
+   "min": [
+    -0.485,
+    0,
+    -0.47
+   ],
+   "max": [
+    0.485,
+    1.293,
+    0.47
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-c": {
+   "tris": 1195,
+   "lod1": 1195,
+   "min": [
+    -0.442,
+    0,
+    -0.545
+   ],
+   "max": [
+    0.442,
+    0.893,
+    0.545
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-d": {
+   "tris": 1100,
+   "lod1": 1100,
+   "min": [
+    -0.42,
+    0,
+    -0.45
+   ],
+   "max": [
+    0.42,
+    1.293,
+    0.45
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-e": {
+   "tris": 1509,
+   "lod1": 1509,
+   "min": [
+    -0.82,
+    0,
+    -0.504
+   ],
+   "max": [
+    0.82,
+    0.893,
+    0.504
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-f": {
+   "tris": 1794,
+   "lod1": 1794,
+   "min": [
+    -0.42,
+    0,
+    -0.515
+   ],
+   "max": [
+    0.42,
+    1.693,
+    0.515
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-g": {
+   "tris": 2006,
+   "lod1": 2006,
+   "min": [
+    -0.485,
+    0,
+    -0.461
+   ],
+   "max": [
+    0.485,
+    1.693,
+    0.461
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-h": {
+   "tris": 1512,
+   "lod1": 1512,
+   "min": [
+    -0.442,
+    0,
+    -0.504
+   ],
+   "max": [
+    0.442,
+    1.293,
+    0.504
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-i": {
+   "tris": 2544,
+   "lod1": 2544,
+   "min": [
+    -0.62,
+    0,
+    -0.651
+   ],
+   "max": [
+    0.62,
+    1.68,
+    0.651
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-j": {
+   "tris": 5246,
+   "lod1": 5246,
+   "min": [
+    -1.042,
+    0,
+    -0.67
+   ],
+   "max": [
+    1.042,
+    1.693,
+    0.67
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-k": {
+   "tris": 2960,
+   "lod1": 2960,
+   "min": [
+    -1.042,
+    0,
+    -0.471
+   ],
+   "max": [
+    1.042,
+    1.47,
+    0.471
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-l": {
+   "tris": 3512,
+   "lod1": 3512,
+   "min": [
+    -0.685,
+    0,
+    -0.701
+   ],
+   "max": [
+    0.685,
+    2.27,
+    0.701
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-m": {
+   "tris": 3740,
+   "lod1": 3740,
+   "min": [
+    -0.62,
+    0,
+    -0.621
+   ],
+   "max": [
+    0.62,
+    3.15,
+    0.621
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-n": {
+   "tris": 4350,
+   "lod1": 4350,
+   "min": [
+    -1.16,
+    0,
+    -0.91
+   ],
+   "max": [
+    1.16,
+    2.48,
+    0.91
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-skyscraper-a": {
+   "tris": 1292,
+   "lod1": 1292,
+   "min": [
+    -0.68,
+    0,
+    -0.68
+   ],
+   "max": [
+    0.68,
+    2.88,
+    0.68
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-skyscraper-b": {
+   "tris": 1592,
+   "lod1": 1592,
+   "min": [
+    -0.68,
+    0,
+    -0.68
+   ],
+   "max": [
+    0.68,
+    4.48,
+    0.68
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-skyscraper-c": {
+   "tris": 1704,
+   "lod1": 1704,
+   "min": [
+    -0.64,
+    0,
+    -0.694
+   ],
+   "max": [
+    0.64,
+    4.08,
+    0.694
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-skyscraper-d": {
+   "tris": 1892,
+   "lod1": 1892,
+   "min": [
+    -0.64,
+    0,
+    -0.694
+   ],
+   "max": [
+    0.64,
+    5.47,
+    0.694
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_building-skyscraper-e": {
+   "tris": 1156,
+   "lod1": 1156,
+   "min": [
+    -0.647,
+    0,
+    -0.621
+   ],
+   "max": [
+    0.648,
+    4.08,
+    0.621
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-awning": {
+   "tris": 40,
+   "lod1": 40,
+   "min": [
+    -0.2,
+    0,
+    0.1
+   ],
+   "max": [
+    0.2,
+    0.4,
+    0.248
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-awning-wide": {
+   "tris": 40,
+   "lod1": 40,
+   "min": [
+    -0.4,
+    0,
+    0.1
+   ],
+   "max": [
+    0.4,
+    0.4,
+    0.248
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-overhang": {
+   "tris": 64,
+   "lod1": 64,
+   "min": [
+    -0.25,
+    0,
+    0.05
+   ],
+   "max": [
+    0.25,
+    0.4,
+    0.25
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-overhang-wide": {
+   "tris": 64,
+   "lod1": 64,
+   "min": [
+    -0.5,
+    0,
+    0.05
+   ],
+   "max": [
+    0.5,
+    0.4,
+    0.25
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-parasol-a": {
+   "tris": 96,
+   "lod1": 96,
+   "min": [
+    -0.173,
+    0,
+    -0.2
+   ],
+   "max": [
+    0.173,
+    0.45,
+    0.2
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "com_detail-parasol-b": {
+   "tris": 120,
+   "lod1": 120,
+   "min": [
+    -0.173,
+    0,
+    -0.2
+   ],
+   "max": [
+    0.173,
+    0.45,
+    0.2
+   ],
+   "kit": "Kenney City Kit (Commercial)"
+  },
+  "road_light-curved": {
+   "tris": 92,
+   "lod1": 54,
+   "min": [
+    -0.025,
+    0,
+    -0.2
+   ],
+   "max": [
+    0.025,
+    0.675,
+    0.025
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_light-square": {
+   "tris": 60,
+   "lod1": 60,
+   "min": [
+    -0.025,
+    0,
+    -0.213
+   ],
+   "max": [
+    0.025,
+    0.6,
+    0.025
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_traffic-light": {
+   "tris": 212,
+   "lod1": 154,
+   "min": [
+    -0.073,
+    0,
+    -0.045
+   ],
+   "max": [
+    0.045,
+    0.515,
+    0.045
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_road-sign-street": {
+   "tris": 154,
+   "lod1": 92,
+   "min": [
+    -0.171,
+    0,
+    -0.025
+   ],
+   "max": [
+    0.025,
+    0.475,
+    0.171
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_dumpster": {
+   "tris": 234,
+   "lod1": 230,
+   "min": [
+    -0.13,
+    0,
+    -0.185
+   ],
+   "max": [
+    0.145,
+    0.209,
+    0.185
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_construction-cone": {
+   "tris": 66,
+   "lod1": 66,
+   "min": [
+    -0.038,
+    0,
+    -0.038
+   ],
+   "max": [
+    0.038,
+    0.094,
+    0.038
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "road_construction-barrier": {
+   "tris": 60,
+   "lod1": 60,
+   "min": [
+    -0.068,
+    0,
+    -0.112
+   ],
+   "max": [
+    0.068,
+    0.13,
+    0.112
+   ],
+   "kit": "Kenney City Kit (Roads)"
+  },
+  "car_sedan": {
+   "tris": 2032,
+   "lod1": 2032,
+   "min": [
+    -0.75,
+    0,
+    -1.3
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.25
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_suv": {
+   "tris": 2474,
+   "lod1": 2474,
+   "min": [
+    -0.75,
+    0,
+    -1.35
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.35
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_taxi": {
+   "tris": 2072,
+   "lod1": 2072,
+   "min": [
+    -0.75,
+    0,
+    -1.4
+   ],
+   "max": [
+    0.75,
+    1.5,
+    1.35
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_van": {
+   "tris": 2082,
+   "lod1": 2082,
+   "min": [
+    -0.75,
+    0,
+    -1.4
+   ],
+   "max": [
+    0.75,
+    1.35,
+    1.35
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_police": {
+   "tris": 2304,
+   "lod1": 2304,
+   "min": [
+    -0.75,
+    0,
+    -1.55
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.55
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_hatchback-sports": {
+   "tris": 2088,
+   "lod1": 2088,
+   "min": [
+    -0.65,
+    0,
+    -1.45
+   ],
+   "max": [
+    0.65,
+    1.1,
+    1.4
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_sedan-sports": {
+   "tris": 2088,
+   "lod1": 2088,
+   "min": [
+    -0.65,
+    0,
+    -1.3
+   ],
+   "max": [
+    0.65,
+    1.1,
+    1.25
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_delivery": {
+   "tris": 2476,
+   "lod1": 2476,
+   "min": [
+    -0.75,
+    0,
+    -1.65
+   ],
+   "max": [
+    0.75,
+    1.65,
+    1.6
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_truck": {
+   "tris": 2082,
+   "lod1": 2082,
+   "min": [
+    -0.75,
+    0,
+    -1.5
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.45
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_ambulance": {
+   "tris": 2804,
+   "lod1": 2804,
+   "min": [
+    -0.75,
+    0,
+    -1.65
+   ],
+   "max": [
+    0.75,
+    1.8,
+    1.6
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_garbage-truck": {
+   "tris": 3124,
+   "lod1": 3124,
+   "min": [
+    -0.8,
+    0,
+    -1.7
+   ],
+   "max": [
+    0.8,
+    1.6,
+    1.75
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_firetruck": {
+   "tris": 2767,
+   "lod1": 2767,
+   "min": [
+    -0.75,
+    0,
+    -1.7
+   ],
+   "max": [
+    0.75,
+    1.7,
+    1.7
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_suv-luxury": {
+   "tris": 2086,
+   "lod1": 2086,
+   "min": [
+    -0.75,
+    0,
+    -1.4
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.45
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_truck-flat": {
+   "tris": 2488,
+   "lod1": 2488,
+   "min": [
+    -0.75,
+    0,
+    -1.373
+   ],
+   "max": [
+    0.75,
+    1.3,
+    1.373
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_box": {
+   "tris": 124,
+   "lod1": 124,
+   "min": [
+    -0.357,
+    0,
+    -0.357
+   ],
+   "max": [
+    0.357,
+    0.715,
+    0.357
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "car_cone": {
+   "tris": 172,
+   "lod1": 172,
+   "min": [
+    -0.238,
+    0,
+    -0.238
+   ],
+   "max": [
+    0.238,
+    0.595,
+    0.238
+   ],
+   "kit": "Kenney Car Kit"
+  },
+  "nat_tree_oak": {
+   "tris": 196,
+   "lod1": 196,
+   "min": [
+    -0.32,
+    -0.05,
+    -0.37
+   ],
+   "max": [
+    0.32,
+    1.176,
+    0.37
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_default": {
+   "tris": 114,
+   "lod1": 114,
+   "min": [
+    -0.378,
+    -0.05,
+    -0.327
+   ],
+   "max": [
+    0.378,
+    1.658,
+    0.327
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_detailed": {
+   "tris": 402,
+   "lod1": 402,
+   "min": [
+    -0.432,
+    -0.05,
+    -0.372
+   ],
+   "max": [
+    0.415,
+    1.282,
+    0.389
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_fat": {
+   "tris": 50,
+   "lod1": 50,
+   "min": [
+    -0.378,
+    -0.05,
+    -0.327
+   ],
+   "max": [
+    0.378,
+    1.1,
+    0.327
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_plateau": {
+   "tris": 215,
+   "lod1": 215,
+   "min": [
+    -0.328,
+    -0.05,
+    -0.325
+   ],
+   "max": [
+    0.284,
+    1.199,
+    0.329
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_blocks": {
+   "tris": 132,
+   "lod1": 132,
+   "min": [
+    -0.3,
+    -0.05,
+    -0.3
+   ],
+   "max": [
+    0.3,
+    1.135,
+    0.3
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_oak_fall": {
+   "tris": 196,
+   "lod1": 196,
+   "min": [
+    -0.32,
+    -0.05,
+    -0.37
+   ],
+   "max": [
+    0.32,
+    1.176,
+    0.37
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_default_fall": {
+   "tris": 228,
+   "lod1": 228,
+   "min": [
+    -0.378,
+    -0.05,
+    -0.327
+   ],
+   "max": [
+    0.378,
+    1.658,
+    0.327
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_detailed_dark": {
+   "tris": 402,
+   "lod1": 402,
+   "min": [
+    -0.432,
+    -0.05,
+    -0.372
+   ],
+   "max": [
+    0.415,
+    1.282,
+    0.389
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_pineRoundA": {
+   "tris": 204,
+   "lod1": 204,
+   "min": [
+    -0.309,
+    -0.05,
+    -0.356
+   ],
+   "max": [
+    0.309,
+    1.316,
+    0.356
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_pineRoundC": {
+   "tris": 206,
+   "lod1": 206,
+   "min": [
+    -0.24,
+    -0.05,
+    -0.277
+   ],
+   "max": [
+    0.24,
+    1.203,
+    0.277
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_pineTallA_detailed": {
+   "tris": 134,
+   "lod1": 134,
+   "min": [
+    -0.179,
+    -0.05,
+    -0.194
+   ],
+   "max": [
+    0.207,
+    1.48,
+    0.198
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_pineTallC_detailed": {
+   "tris": 154,
+   "lod1": 154,
+   "min": [
+    -0.24,
+    -0.05,
+    -0.277
+   ],
+   "max": [
+    0.24,
+    1.62,
+    0.277
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_pineDefaultA": {
+   "tris": 230,
+   "lod1": 230,
+   "min": [
+    -0.266,
+    -0.05,
+    -0.266
+   ],
+   "max": [
+    0.266,
+    1.496,
+    0.266
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_cone": {
+   "tris": 132,
+   "lod1": 132,
+   "min": [
+    -0.265,
+    -0.05,
+    -0.265
+   ],
+   "max": [
+    0.265,
+    1.38,
+    0.265
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_tree_palmTall": {
+   "tris": 190,
+   "lod1": 190,
+   "min": [
+    -0.517,
+    -0.05,
+    -0.515
+   ],
+   "max": [
+    0.517,
+    1.306,
+    0.52
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_plant_bushDetailed": {
+   "tris": 104,
+   "lod1": 104,
+   "min": [
+    -0.301,
+    -0.05,
+    -0.301
+   ],
+   "max": [
+    0.301,
+    0.31,
+    0.301
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_plant_bushLarge": {
+   "tris": 60,
+   "lod1": 60,
+   "min": [
+    -0.187,
+    -0.05,
+    -0.168
+   ],
+   "max": [
+    0.187,
+    0.193,
+    0.168
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_plant_bush": {
+   "tris": 32,
+   "lod1": 32,
+   "min": [
+    -0.198,
+    -0.05,
+    -0.198
+   ],
+   "max": [
+    0.198,
+    0.194,
+    0.198
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_flower_redA": {
+   "tris": 76,
+   "lod1": 76,
+   "min": [
+    -0.105,
+    -0.05,
+    -0.091
+   ],
+   "max": [
+    0.055,
+    0.242,
+    0.091
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_flower_yellowB": {
+   "tris": 154,
+   "lod1": 154,
+   "min": [
+    -0.129,
+    -0.05,
+    -0.12
+   ],
+   "max": [
+    0.079,
+    0.109,
+    0.12
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_flower_purpleA": {
+   "tris": 76,
+   "lod1": 76,
+   "min": [
+    -0.105,
+    -0.05,
+    -0.091
+   ],
+   "max": [
+    0.055,
+    0.192,
+    0.091
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_flower_redB": {
+   "tris": 98,
+   "lod1": 98,
+   "min": [
+    -0.129,
+    -0.05,
+    -0.12
+   ],
+   "max": [
+    0.079,
+    0.208,
+    0.12
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_flower_purpleC": {
+   "tris": 78,
+   "lod1": 78,
+   "min": [
+    -0.105,
+    -0.05,
+    -0.091
+   ],
+   "max": [
+    0.076,
+    0.133,
+    0.091
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_grass_large": {
+   "tris": 224,
+   "lod1": 224,
+   "min": [
+    -0.199,
+    -0.05,
+    -0.212
+   ],
+   "max": [
+    0.21,
+    0.204,
+    0.196
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_grass_leafsLarge": {
+   "tris": 144,
+   "lod1": 144,
+   "min": [
+    -0.242,
+    -0.05,
+    -0.243
+   ],
+   "max": [
+    0.234,
+    0.092,
+    0.244
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_rock_smallE": {
+   "tris": 64,
+   "lod1": 64,
+   "min": [
+    -0.18,
+    -0.05,
+    -0.156
+   ],
+   "max": [
+    0.18,
+    0.206,
+    0.156
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_rock_smallH": {
+   "tris": 60,
+   "lod1": 60,
+   "min": [
+    -0.231,
+    -0.05,
+    -0.231
+   ],
+   "max": [
+    0.231,
+    0.357,
+    0.231
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_rock_smallTopB": {
+   "tris": 76,
+   "lod1": 76,
+   "min": [
+    -0.311,
+    -0.05,
+    -0.323
+   ],
+   "max": [
+    0.311,
+    0.23,
+    0.323
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_stone_tallB": {
+   "tris": 172,
+   "lod1": 172,
+   "min": [
+    -0.382,
+    -0.05,
+    -0.385
+   ],
+   "max": [
+    0.382,
+    0.834,
+    0.385
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_stone_tallH": {
+   "tris": 78,
+   "lod1": 78,
+   "min": [
+    -0.287,
+    -0.05,
+    -0.332
+   ],
+   "max": [
+    0.287,
+    0.661,
+    0.332
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_rock_largeA": {
+   "tris": 80,
+   "lod1": 80,
+   "min": [
+    -0.392,
+    -0.05,
+    -0.508
+   ],
+   "max": [
+    0.392,
+    0.21,
+    0.508
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_rock_tallA": {
+   "tris": 136,
+   "lod1": 136,
+   "min": [
+    -0.492,
+    -0.05,
+    -0.342
+   ],
+   "max": [
+    0.492,
+    0.946,
+    0.342
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_fence_simple": {
+   "tris": 64,
+   "lod1": 64,
+   "min": [
+    -0.5,
+    -0.05,
+    -0.5
+   ],
+   "max": [
+    0.5,
+    0.295,
+    -0.43
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_fence_planks": {
+   "tris": 96,
+   "lod1": 96,
+   "min": [
+    -0.5,
+    -0.05,
+    -0.526
+   ],
+   "max": [
+    0.5,
+    0.295,
+    -0.43
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_log": {
+   "tris": 200,
+   "lod1": 200,
+   "min": [
+    -0.109,
+    -0.05,
+    -0.355
+   ],
+   "max": [
+    0.125,
+    0.123,
+    0.355
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_stump_round": {
+   "tris": 56,
+   "lod1": 56,
+   "min": [
+    -0.161,
+    -0.05,
+    -0.185
+   ],
+   "max": [
+    0.161,
+    0.156,
+    0.185
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_mushroom_red": {
+   "tris": 48,
+   "lod1": 48,
+   "min": [
+    -0.086,
+    -0.05,
+    -0.095
+   ],
+   "max": [
+    0.088,
+    0.153,
+    0.105
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_lily_large": {
+   "tris": 86,
+   "lod1": 86,
+   "min": [
+    -0.136,
+    -0.05,
+    -0.157
+   ],
+   "max": [
+    0.136,
+    0.048,
+    0.157
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_statue_column": {
+   "tris": 122,
+   "lod1": 122,
+   "min": [
+    -0.15,
+    -0.05,
+    -0.15
+   ],
+   "max": [
+    0.15,
+    0.95,
+    0.15
+   ],
+   "kit": "Kenney Nature Kit"
+  },
+  "nat_hanging_moss": {
+   "tris": 52,
+   "lod1": 52,
+   "min": [
+    -0.08,
+    -0.05,
+    0.465
+   ],
+   "max": [
+    0.08,
+    0.428,
+    0.5
+   ],
+   "kit": "Kenney Nature Kit"
+  }
+ },
+ "bytes": 1726432
+}

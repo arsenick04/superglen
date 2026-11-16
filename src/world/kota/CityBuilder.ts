@@ -4,6 +4,8 @@ import { Parkour } from '../../config/parkour';
 import { Recipe, Sh, type Vec3 } from './CityMesher';
 import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
+import { dressOf, type Dress } from './CityDressing';
+import { cityModels } from './CityModels';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -566,7 +568,11 @@ function barongsaiFacade(B: Builder, b: CityBuilding, c: number): void {
   lit.cone(0.1, 0.5, [b.x, top + 2.95, b.z], OF.gold);
 }
 
-function drawTower(B: Builder, b: CityBuilding): void {
+function drawTowerDressed(B: Builder, b: CityBuilding): void {
+  drawTower(B, b, true);
+}
+
+function drawTower(B: Builder, b: CityBuilding, dressed = false): void {
   const t = b.tower as NonNullable<CityBuilding['tower']>;
   const dist = districtById(b.district);
   const pod = t.podium;
@@ -576,6 +582,7 @@ function drawTower(B: Builder, b: CityBuilding): void {
   B.far.box([12, pod, 12], [b.x, b.base + pod / 2, b.z], STONE, undefined, T.paving);
   B.far.box([12.04, 0.25, 12.04], [b.x, b.base + pod - 0.125, b.z], C.GOLD);
   B.far.box([12.04, 0.3, 12.04], [b.x, b.base + 0.15, b.z], lighten(dist.color, 20));
+  if (!dressed) {
   // Tower body.
   const ty = b.base + pod + h / 2;
   if (t.round) B.far.cyl(t.size / 2, h, [b.x, ty, b.z], dist.color);
@@ -588,12 +595,13 @@ function drawTower(B: Builder, b: CityBuilding): void {
   // Deck rim (flush with the top) and windows.
   if (t.round) B.far.cyl(t.size / 2 + 0.04, 0.35, [b.x, top - 0.175, b.z], C.CREAM);
   else B.far.box([t.size + 0.08, 0.35, t.size + 0.08], [b.x, top - 0.175, b.z], C.CREAM);
-  edge(B, b.x, b.z, t.size - (t.round ? 1.4 : 0), t.size - (t.round ? 1.4 : 0), top);
   for (let s = 0; s < 4; s++) {
     const [fx, fz] = FACE_VEC[s];
     const r = t.size / 2 + 0.04;
     for (const y of [pod + h * 0.18, pod + h * 0.5]) B.ch.deco.decal(T.window0, 1.0, 1.2, [b.x + fx * r, b.base + y, b.z + fz * r], Math.atan2(fx, fz));
   }
+  }
+  edge(B, b.x, b.z, t.size - (t.round ? 1.4 : 0), t.size - (t.round ? 1.4 : 0), top);
   // Style on top / near the top (decoration, no collider). Kept small so the deck stays a free place to stand.
   const y8 = top - 1.6;
   const disc = (fx: number, fz: number, y: number, r: number, color: number, glow = false): void => {
@@ -643,6 +651,9 @@ function drawTower(B: Builder, b: CityBuilding): void {
 
 // ---- Props ---------------------------------------------------------------------------------------------------------------------
 
+const KENNEY_ROUND: [string, number][] = [['nat_tree_oak', 1.23], ['nat_tree_default', 1.71], ['nat_tree_detailed', 1.33], ['nat_tree_plateau', 1.25], ['nat_tree_fat', 1.15], ['nat_tree_oak_fall', 1.23]];
+const KENNEY_PINE: [string, number][] = [['nat_tree_pineRoundA', 1.37], ['nat_tree_pineTallA_detailed', 1.53], ['nat_tree_pineRoundC', 1.25], ['nat_tree_pineDefaultA', 1.55]];
+
 const LEAF = [0x6fcf5a, 0x5cc04f, 0x86d85e, 0x4fb561];
 const LEAF_DARK = [0x4fae4a, 0x3f9f47, 0x5fbf4f, 0x3a9650];
 
@@ -654,11 +665,23 @@ function drawProps(B: Builder, L: CityLayout): void {
     lamp: envModels.shape('lamp'),
     bench: envModels.shape('bench'),
   };
+  // L18: Kenney nature kit trees (CC0) when loaded: [model, height at s = 1].
+  const ROUND = KENNEY_ROUND.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const PINES = KENNEY_PINE.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const lampK = cityModels.template('road_light-curved');
   for (const t of L.trees) {
     const ch = B.at(t.x, t.z);
     const s = t.s;
     const hv = hsh(t.x, t.z, 2);
     const yaw = hv * 6.283;
+    const kl = t.kind === 'pine' ? PINES : ROUND;
+    if (kl.length) {
+      const [id, h] = kl[Math.floor(hv * 997) % kl.length];
+      const r = t.far ? B.far : ch.lit;
+      const k = (t.kind === 'pine' ? 5.4 : 4.0) * s / h * (0.9 + hsh(t.x, t.z, 5) * 0.2);
+      r.add(id as Sh, [t.x, t.base, t.z], [k, k, k], 0xffffff, [0, yaw, 0]);
+      continue;
+    }
     if (t.kind === 'pine' && E.pine >= 0) {
       // Stylised pine (env model, own colours; 37 triangles): scalloped soft tiers, about 5.2 m at s = 1.
       const r = t.far ? B.far : ch.lit;
@@ -691,6 +714,12 @@ function drawProps(B: Builder, L: CityLayout): void {
   }
   for (const l of L.lamps) {
     const ch = B.at(l.x, l.z);
+    if (lampK >= 0) {
+      // Kenney curved street light, 3.7 m, arm turned to +x; the bulb stays in the glow layer.
+      ch.deco.add(lampK as Sh, [l.x, 0, l.z], [5.5, 5.5, 5.5], 0xffffff, [0, -Math.PI / 2, 0]);
+      ch.glow.ball(0.16, [l.x + 1.0, 3.62, l.z], 0xffe9a0);
+      continue;
+    }
     if (E.lamp >= 0) {
       // Env model: rounded plinth, tapered pole, curved arm, golden hood; the bulb stays in the glow layer.
       ch.deco.add(E.lamp as Sh, [l.x, 0, l.z], [1, 1, 1], 0xffffff);
@@ -859,12 +888,41 @@ function drawGround(B: Builder, L: CityLayout): void {
 }
 
 /** Build every recipe and collider list of the city. */
+/** The procedural parts a model does not replace: hip roofs of the shops, the towers' podium and style, flat-roof edges. */
+function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
+  const top = b.base + b.wall;
+  if (!d.skipRoof && b.roof === 'hip') {
+    B.far.pyr(b.roofW + 0.5, b.roofH, b.roofD + 0.5, [b.x, top + b.roofH / 2 - 0.04, b.z], b.roofColor, roofTile(b));
+    B.ch.deco.box([b.w + 0.3, 0.2, b.d + 0.3], [b.x, top - 0.08, b.z], C.CREAM);
+  }
+  if (b.roof === 'flat' && b.kind !== 'tower') edge(B, b.x, b.z, b.w, b.d, top);
+  if (b.kind === 'tower' && b.tower) drawTowerDressed(B, b);
+  if (b.kind === 'kiosk' && !d.skipFacade) {
+    const fruit = [0xff6b6b, 0xffd23f, 0x7bd389, 0xff9f43];
+    B.ch.deco.box(fs(b, 2.4, 0.5, 0.9), fp(b, 0.45, 0.25, b.base + 0.45), 0xffffff, undefined, T.wood);
+    for (let i = 0; i < 4; i++) B.ch.deco.ball(0.18, fp(b, -0.4 + i * 0.55, 0.25, b.base + 1.1), fruit[i]);
+  }
+  if (b.glen && !d.model.startsWith('custom:')) {
+    const L = facadeLen(b);
+    const [x, , z] = fp(b, -L / 2 - 0.6, 1.2, 0);
+    B.far.cyl(0.06, 5.2, [x, 2.6, z], C.GREY);
+    B.far.box([1.4, 0.8, 0.06], [x + 0.7, 4.7, z], C.ORANGE);
+  }
+}
+
 export function buildCity(L: CityLayout): BuiltCity {
   const B = new Builder();
   envModels.cityBuilt = true;
   drawGround(B, L);
   for (const b of L.buildings) {
     B.at(b.x, b.z);
+    // L18: buildings dressed with a model (CityDressing.ts) keep only what the model does not show (climbing pieces always).
+    const dress = dressOf(b);
+    if (dress) {
+      drawDressed(B, b, dress);
+      for (const p of b.pieces) drawPiece(B, b, p);
+      continue;
+    }
     if (b.kind === 'tower') drawTower(B, b);
     else if (b.kind === 'oldBarongsai') drawOld(B, b);
     else if (b.cls === 'house') drawHouse(B, b);

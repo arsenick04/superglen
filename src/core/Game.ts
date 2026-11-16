@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { setSkyRenderer } from '../world/kota/Sky';
 import { Renderer } from './Renderer';
 import { Physics, FIXED_DT } from './Physics';
 import { Input, type Action, type InputSource, type Vec2 } from '../input/Input';
@@ -454,6 +455,7 @@ export class Game {
 
   constructor(container: HTMLElement) {
     this.renderer = new Renderer(container);
+    setSkyRenderer(this.renderer.renderer);
     this.physics = new Physics();
 
     this.input = new Input();
@@ -1316,7 +1318,7 @@ export class Game {
       this.rings.update(FIXED_DT);
     }
     this.frameUpdate(frames * FIXED_DT);
-    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderFrame(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -1326,7 +1328,7 @@ export class Game {
       this.advance(1, false);
       for (let k = 0; k < 8; k++) await Promise.resolve();
     }
-    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderFrame(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 

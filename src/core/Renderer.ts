@@ -1,6 +1,27 @@
 import * as THREE from 'three';
 import { Quality } from './Quality';
 import { perfMark, PerfMark } from './PerfMarks';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+
+/**
+ * L18 post-processing (desktop / high preset only; `?post=0` turns it off): ground-truth ambient occlusion (GTAO, half
+ * resolution, denoised) for contact shadows between the flat-coloured models, a gentle bloom on the brightest highlights (sun
+ * glints, lamps, the sky), then tone mapping (ACES) + sRGB in the output pass. 4x MSAA on the scene target. The draw-call counters
+ * add up every pass of a frame (renderer.info is reset per frame, not per pass).
+ */
+export const PostConfig = {
+  enabled: Quality.level === 'high' && new URLSearchParams(window.location.search).get('post') !== '0',
+  aoScale: 0.5,
+  aoRadius: 1.6,
+  aoBlend: 1,
+  bloomStrength: 0.12,
+  bloomRadius: 0.45,
+  bloomThreshold: 1.6,
+};
 
 /**
  * Adaptive resolution. Changing the pixel ratio reallocates the drawing buffer, which is a visible hitch on a
@@ -77,6 +98,7 @@ export class Renderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = Quality.shadows;
+    this.renderer.localClippingEnabled = true; // L18: custom building models are cut to their lot (CityDressing.ts)
     this.renderer.shadowMap.type = Quality.shadowMapType;
     this.renderer.domElement.tabIndex = 0;
     container.appendChild(this.renderer.domElement);
@@ -122,6 +144,11 @@ export class Renderer {
     this.pixelRatio = ratio;
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
+    if (this.post) {
+      const sz = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+      this.post.composer.setSize(sz.x, sz.y);
+      this.post.ao.setSize(Math.round(sz.x * PostConfig.aoScale), Math.round(sz.y * PostConfig.aoScale));
+    }
     if (this.camera) {
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
@@ -130,8 +157,47 @@ export class Renderer {
 
   /** Render, then feed the adaptive logic. `now` = the frame timestamp (ms), `moving` = the player walks. */
   render(scene: THREE.Scene, camera: THREE.Camera, now: number, moving: boolean): void {
-    this.renderer.render(scene, camera);
+    this.renderFrame(scene, camera);
     this.observeFrame(now, moving);
+  }
+
+  private post: { composer: EffectComposer; render: RenderPass; ao: GTAOPass; bloom: UnrealBloomPass } | null = null;
+
+  /** One frame: with the post chain on the high preset, else a plain render. */
+  renderFrame(scene: THREE.Scene, camera: THREE.Camera): void {
+    const r = this.renderer;
+    r.info.autoReset = false;
+    r.info.reset();
+    if (!PostConfig.enabled || !(camera instanceof THREE.PerspectiveCamera)) {
+      r.render(scene, camera);
+      return;
+    }
+    const p = (this.post ??= this.makePost(scene, camera));
+    p.render.scene = scene;
+    p.render.camera = camera;
+    p.ao.scene = scene;
+    p.ao.camera = camera;
+    p.composer.render();
+  }
+
+  private makePost(scene: THREE.Scene, camera: THREE.PerspectiveCamera): NonNullable<Renderer['post']> {
+    const r = this.renderer;
+    const size = r.getDrawingBufferSize(new THREE.Vector2());
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: Quality.antialias ? 4 : 0 });
+    const composer = new EffectComposer(r, target);
+    composer.setPixelRatio(1);
+    composer.setSize(size.x, size.y);
+    const render = new RenderPass(scene, camera);
+    const ao = new GTAOPass(scene, camera, Math.round(size.x * PostConfig.aoScale), Math.round(size.y * PostConfig.aoScale));
+    ao.updateGtaoMaterial({ radius: PostConfig.aoRadius, distanceExponent: 1, thickness: 1, scale: 1, samples: 12 });
+    ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+    ao.blendIntensity = PostConfig.aoBlend;
+    const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), PostConfig.bloomStrength, PostConfig.bloomRadius, PostConfig.bloomThreshold);
+    composer.addPass(render);
+    composer.addPass(ao);
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    return { composer, render, ao, bloom };
   }
 
   /**
