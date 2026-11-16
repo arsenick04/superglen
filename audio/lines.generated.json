@@ -1668,8 +1668,8 @@
     "id": "bab6_nino_curut",
     "speaker": "nino",
     "lang": "id",
-    "text": "Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
-    "tts": "[urgent] Curut Cemberut datang membantu! Tembak tiga kali atau hentak!",
+    "text": "Curut Cemberut datang! Tembak terus sampai mereka kabur!",
+    "tts": "[urgent] Curut Cemberut datang! Tembak terus sampai mereka kabur!",
     "source": "audio/dialog.json",
     "category": "bab6"
   },

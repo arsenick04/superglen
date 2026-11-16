@@ -34,7 +34,7 @@ export const BAB6_LINES = {
   ninoPusing: { id: 'bab6_nino_pusing', speaker: 'nino', text: 'Dia kehabisan napas! Tembak laser sekarang!' },
   ninoBelum: { id: 'bab6_nino_belum', speaker: 'nino', text: 'Belum. Tunggu sampai dia kehabisan napas.' },
   ninoKecil: { id: 'bab6_nino_kecil', speaker: 'nino', text: 'Kena! Dia mengecil lagi, hihi!' },
-  ninoCurut: { id: 'bab6_nino_curut', speaker: 'nino', text: 'Curut Cemberut datang membantu! Tembak tiga kali atau hentak!' },
+  ninoCurut: { id: 'bab6_nino_curut', speaker: 'nino', text: 'Curut Cemberut datang! Tembak terus sampai mereka kabur!' },
   ninoLagi: { id: 'bab6_nino_lagi', speaker: 'nino', text: 'Tikus Rakus masih di jalan depan gudang. Kamu pasti bisa!' },
   // Tamed.
   rakusSendawa: { id: 'bab6_rakus_sendawa', speaker: 'rakus', text: 'Hik! Sendawa... Perutku sakit. Sekarang aku kecil lagi.' },
