@@ -6,6 +6,7 @@
 - Build, check:reach (0 error/warning), check:quiz, kota-touch, hud-layout desktop dan bab1 lulus. Kota-life desktop sebelumnya gagal anggaran grafik; jalur render kota kini disamakan dengan touch dan menunggu tes ulang. HUD touch masih perlu verifikasi setelah sinkronisasi frame pengukuran.
 - Branch sudah dipush. Pembuatan PR otomatis ditolak GitHub API (`Forbidden`); belum ada PR. Tidak ada perubahan gameplay/cerita/audio atau CityData.
 - Untuk dicoba setelah review: bandingkan semua gedung dari dekat; pintu/wajah singa Barongsai; minimap/joystick/zoom di iPhone. C2 belum dinyatakan selesai.
+- Tes ulang kota dan kota-life lulus setelah renderer disamakan (44 calls / 403.090 segitiga). HUD touch masih gagal: peta/zoom dan kartu dialog tidak terlihat pada kondisi pengukuran, meskipun tidak ada bounding box bertumpuk. Hipotesis sinkronisasi frame tidak menyelesaikan masalah; perubahan percobaannya dibuang.
 
 ## Paket malam A1 (11 November 2026): selesai
 

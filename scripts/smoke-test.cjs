@@ -9645,8 +9645,6 @@ async function bab5FightScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
   await d3Adv(page, 30);
-  // Flush the visual/UI update after deterministic steps before measuring DOM bounds.
-  await page.evaluate(() => window.__superglen.advance(1, true));
   let h = await hSt(page);
   let b = await ch5Boss(page);
   check(`bab5-fight ${tag}: step "city": the snake is coiled in the school field, full stars (5), not awake yet`, b.stars === 5 && b.phase === 'idle' && b.enabled === false && Math.abs(b.pos.x - BOSS.x) < 0.1 && Math.abs(b.pos.z - BOSS.z) < 0.1, JSON.stringify(b));
@@ -10465,7 +10463,6 @@ async function hudLayoutScenario(page, check, touch) {
     // Freeze the live RAF while the test exposes the other HUD rows. The
     // settle delay used to let the short dialog close before measurement.
     window.__superglen.pause(true);
-    window.__superglen.advance(1, true);
     const t = document.querySelector('.city-toast'); if (t) { t.textContent = 'Lapangan'; t.classList.add('show'); }
       const ch = document.querySelector('.coin-hud'); if (ch) ch.classList.add('show');
     const e = document.querySelector('.ch5-stars'); if (e) { window.__starsWas = e.classList.contains('show'); e.classList.add('show'); }

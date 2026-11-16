@@ -8,6 +8,10 @@ Follow-up: quiz validation PASS, kota-touch PASS on isolated port 4191, desktop 
 
 The branch `codex/c2-city-look` was pushed successfully. Automatic PR creation failed with GitHub GraphQL `Forbidden`; a PR has not been created.
 
+Latest reruns: `kota` PASS, `bab1` PASS, `kota-life` PASS. The busiest desktop crowd view now renders at 44 calls / 403,090 triangles, within the unchanged 70 / 480,000 budgets after removing the additional city post pass.
+
+Final touch HUD rerun still FAILS: no overlapping/out-of-viewport rectangles were found, but map and zoom were absent in the exploration measurement and the dialog card was absent in its measurement. A frame flush did not fix it and was removed. This remains an unresolved visibility/state issue; the assertions remain strict. Desktop hud-layout PASS, touch hud-layout FAIL; C2 is still WIP.
+
 ## Before / after
 
 Desktop views, ordered bank/hospital, hill, market, housing, plaza, school:
