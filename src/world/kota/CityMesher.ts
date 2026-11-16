@@ -48,6 +48,11 @@ export const Sh = {
   ConeO: 17,
   /** Icosahedron with smooth normals (12 vertices, 20 triangles): tiny balls (fruit, pots, bulbs, canopy lobes). */
   Ico: 18,
+  /**
+   * Building body: unit box without a bottom whose four vertical edges are rounded (a bevel strip with normals that blend from
+   * one wall to the next, so the corner shades soft). 22 triangles. Fits inside the box of the same size (visual only).
+   */
+  Body: 19,
 } as const;
 export type Sh = (typeof Sh)[keyof typeof Sh];
 
@@ -58,6 +63,9 @@ interface Template {
   idx: Uint16Array;
   verts: number;
   tris: number;
+  /** Model templates (EnvModels.ts): linear 0..255 colour multiplier per vertex and the bounding radius at scale 1. */
+  col?: Uint8Array;
+  radius?: number;
 }
 
 function tpl(g: THREE.BufferGeometry): Template {
@@ -131,6 +139,47 @@ function ico(): Template {
   return { pos: pa, nrm: Float32Array.from(pa), uv: new Float32Array((pa.length / 3) * 2), idx: Uint16Array.from(idx), verts: pa.length / 3, tris: idx.length / 3 };
 }
 
+function body(): Template {
+  const b = 0.04; // bevel in unit space (scaled with the size: about 0.25 to 0.55 m on a house)
+  const h = 0.5;
+  // Octagon in XZ, counter-clockwise seen from above; every side has the normals at its two ends.
+  const ring: [number, number, number, number][] = [
+    [h, -h + b, 1, 0], [h, h - b, 1, 0], [h - b, h, 0, 1], [-h + b, h, 0, 1],
+    [-h, h - b, -1, 0], [-h, -h + b, -1, 0], [-h + b, -h, 0, -1], [h - b, -h, 0, -1],
+  ];
+  const p: number[] = [], n: number[] = [], idx: number[] = [];
+  const push = (x: number, y: number, z: number, nx: number, ny: number, nz: number): number => {
+    p.push(x, y, z);
+    n.push(nx, ny, nz);
+    return p.length / 3 - 1;
+  };
+  const tri = (a: number, b2: number, c: number, nx: number, nz: number, ny = 0): void => {
+    // Orient so the geometric normal agrees with the intended one.
+    const ax = p[a * 3], ay = p[a * 3 + 1], az = p[a * 3 + 2];
+    const ux = p[b2 * 3] - ax, uy = p[b2 * 3 + 1] - ay, uz = p[b2 * 3 + 2] - az;
+    const vx = p[c * 3] - ax, vy = p[c * 3 + 1] - ay, vz = p[c * 3 + 2] - az;
+    const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
+    if (gx * nx + gy * ny + gz * nz >= 0) idx.push(a, b2, c);
+    else idx.push(a, c, b2);
+  };
+  for (let i = 0; i < 8; i++) {
+    const A = ring[i];
+    const B = ring[(i + 1) % 8];
+    const a0 = push(A[0], -h, A[1], A[2], 0, A[3]);
+    const a1 = push(A[0], h, A[1], A[2], 0, A[3]);
+    const b0 = push(B[0], -h, B[1], B[2], 0, B[3]);
+    const b1 = push(B[0], h, B[1], B[2], 0, B[3]);
+    // Mean outward direction of this side (a bevel side has two different end normals).
+    const mx = A[2] + B[2] || (A[0] + B[0]);
+    const mz = A[3] + B[3] || (A[1] + B[1]);
+    tri(a0, b0, b1, mx, mz);
+    tri(a0, b1, a1, mx, mz);
+  }
+  const top = ring.map((r) => push(r[0], h, r[1], 0, 1, 0));
+  for (let i = 1; i < 7; i++) tri(top[0], top[i], top[i + 1], 0, 0, 1);
+  return { pos: Float32Array.from(p), nrm: Float32Array.from(n), uv: new Float32Array((p.length / 3) * 2), idx: Uint16Array.from(idx), verts: p.length / 3, tris: idx.length / 3 };
+}
+
 function pyr4(): Template {
   const A: number[][] = [[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]];
   const apex = [0, 0.5, 0];
@@ -171,7 +220,19 @@ const TEMPLATES: Template[] = [
   tpl(new THREE.CylinderGeometry(1, 1, 1, 6, 1, true)),
   tpl(new THREE.ConeGeometry(1, 1, 8, 1, true)),
   ico(),
+  body(),
 ];
+
+/**
+ * Register a model template (src/world/kota/EnvModels.ts): metres at scale 1, origin at its base. Returns its shape id; parts
+ * use `size` as a per-axis scale. Must run before any Recipe adds it (the city is built after the env models load).
+ */
+export function registerTemplate(pos: Float32Array, nrm: Float32Array, col: Uint8Array, idx: Uint16Array): Sh {
+  let radius = 0;
+  for (let k = 0; k < pos.length; k += 3) radius = Math.max(radius, Math.hypot(pos[k], pos[k + 1], pos[k + 2]));
+  TEMPLATES.push({ pos, nrm, uv: new Float32Array((pos.length / 3) * 2), idx, verts: pos.length / 3, tris: idx.length / 3, col, radius });
+  return (TEMPLATES.length - 1) as Sh;
+}
 
 export function templateTris(shape: Sh): number {
   return TEMPLATES[shape].tris;
@@ -232,7 +293,9 @@ export class Recipe {
     this.indices += t.idx.length;
     // Conservative extent: half the diagonal for boxes, the radius for round shapes (rotation does not matter then).
     const round = (shape >= Sh.Cyl0 && shape <= Sh.Hill) || shape >= Sh.Trunk;
-    const r = round ? Math.hypot(size[0], size[1] / 2, size[2]) : Math.hypot(size[0], size[1], size[2]) / 2;
+    const r = t.radius !== undefined
+      ? t.radius * Math.max(Math.abs(size[0]), Math.abs(size[1]), Math.abs(size[2]))
+      : round ? Math.hypot(size[0], size[1] / 2, size[2]) : Math.hypot(size[0], size[1], size[2]) / 2;
     this.min.set(Math.min(this.min.x, pos[0] - r), Math.min(this.min.y, pos[1] - r), Math.min(this.min.z, pos[2] - r));
     this.max.set(Math.max(this.max.x, pos[0] + r), Math.max(this.max.y, pos[1] + r), Math.max(this.max.z, pos[2] + r));
     return this;
@@ -356,6 +419,7 @@ function expand(r: Recipe, from: number, to: number, out: Out, v0: number, i0: n
     const isz = sz !== 0 ? 1 / sz : 0;
     const tp = t.pos;
     const tn = t.nrm;
+    const tc = t.col;
     for (let k = 0; k < t.verts; k++) {
       const k3 = k * 3;
       const lx = tp[k3] * sx;
@@ -384,9 +448,15 @@ function expand(r: Recipe, from: number, to: number, out: Out, v0: number, i0: n
       out.nrm[w] = Math.round(nx * inv);
       out.nrm[w + 1] = Math.round(ny * inv);
       out.nrm[w + 2] = Math.round(nz * inv);
-      out.col[w] = cr;
-      out.col[w + 1] = cg;
-      out.col[w + 2] = cb;
+      if (tc) {
+        out.col[w] = (cr * tc[k3] + 127) / 255;
+        out.col[w + 1] = (cg * tc[k3 + 1] + 127) / 255;
+        out.col[w + 2] = (cb * tc[k3 + 2] + 127) / 255;
+      } else {
+        out.col[w] = cr;
+        out.col[w + 1] = cg;
+        out.col[w + 2] = cb;
+      }
       if (tex && tile > 0) {
         const uo = v * 2;
         const ux = out.pos[w], uy = out.pos[w + 1], uz = out.pos[w + 2];

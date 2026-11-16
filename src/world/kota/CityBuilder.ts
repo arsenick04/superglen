@@ -3,6 +3,7 @@ import { EDGE_COLOR } from '../kits/ParkourKit';
 import { Parkour } from '../../config/parkour';
 import { Recipe, Sh, type Vec3 } from './CityMesher';
 import { ATLAS_TILES, T } from './CityAtlas';
+import { envModels } from './EnvModels';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -270,7 +271,8 @@ function windows(B: Builder, b: CityBuilding, ats: number[], y: number, w = 1.1,
 function drawBody(B: Builder, b: CityBuilding): void {
   const top = b.base + b.wall;
   const wall = b.abandoned ? b.wallColor : paint(b.wallColor, b.x, b.z);
-  B.far.box([b.w, b.wall, b.d], [b.x, b.base + b.wall / 2, b.z], wall, undefined, T.plaster);
+  // Soft rounded vertical corners (visual only: the collider is the data's box).
+  B.far.add(Sh.Body, [b.x, b.base + b.wall / 2, b.z], [b.w, b.wall, b.d], wall, undefined, T.plaster);
   if (b.roof === 'hip') {
     // Visual overhang a little wider than the collider roof (cute deep eaves); the apex stays where the data puts it.
     B.far.pyr(b.roofW + 0.5, b.roofH, b.roofD + 0.5, [b.x, top + b.roofH / 2 - 0.04, b.z], b.roofColor, roofTile(b));
@@ -645,16 +647,35 @@ const LEAF = [0x6fcf5a, 0x5cc04f, 0x86d85e, 0x4fb561];
 const LEAF_DARK = [0x4fae4a, 0x3f9f47, 0x5fbf4f, 0x3a9650];
 
 function drawProps(B: Builder, L: CityLayout): void {
+  const E = {
+    canopy: envModels.shape('canopy'),
+    trunk: envModels.shape('trunk'),
+    pine: envModels.shape('pine'),
+    lamp: envModels.shape('lamp'),
+    bench: envModels.shape('bench'),
+  };
   for (const t of L.trees) {
     const ch = B.at(t.x, t.z);
     const s = t.s;
     const hv = hsh(t.x, t.z, 2);
-    if (t.kind === 'pine') {
+    const yaw = hv * 6.283;
+    if (t.kind === 'pine' && E.pine >= 0) {
+      // Stylised pine (env model, own colours; 37 triangles): scalloped soft tiers, about 5.2 m at s = 1.
+      const r = t.far ? B.far : ch.lit;
+      const k = 0.9 + (Math.floor(hv * 3) / 3) * 0.2;
+      r.add(E.pine as Sh, [t.x, t.base, t.z], [s, s * k, s], 0xffffff, [0, yaw, 0]);
+    } else if (t.kind === 'pine') {
       const r = t.far ? B.far : ch.lit;
       const k = Math.floor(hv * 3);
       r.trunk(0.18 * s, 1.4 * s, [t.x, t.base + 0.7 * s, t.z], C.BROWN);
       r.add(Sh.Cone1, [t.x, t.base + 2.4 * s, t.z], [1.35 * s, 2.6 * s, 1.35 * s], [0x2f7f45, 0x2b7a4f, 0x35884a][k]);
       r.coneOpen(0.95 * s, 2.0 * s, [t.x, t.base + 3.9 * s, t.z], [0x3f9f4f, 0x3b9a58, 0x47a851][k]);
+    } else if (E.canopy >= 0 && E.trunk >= 0) {
+      // Stylised round tree (env models): flared trunk + one soft three-lobe canopy with baked light (the leaf hue comes from here).
+      const bloom = hv > 0.88;
+      const lc = bloom ? 0xffb8d4 : LEAF[Math.floor(hv * 4) % 4];
+      ch.lit.add(E.trunk as Sh, [t.x, t.base, t.z], [0.32 * s, 2.0 * s, 0.32 * s], 0xffffff, [0, yaw, 0]);
+      ch.lit.add(E.canopy as Sh, [t.x, t.base + 2.4 * s, t.z], [1.15 * s, 1.05 * s, 1.15 * s], lc, [0, yaw, 0]);
     } else {
       // Round crown: a main ball and three soft lobes (smooth normals make the cluster read as one round cloud). A few are in blossom.
       const bloom = hv > 0.88;
@@ -670,6 +691,12 @@ function drawProps(B: Builder, L: CityLayout): void {
   }
   for (const l of L.lamps) {
     const ch = B.at(l.x, l.z);
+    if (E.lamp >= 0) {
+      // Env model: rounded plinth, tapered pole, curved arm, golden hood; the bulb stays in the glow layer.
+      ch.deco.add(E.lamp as Sh, [l.x, 0, l.z], [1, 1, 1], 0xffffff);
+      ch.glow.ball(0.2, [l.x + 0.42, 3.36, l.z], 0xffe9a0);
+      continue;
+    }
     // Teal pole on a base, a short arm with a golden cap and a glowing lantern.
     ch.deco.boxNB([0.3, 0.35, 0.3], [l.x, 0.175, l.z], 0x3d7f8a);
     ch.deco.trunk(0.07, 3.1, [l.x, 1.9, l.z], 0x3d7f8a);
@@ -680,9 +707,15 @@ function drawProps(B: Builder, L: CityLayout): void {
   for (const b of L.benches) {
     const ch = B.at(b.x, b.z);
     const [w, d] = b.alongX ? [1.8, 0.6] : [0.6, 1.8];
+    const bs = envModels.size('bench');
+    if (E.bench >= 0 && bs) {
+      // Poly Haven painted bench (CC0), fitted to the old 1.8 x 0.6 footprint; its backrest is on local -z (turned to -x across).
+      ch.deco.add(E.bench as Sh, [b.x, 0, b.z], [1.8 / bs.x, 0.85 / bs.y, 0.62 / bs.z], 0xffffff, b.alongX ? undefined : [0, Math.PI / 2, 0]);
+    } else {
     ch.deco.box([w, 0.1, d], [b.x, 0.45, b.z], 0xffffff, undefined, T.wood);
     ch.deco.boxNB(b.alongX ? [1.8, 0.5, 0.08] : [0.08, 0.5, 1.8], [b.x - (b.alongX ? 0 : 0.26), 0.75, b.z - (b.alongX ? 0.26 : 0)], 0xffffff, undefined, T.wood);
     for (const s of [-1, 1]) ch.deco.boxNB([b.alongX ? 0.1 : 0.62, 0.42, b.alongX ? 0.62 : 0.1], [b.x + (b.alongX ? s * 0.8 : 0), 0.21, b.z + (b.alongX ? 0 : s * 0.8)], 0x3d7f8a);
+    }
     // A flower pot at one end.
     const px = b.x + (b.alongX ? 1.15 : 0);
     const pz = b.z + (b.alongX ? 0 : 1.15);
@@ -828,6 +861,7 @@ function drawGround(B: Builder, L: CityLayout): void {
 /** Build every recipe and collider list of the city. */
 export function buildCity(L: CityLayout): BuiltCity {
   const B = new Builder();
+  envModels.cityBuilt = true;
   drawGround(B, L);
   for (const b of L.buildings) {
     B.at(b.x, b.z);

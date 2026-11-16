@@ -60,8 +60,8 @@ export function makeCityMaterial(): THREE.MeshStandardMaterial {
     shader.uniforms.uAvg = uniforms.uAvg;
     shader.uniforms.uWrap = uniforms.uWrap;
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec2 aUv;\nattribute float aTile;\nvarying vec2 vTuv;\nflat varying float vTile;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTuv = aUv;\nvTile = aTile;');
+      .replace('#include <common>', '#include <common>\nattribute vec2 aUv;\nattribute float aTile;\nvarying vec2 vTuv;\nflat varying float vTile;\nvarying vec2 vAo;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTuv = aUv;\nvTile = aTile;\nvAo = vec2((modelMatrix * vec4(transformed, 1.0)).y, abs(normal.y));');
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
@@ -71,7 +71,8 @@ uniform vec4 uRect[${NT}];
 uniform vec3 uAvg[${NT}];
 uniform float uWrap[${NT}];
 varying vec2 vTuv;
-flat varying float vTile;`,
+flat varying float vTile;
+varying vec2 vAo;`,
       )
       .replace(
         '#include <color_fragment>',
@@ -87,9 +88,11 @@ flat varying float vTile;`,
   vec3 tx = textureLod(uAtlas, cr.xy + uvt * cr.zw, clamp(lod, 0.0, ${LOD_MAX.toFixed(1)})).rgb;
   tx = mix(tx, uAvg[ti], wr * smoothstep(2.0, 4.2, lod));
   diffuseColor.rgb *= tx;
+  // Contact shadow: walls, trunks and poles darken softly in the last metre above the street (grounds everything).
+  diffuseColor.rgb *= mix(1.0, mix(0.7, 1.0, smoothstep(0.0, 1.3, vAo.x)), 1.0 - smoothstep(0.4, 0.7, vAo.y));
 }`,
       );
   };
-  m.customProgramCacheKey = () => 'city-atlas-v1';
+  m.customProgramCacheKey = () => 'city-atlas-v2';
   return m;
 }

@@ -1,3 +1,4 @@
+import { envModels } from './EnvModels';
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
@@ -501,7 +502,9 @@ export class CityLife {
     this.anim.setUsage(THREE.DynamicDrawUsage);
     pedGeo.setAttribute('aAnim', this.anim);
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
-    this.cars = mk(carGeo(), carMat, 70);
+    // Soft rounded car from the env models (scripts/build-env-assets.mjs); the box car is the fallback.
+    const envCar = envModels.geometry('car');
+    this.cars = mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
     this.motos = mk(motoGeo(), carMat, 40);
     this.bikes = mk(bikeGeo(), carMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
