@@ -10,7 +10,7 @@ export const Combat = {
   /** What a hit does to Glen. */
   hurt: {
     /** Seconds nothing can hurt him after a hit (he blinks). */
-    invuln: 1.5,
+    invuln: 1.2,
     /** A small push away from the attacker (m/s for this many seconds). */
     knockSpeed: 6,
     knockTime: 0.25,
@@ -26,24 +26,26 @@ export const Combat = {
     /** Visual size multiplier of the old 0.6 m rat: about knee-to-waist of Glen. */
     scale: 1.5,
     /** Hits to tame (stomp and laser each count 1). */
-    hp: 3,
-    hpEasy: 2,
+    hp: 5,
+    hpEasy: 3,
     /** The rat starts to attack a child closer than this (m). */
-    aggroRadius: 11,
+    aggroRadius: 13,
     /** Closer than this it charges; farther (up to aggroRadius) it throws crumbs. */
     chargeMaxDist: 6.5,
     /** Telegraph before an attack (s): shaking, puffs and an arrow on the ground. */
-    windup: 0.8,
+    windup: 0.6,
     windupEasy: 1.2,
     /** The direction of a charge is locked after this share of the wind-up (the arrow stops turning). */
     lockShare: 0.45,
-    chargeSpeed: 7,
+    chargeSpeed: 7.5,
     chargeTime: 0.55,
     /** After an attack the rat pants (s) and is easy to hit. */
-    recover: 1.1,
+    recover: 0.9,
     /** Seconds between two attacks of one rat. */
-    cooldown: 2.6,
+    cooldown: 2.2,
     cooldownEasy: 4.2,
+    /** Rats help each other: while one rat attacks, a second one near the child joins after this delay (s) whatever its own cooldown (normal mode only; 2 rats at most, in turn, never at the same moment). */
+    assistDelay: 1.2,
     /** Charge touches a child within this horizontal distance (m) and only while his feet are lower than `touchTop` (a jump dodges). */
     touchRadius: 1.0,
     touchTop: 0.75,
@@ -55,21 +57,35 @@ export const Combat = {
     /** After a hit that does not tame it the rat is dizzy this long (s). */
     stun: 0.7,
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
-    globalGap: 0.9,
+    globalGap: 0.5,
   },
-  /** Ular Melar (Chapter 5 mini-boss): 3 stars; the head glows when dizzy and only then does the laser count. */
+  /** Ular Melar (Chapter 5 mini-boss): 5 stars of 2 laser hits each; the head glows when dizzy and only then does the laser count. */
   snake: {
-    /** Stars (health). One successful laser hit in a dizzy window takes one. */
-    stars: 3,
+    /** Stars (health). `hitsPerStar` successful laser hits in ONE dizzy window take one (a half-hit is forgotten when the window closes). */
+    stars: 5,
+    starsEasy: 3,
+    hitsPerStar: 2,
+    hitsPerStarEasy: 1,
+    /** A first hit of a star keeps the window open at least this long (s) so the second one can follow. */
+    partialKeep: 1.6,
+    /** After this many stars are lost the snake lunges twice in a row (two stripes), the second one after a short wind-up (s). */
+    doubleAfter: 2,
+    doubleWind: 0.9,
+    /** The second stripe locks after this share of its wind-up (earlier than the first: it still leaves 0.6 s to step aside). */
+    doubleLockShare: 0.3,
+    doubleRetract: 0.28,
+    /** After this many stars are lost the lunge is a sweep: the stripe and the body bend (curvature in 1/m, the side alternates). */
+    sweepAfter: 4,
+    sweepCurve: 0.085,
     /** The snake wakes when a child comes this close to its coil (m). */
     engageRadius: 22,
     /** Size multiplier on the whole snake (the coil is about 3.2 m tall: clearly bigger than Glen). */
     scale: 1,
     /** Seconds the snake waits between two lunges (coiled, looking around). */
-    cooldown: 2.2,
+    cooldown: 4.2,
     cooldownEasy: 3.6,
     /** Wind-up: coils and wiggles, a red stripe shows the line of the lunge (s). */
-    windup: 1.15,
+    windup: 1.1,
     windupEasy: 1.8,
     /** The stripe's direction is locked after this share of the wind-up (walk or jump aside after that). */
     lockShare: 0.4,
@@ -82,10 +98,10 @@ export const Combat = {
     /** Width of the red stripe on the ground (m). */
     stripeWidth: 2.2,
     /** Dizzy time (s) after: a missed lunge, a shield block (longer: the reward), a hit on Glen (short). Head glows meanwhile. */
-    dizzyMiss: 3.4,
-    dizzyBlock: 4.4,
-    dizzyHit: 1.8,
-    dizzyEasyMul: 1.5,
+    dizzyMiss: 2.2,
+    dizzyBlock: 3.2,
+    dizzyHit: 1.4,
+    dizzyEasyMul: 2.2,
     /** After a star is lost the snake stays dizzy this long at most (s), then pulls back. */
     afterHit: 1.0,
     /** Seconds to pull the stretched body back to the coil. */
@@ -97,14 +113,23 @@ export const Combat = {
     hintGap: 25,
   },
   /**
-   * Tikus Rakus (Chapter 6 mini-boss): 3 stars. Pattern, repeated: a food pile glows -> he runs to it and EATS (grows one size step,
+   * Tikus Rakus (Chapter 6 mini-boss): 5 stars of 2 hits each. Pattern, repeated: a food pile glows -> he runs to it and EATS (grows one size step,
    * `maxLevel` at most; the child can pop the glowing pile with the laser or a stomp first) -> belly-bounce slam (a ring on the ground
    * shows where, jump / shield / step out) -> out of breath (dizzy): only now the laser takes a star, and he shrinks one step.
    * Curut Cemberut helpers join between rounds. Everything is silly, nobody is hurt.
    */
   rakus: {
-    /** Stars (health). */
-    stars: 3,
+    /** Stars (health); `hitsPerStar` laser hits in ONE out-of-breath window take one. */
+    stars: 5,
+    starsEasy: 3,
+    hitsPerStar: 2,
+    hitsPerStarEasy: 1,
+    partialKeep: 1.6,
+    /** He only shrinks one step every this many stars lost (so he stays big: the big size comes sooner and stays; easy mode: every star). */
+    shrinkEvery: 2,
+    /** From this size step on the slam comes as a double ring: a second wave `doubleGap` s after the first (normal mode only). */
+    doubleFrom: 2,
+    doubleGap: 0.55,
     /** Biggest size step (steps 0..maxLevel). At the biggest size he no longer eats: slower, bigger ring. */
     maxLevel: 3,
     /** Height of the body at step 0 (m): Glen is 1.1, so about 1.5 times Glen from the start. */
@@ -122,13 +147,13 @@ export const Combat = {
     /** A popped or eaten pile comes back after this long (s). */
     pileRespawn: 5,
     /** The pile glows this long before he goes for it (s): the clear cue. */
-    cue: 1.7,
+    cue: 1.2,
     cueEasy: 2.6,
     /** Eating takes this long (s); the pile shrinks meanwhile. */
-    eat: 2,
+    eat: 1.4,
     eatEasy: 3,
     /** Growing one step (s). */
-    grow: 0.6,
+    grow: 0.45,
     /** After a popped pile he pouts this long (s) before the tantrum slam. */
     pout: 1.3,
     /** Laser / stomp aim radius of a pile (m). */
@@ -146,12 +171,15 @@ export const Combat = {
     /** Out-of-breath time (s): after a slam that missed, was blocked by the shield (the reward), hit Glen (short). Easy mode multiplies. */
     dizzyMiss: 3.0,
     dizzyBlock: 4.2,
-    dizzyHit: 2.2,
+    dizzyHit: 1.8,
     dizzyEasyMul: 1.5,
     /** After a star is lost he stays dizzy at most this long (s). */
     afterHit: 1.0,
     /** Short get-up before the next round (s). */
-    recover: 0.8,
+    recover: 1.0,
+    /** Rest between two rounds (s), when he is idle and looks around. */
+    roundGap: 1.5,
+    roundGapEasy: 1.4,
     /** Laser aim at his belly: the body is big, so the assist cone is generous. */
     aimRadius: 1.4,
     assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 22 },
@@ -159,12 +187,15 @@ export const Combat = {
     hintGap: 25,
     /** Curut Cemberut helpers (the small rats of Chapter 3, 3 hits each) join after round 1, 3, 5 ... */
     helpers: {
-      max: 3,
+      max: 4,
       perWave: 2,
       /** Walking speed while chasing (m/s). */
       speed: 2.6,
       /** Seconds between any two helper attacks starting. */
-      gap: 1.6,
+      gap: 1.3,
+      /** Helpers wind up a little longer and rest longer than the market rats (the boss is already in the picture). */
+      windup: 0.8,
+      cooldown: 3.2,
       /** Helper attacks never start while the boss slam ring is up; a boss slam waits at most this long for a helper wind-up (s). */
       bossWait: 1.5,
     },

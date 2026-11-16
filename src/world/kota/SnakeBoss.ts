@@ -81,12 +81,21 @@ const smooth = (x: number): number => {
  * The body is drawn from two poses: a rearing coil and a straight line along the ground; `ext` (metres the head is out) blends them,
  * so the lunge "melar" stretches the whole body. Pattern, repeated: coil and wiggle (wind-up, a red stripe on the ground shows the
  * line) -> LUNGE along the stripe -> dizzy at the far end (blocked, missed or hit) -> pulls back. While dizzy the head glows and
- * ONLY then does a laser hit take one of the 3 stars. Nothing here hurts for real: a lunge touch is one heart (`Health.hurt`).
+ * ONLY then do laser hits count: `hitsPerStar` of them in one window take one star (5 stars; 3 in easy mode). After 2 stars are lost it lunges
+ * twice in a row, after 4 the lunge is a sweep (the stripe and the body bend). Nothing here hurts for real: a lunge touch is one heart (`Health.hurt`).
  */
 export class SnakeBoss {
   readonly x: number;
   readonly z: number;
-  stars: number = Combat.snake.stars;
+  stars: number;
+  /** Stars at the start of a fight (3 in "Mode mudah"). */
+  readonly maxStars: number;
+  /** Laser hits on the current star in this dizzy window. */
+  hitsGot = 0;
+  partialHits = 0;
+  /** Test counters of the fight pattern. */
+  doubles = 0;
+  sweeps = 0;
   phase: SnakePhase = 'idle';
   /** False: it only looks around (before the intro, during a scene, after a reset until the child comes back). */
   enabled = false;
@@ -116,6 +125,15 @@ export class SnakeBoss {
   private readonly glowMat: THREE.MeshBasicMaterial;
   private readonly stripe: THREE.Mesh;
   private readonly stripeMat: THREE.MeshBasicMaterial;
+  private readonly arcStripe: THREE.Mesh;
+  private readonly arcPos: THREE.BufferAttribute;
+  /** Curvature (1/m) of the lunge now, a second lunge of the double lunge is waiting, wind-up length of this lunge (s). */
+  private curve = 0;
+  private comboLeft = 0;
+  private comboNext = false;
+  private windLen = 1;
+  private secondLunge = false;
+  private side = 1;
   private readonly bodyGeo: THREE.BufferGeometry;
   private readonly mats: THREE.Material[] = [];
   private readonly target: Target;
@@ -141,6 +159,7 @@ export class SnakeBoss {
   private readonly e = new THREE.Euler();
   private readonly v2 = new THREE.Vector3();
   private readonly col = new THREE.Color();
+  private readonly arcOut = { x: 0, z: 0, hx: 0, hz: 0 };
   private readonly segs: THREE.Vector3[] = [];
   private readonly rad: number[] = [];
 
@@ -153,6 +172,8 @@ export class SnakeBoss {
     this.x = x;
     this.z = z;
     this.easy = ctx.save.data.settings.easyFight;
+    this.maxStars = this.easy ? Combat.snake.starsEasy : Combat.snake.stars;
+    this.stars = this.maxStars;
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
     this.bodyGeo = merge([{ g: sph(1, 9, 6), c: 0xffffff }]);
@@ -180,12 +201,23 @@ export class SnakeBoss {
     this.stripe = new THREE.Mesh(sg, this.stripeMat);
     this.stripe.visible = false;
     this.stripe.renderOrder = 3;
-    for (const m of [this.bodyMesh, this.headMesh, this.glow, this.stripe]) {
+    // The bent stripe of the sweep: a strip of 16 quads whose vertices are written every frame while it shows.
+    const ASEG = 16;
+    const ag = new THREE.BufferGeometry();
+    this.arcPos = new THREE.BufferAttribute(new Float32Array((ASEG + 1) * 2 * 3), 3);
+    ag.setAttribute('position', this.arcPos);
+    const idx: number[] = [];
+    for (let i = 0; i < ASEG; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    ag.setIndex(idx);
+    this.arcStripe = new THREE.Mesh(ag, this.stripeMat);
+    this.arcStripe.visible = false;
+    this.arcStripe.renderOrder = 3;
+    for (const m of [this.bodyMesh, this.headMesh, this.glow, this.stripe, this.arcStripe]) {
       m.frustumCulled = false;
       m.castShadow = false;
       m.receiveShadow = false;
     }
-    this.group.add(this.bodyMesh, this.headMesh, this.glow, this.stripe);
+    this.group.add(this.bodyMesh, this.headMesh, this.glow, this.stripe, this.arcStripe);
     ctx.root.add(this.group);
 
     this.target = ctx.targets.add({
@@ -201,7 +233,7 @@ export class SnakeBoss {
     this.hud = document.createElement('div');
     this.hud.className = 'ch5-stars';
     this.hud.setAttribute('aria-hidden', 'true');
-    for (let i = 0; i < Combat.snake.stars; i++) {
+    for (let i = 0; i < this.maxStars; i++) {
       const s = document.createElement('span');
       s.className = 'ch5-star';
       s.innerHTML = STAR_SVG;
@@ -219,6 +251,7 @@ export class SnakeBoss {
       this.headHappy.dispose();
       this.glow.geometry.dispose();
       this.stripe.geometry.dispose();
+      this.arcStripe.geometry.dispose();
       for (const m of this.mats) m.dispose();
     });
     this.layout();
@@ -230,13 +263,21 @@ export class SnakeBoss {
   }
 
   private paintHud(): void {
-    this.hudStars.forEach((s, i) => s.classList.toggle('lost', i >= this.stars));
+    this.hudStars.forEach((s, i) => {
+      s.classList.toggle('lost', i >= this.stars);
+      // A star with one of its hits already taken shows half faded.
+      s.classList.toggle('half', i === this.stars - 1 && this.hitsGot > 0);
+    });
     this.hud.dataset.stars = String(this.stars);
   }
 
   /** Full stars, coiled, waiting (a new fight after "kelelahan", or the first one). */
   reset(): void {
-    this.stars = Combat.snake.stars;
+    this.stars = this.maxStars;
+    this.hitsGot = 0;
+    this.curve = 0;
+    this.comboLeft = 0;
+    this.comboNext = false;
     this.phase = 'idle';
     this.vulnerable = false;
     this.ext = 0;
@@ -250,6 +291,7 @@ export class SnakeBoss {
     this.headMesh.geometry = this.headAngry;
     this.group.visible = true;
     this.stripe.visible = false;
+    this.arcStripe.visible = false;
     this.glow.visible = false;
     this.paintHud();
     this.syncTarget();
@@ -265,6 +307,25 @@ export class SnakeBoss {
     this.syncTarget();
   }
 
+  /** Point and heading of the lunge line at distance d from the coil (a straight line, or an arc of constant curvature). */
+  private arcAt(d: number): void {
+    const o = this.arcOut;
+    const k = this.curve;
+    if (k === 0) {
+      o.x = this.dir.x * d;
+      o.z = this.dir.y * d;
+      o.hx = this.dir.x;
+      o.hz = this.dir.y;
+      return;
+    }
+    const f0 = Math.atan2(this.dir.x, this.dir.y);
+    const f1 = f0 + k * d;
+    o.x = (Math.cos(f0) - Math.cos(f1)) / k;
+    o.z = (Math.sin(f1) - Math.sin(f0)) / k;
+    o.hx = Math.sin(f1);
+    o.hz = Math.cos(f1);
+  }
+
   private dist(): number {
     const p = this.ctx.player.position;
     return Math.hypot(p.x - this.x, p.z - this.z);
@@ -272,10 +333,32 @@ export class SnakeBoss {
 
   // ---- fight -------------------------------------------------------------------------------------------------
 
-  private beginWind(): void {
+  /** Stars lost so far. */
+  private get lost(): number {
+    return this.maxStars - this.stars;
+  }
+
+  /** Direction of the lunge toward the child; a sweep starts turned away by half its bend so that it ends at him. */
+  private aimDir(): void {
     const p = this.ctx.player.position;
-    const d = Math.hypot(p.x - this.x, p.z - this.z) || 1;
-    this.dir.set((p.x - this.x) / d, (p.z - this.z) / d);
+    const a = Math.atan2(p.x - this.x, p.z - this.z) - (this.curve * Combat.snake.reach * this.scale) / 2;
+    this.dir.set(Math.sin(a), Math.cos(a));
+  }
+
+  private beginWind(second = false): void {
+    const C = Combat.snake;
+    if (!second) {
+      // Harder patterns of the later stars (normal mode only).
+      this.comboLeft = !this.easy && this.lost >= C.doubleAfter ? 1 : 0;
+      this.curve = !this.easy && this.lost >= C.sweepAfter ? C.sweepCurve * this.side : 0;
+      this.side = -this.side;
+      if (this.comboLeft > 0) this.doubles++;
+      if (this.curve !== 0) this.sweeps++;
+    }
+    this.secondLunge = second;
+    this.windLen = second ? C.doubleWind : this.easy ? C.windupEasy : C.windup;
+    this.comboNext = false;
+    this.aimDir();
     this.phase = 'wind';
     this.timer = 0;
     this.locked = false;
@@ -298,6 +381,10 @@ export class SnakeBoss {
     this.dizzyKind = kind;
     const base = kind === 'block' ? C.dizzyBlock : kind === 'hit' ? C.dizzyHit : C.dizzyMiss;
     this.dizzyLeft = base * (this.easy ? C.dizzyEasyMul : 1);
+    this.comboLeft = 0;
+    this.comboNext = false;
+    this.hitsGot = 0;
+    this.paintHud();
     this.timer = 0;
     this.vulnerable = true;
     this.squash = 1;
@@ -318,13 +405,29 @@ export class SnakeBoss {
       return;
     }
     this.laserCounted++;
-    this.takeStar();
+    this.hitsGot++;
+    if (this.hitsGot >= (this.easy ? Combat.snake.hitsPerStarEasy : Combat.snake.hitsPerStar)) this.takeStar();
+    else this.halfHit();
+  }
+
+  /** The first of two hits: a bonk and sparkles, the star shows half, the window stays open a little longer for the second. */
+  private halfHit(): void {
+    const { ctx } = this;
+    this.partialHits++;
+    this.squash = 1;
+    this.dizzyLeft = Math.max(this.dizzyLeft, Combat.snake.partialKeep);
+    this.paintHud();
+    ctx.synth.boing();
+    ctx.sfx.pop();
+    ctx.fx.sparkles.burst(this.head.x, this.head.y, this.head.z, 12, 2.6, 0xffe14d, { gravity: 2, life: 0.6, up: 0.6 });
+    ctx.fx.flashes.spawn(this.head.x, this.head.y, this.head.z, 1.4 * this.scale, 0.4, 0xffd23f);
   }
 
   /** One star goes (a laser hit in the dizzy window; also the test hook). */
   takeStar(): void {
     const { ctx } = this;
     this.stars = Math.max(0, this.stars - 1);
+    this.hitsGot = 0;
     this.vulnerable = false;
     this.squash = 1;
     this.paintHud();
@@ -349,14 +452,38 @@ export class SnakeBoss {
     const p = this.ctx.player.position;
     const px = p.x - this.x;
     const pz = p.z - this.z;
-    const along = Math.max(0, Math.min(this.ext, px * this.dir.x + pz * this.dir.y));
-    const cx = this.dir.x * along;
-    const cz = this.dir.y * along;
+    let cx: number;
+    let cz: number;
+    let hx = this.dir.x;
+    let hz = this.dir.y;
+    if (this.curve === 0) {
+      const along = Math.max(0, Math.min(this.ext, px * this.dir.x + pz * this.dir.y));
+      cx = this.dir.x * along;
+      cz = this.dir.y * along;
+    } else {
+      // A bent body: the nearest of a few points along the arc.
+      let best = Infinity;
+      cx = 0;
+      cz = 0;
+      for (let d = 0; ; d += 0.75) {
+        const dd = Math.min(d, this.ext);
+        this.arcAt(dd);
+        const dist = Math.hypot(px - this.arcOut.x, pz - this.arcOut.z);
+        if (dist < best) {
+          best = dist;
+          cx = this.arcOut.x;
+          cz = this.arcOut.z;
+          hx = this.arcOut.hx;
+          hz = this.arcOut.hz;
+        }
+        if (dd >= this.ext) break;
+      }
+    }
     if (Math.hypot(px - cx, pz - cz) > C.hitRadius * this.scale) return;
     if (p.y - 0.55 > C.touchTop * this.scale) return;
     // The touch comes from the snake's side (a bit behind the child along the line), so a shield held up toward it blocks.
-    const sx = this.x + cx - this.dir.x * 0.7;
-    const sz = this.z + cz - this.dir.y * 0.7;
+    const sx = this.x + cx - hx * 0.7;
+    const sz = this.z + cz - hz * 0.7;
     const r = this.ctx.health.hurt(sx, sz);
     if (r === 'hit') {
       this.hurtGlen++;
@@ -376,7 +503,7 @@ export class SnakeBoss {
     const { ctx } = this;
     const pl = ctx.player.position;
     this.squash = Math.max(0, this.squash - dt * 2.5);
-    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.active || ctx.health.resting;
+    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     if (this.phase === 'idle' || this.phase === 'beaten' || this.phase === 'tamed') {
       // Looks at the child while coiled.
       const want = Math.atan2(pl.x - this.x, pl.z - this.z);
@@ -390,10 +517,9 @@ export class SnakeBoss {
       }
       case 'wind': {
         this.timer += dt;
-        const wind = this.easy ? C.windupEasy : C.windup;
-        if (this.timer < wind * C.lockShare) {
-          const d = this.dist() || 1;
-          this.dir.set((pl.x - this.x) / d, (pl.z - this.z) / d);
+        const wind = this.windLen;
+        if (this.timer < wind * (this.secondLunge ? C.doubleLockShare : C.lockShare)) {
+          this.aimDir();
         } else if (!this.locked) {
           this.locked = true;
           ctx.sfx.blip();
@@ -412,13 +538,23 @@ export class SnakeBoss {
         this.timer += dt;
         this.ext = Math.min(C.reach * this.scale, (this.timer / C.lungeTime) * C.reach * this.scale);
         this.lungeContact();
-        if (this.phase === 'lunge' && this.ext >= C.reach * this.scale) this.beginDizzy(this.hitGlen ? 'hit' : 'miss');
+        if (this.phase === 'lunge' && this.ext >= C.reach * this.scale) {
+          if (!this.hitGlen && this.comboLeft > 0) {
+            // The double lunge: a quick pull back, then the second stripe.
+            this.comboLeft--;
+            this.comboNext = true;
+            this.phase = 'retract';
+            this.timer = 0;
+          } else this.beginDizzy(this.hitGlen ? 'hit' : 'miss');
+        }
         break;
       }
       case 'dizzy': {
         this.dizzyLeft -= dt;
         if (this.dizzyLeft <= 0) {
           this.vulnerable = false;
+          this.hitsGot = 0;
+          this.paintHud();
           this.phase = 'retract';
           this.timer = 0;
         }
@@ -426,10 +562,13 @@ export class SnakeBoss {
       }
       case 'retract': {
         this.timer += dt;
-        this.ext = Math.max(0, this.ext - (C.reach * this.scale * dt) / C.retract);
+        this.ext = Math.max(0, this.ext - (C.reach * this.scale * dt) / (this.comboNext ? C.doubleRetract : C.retract));
         if (this.ext <= 0) {
-          this.phase = 'idle';
-          this.cool = this.easy ? C.cooldownEasy : C.cooldown;
+          if (this.comboNext) this.beginWind(true);
+          else {
+            this.phase = 'idle';
+            this.cool = this.easy ? C.cooldownEasy : C.cooldown;
+          }
         }
         break;
       }
@@ -456,7 +595,7 @@ export class SnakeBoss {
     const t = this.t;
     const sc = this.scale;
     const ext = this.ext / sc;
-    const wind = this.phase === 'wind' ? Math.min(1, this.timer / (this.easy ? C.windupEasy : C.windup)) : 0;
+    const wind = this.phase === 'wind' ? Math.min(1, this.timer / this.windLen) : 0;
     const amp = this.phase === 'wind' ? 0.35 + 0.65 * wind : this.phase === 'dizzy' ? 0.25 : 0.12;
     const cy = Math.cos(this.lookYaw);
     const sy = Math.sin(this.lookYaw);
@@ -495,8 +634,9 @@ export class SnakeBoss {
         // Line pose: the body lies flat along the lunge, the tail stays at the coil.
         const wob = Math.sin(t * 9 + u * 9) * 0.1 * (this.phase === 'dizzy' ? 1 : 0.3);
         const lineD = ext * (1 - u);
-        const lxp = dx * lineD - dz * wob;
-        const lzp = dz * lineD + dx * wob;
+        this.arcAt(lineD);
+        const lxp = this.arcOut.x - dz * wob;
+        const lzp = this.arcOut.z + dx * wob;
         const w = smooth((ext / 3.2) * 1.6 - u * 0.6);
         px = cxp + (lxp - cxp) * w;
         pz = czp + (lzp - czp) * w;
@@ -506,7 +646,8 @@ export class SnakeBoss {
     }
     // The head sits on the neck segment, a little forward; its yaw: the lookYaw while coiled, the lunge line when stretched.
     const w0 = slither >= 0 ? 0 : smooth((ext / 3.2) * 1.6);
-    const headYaw = slither >= 0 ? Math.atan2(this.slitherDir.x, this.slitherDir.y) : this.lookYaw + (turnTo(this.lookYaw, Math.atan2(dx, dz), 1) - this.lookYaw) * w0;
+    const lineYaw = Math.atan2(dx, dz) + this.curve * ext;
+    const headYaw = slither >= 0 ? Math.atan2(this.slitherDir.x, this.slitherDir.y) : this.lookYaw + (turnTo(this.lookYaw, lineYaw, 1) - this.lookYaw) * w0;
     let pitch = 0.32 * (1 - w0) + 0.05 * w0;
     let hx = 0;
     let hy = 0.3 * (1 - w0) + 0.2 * w0;
@@ -558,7 +699,20 @@ export class SnakeBoss {
     }
     // The ground stripe: from the coil along the (locked) line, as long as the lunge.
     const showStripe = this.phase === 'wind' || this.phase === 'lunge';
-    this.stripe.visible = showStripe;
+    const bent = showStripe && this.curve !== 0;
+    this.stripe.visible = showStripe && !bent;
+    this.arcStripe.visible = bent;
+    if (bent) {
+      const wd = C.stripeWidth * sc * 0.5;
+      const n = this.arcPos.count / 2;
+      for (let i = 0; i < n; i++) {
+        this.arcAt((C.reach * sc * i) / (n - 1));
+        const o = this.arcOut;
+        this.arcPos.setXYZ(i * 2, this.x + o.x - o.hz * wd, 0.06, this.z + o.z + o.hx * wd);
+        this.arcPos.setXYZ(i * 2 + 1, this.x + o.x + o.hz * wd, 0.06, this.z + o.z - o.hx * wd);
+      }
+      this.arcPos.needsUpdate = true;
+    }
     if (showStripe) {
       const wd = C.stripeWidth * sc;
       this.stripe.position.set(this.x, 0.06, this.z);
@@ -626,7 +780,14 @@ export class SnakeBoss {
       laserEarly: this.laserEarly,
       scale: this.scale,
       locked: this.locked,
-      stripe: this.stripe.visible,
+      stripe: this.stripe.visible || this.arcStripe.visible,
+      maxStars: this.maxStars,
+      hitsGot: this.hitsGot,
+      partialHits: this.partialHits,
+      doubles: this.doubles,
+      sweeps: this.sweeps,
+      curve: this.curve,
+      comboLeft: this.comboLeft,
       glow: this.glow.visible,
       dizzyKind: this.dizzyKind,
       dizzyLeft: Math.round(this.dizzyLeft * 100) / 100,

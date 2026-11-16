@@ -82,8 +82,8 @@ export class RakusHelpers {
   ) {
     const easy = ctx.save.data.settings.easyFight;
     this.hpMax = easy ? Combat.rat.hpEasy : Combat.rat.hp;
-    this.windup = easy ? Combat.rat.windupEasy : Combat.rat.windup;
-    this.cooldown = easy ? Combat.rat.cooldownEasy : Combat.rat.cooldown;
+    this.windup = easy ? Combat.rat.windupEasy : Combat.rakus.helpers.windup;
+    this.cooldown = easy ? Combat.rat.cooldownEasy : Combat.rakus.helpers.cooldown;
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     const arrowMat = new THREE.MeshBasicMaterial({ color: 0xff5a4a, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, fog: false });
     arrowMat.polygonOffset = true;
@@ -320,7 +320,7 @@ export class RakusHelpers {
     const pl = ctx.player.position;
     const C = Combat.rat;
     this.gap = Math.max(0, this.gap - dt);
-    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.active || ctx.health.resting;
+    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     const feet = pl.y - 0.55;
     let changed = false;
     for (let i = 0; i < this.n; i++) {
@@ -490,7 +490,7 @@ export class RakusHelpers {
         const idx = i * this.hpMax + k;
         if (!fighting) this.m4.makeScale(0, 0, 0);
         else {
-          const off = (k - (this.hpMax - 1) / 2) * 0.32;
+          const off = (k - (this.hpMax - 1) / 2) * (this.hpMax > 3 ? 0.26 : 0.32);
           const full = k < this.hp[i];
           const z = full ? 1.7 : 0.9;
           this.m4.compose(this.p.set(this.hx[i] + rxv * off, 1.35 + (full ? Math.sin(t * 5 + k) * 0.03 : 0), this.hz[i] + rzv * off), this.q.identity(), this.sc.set(z, z, z));

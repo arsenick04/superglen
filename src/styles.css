@@ -538,6 +538,51 @@ html.touch-ui .dlg {
 html.touch-ui .dlg-card {
   width: 100%;
 }
+/* Compact call-out (during a fight): a small pill under the minimap, never covering the play area, never taking a tap. */
+.dlg.compact {
+  top: calc(env(safe-area-inset-top) + 296px);
+  bottom: auto;
+  left: calc(env(safe-area-inset-left) + 8px);
+  right: auto;
+  justify-content: flex-start;
+}
+.dlg.compact .dlg-card {
+  width: auto;
+  max-width: min(40vw, 500px);
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 28px;
+  border-width: 3px;
+  pointer-events: none;
+}
+.dlg.compact .dlg-face {
+  width: 48px;
+  height: 48px;
+}
+.dlg.compact .dlg-text {
+  font-size: 20px;
+  line-height: 1.2;
+}
+.dlg.compact .dlg-next {
+  display: none;
+}
+html.touch-ui .dlg.compact {
+  top: calc(env(safe-area-inset-top) + 96px);
+  left: calc(env(safe-area-inset-left) + 136px);
+  right: auto;
+  bottom: auto;
+}
+html.touch-ui .dlg.compact .dlg-card {
+  width: auto;
+  max-width: min(32vw, 270px);
+}
+html.touch-ui .dlg.compact .dlg-face {
+  width: 34px;
+  height: 34px;
+}
+html.touch-ui .dlg.compact .dlg-text {
+  font-size: 15px;
+}
 .dlg-card.pop {
   animation: dlg-pop 0.28s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 }
@@ -1782,6 +1827,11 @@ html.touch-ui .hearts .heart {
   height: 100%;
   display: block;
 }
+.ch5-star.half {
+  opacity: 0.6;
+  filter: saturate(0.5);
+  transform: scale(0.9);
+}
 .ch5-star.lost {
   opacity: 0.3;
   filter: grayscale(1);
@@ -1807,11 +1857,11 @@ html.touch-ui .ch5-star {
   width: 34px;
   height: 34px;
 }
-html.touch-ui:has(.dlg:not([hidden])) .hearts {
+html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .hearts {
   top: calc(env(safe-area-inset-top) + 98px);
 }
-html.touch-ui:has(.dlg:not([hidden])) .ch5-stars,
-html.touch-ui:has(.dlg:not([hidden])) .ch3-count {
+html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch5-stars,
+html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch3-count {
   top: calc(env(safe-area-inset-top) + 134px);
 }
 html.touch-ui:has(.dlg:not([hidden])) .city-toast {
