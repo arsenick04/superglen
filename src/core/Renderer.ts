@@ -30,7 +30,7 @@ export const PostConfig = {
  *  - Frame time is smoothed (EMA). Under `lowFpsHigh`/`lowFpsLow` (60 / 30 fps presets: 50 / 27) for `downAfter`
  *    seconds drops one step.
  *  - Going back up needs `upAfterIdle` seconds of headroom while the player stands still, or `upAfterMoving`
- *    (>= 15 s) while walking, and never within `lockout` seconds of the last step down. A step-up that is
+ *    while walking, and never within `lockout` seconds of the last step down. A step-up that is
  *    followed by a step-down within `flapWindow` s doubles the lockout (up to `maxLockout`).
  *  - Hard cap: at most `maxChangesPerMinute` changes in any 60 s. Staying a bit low beats oscillating.
  */
@@ -38,19 +38,19 @@ export const AdaptiveConfig = {
   /** Pixel ratio multipliers on the preset ceiling min(devicePixelRatio, maxPixelRatio). */
   steps: [1, 0.85, 0.7, 0.6],
   /** Never render below this absolute pixel ratio. */
-  minRatio: 0.75,
+  minRatio: 1,
   /** Under these fps (for the 60 / 30 fps presets) counts as too slow. */
-  lowFpsHigh: 50,
-  lowFpsLow: 27,
+  lowFpsHigh: 40,
+  lowFpsLow: 40,
   /** At or above this fraction of the target counts as headroom. */
   highFraction: 0.95,
-  downAfter: 2,
-  /** Seconds of headroom before a step up while standing still / while walking (>= 15 s). */
-  upAfterIdle: 8,
-  upAfterMoving: 20,
+  downAfter: 1.5,
+  /** Seconds of headroom before a step up while standing still / while walking . */
+  upAfterIdle: 3,
+  upAfterMoving: 6,
   /** No step up this long (s) after the last step down; doubled after every flap. */
-  lockout: 30,
-  maxLockout: 240,
+  lockout: 10,
+  maxLockout: 120,
   flapWindow: 60,
   maxChangesPerMinute: 3,
   /** EMA weight of the newest frame. */

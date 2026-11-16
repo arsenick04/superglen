@@ -62,6 +62,29 @@ function retarget(src: THREE.AnimationClip, from: THREE.Vector3, to: THREE.Vecto
   return new THREE.AnimationClip(src.name, src.duration, tracks);
 }
 
+/** Crisp textures at grazing angles and distance: anisotropy 16 (three clamps it to the GPU max), trilinear mipmaps, right colour spaces. */
+function sharpenTextures(scene: THREE.Object3D): void {
+  scene.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!m || !(m as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
+    const set = (t: THREE.Texture | null, srgb: boolean): void => {
+      if (!t) return;
+      t.anisotropy = 16;
+      t.generateMipmaps = true;
+      t.minFilter = THREE.LinearMipmapLinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      t.needsUpdate = true;
+    };
+    set(m.map, true);
+    set(m.emissiveMap, true);
+    set(m.normalMap, false);
+    set(m.metalnessMap, false);
+    set(m.roughnessMap, false);
+    set(m.aoMap, false);
+  });
+}
+
 class CharacterModels {
   private readonly templates = new Map<ModelKind, Template>();
   private readonly waiters = new Map<ModelKind, Array<() => void>>();
@@ -105,6 +128,7 @@ class CharacterModels {
         const gltf = await loader.parseAsync(buf, `${base}models/`);
         const clips = new Map<string, THREE.AnimationClip>();
         for (const c of gltf.animations) clips.set(c.name, c);
+        sharpenTextures(gltf.scene);
         this.templates.set(kind, { scene: gltf.scene, clips });
       } catch (err) {
         this.failed.push(kind);
@@ -361,6 +385,7 @@ export class Avatar {
   private landLeft = 0;
   private running = false;
   private disposed = false;
+  private waitT = 0;
   private onRig: ((rig: CharacterRig) => void) | null = null;
 
   constructor(
@@ -380,6 +405,8 @@ export class Avatar {
       } else if (kind !== 'aara') {
         this.fig = new Figure(kind as FigureKind, fallbackMat ?? figureMaterial(0x2a74c8, 0.08), shadows);
         this.root.add(this.fig.root);
+        // The blocky figure only shows when the model is really late (models load during the start screen).
+        this.fig.root.visible = false;
       }
       characterModels.whenReady(kind, () => {
         if (this.disposed) return;
@@ -469,6 +496,8 @@ export class Avatar {
   pose(dt: number, s: AvatarState): void {
     const rig = this.rig;
     if (!rig) {
+      this.waitT += dt;
+      if (this.fig && !this.fig.root.visible && this.waitT > 2) this.fig.root.visible = true;
       this.fig?.pose(dt, s);
       return;
     }

@@ -50,14 +50,16 @@ function pickPreset(): QualityPreset {
   return {
     level,
     isTouch,
-    maxPixelRatio: 1.5,
-    antialias: false,
+    // Native-app target: phones (60 fps measured) render at the full device pixel ratio (up to 3) with MSAA; the adaptive scaler
+    // in Renderer.ts only steps down when fps really drops.
+    maxPixelRatio: 3,
+    antialias: true,
     shadows: true,
     shadowMapType: THREE.PCFShadowMap,
-    shadowMapSize: 1024,
+    shadowMapSize: 2048,
     shadowArea: 18,
     cameraFar: 150,
-    targetFps: 30,
+    targetFps: 60,
   };
 }
 
