@@ -3,6 +3,7 @@
 
   python3 scripts/make-music.py            -> public/audio/music/ringan_a.mp3, ringan_b.mp3
   python3 scripts/make-music.py --check    -> also prints seam / loudness checks
+  python3 scripts/make-music.py --battle-b [--check] -> battle_b.mp3 only (tense D minor battle loop, 160 BPM, 24 bars)
   python3 scripts/make-music.py --battle [--check] -> public/audio/music/battle_a.mp3 only (see below)
 
 Battle loop (--battle): 144 BPM, 20 bars (33.3 s), C major pentatonic, lion-dance flavour (gong, cymbal crashes,
@@ -250,8 +251,114 @@ def render_battle():
     x = sosfiltfilt(sos, np.tile(x, (1, 3)), axis=1)[:, n:2 * n]
     return np.tanh(x / np.max(np.abs(x)) * 1.6) * 0.6        # gentle glue/limit (memoryless, keeps the loop seamless)
 
+def stac(f, length=0.14):
+    t = np.arange(int(SR * length)) / SR
+    s = sum(np.sin(2 * np.pi * k * f * t + 0.4 * k) / k ** 1.1 for k in range(1, 8) if f * k < 8000)
+    return s * env_decay(t, 0.05, 0.003) * np.minimum(1, (length - t) / 0.02)
+
+def render_battle_b():
+    bpm, bars = 160, 24
+    beat = 60 / bpm; st16 = beat / 4
+    n = int(round(bars * 4 * beat * SR)); mix = Mix(n)
+    at = lambda k: int(round(k * st16 * SR)) % n
+    rng = np.random.default_rng(23)
+    nz = rng.standard_normal(SR * 8)
+    hp = lambda x, fc: sosfiltfilt(butter(2, fc, 'high', fs=SR, output='sos'), x)
+    bp = lambda x, lo, hi: sosfiltfilt(butter(2, [lo, hi], 'band', fs=SR, output='sos'), x)
+    n_hat = hp(nz, 7000); n_snare = bp(nz, 1200, 6500); n_crash = hp(nz, 4500)
+    def noise(src, off, tau, length, atk=0.002):
+        t = np.arange(int(SR * length)) / SR
+        return src[off:off + len(t)] * env_decay(t, tau, atk) * np.minimum(1, (length - t) / 0.01)
+    def gong(f0=73.4, length=3.6):
+        t = np.arange(int(SR * length)) / SR
+        s = np.zeros_like(t)
+        for i, (r, a, tau) in enumerate(((1, 1, 1.6), (1.51, .8, 1.3), (2.07, .6, 1.0), (2.63, .5, .8), (3.2, .35, .6), (4.14, .25, .4))):
+            s += a * np.sin(2 * np.pi * f0 * r * t + 0.17 * i * np.sin(2 * np.pi * 3.1 * t)) * np.exp(-t / tau)
+        return s * np.minimum(1, t / 0.006) * np.minimum(1, (length - t) / 0.2)
+    PC = {'Dm': (2, 3), 'Bb': (10, 4), 'A': (9, 4), 'Gm': (7, 3), 'C': (0, 4), 'F': (5, 4)}
+    prog = ('Dm Dm Bb A  Dm Dm Gm A  Dm Bb C A  Dm Dm Bb A  Bb C Dm A  Gm A Bb A').split()
+    mel = [  # 8 eighth-note tokens per bar, 4 bars per phrase
+        'D5 - - D5 F5 - E5 D5 | D5 - - - A4 - C#5 - | A#4 - - A#4 D5 - C5 A#4 | A4 - - - C#5 - E5 -',
+        'D5 - - D5 F5 - A5 - | G5 - F5 - E5 - D5 - | G5 - - G5 A#5 - A5 G5 | F5 - E5 - C#5 - E5 A5',
+        'A5 - A5 - A5 - A#5 A5 | G5 - G5 - G5 - A5 G5 | E5 - G5 - C6 - G5 E5 | C#6 - E6 - A5 - C#6 E6',
+        'D6 - - D6 F6 - E6 D6 | A5 - - - D6 - C#6 - | A#5 - - A#5 D6 - C6 A#5 | A5 - C#6 - E6 - A6 -',
+        'D6 - - F6 - - D6 - | E6 - - G6 - - E6 - | F6 - A6 - - F6 D6 - | E6 - C#6 - A5 - E6 -',
+        'D6 - A#5 - D6 - G6 - | E6 - A5 - C#6 - E6 - | F6 - D6 - A#5 - D6 - | E6 - C#6 - A5 - C#6 E6']
+    for bar in range(bars):
+        ch = prog[bar]; pc, third = PC[ch]; ph = bar // 4
+        root = 38 + (pc - 2) % 12
+        tones = [pc, pc + third, pc + 7]
+        b0 = bar * 16
+        # 16th-note bass ostinato with octave jumps
+        sem = [0, 0, 12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 0, 7, 0, 12]
+        for k in range(16):
+            acc = 1.0 if k % 4 == 0 else 0.7
+            mix.add(bass_punch(hz(root + sem[k]), 0.16), at(b0 + k), pan=-0.05, gain=0.8 * acc)
+        # staccato arpeggio (rises in later phrases)
+        octv = 5 if ph in (2, 5) else 4
+        pat = [0, 1, 2, 1, 0, 1, 2, 1] if ph < 4 else [0, 2, 1, 2, 0, 2, 1, 2]
+        for k in range(16):
+            m = 12 * (octv + 1) + tones[pat[k % 8] % 3] % 12 + (12 if pat[k % 8] == 2 and tones[2] % 12 < tones[0] % 12 else 0)
+            mix.add(stac(hz(m), 0.12), at(b0 + k), pan=(-0.3, 0.3)[k % 2], gain=0.12)
+        # drums
+        for k in (0, 8) + ((10,) if bar % 2 else ()):
+            mix.add(sweep(130, 48, 0.12, 0.4, click=0.35), at(b0 + k), gain=1.0)
+        for k in (4, 12):
+            mix.add(noise(n_snare, 3000 + 6000 * k + 20000 * (bar % 3), 0.1, 0.3) * 0.5 + 0.5 * sweep(210, 170, 0.07, 0.3), at(b0 + k), gain=0.75)
+        step_h = 1 if ph in (2, 5) else 2
+        for k in range(0, 16, step_h):
+            mix.add(noise(n_hat, 9000 + 3331 * (bar * 16 + k) % 90000, 0.025, 0.1), at(b0 + k), pan=(-0.25, 0.25)[(k // step_h) % 2], gain=0.12 if k % 4 else 0.18)
+        if bar % 4 == 3:   # fill: 16th snare roll building, tom run
+            for i, k in enumerate(range(8, 16)):
+                mix.add(noise(n_snare, 30000 + 3500 * k, 0.07, 0.2), at(b0 + k), gain=0.25 + 0.05 * i)
+            for k, fr in ((12, 170), (13, 150), (14, 125), (15, 100)):
+                mix.add(sweep(fr + 50, fr, 0.14, 0.3), at(b0 + k), pan=(k - 13.5) * 0.15, gain=0.5)
+        if bar % 4 == 0 and bar != 0:
+            mix.add(noise(n_crash, 20000 + 9000 * (bar // 4), 0.7, 2.0, 0.003), at(b0), pan=-0.2, gain=0.4)
+        if bar == 0:
+            mix.add(noise(n_crash, 15000, 0.9, 2.5, 0.003), at(b0), pan=-0.2, gain=0.45)
+        if bar in (0, 12):
+            mix.add(gong(), at(b0), gain=0.3)
+        if bar in (4, 16, 20):   # serious taiko hits
+            for k in (0, 6, 8):
+                mix.add(sweep(110, 52, 0.35, 0.8), at(b0 + k), gain=0.7)
+        # melody (8th grid) + counter-melody in second half
+        if bar % 4 == 0:
+            toks = mel[ph].replace('|', ' ').split(); assert len(toks) == 32, ph
+            for k, tk in enumerate(toks):
+                if tk == '-': continue
+                d = 1
+                while k + d < 32 and toks[k + d] == '-': d += 1
+                mix.add(brass(hz(midi(tk)), d * 2 * st16 * 0.95 + 0.05), at(b0 + 2 * k), pan=0.1, gain=0.3)
+        if bar >= 12:
+            mix.add(brass(hz(12 * 5 + tones[2] % 12 - 12 * 0 + (0 if tones[2] % 12 >= 0 else 0)) / 2, 4 * beat * 0.97), at(b0), pan=-0.2, gain=0.16)
+    # cymbal swell over the last 2 bars into the loop point
+    L = int(2 * 4 * beat * SR); t = np.arange(L) / SR
+    sw = n_crash[:L] * (np.minimum(1, t / (t[-1])) ** 2.5) * np.minimum(1, (t[-1] - t) / 0.03 + 0.0) if False else None
+    sw = n_crash[40000:40000 + L] * (t / t[-1]) ** 2.5 * np.minimum(1, (t[-1] - t) / 0.03)
+    mix.add(sw, n - L, pan=0.1, gain=0.45)
+    x = mix.buf
+    Lr = int(0.9 * SR); tt = np.arange(Lr) / SR
+    wetsig = np.zeros_like(x)
+    for c in range(2):
+        ir = rng.standard_normal(Lr) * np.exp(-tt / 0.2)
+        ir = sosfiltfilt(butter(2, 5000, fs=SR, output='sos'), ir); ir /= np.sqrt(np.sum(ir ** 2))
+        irp = np.zeros(n); irp[:Lr] = ir
+        wetsig[c] = np.fft.irfft(np.fft.rfft(x[c]) * np.fft.rfft(irp), n)
+    x = x + 0.12 * wetsig
+    sos = np.vstack([butter(4, 9500, fs=SR, output='sos'), butter(2, 45, 'high', fs=SR, output='sos')])
+    x = sosfiltfilt(sos, np.tile(x, (1, 3)), axis=1)[:, n:2 * n]
+    return np.tanh(x / np.max(np.abs(x)) * 1.6) * 0.6
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
+    if '--battle-b' in sys.argv:
+        mp3, xf = finish(render_battle_b(), 'battle_b', target=-17.0)
+        lufs, tp = measure(mp3)
+        print(f'battle_b: {os.path.getsize(mp3)} bytes, {xf.shape[1]/SR:.2f} s, {lufs} LUFS, sample peak {tp} dBFS')
+        if '--check' in sys.argv:
+            for k, v in seam_report(xf, mp3).items(): print('  seam', k, v)
+        sys.exit(0)
     if '--battle' in sys.argv:
         mp3, xf = finish(render_battle(), 'battle_a', target=-18.0)
         lufs, tp = measure(mp3)
