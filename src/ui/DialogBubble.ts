@@ -132,6 +132,10 @@ export class DialogBubble {
       onTap();
     });
     root.appendChild(this.element);
+    // The touch HUD rows under the bubble (hearts, stars, counter) follow the bubble's real height via --dlg-bottom.
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => this.syncBottom()).observe(this.card);
+    }
     preloadPortraits();
   }
 
@@ -149,6 +153,7 @@ export class DialogBubble {
       this.speaker = speaker;
     }
     this.textEl.textContent = text;
+    this.syncBottom();
     if (!this.shown) {
       this.shown = true;
       this.element.hidden = false;
@@ -157,6 +162,7 @@ export class DialogBubble {
       void this.card.offsetWidth;
       this.card.classList.add('pop');
     }
+    this.syncBottom();
   }
 
   /** Portrait image when the speaker has one (and it loads), else the drawn face. */
@@ -181,10 +187,17 @@ export class DialogBubble {
     }
   }
 
+  private syncBottom(): void {
+    const root = document.documentElement.style;
+    if (!this.shown || this.element.classList.contains('compact')) root.removeProperty('--dlg-bottom');
+    else root.setProperty('--dlg-bottom', `${Math.ceil(this.element.getBoundingClientRect().bottom)}px`);
+  }
+
   hide(): void {
     if (!this.shown) return;
     this.shown = false;
     this.element.hidden = true;
     this.card.classList.remove('pop');
+    this.syncBottom();
   }
 }

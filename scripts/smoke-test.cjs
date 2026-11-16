@@ -10875,18 +10875,55 @@ async function dlgFitScenario(page, check, touch) {
   const longest = texts[0] || '';
   await page.evaluate((t) => { document.querySelector('.dlg-text').textContent = t; }, longest);
   await sleep(150);
+  const hb = await page.evaluate(() => {
+    const h = document.querySelector('.hearts');
+    const c = document.querySelector('.dlg-card').getBoundingClientRect();
+    if (!h || h.hidden) return { shown: false };
+    const r = h.getBoundingClientRect();
+    return { shown: r.width > 0, overlap: r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom, hearts: [r.top, r.bottom], card: [c.top, c.bottom] };
+  });
+  check(`dlg-fit ${tag}: the hearts row does not touch the bubble showing the longest line`, hb.shown && !hb.overlap, JSON.stringify(hb));
   if (shotDir) {
     fs.mkdirSync(shotDir, { recursive: true });
     await page.screenshot({ path: path.join(shotDir, `longest-${touch ? 'touch' : 'desktop'}.png`) });
-    for (const sp of ['glen', 'superglen', 'nino', 'aara', 'rakus', 'ular', 'res_guru', 'lina']) {
-      await page.evaluate((sp) => { window.__superglen.say({ speaker: sp, text: 'Halo, Glen! Ayo kita jalan-jalan ke kota.' }, { lockControls: true }); }, sp);
-      await d3Adv(page, 14);
-      await sleep(200);
-      await page.screenshot({ path: path.join(shotDir, `speaker-${sp}-${touch ? 'touch' : 'desktop'}.png`) });
-      await page.evaluate((sp) => { document.querySelector('.dlg-card').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); }, sp);
-      await d3Adv(page, 20);
-    }
   }
+  // Each speaker shows ITS OWN portrait and name (Glen shows the Superglen face only while the player is Superglen).
+  const mode = await page.evaluate(() => window.__superglen.mode);
+  const want = {
+    glen: mode === 'superglen' ? ['superglen', 'Superglen'] : ['glen', 'Glen'],
+    superglen: ['superglen', 'Superglen'],
+    nino: ['nino', 'Nino'],
+    aara: ['aara', 'Aara'],
+    rakus: ['tikus_rakus', 'Tikus Rakus'],
+    ular: ['ular_melar', 'Ular Melar'],
+    res_guru: [null, 'Bu Guru'],
+    lina: [null, 'Bu Lina'],
+  };
+  const whoBad = [];
+  await page.evaluate(() => { const c = document.querySelector('.dlg-card'); c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+  await d3Adv(page, 30);
+  for (const sp of Object.keys(want)) {
+    await page.evaluate((sp) => { window.__superglen.say({ speaker: sp, text: 'Halo, Glen! Ayo kita jalan-jalan ke kota.' }, { lockControls: true }); }, sp);
+    let got = null;
+    for (let i = 0; i < 12 && !got; i++) {
+      await d3Adv(page, 12);
+      got = await page.evaluate((sp) => {
+        if (window.__superglen.dialog.speaker !== sp) {
+          const c = document.querySelector('.dlg-card'); c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+          return null;
+        }
+        const img = document.querySelector('.dlg-face img');
+        return { src: img ? img.getAttribute('src') : null, name: document.querySelector('.dlg-name').textContent, face: document.querySelector('.dlg-face').dataset.speaker };
+      }, sp);
+    }
+    const [portrait, name] = want[sp];
+    const ok = !!got && got.name === name && (portrait ? !!got.src && got.src.endsWith(`portraits/${portrait}.webp`) : got.src === null);
+    if (!ok) whoBad.push({ sp, want: want[sp], got });
+    if (shotDir && got) { await sleep(200); await page.screenshot({ path: path.join(shotDir, `speaker-${sp}-${touch ? 'touch' : 'desktop'}.png`) }); }
+    await page.evaluate(() => { const c = document.querySelector('.dlg-card'); c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+    await d3Adv(page, 30);
+  }
+  check(`dlg-fit ${tag}: every speaker shows its own portrait and name tag (mode ${mode})`, whoBad.length === 0, JSON.stringify(whoBad));
   // Portraits exist and load for every hero and enemy speaker.
   const imgs = await page.evaluate(async () => {
     const res = {};

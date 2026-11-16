@@ -1903,11 +1903,11 @@ html.touch-ui .ch5-star {
   height: 34px;
 }
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .hearts {
-  top: calc(env(safe-area-inset-top) + 98px);
+  top: calc(var(--dlg-bottom, calc(env(safe-area-inset-top) + 92px)) + 6px);
 }
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch5-stars,
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch3-count {
-  top: calc(env(safe-area-inset-top) + 134px);
+  top: calc(var(--dlg-bottom, calc(env(safe-area-inset-top) + 92px)) + 42px);
 }
 html.touch-ui:has(.dlg:not([hidden])) .city-toast {
   opacity: 0;
