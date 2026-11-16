@@ -1,3 +1,4 @@
+import { ninoVariasiIds } from '../../gameplay/NinoVariasi';
 import * as THREE from 'three';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
@@ -45,7 +46,7 @@ export class Bab2Level implements Level {
     if (!flow.sandbox) ctx.save.setWhere('bab2');
     const { root, physics, scene, game } = ctx;
     // Voice files (the chapter's lines and Nino's quiz lines) load in the background; the music starts with the first tap.
-    ctx.audio.preload([...ctx.dialog.idsWithPrefix('bab2_'), ...Object.values(QuizLines).map((l) => l.id)]);
+    ctx.audio.preload([...ctx.dialog.idsWithPrefix('bab2_'), ...ninoVariasiIds(), ...Object.values(QuizLines).map((l) => l.id)]);
     ctx.audio.music.setScene('latihan');
 
     // Story: Superglen is required (not saved as the last mode) and the switch stays hidden until the chapter is done.

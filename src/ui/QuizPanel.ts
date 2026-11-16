@@ -1,3 +1,4 @@
+import { ninoLine } from '../gameplay/NinoVariasi';
 import '../quiz.css';
 import type { DrumSynth } from '../audio/DrumSynth';
 import type { Sfx } from '../audio/Sfx';
@@ -422,7 +423,7 @@ export class QuizPanel {
     card.classList.add('wobble');
     this.deps.sfx.quizWrong();
     const help = this.wrongs >= 2;
-    this.ninoSays(help ? QuizLines.tinggal : QuizLines.hampir);
+    this.ninoSays(help ? QuizLines.tinggal : ninoLine('coba_lagi'));
     this.after(T.goneAfter, () => {
       card.classList.remove('wobble');
       card.classList.add('gone');
@@ -457,7 +458,7 @@ export class QuizPanel {
     const coins = this.onSolved ? this.onSolved(this.wrongs) : 0;
     this.coinsEl.textContent = String(this.deps.save.data.quiz.coins);
     if (coins > 0) this.floatPlus(coins);
-    this.ninoSays(QuizLines.hebat);
+    this.ninoSays(ninoLine('pujian'));
     this.deps.synth.drum(Math.min(4, 1 + this.idx), true);
     this.deps.sfx.quizRight();
     this.after(0.18, () => this.deps.synth.drum(Math.min(4, 2 + this.idx), true));

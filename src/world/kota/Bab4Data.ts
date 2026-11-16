@@ -60,7 +60,7 @@ export const BAB4_LINES = {
   glenMau: { id: 'bab4_glen_mau', speaker: 'glen', text: 'Mau! Aku siap menjawab.' },
   aaraBenar1: { id: 'bab4_aara_benar1', speaker: 'aara', text: 'Benar! Alatnya mulai menyala.' },
   aaraBenar2: { id: 'bab4_aara_benar2', speaker: 'aara', text: 'Betul! Alatnya makin canggih.' },
-  aaraBenar3: { id: 'bab4_aara_benar3', speaker: 'aara', text: 'Hebat! Alatnya sudah canggih sekali!' },
+  aaraBenar3: { id: 'bab4_aara_benar3', speaker: 'aara', text: 'Wah! Alatnya sudah canggih sekali!' },
   aaraSinyal: { id: 'bab4_aara_sinyal', speaker: 'aara', text: 'Tuut tuut! Ada sinyal. Menunjuk ke taman kota!' },
   glenTaman: { id: 'bab4_glen_taman', speaker: 'glen', text: 'Ayo ke taman, kita selidiki!' },
   aaraTaman: { id: 'bab4_aara_taman', speaker: 'aara', text: 'Lihat! Ada papan petunjuk. Ayo kita baca!' },

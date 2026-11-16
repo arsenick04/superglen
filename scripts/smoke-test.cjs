@@ -34,6 +34,9 @@ async function waitForServer(timeoutMs) {
   throw new Error('vite preview did not respond in time');
 }
 
+const VARIASI = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'nino_variasi.json'), 'utf8'));
+const PRAISE = VARIASI.pujian.map((l) => l.text);
+const RETRY = VARIASI.coba_lagi.map((l) => l.text);
 const state = () => window.__superglen && JSON.parse(JSON.stringify(window.__superglen));
 
 async function sampleFps(page, n = 6) {
@@ -951,9 +954,9 @@ async function frameworkDesktopScenario(page, check) {
   check('E opens the dialog bubble with the right text', s.dialog.open && s.dialog.text === 'Halo!' && s.dialog.speaker === 'nino' && s.dialog.id === 'demo_halo', JSON.stringify(s.dialog));
   const face = await page.evaluate(() => {
     const f = document.querySelector('.dlg-face');
-    return { speaker: f.dataset.speaker, svg: !!f.querySelector('svg circle'), shown: !document.querySelector('.dlg').hidden, text: document.querySelector('.dlg-text').textContent };
+    return { speaker: f.dataset.speaker, svg: !!f.querySelector('img.dlg-portrait, svg circle'), name: document.querySelector('.dlg-name').textContent, shown: !document.querySelector('.dlg').hidden, text: document.querySelector('.dlg-text').textContent };
   });
-  check('bubble shows nino face icon and the same text', face.speaker === 'nino' && face.svg && face.shown && face.text === 'Halo!', JSON.stringify(face));
+  check('bubble shows the nino portrait, the name tag and the same text', face.speaker === 'nino' && face.name === 'Nino' && face.svg && face.shown && face.text === 'Halo!', JSON.stringify(face));
   const dl = await page.evaluate(dialogLayoutInfo);
   check('desktop bubble: inside viewport, text >= 22 px', dl.inside && dl.fontPx >= 22, JSON.stringify({ inside: dl.inside, font: dl.fontPx }));
   check('prompt hidden while the dialog shows', !(await st()).prompt.visible || true);
@@ -1217,7 +1220,7 @@ async function frameworkTouchScenario(page, check) {
     check(`touch ${w}x${h}: tapping Bicara opens the bubble`, s.dialog.open && s.dialog.text === 'Halo!', JSON.stringify(s.dialog));
     const d = await page.evaluate(dialogLayoutInfo);
     check(`touch ${w}x${h}: bubble inside the screen and clear of joystick and buttons`, d.inside && !d.overlap && d.n >= 3, JSON.stringify({ inside: d.inside, overlap: d.overlap, n: d.n, card: d.card }));
-    check(`touch ${w}x${h}: bubble text >= 22 px, at most 2 lines`, d.fontPx >= 22 && d.textH <= 2 * d.lh + 2, `font ${d.fontPx} h ${d.textH} lh ${d.lh}`);
+    check(`touch ${w}x${h}: bubble text >= 17 px (smaller on phones), at most 3 lines`, d.fontPx >= 17 && d.textH <= 3 * d.lh + 2, `font ${d.fontPx} h ${d.textH} lh ${d.lh}`);
     await shot(page, `dialog-${w}x${h}`);
     await bot.step(30);
     const c = [d.card.l + d.card.w / 2, d.card.t + d.card.h / 2];
@@ -1907,7 +1910,12 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
       await page.evaluate(([c, r]) => window.__superglen.advanceAsync(c, r), [c, left - c <= 0 && render]);
       left -= c;
       const id = await page.evaluate(() => window.__superglen.dialog.id);
-      if (id && id !== lastId) hits[id] = (hits[id] || 0) + 1;
+      if (id && id !== lastId) {
+        hits[id] = (hits[id] || 0) + 1;
+        // The varied praise / retry lines (content/nino_variasi.json) count together.
+        if (id.startsWith('nino_pujian_')) hits.PUJIAN = (hits.PUJIAN || 0) + 1;
+        if (id.startsWith('nino_coba_')) hits.COBA = (hits.COBA || 0) + 1;
+      }
       lastId = id;
       if (id && d.seen[d.seen.length - 1] !== id) d.seen.push(id);
       if (d.autoQuiz !== false) await quizBotStep(page, tag);
@@ -2023,8 +2031,8 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   s = await d.st();
   if (!filled.includes(5) && s.levelInfo.rowCount === 5) filled.push(5);
   check(`${tag}: 5 rings passed (counter, stat) and the row filled one by one`, s.levelInfo.rings === 5 && s.skills.ringsPassed >= 5 && [1, 2, 3, 4, 5].every((n) => filled.includes(n)), `rings ${s.levelInfo.rings}, filled ${filled.join(',')}`);
-  check(`${tag}: cincin_bagus after some rings`, d.seen.includes('bab2_nino_cincin_bagus'), d.seen.join());
-  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 1, 600, 10);
+  check(`${tag}: a varied praise line after some rings`, (hits.PUJIAN || 0) >= 1, d.seen.join());
+  s = await d.until(() => (hits.PUJIAN || 0) >= 2, 600, 10);
   check(`${tag}: hebat after the rings`, !!s);
   await area('flying');
 
@@ -2070,10 +2078,10 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   check(`${tag}: 5 targets hit; row filled one by one`, s.levelInfo.targets === 5 && [1, 2, 3, 4, 5].every((n) => filledT.includes(n)), `targets ${s.levelInfo.targets}, filled ${filledT.join(',')}`);
   check(`${tag}: a deliberate miss (laser at nothing) made Nino say tenang`, s.levelInfo.laserMisses >= 1 && (hits.bab2_nino_tenang || 0) >= 1, `misses ${s.levelInfo.laserMisses}, tenang x${hits.bab2_nino_tenang || 0}`);
   check(`${tag}: tenang is rate limited (at most once per 6 s)`, (hits.bab2_nino_tenang || 0) <= 3, `x${hits.bab2_nino_tenang}`);
-  check(`${tag}: laser_bagus is not said after every hit`, (hits.bab2_nino_laser_bagus || 0) >= 1 && (hits.bab2_nino_laser_bagus || 0) <= 3, `x${hits.bab2_nino_laser_bagus}`);
+  check(`${tag}: praise is not said after every hit`, (hits.PUJIAN || 0) >= 3 && (hits.PUJIAN || 0) <= 9, `x${hits.PUJIAN}`);
   await d.adv(60);
   await area('laser');
-  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 2, 600, 10);
+  s = await d.until(() => (hits.PUJIAN || 0) >= 4, 600, 10);
   check(`${tag}: hebat after the targets`, !!s);
 
   // ---- 3. shield ----
@@ -2103,8 +2111,8 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
     const s2 = await d.st();
     const moved = Math.hypot(s2.player.x - x0, s2.player.z - z0);
     check(`${tag}: the bonk does not push the player more than 0.1 m`, moved <= 0.1, `${moved.toFixed(3)} m`);
-    s = await d.until(() => (hits.bab2_nino_coba_lagi || 0) >= 1, 400, 10);
-    check(`${tag}: a bonk makes Nino say coba_lagi, no penalty (blocks still 0)`, !!s && (await d.st()).levelInfo.blocks === 0, s ? '' : `coba_lagi x${hits.bab2_nino_coba_lagi || 0}`);
+    s = await d.until(() => (hits.COBA || 0) >= 1, 400, 10);
+    check(`${tag}: a bonk makes Nino say coba_lagi, no penalty (blocks still 0)`, !!s && (await d.st()).levelInfo.blocks === 0, s ? '' : `coba_lagi x${hits.COBA || 0}`);
   }
   const filledS = [];
   let shotShield = false;
@@ -2121,13 +2129,13 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
   s = await d.st();
   if (!filledS.includes(5) && s.levelInfo.rowCount === 5) filledS.push(5);
   check(`${tag}: 5 blocks counted and the row filled`, s.levelInfo.blocks === 5 && [1, 2, 3, 4, 5].every((n) => filledS.includes(n)), `blocks ${s.levelInfo.blocks}, filled ${filledS.join(',')}`);
-  check(`${tag}: tangkis line said on some blocks`, (hits.bab2_nino_tangkis || 0) >= 1);
+  check(`${tag}: tangkis line said on some blocks`, (hits.PUJIAN || 0) >= 5);
   const t0 = s.levelInfo.thrown;
   await d.adv(400);
   s = await d.st();
   check(`${tag}: after 5 blocks the balls stop`, s.levelInfo.thrown <= t0 + 1, `${t0} -> ${s.levelInfo.thrown}`);
   await area('shield');
-  s = await d.until(() => (hits.bab2_nino_hebat || 0) >= 3, 600, 10);
+  s = await d.until(() => (hits.PUJIAN || 0) >= 6, 600, 10);
   check(`${tag}: hebat after the shield`, !!s);
 
   // ---- 4. lunch ----
@@ -5753,7 +5761,7 @@ async function quizDesktopScenario(page, check) {
     await page.keyboard.press(String(z.key));
     await adv(8);
     z = await quizSt(page);
-    check(`quiz: question ${i + 1} right via key ${i === 0 ? z.key : 'n'}: solved, +3 coins, Nino says Hebat, Glen!`, z.state === 'solved' && z.coins === c0 + 3 && z.bubble === 'Hebat, Glen!', `${z.state} coins ${c0}->${z.coins} "${z.bubble}"`);
+    check(`quiz: question ${i + 1} right via key ${i === 0 ? z.key : 'n'}: solved, +3 coins, Nino praises with a varied line`, z.state === 'solved' && z.coins === c0 + 3 && PRAISE.includes(z.bubble), `${z.state} coins ${c0}->${z.coins} "${z.bubble}"`);
     await adv(10);
     await page.keyboard.press('Enter');
     await adv(4);
@@ -5795,7 +5803,7 @@ async function quizDesktopScenario(page, check) {
   await shot(page, 'quiz-wrong');
   z = await quizSt(page);
   const wob = await page.evaluate((k) => document.querySelector(`.qp-card[data-slot="${k}"]`).classList.contains('wobble'), w1);
-  check('quiz: a wrong pick wobbles the card and Nino says "Hampir! Coba lagi."', wob && z.bubble === 'Hampir! Coba lagi.' && z.wrong === 1, `wobble ${wob} "${z.bubble}"`);
+  check('quiz: a wrong pick wobbles the card and Nino says a varied retry line', wob && RETRY.includes(z.bubble) && z.wrong === 1, `wobble ${wob} "${z.bubble}"`);
   check('quiz: ... no coin is lost and the question stays', z.coins === c0 && z.index === 0 && z.qid === q1);
   check('quiz: ... the wrong pick is blocked while the card wobbles (no double count)', await (async () => { await page.keyboard.press(String(w1)); await adv(2); return (await quizSt(page)).wrong === 1; })());
   await adv(70);
@@ -5956,7 +5964,7 @@ async function quizTouchScenario(page, check) {
   await quizAnswer(page, w, true);
   await adv(8);
   z = await quizSt(page);
-  check('quiz-touch: a tap on a wrong card wobbles it ("Hampir")', z.wrong === 1 && z.bubble === 'Hampir! Coba lagi.');
+  check('quiz-touch: a tap on a wrong card wobbles it ("Hampir")', z.wrong === 1 && RETRY.includes(z.bubble));
   await adv(80);
   // The first question is still open (it had the wrong tap): finish it and two more by tapping.
   await quizPlay(page, adv, { wrongs: [0, 0, 0], tap: true });
@@ -10809,6 +10817,88 @@ async function dlgCompactScenario(page, check, touch) {
   }
 }
 
+// ---- Dialog fit: every line in the game fits the bubble (no "...", no cut text, at most 3 lines, bubble on screen): groups `dlg-fit`, `dlg-fit-touch` ----
+function allDialogTexts() {
+  const texts = new Map();
+  const add = (t) => { if (t && t.length > 1) texts.set(t, true); };
+  for (const l of JSON.parse(fs.readFileSync(path.join(ROOT, 'audio', 'dialog.json'), 'utf8'))) add(l.text);
+  const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'nino_variasi.json'), 'utf8'));
+  for (const k of Object.keys(v)) for (const l of v[k]) add(l.text);
+  // Literal lines in the code: `text: '...'` (single-quoted) next to a speaker.
+  const walk = (dir) => {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, f.name);
+      if (f.isDirectory()) walk(full);
+      else if (f.name.endsWith('.ts')) {
+        const src = fs.readFileSync(full, 'utf8');
+        for (const m of src.matchAll(/(?:speaker:\s*'\w+'|line\('[\w]+')[^\n]*?text:\s*'((?:[^'\\]|\\.)*)'|line\('\w+',\s*'((?:[^'\\]|\\.)*)'\)/g)) add((m[1] || m[2] || '').replace(/\\'/g, "'"));
+      }
+    }
+  };
+  walk(path.join(ROOT, 'src'));
+  return [...texts.keys()];
+}
+
+async function dlgFitScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const shotDir = process.env.DLG_SHOTS;
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
+  await d3Adv(page, 30);
+  const texts = allDialogTexts();
+  texts.sort((a, b) => b.length - a.length);
+  check(`dlg-fit ${tag}: collected the dialog texts (${texts.length}, longest ${texts[0] ? texts[0].length : 0} chars)`, texts.length > 150, String(texts.length));
+  await page.evaluate(() => { window.__superglen.say({ speaker: 'glen', text: 'Halo!' }, { lockControls: true }); });
+  await d3Adv(page, 20);
+  const bad = await page.evaluate((texts) => {
+    const out = [];
+    const card = document.querySelector('.dlg-card');
+    const textEl = document.querySelector('.dlg-text');
+    const lh = parseFloat(getComputedStyle(textEl).lineHeight);
+    const vw = innerWidth, vh = innerHeight;
+    const btns = [...document.querySelectorAll('.tc-button, .tc-hint')].map((e) => e.getBoundingClientRect());
+    let maxLines = 0;
+    for (const t of texts) {
+      textEl.textContent = t;
+      const r = card.getBoundingClientRect();
+      const tr = textEl.getBoundingClientRect();
+      const lines = Math.round(tr.height / lh);
+      maxLines = Math.max(maxLines, lines);
+      const overflow = textEl.scrollHeight > textEl.clientHeight + 1 || textEl.scrollWidth > textEl.clientWidth + 1;
+      const inside = r.left >= 0 && r.top >= 0 && r.right <= vw && r.bottom <= vh;
+      const hits = btns.some((b) => r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom);
+      const clamp = getComputedStyle(textEl).webkitLineClamp;
+      if (t.includes('…') || overflow || !inside || lines > 3 || clamp !== 'none' || hits) out.push({ t, lines, overflow, inside, hits, clamp });
+    }
+    return { out: out.slice(0, 6), n: out.length, maxLines };
+  }, texts);
+  check(`dlg-fit ${tag}: every line fits (no overflow, no ellipsis, <= 3 lines, bubble on screen and clear of the buttons); longest uses ${bad.maxLines} lines`, bad.n === 0, JSON.stringify(bad.out));
+  const longest = texts[0] || '';
+  await page.evaluate((t) => { document.querySelector('.dlg-text').textContent = t; }, longest);
+  await sleep(150);
+  if (shotDir) {
+    fs.mkdirSync(shotDir, { recursive: true });
+    await page.screenshot({ path: path.join(shotDir, `longest-${touch ? 'touch' : 'desktop'}.png`) });
+    for (const sp of ['glen', 'superglen', 'nino', 'aara', 'rakus', 'ular', 'res_guru', 'lina']) {
+      await page.evaluate((sp) => { window.__superglen.say({ speaker: sp, text: 'Halo, Glen! Ayo kita jalan-jalan ke kota.' }, { lockControls: true }); }, sp);
+      await d3Adv(page, 14);
+      await sleep(200);
+      await page.screenshot({ path: path.join(shotDir, `speaker-${sp}-${touch ? 'touch' : 'desktop'}.png`) });
+      await page.evaluate((sp) => { document.querySelector('.dlg-card').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); }, sp);
+      await d3Adv(page, 20);
+    }
+  }
+  // Portraits exist and load for every hero and enemy speaker.
+  const imgs = await page.evaluate(async () => {
+    const res = {};
+    for (const id of ['glen', 'superglen', 'nino', 'aara', 'tikus_rakus', 'ular_melar', 'curut_cemberut', 'elang_belang', 'gorilla_gembira']) {
+      const r = await fetch(`portraits/${id}.webp`);
+      res[id] = r.ok ? (await r.arrayBuffer()).byteLength : 0;
+    }
+    return res;
+  });
+  check(`dlg-fit ${tag}: all 9 portrait images are served`, Object.values(imgs).every((n) => n > 1000), JSON.stringify(imgs));
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -11060,6 +11150,8 @@ async function main() {
     results.push(await runScenario(browser, 'bab6-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab6FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-fight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab6FightScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-easy', { viewport: { width: 1280, height: 720 } }, bab6EasyScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'dlg-fit', { viewport: { width: 1280, height: 720 } }, (p, c) => dlgFitScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'dlg-fit-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => dlgFitScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dlg-compact', { viewport: { width: 1280, height: 720 } }, (p, c) => dlgCompactScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dlg-compact-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => dlgCompactScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'fightlen-snake', { viewport: { width: 1280, height: 720 } }, (p, c) => fightLenScenario(p, c, 'snake'), '?level=kota&fps=0&reset=1'));

@@ -3,8 +3,8 @@
     "id": "bab1_glen_pulang",
     "speaker": "glen",
     "lang": "id",
-    "text": "Hore, pulang sekolah!",
-    "delivery": "[excited] Hore, pulang sekolah!"
+    "text": "Hore, pulang sekolah! Eh, ada cahaya di atas bukit?",
+    "delivery": "[excited] Hore, pulang sekolah! [curious] Eh, ada cahaya di atas bukit?"
   },
   {
     "id": "bab1_glen_lompat",
@@ -17,8 +17,8 @@
     "id": "bab1_glen_gedung",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wah, gedung Barongsai tua. Ada cahaya di dalam!",
-    "delivery": "[amazed] Wah, gedung Barongsai tua. [curious] Ada cahaya di dalam!"
+    "text": "Wah, gedung Barongsai tua di atas bukit! Ada cahaya di dalam.",
+    "delivery": "[amazed] Wah, gedung Barongsai tua di atas bukit! [curious] Ada cahaya di dalam."
   },
   {
     "id": "bab1_glen_pagar",
@@ -234,8 +234,8 @@
     "id": "bab2_nino_alarm",
     "speaker": "nino",
     "lang": "id",
-    "text": "Alarm! Ada masalah di pasar!",
-    "delivery": "[alarmed] Alarm! Ada masalah di pasar!"
+    "text": "Alarm! Ada masalah di pasar kota. Ikuti panah emas!",
+    "delivery": "[alarmed] Alarm! Ada masalah di pasar kota. Ikuti panah emas!"
   },
   {
     "id": "bab2_glen_siap",
@@ -724,8 +724,8 @@
     "id": "bab4_aara_benar3",
     "speaker": "aara",
     "lang": "id",
-    "text": "Hebat! Alatnya sudah canggih sekali!",
-    "delivery": "[amazed] Hebat! Alatnya sudah canggih sekali!"
+    "text": "Wah! Alatnya sudah canggih sekali!",
+    "delivery": "[amazed] Wah! Alatnya sudah canggih sekali!"
   },
   {
     "id": "bab4_aara_sinyal",
@@ -1186,8 +1186,8 @@
     "id": "bab5_nino_hebat",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hebat, Superglen! Ular Melar sudah jinak.",
-    "delivery": "[proud] Hebat, Superglen! Ular Melar sudah jinak."
+    "text": "Keren, Superglen! Ular Melar sudah jinak.",
+    "delivery": "[proud] Keren, Superglen! Ular Melar sudah jinak."
   },
   {
     "id": "bab5_nino_tikus",
@@ -1340,7 +1340,7 @@
     "id": "bab6_nino_hebat",
     "speaker": "nino",
     "lang": "id",
-    "text": "Hebat, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
-    "delivery": "[proud] Hebat, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
+    "text": "Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "delivery": "[proud] Mantap, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
   }
 ]

@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>portrait</title></head>
+<body style="margin:0;background:transparent">
+<canvas id="c" width="512" height="512"></canvas>
+<script type="module">
+// Renders a head-and-shoulders portrait of one character GLB (idle pose, frame 0) for scripts/make-portraits.mjs.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+
+const kind = new URLSearchParams(location.search).get('kind');
+window.__done = false;
+try {
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const gltf = await loader.loadAsync(`/public/models/${kind}.glb`);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+  sun.position.set(1.5, 2.5, 3);
+  scene.add(sun);
+  scene.add(gltf.scene);
+  const idle = gltf.animations.find((a) => a.name === 'idle') ?? gltf.animations[0];
+  if (idle) {
+    const mixer = new THREE.AnimationMixer(gltf.scene);
+    mixer.clipAction(idle).play();
+    mixer.update(0.05);
+  }
+  gltf.scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  const height = box.max.y - box.min.y;
+  // Head and shoulders: the top ~50% of the body, centered on the model's x/z.
+  const cx = (box.min.x + box.max.x) / 2;
+  const cz = (box.min.z + box.max.z) / 2;
+  const top = box.max.y + height * 0.02;
+  const span = height * 0.5;
+  const cy = top - span / 2;
+  const cam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, 0.01, 50);
+  cam.position.set(cx, cy, cz + 5);
+  cam.lookAt(cx, cy, cz);
+  renderer.render(scene, cam);
+  window.__done = true;
+} catch (e) {
+  window.__error = String(e && e.stack || e);
+  window.__done = true;
+}
+</script></body></html>

@@ -65,6 +65,8 @@ export class Lab {
   private readonly dialog: LevelContext['dialog'];
   private readonly costumeBody: THREE.Group;
   private readonly belt: THREE.Mesh;
+  private readonly costumeFig: Avatar;
+  private readonly costumeSt: AvatarState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, talking: false };
   private readonly beltMat: THREE.MeshStandardMaterial;
   private readonly coinMesh: THREE.Mesh[] = [];
   private readonly coinOn: boolean[] = [];
@@ -287,18 +289,18 @@ export class Lab {
 
     // --- Costume (red suit with a golden belt, floating over its stand) ---
     this.costumeBody = new THREE.Group();
-    const suit = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.46, 6, 16), new THREE.MeshStandardMaterial({ color: 0xe02b20, roughness: 0.5, emissive: 0x500a06, emissiveIntensity: 0.4 }));
+    // The costume is the real Superglen model (Barongsai lion head, red-gold suit) floating like on a mannequin; the low-poly
+    // figure only shows for the moment the GLB is still loading (never a capsule).
+    this.costumeFig = new Avatar('superglen', figureMaterial(0xe02b20, 0.08), false);
+    this.costumeFig.root.position.y = -0.75;
+    this.costumeFig.root.scale.setScalar(1.3);
+    ctx.onDispose(() => this.costumeFig.dispose());
     this.beltMat = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.35, metalness: 0.2, emissive: 0x6b4a00, emissiveIntensity: 0.6 });
-    this.belt = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.045, 8, 24), this.beltMat);
+    // A thin golden halo ring under the suit (the funny ending blinks it).
+    this.belt = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), this.beltMat);
     this.belt.rotation.x = Math.PI / 2;
-    this.belt.position.y = -0.08;
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 8, 20), new THREE.MeshStandardMaterial({ color: C.CREAM }));
-    collar.rotation.x = Math.PI / 2;
-    collar.position.y = 0.32;
-    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.1), basic(0xffd23f));
-    star.position.set(0, 0.12, 0.31);
-    star.scale.z = 0.4;
-    this.costumeBody.add(suit, this.belt, collar, star);
+    this.belt.position.y = -0.77;
+    this.costumeBody.add(this.costumeFig.root, this.belt);
     this.costume.add(this.costumeBody);
     this.costume.position.copy(this.costumePos);
     this.costume.visible = false;
@@ -460,6 +462,7 @@ export class Lab {
       this.ninoGlow.scale.setScalar(1 + 0.08 * Math.sin(t * 3) + 0.25 * this.chaos * Math.sin(t * 25));
     }
     if (this.costume.visible) {
+      this.costumeFig.pose(this.lastDt, this.costumeSt);
       this.costume.position.y = this.costumePos.y + 0.2 + 1.0 * this.costumeRise + 0.07 * Math.sin(t * 2);
       this.costume.rotation.y = t * 0.9;
     }

@@ -1,3 +1,4 @@
+import { ninoLine } from '../../gameplay/NinoVariasi';
 import * as THREE from 'three';
 import { PracticeTarget } from '../../gameplay/props/PracticeTarget';
 import { PADS, TARGETS, TARGET_GROUPS } from './Layout';
@@ -119,7 +120,7 @@ export class LaserExercise implements Exercise {
     this.fallbacks = 0;
     row.set(this.count);
     this.hideAt[i] = this.time + 1.0;
-    if (this.voice && this.count < GOAL && this.count % 2 === 1) void ctx.dialog.say('bab2_nino_laser_bagus');
+    if (this.voice && this.count < GOAL && this.count % 2 === 1) void ctx.dialog.say(ninoLine('pujian'));
     this.left--;
     this.point();
     if (this.count >= GOAL) {
