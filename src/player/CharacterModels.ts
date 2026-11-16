@@ -28,8 +28,8 @@ const RUN_DIV = 2.5;
 const RUN_FROM = 3.0;
 const RUN_BACK = 2.5;
 
-/** Clips Glen does not have; he borrows them from Superglen (same Mixamo rig, same bone names). */
-const BORROW: readonly string[] = ['jump', 'fall', 'land', 'hit'];
+/** Clips Glen does not have; he borrows them from Superglen (jump / fall / land are procedural now, see JumpLayer) (same Mixamo rig, same bone names). */
+const BORROW: readonly string[] = ['hit'];
 
 interface Template {
   scene: THREE.Group;
@@ -179,9 +179,191 @@ if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__characters = {
     info: () => ({ bytes: characterModels.bytes, ms: Math.round(characterModels.loadMs), failed: characterModels.failed }),
     clips: () => [...characterModels.avatars].filter((a) => a.visible).map((a) => `${a.kindName}:${a.rig ? a.rig.clipName : 'figure'}`),
+    jump: () => [...characterModels.avatars].filter((a) => a.visible && a.rig).map((a) => a.rig!.jumpLayer.dump()),
     /** Force a one-shot on the visible Glen/Superglen avatar. */
     emote: (c: 'cheer' | 'wave') => [...characterModels.avatars].filter((a) => a.visible).forEach((a) => a.emote(c, 3)),
   };
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Procedural jump: Mixamo bones are rotated in code on top of idle / run (no allocation per frame). Angles are in degrees in rig space
+// (character faces +Z, up +Y, its left is +X). Each pose is a vector of the fields below; the live vector eases toward the pose of the
+// moment (about 0.1 s crossfade) and the whole layer fades in and out with `w`.
+// ---------------------------------------------------------------------------------------------------------------------------------
+const enum J {
+  DROP, SPINE, THL, KNL, THR, KNR, AFL, AAL, AFR, AAR, TOE, FLAT, N,
+}
+//                                   drop   spine thL  knL  thR  knR  afL   aaL  afR   aaR  toe  flat
+const POSE_CROUCH = [0.1, 24, 50, 95, 50, 95, -35, 12, -35, 12, 0, 1];
+const POSE_STRETCH = [-0.01, -5, -6, 4, -10, 4, 150, 24, 150, 24, 40, 0];
+const POSE_AIR = [0, 10, 12, 22, 82, 100, 30, 150, 24, 152, 22, 0];
+const POSE_TUCK = [0.02, 36, 100, 125, 100, 125, 55, 12, 55, 12, 10, 0];
+const POSE_FALL = [0, 4, 26, 18, -6, 26, 8, 88, 6, 90, 12, 0];
+const POSE_LAND = [0.08, 28, 52, 98, 52, 98, 52, 25, 52, 25, 0, 1];
+const POSE_ZERO = new Array<number>(J.N).fill(0);
+
+/** Bones the layer touches, parents before children (the chain is walked top-down). */
+const LAYER_BONES = ['Hips', 'Spine', 'Spine1', 'Spine2', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot', 'LeftArm', 'RightArm'] as const;
+type LayerBone = (typeof LAYER_BONES)[number];
+
+const AX = new THREE.Vector3(1, 0, 0);
+const AZ = new THREE.Vector3(0, 0, 1);
+const qR = new THREE.Quaternion();
+const qT = new THREE.Quaternion();
+const qP = new THREE.Quaternion();
+const qC = new THREE.Quaternion();
+const D2R = Math.PI / 180;
+
+class JumpLayer {
+  private readonly bones = new Map<LayerBone, THREE.Bone>();
+  private readonly cur = new Float32Array(J.N);
+  private readonly tgt = new Float32Array(J.N);
+  w = 0;
+  private air = false;
+  private wasAir = false;
+  private tk = 1;
+  private landT = 0;
+  private vyTop = 5;
+  private hipsY = 0;
+  private readonly root: THREE.Object3D;
+  /** Strength of the next landing squash (0..1). */
+  private landPow = 1;
+  ready = false;
+
+  constructor(root: THREE.Object3D) {
+    this.root = root;
+    root.traverse((o) => {
+      if (!(o as THREE.Bone).isBone) return;
+      const n = o.name.replace(/^mixamorig:?/, '') as LayerBone;
+      if ((LAYER_BONES as readonly string[]).includes(n)) this.bones.set(n, o as THREE.Bone);
+    });
+    this.ready = this.bones.size === LAYER_BONES.length;
+    const h = this.bones.get('Hips');
+    if (h) this.hipsY = h.position.y;
+  }
+
+  /** Per-frame input from the avatar. */
+  set(air: boolean, vy: number, tuck: boolean): void {
+    this.air = air;
+    if (air && !this.wasAir) {
+      // Takeoff (a jump) or a step off a ledge (no crouch, straight to the fall pose).
+      this.tk = vy > 0.5 ? 0 : 1;
+      this.vyTop = Math.max(2, vy);
+      this.landT = 0;
+    }
+    this.wasAir = air;
+    this.vy = vy;
+    this.tuck = tuck;
+  }
+  private vy = 0;
+  private tuck = false;
+  private power = 0;
+
+  setPower(p: number): void {
+    this.power = p;
+  }
+
+  /** Debug: weight, live pose vector and target (test handle). */
+  dump(): { w: number; cur: number[]; tgt: number[] } {
+    return { w: this.w, cur: Array.from(this.cur, (v) => Math.round(v * 10) / 10), tgt: Array.from(this.tgt, (v) => Math.round(v * 10) / 10) };
+  }
+
+  land(): void {
+    this.landT = 0.3;
+  }
+
+  update(dt: number): void {
+    if (!this.ready) return;
+    const T = this.tgt;
+    const pw = this.power;
+    if (this.landT > 0) this.landT -= dt;
+    if (this.air) {
+      this.tk += dt;
+      const u = this.vy / this.vyTop; // 1 at takeoff, 0 at the apex, negative while falling
+      const up = Math.min(1, Math.max(0, (u - 0.1) / 0.5)); // 1 = still pushing off
+      // Rising: crouch (first 0.08 s) -> stretch -> airborne pose; falling: airborne pose -> fall pose.
+      const fall = Math.min(1, Math.max(0, -this.vy / 3.5));
+      let base: number[] = POSE_AIR;
+      if (this.tuck) base = POSE_TUCK;
+      for (let i = 0; i < J.N; i++) T[i] = base[i];
+      // blend toward stretch while pushing off
+      for (let i = 0; i < J.N; i++) T[i] += (POSE_STRETCH[i] - T[i]) * up;
+      for (let i = 0; i < J.N; i++) T[i] += (POSE_FALL[i] - T[i]) * fall * (this.tuck ? 0.3 : 1);
+      // higher jumps (rhythm levels): a bigger stretch
+      if (pw > 0) {
+        const k = pw * up;
+        T[J.AFL] += 20 * k;
+        T[J.AFR] += 20 * k;
+        T[J.TOE] += 15 * k;
+        T[J.SPINE] -= 6 * k;
+      }
+      if (this.tk < 0.1) {
+        const c = 1 - this.tk / 0.1;
+        for (let i = 0; i < J.N; i++) T[i] += (POSE_CROUCH[i] - T[i]) * c;
+      }
+    } else if (this.landT > 0) {
+      const k = this.landT > 0.2 ? 1 : this.landT / 0.2; // squash, then recover
+      for (let i = 0; i < J.N; i++) T[i] = POSE_LAND[i] * k * this.landPow;
+    } else {
+      for (let i = 0; i < J.N; i++) T[i] = POSE_ZERO[i];
+    }
+    const e = 1 - Math.exp(-dt * (this.air ? 20 : 24));
+    const C = this.cur;
+    for (let i = 0; i < J.N; i++) C[i] += (T[i] - C[i]) * e;
+    const wt = this.air || this.landT > 0 ? 1 : 0;
+    this.w += (wt - this.w) * (1 - Math.exp(-dt * (wt ? 30 : 14)));
+    if (wt === 0 && this.w < 0.01) this.w = 0;
+  }
+
+  /** Rotate bone `name` by `qR` (a rig-space rotation) about its own joint: local = P^-1 * R * P * local, P = parent's rig-space rotation. */
+  private rot(name: LayerBone): void {
+    const b = this.bones.get(name)!;
+    qP.identity();
+    for (let n: THREE.Object3D | null = b.parent; n && n !== this.root; n = n.parent) qP.premultiply(n.quaternion);
+    qC.copy(qP).invert();
+    qT.copy(qC).multiply(qR).multiply(qP);
+    b.quaternion.premultiply(qT);
+  }
+
+  private rotX(name: LayerBone, deg: number): void {
+    qR.setFromAxisAngle(AX, deg * D2R);
+    this.rot(name);
+  }
+
+  /** Arm: flex forward-up (deg), then raise out to the side (abduction, deg); `side` +1 = the character's left. */
+  private arm(name: LayerBone, flex: number, abd: number, side: number): void {
+    // Raise out to the side first, then swing the raised arm forward / back about the body's X axis.
+    qT.setFromAxisAngle(AX, -flex * D2R);
+    qR.setFromAxisAngle(AZ, abd * D2R * side);
+    qR.premultiply(qT);
+    this.rot(name);
+  }
+
+  /** Call after the mixer wrote the clip pose. */
+  apply(): void {
+    if (!this.ready || this.w <= 0) return;
+    const c = this.cur;
+    const w = this.w;
+    const hips = this.bones.get('Hips')!;
+    hips.position.y = this.hipsY * 1 - c[J.DROP] * w;
+    const sp = c[J.SPINE] * w * 0.34;
+    this.rotX('Spine', sp);
+    this.rotX('Spine1', sp);
+    this.rotX('Spine2', sp);
+    const flat = c[J.FLAT];
+    const toe = c[J.TOE];
+    for (const side of [1, -1] as const) {
+      const L = side === 1;
+      const th = c[L ? J.THL : J.THR] * w;
+      const kn = c[L ? J.KNL : J.KNR] * w;
+      this.rotX(L ? 'LeftUpLeg' : 'RightUpLeg', -th);
+      this.rotX(L ? 'LeftLeg' : 'RightLeg', kn);
+      // Foot: undo the chain pitch where the foot is planted, point the toes in the air.
+      this.rotX(L ? 'LeftFoot' : 'RightFoot', (th - kn) * flat + toe * w);
+      this.arm(L ? 'LeftArm' : 'RightArm', c[L ? J.AFL : J.AFR] * w, c[L ? J.AAL : J.AAR] * w, side);
+    }
+  }
 }
 
 /** One-shot clip window: play `clip` from `from` to `to` seconds (to <= 0: the whole clip) at `rate`. */
@@ -207,6 +389,7 @@ export class CharacterRig {
   private holdEnd = 0;
   private running = false;
   private t = 0;
+  readonly jumpLayer: JumpLayer;
 
   constructor(
     readonly kind: ModelKind,
@@ -240,6 +423,8 @@ export class CharacterRig {
     this.root.add(scene);
     this.root.scale.setScalar(MODEL_SCALE[kind]);
     this.mixer = new THREE.AnimationMixer(scene);
+    scene.updateMatrixWorld(true);
+    this.jumpLayer = new JumpLayer(scene);
   }
 
   hasClip(name: string): boolean {
@@ -351,6 +536,8 @@ export class CharacterRig {
       this.holdAct.paused = true;
     }
     this.mixer.update(dt);
+    this.jumpLayer.update(dt);
+    this.jumpLayer.apply();
   }
 
   dispose(): void {
@@ -368,6 +555,10 @@ export interface AvatarState extends FigureState {
   shield?: boolean;
   /** This person is speaking (dialog line on screen): plays the talk clip when standing or hovering. */
   talking?: boolean;
+  /** Double jump / flip in progress: tuck the legs. */
+  tuck?: boolean;
+  /** Jump strength 0..1 (the Lompat Irama rhythm level): a bigger stretch. */
+  power?: number;
 }
 
 /**
@@ -473,10 +664,8 @@ export class Avatar {
   }
 
   /** Soft landing: a quick crouch (only when standing still; a run just goes on). */
-  land(speed: number): void {
-    if (!this.rig?.hasClip('land') || speed > 1.5) return;
-    this.landLeft = 0.4;
-    this.rig.shot({ clip: 'land', from: 0, to: 0.65, rate: 1.6 }, 0.06);
+  land(_speed: number): void {
+    this.rig?.jumpLayer.land();
   }
 
   /** Got hit (hurt reaction). */
@@ -517,6 +706,9 @@ export class Avatar {
   }
 
   private drive(rig: CharacterRig, s: AvatarState): void {
+    const jl = rig.jumpLayer;
+    jl.set(!!s.airborne && !s.flying && !s.riding, s.vy, !!s.tuck);
+    jl.setPower(s.power ?? 0);
     if (s.riding) {
       if (rig.hasClip('ride')) rig.loop('ride', 0.25, 1);
       else rig.loop('idle', 0.25, 1);
@@ -535,9 +727,9 @@ export class Avatar {
       return;
     }
     if (s.airborne) {
+      // The jump / fall pose is procedural (JumpLayer) on top of the idle clip.
       this.running = false;
-      if (s.vy > 0.5 && rig.hasClip('jump')) rig.hold('jump', JUMP_FROM, JUMP_TO, 0.08, 1);
-      else if (rig.hasClip('fall')) rig.hold('fall', FALL_FROM, FALL_TO, 0.15, 1);
+      rig.loop('idle', 0.1, 1);
       return;
     }
     if (s.speed > 0.4) {
@@ -560,9 +752,5 @@ export class Avatar {
 }
 
 /** Clip windows (seconds), tuned by looking at the clips. */
-const JUMP_FROM = 0.9;
-const JUMP_TO = 1.5;
-const FALL_FROM = 0.7;
-const FALL_TO = 1.1;
 const SHOOT_FROM = 6.2;
 const SHOOT_TO = 7.0;
