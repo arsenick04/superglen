@@ -51,8 +51,8 @@
       "license": "CC0 1.0"
     },
     "car": {
-      "tris": 368,
-      "verts": 398,
+      "tris": 432,
+      "verts": 494,
       "tint": false,
       "size": [
         1.74,
@@ -75,5 +75,5 @@
       "license": "CC0 1.0"
     }
   },
-  "bytes": 22412
+  "bytes": 23204
 }

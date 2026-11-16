@@ -232,9 +232,9 @@ function car() {
   addR(m, rbox(1.62, 0.62, 3.5, 0.26), shade(W), [0, 0.6, 0]);
   // Cabin in body colour with a glass band slightly proud of it (windows all round, body-colour roof and sills).
   addR(m, rbox(1.36, 0.62, 1.9, 0.27), shade(W), [0, 1.1, -0.22]);
-  addR(m, rbox(1.4, 0.34, 1.78, 0.17), glass, [0, 1.13, -0.22]);
+  addR(m, rbox(1.4, 0.42, 1.78, 0.19), glass, [0, 1.12, -0.22]);
   for (const [x, z] of [[0.74, 1.08], [-0.74, 1.08], [0.74, -1.08], [-0.74, -1.08]]) {
-    const g = new THREE.CylinderGeometry(0.34, 0.34, 0.26, 8);
+    const g = new THREE.CylinderGeometry(0.34, 0.34, 0.26, 12);
     g.rotateZ(Math.PI / 2);
     g.translate(x, 0.34, z);
     m.geo(g, (P, N) => (Math.abs(N[0]) > 0.9 && Math.abs(P[0]) > 0.8 ? hub : dark));
