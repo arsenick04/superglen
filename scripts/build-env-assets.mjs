@@ -154,8 +154,8 @@ function canopy(lumps, detail, seed) {
       (P) => {
         const t = clamp01((P[1] + 0.95) / 1.85);
         const out = Math.hypot(P[0] - centre[0], (P[1] - centre[1]) * 0.8, P[2] - centre[2]);
-        const ao = clamp01(0.68 + 0.32 * (out / 1.15)); // dents between the lumps get darker
-        const L = lerp(0.62, 1.0, Math.pow(t, 0.8)) * ao;
+        const ao = clamp01(0.84 + 0.16 * (out / 1.15)); // dents between the lumps get darker
+        const L = lerp(0.8, 1.0, Math.pow(t, 0.8)) * ao; // sRGB: 0.8 is about 0.6 linear
         return [Math.min(1, L * lerp(0.9, 1.0, t)), Math.min(1, L * lerp(0.94, 1.0, t)), Math.min(1, L * lerp(1.0, 0.96, t))];
       },
       (P, N) => {
@@ -227,7 +227,7 @@ function lamp() {
 /** Car (own colours; white body parts take the instance tint): rounded body and cabin, glass, round wheels, lamps. +z = front. */
 function car() {
   const m = new M();
-  const W = [1, 1, 1], glass = hex(0x9fd6f2), dark = hex(0x2a2a33), hub = hex(0xc9ccd6);
+  const W = [1, 1, 1], glass = hex(0x2e3d55), dark = hex(0x2a2a33), hub = hex(0xc9ccd6);
   const shade = (base) => (P) => { const k = lerp(0.72, 1, clamp01((P[1] - 0.15) / 0.9)); return [base[0] * k, base[1] * k, base[2] * k]; };
   addR(m, rbox(1.62, 0.62, 3.5, 0.26), shade(W), [0, 0.6, 0]);
   // Cabin in body colour with a glass band slightly proud of it (windows all round, body-colour roof and sills).
