@@ -44,12 +44,18 @@ const ADVANCE_GUARD = 0.35;
 /** The bubble stays up this long between two lines (a script awaiting `say` twice would otherwise flicker). */
 const IDLE_HIDE = 0.15;
 const FALLBACK_TEXT = '…';
+/** A compact call-out (during a fight) stays this long without a voice clip (s); a clip sets its own length. */
+export const COMPACT_DURATION = 2.5;
 
 interface Item {
   info: LineInfo;
   lock: boolean;
   auto: boolean;
   duration: number;
+  /** True when the author gave a duration (a compact call-out otherwise uses COMPACT_DURATION). */
+  explicitDuration: boolean;
+  /** Shown as the small call-out (decided when the line starts). */
+  compact: boolean;
   /** Settle the promise returned to the caller (only the last line of a `sequence` has one). */
   done: (() => void) | null;
 }
@@ -66,6 +72,8 @@ export class Dialog {
   private locked = false;
   private readonly listeners: LineStartListener[] = [];
   private readonly endListeners: LineEndListener[] = [];
+  private readonly compactRules: (() => boolean)[] = [];
+  private compactNow = false;
   /** True during the fixed step in which an `interact` press was used by the dialog (Interactions must skip it). */
   pressConsumed = false;
 
@@ -95,6 +103,40 @@ export class Dialog {
   /** The audio manager hooks in here too: stop the clip when a line ends (advanced by tap or by time, or cancelled). */
   onLineEnd(cb: LineEndListener): void {
     this.endListeners.push(cb);
+  }
+
+  /**
+   * During a fight the story lines show as a small call-out (see DialogBubble): no tap, no control lock, the enemies keep fighting.
+   * A rule returns true while a fight is on; the result is read when a line starts. Returns the function that removes the rule.
+   */
+  addCompactRule(rule: () => boolean): () => void {
+    this.compactRules.push(rule);
+    return () => {
+      const i = this.compactRules.indexOf(rule);
+      if (i >= 0) this.compactRules.splice(i, 1);
+    };
+  }
+
+  /** The line on screen is a compact call-out. */
+  get compact(): boolean {
+    return this.current !== null && this.current.compact;
+  }
+
+  /** Like `active`, but false while only compact call-outs are up: enemies and interactions do not wait for those. */
+  get blocking(): boolean {
+    if (!this.active) return false;
+    return !(this.compactNow && this.queue.every((q) => !q.lock));
+  }
+
+  private wantsCompact(): boolean {
+    for (const r of this.compactRules) {
+      try {
+        if (r()) return true;
+      } catch (err) {
+        console.error('Dialog compact rule failed:', err);
+      }
+    }
+    return false;
   }
 
   /** Ids of every table line that starts with `prefix` (to preload a chapter's voice files). */
@@ -160,6 +202,7 @@ export class Dialog {
     if (this.current) this.notifyEnd();
     this.queue.length = 0;
     this.current = null;
+    this.compactNow = false;
     this.idle = 0;
     this.tapPending = false;
     this.pressConsumed = false;
@@ -173,12 +216,13 @@ export class Dialog {
     const cur = this.current;
     if (cur) {
       this.elapsed += dt;
-      const interact = this.input.wasPressed('interact');
+      // A compact call-out never takes a press or a tap (the button keeps its other job); it ends by itself.
+      const interact = !cur.compact && this.input.wasPressed('interact');
       // Space (jump) advances only when it is not needed for jumping.
-      const jump = cur.lock && this.input.wasPressed('jump');
+      const jump = cur.lock && !cur.compact && this.input.wasPressed('jump');
       if (interact) this.pressConsumed = true;
       let advance = false;
-      if (interact || jump || this.tapPending) advance = this.elapsed >= ADVANCE_GUARD;
+      if (interact || jump || (this.tapPending && !cur.compact)) advance = this.elapsed >= ADVANCE_GUARD;
       if (cur.auto && this.elapsed >= cur.duration) advance = true;
       this.tapPending = false;
       if (advance) this.finishCurrent();
@@ -204,6 +248,8 @@ export class Dialog {
       lock: opts.lockControls === true,
       auto: opts.autoAdvance !== false,
       duration: opts.duration ?? defaultLineDuration(info.text),
+      explicitDuration: opts.duration !== undefined,
+      compact: false,
       done,
     };
     if (this.current) this.queue.push(item);
@@ -228,7 +274,13 @@ export class Dialog {
     this.idle = 0;
     this.tapPending = false;
     this.lastLock = item.lock;
-    this.bubble.show(item.info.speaker, item.info.text);
+    item.compact = !item.lock && this.wantsCompact();
+    this.compactNow = item.compact;
+    if (item.compact) {
+      item.auto = true;
+      if (!item.explicitDuration) item.duration = COMPACT_DURATION;
+    }
+    this.bubble.show(item.info.speaker, item.info.text, item.compact);
     this.setLocked(item.lock);
     for (const l of this.listeners) {
       try {

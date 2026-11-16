@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
+import { makeCityMaterial } from './CityMaterial';
 import { Quality } from '../../core/Quality';
 import { ShadowFollower } from '../../core/ShadowSnap';
 import { CITY, CITY_LAYOUT, FACE_VEC, KOTA_REACH, districtAt } from './CityData';
@@ -74,6 +75,7 @@ export class KotaLevel implements Level {
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
   private lit!: THREE.Material;
+  private cityLit!: THREE.Material;
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
@@ -141,9 +143,9 @@ export class KotaLevel implements Level {
     // Bright morning: sky, a long fog (the far layer is cheap), one shadow-casting sun that follows the player.
     const sky = 0x9fd8ff;
     scene.background = new THREE.Color(sky);
-    scene.fog = new THREE.Fog(0xcfeaff, Quality.cameraFar * 0.35, Quality.cameraFar * 0.95);
-    root.add(new THREE.HemisphereLight(0xdff2ff, 0x77b85a, 1.45));
-    this.sun = new THREE.DirectionalLight(0xfff1d0, 2.4);
+    scene.fog = new THREE.Fog(0xc6e6fa, Quality.cameraFar * 0.35, Quality.cameraFar * 0.95);
+    root.add(new THREE.HemisphereLight(0xd6ecff, 0xb4c76e, 1.5)); // soft sky fill with a warm grass bounce
+    this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
@@ -164,7 +166,8 @@ export class KotaLevel implements Level {
     BUILT ??= buildCity(CITY_LAYOUT);
     const mats = makeMaterials();
     this.lit = mats.lit;
-    this.streamer = new ChunkStreamer(BUILT, physics, root, mats.lit, mats.glow);
+    this.cityLit = makeCityMaterial();
+    this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);

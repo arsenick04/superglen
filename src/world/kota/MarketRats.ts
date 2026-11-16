@@ -172,6 +172,11 @@ export class MarketRats {
   /** Test: no rat starts an attack by itself. */
   muted = false;
   private readonly hpMax: number;
+  private readonly easy: boolean;
+  /** A second rat that joins the attack of the first one (index, seconds until it starts); -1 none. */
+  private assistIdx = -1;
+  private assistT = 0;
+  private assisting = false;
   private readonly windup: number;
   private readonly cooldown: number;
   private readonly pipMesh: THREE.InstancedMesh;
@@ -234,6 +239,7 @@ export class MarketRats {
     const pg = propsGeo();
     this.geos.push(rg, fg, pg);
     const easy = ctx.save.data.settings.easyFight;
+    this.easy = easy;
     this.hpMax = easy ? Combat.rat.hpEasy : Combat.rat.hp;
     this.windup = easy ? Combat.rat.windupEasy : Combat.rat.windup;
     this.cooldown = easy ? Combat.rat.cooldownEasy : Combat.rat.cooldown;
@@ -453,7 +459,9 @@ export class MarketRats {
   /** Test helper: rat i starts an attack now (0 = charge, 1 = crumbs) whatever its cooldown. */
   forceAttack(i: number, kind: 0 | 1): void {
     if (this.st[i] >= ST_DIZZY) return;
+    this.assisting = true; // a test attack never calls a second rat
     this.beginAttack(i, kind === K_CHARGE ? 1 : Combat.rat.chargeMaxDist + 2);
+    this.assisting = false;
   }
 
   /** Test helper: fight counters. */
@@ -520,6 +528,24 @@ export class MarketRats {
     this.dirX[i] = (pl.x - this.rx[i]) / d;
     this.dirZ[i] = (pl.z - this.rz[i]) / d;
     this.ctx.sfx.blip();
+    if (!this.easy && !this.assisting) this.pickAssist(i);
+  }
+
+  /** Rats help each other: the nearest other rat that loops near the child joins in a moment (it attacks in turn, not at once). */
+  private pickAssist(i: number): void {
+    const pl = this.ctx.player.position;
+    let best = -1;
+    let bd: number = Combat.rat.aggroRadius;
+    for (let j = 0; j < this.n; j++) {
+      if (j === i || this.st[j] !== ST_LOOP) continue;
+      const d = Math.hypot(this.rx[j] - pl.x, this.rz[j] - pl.z);
+      if (d < bd) {
+        bd = d;
+        best = j;
+      }
+    }
+    this.assistIdx = best;
+    this.assistT = Combat.rat.assistDelay;
   }
 
   /** The wind-up is over: the rat dashes along the locked line, or lets a slow crumb fly. */
@@ -572,8 +598,21 @@ export class MarketRats {
     const pl = ctx.player.position;
     const C = Combat.rat;
     this.gap = Math.max(0, this.gap - dt);
-    const calm = this.muted || !ctx.game.controlsEnabled || ctx.dialog.active || ctx.health.resting;
+    const calm = this.muted || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     const feet = pl.y - 0.55;
+    if (this.assistIdx >= 0) {
+      this.assistT -= dt;
+      if (this.assistT <= 0) {
+        const j = this.assistIdx;
+        this.assistIdx = -1;
+        const dj = Math.hypot(this.rx[j] - pl.x, this.rz[j] - pl.z);
+        if (!calm && this.st[j] === ST_LOOP && dj < C.aggroRadius) {
+          this.assisting = true;
+          this.beginAttack(j, dj);
+          this.assisting = false;
+        }
+      }
+    }
     for (let i = 0; i < this.n; i++) {
       const s = this.st[i];
       if (s === ST_GONE) continue;
@@ -834,7 +873,7 @@ export class MarketRats {
         const idx = i * this.hpMax + k;
         if (!fighting) this.m4.makeScale(0, 0, 0);
         else {
-          const off = (k - (this.hpMax - 1) / 2) * 0.32;
+          const off = (k - (this.hpMax - 1) / 2) * (this.hpMax > 3 ? 0.26 : 0.32);
           const full = k < this.hp[i];
           const z = full ? 1.7 : 0.9;
           this.m4.compose(this.p.set(this.rx[i] + rxv * off, 1.35 + (full ? Math.sin(t * 5 + k) * 0.03 : 0), this.rz[i] + rzv * off), this.q.identity(), this.sc.set(z, z, z));

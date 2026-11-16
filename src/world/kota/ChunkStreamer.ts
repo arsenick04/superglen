@@ -108,7 +108,7 @@ export class ChunkStreamer {
       }
       const out: Slot[] = [];
       for (let s = 0; s < STREAM.slots; s++) {
-        const slot = new Slot(v, i, l === 2 ? glow : lit, l === 0 && Quality.shadows, l !== 2);
+        const slot = new Slot(v, i, l === 2 ? glow : lit, l === 0 && Quality.shadows, l !== 2, l !== 2);
         root.add(slot.mesh);
         out.push(slot);
       }

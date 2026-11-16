@@ -129,7 +129,13 @@ export class RakusBoss {
   z: number;
   readonly cx: number;
   readonly cz: number;
-  stars: number = Combat.rakus.stars;
+  stars: number;
+  /** Stars at the start of a fight (3 in "Mode mudah"). */
+  readonly maxStars: number;
+  /** Laser hits on the current star in this out-of-breath window. */
+  hitsGot = 0;
+  partialHits = 0;
+  doubles = 0;
   phase: RakusPhase = 'idle';
   /** False: he only looks around (before the intro, during a scene, after a reset until the child comes back). */
   enabled = false;
@@ -166,6 +172,9 @@ export class RakusBoss {
   private ringR = 0;
   private waveT = 99;
   private waveDone = true;
+  /** A second wave of the double ring is still to come, and the seconds until it starts. */
+  private wave2 = false;
+  private wave2Wait = 0;
   private waitedForHelpers = 0;
   private lockedAt = { x: 0, z: 0 };
   private fly = -1;
@@ -216,6 +225,8 @@ export class RakusBoss {
     this.x = cx;
     this.z = cz;
     this.easy = ctx.save.data.settings.easyFight;
+    this.maxStars = this.easy ? Combat.rakus.starsEasy : Combat.rakus.stars;
+    this.stars = this.maxStars;
     const C = Combat.rakus;
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
@@ -302,7 +313,7 @@ export class RakusBoss {
     this.hud = document.createElement('div');
     this.hud.className = 'ch5-stars ch6-stars';
     this.hud.setAttribute('aria-hidden', 'true');
-    for (let i = 0; i < C.stars; i++) {
+    for (let i = 0; i < this.maxStars; i++) {
       const s = document.createElement('span');
       s.className = 'ch5-star';
       s.innerHTML = STAR_SVG;
@@ -353,7 +364,10 @@ export class RakusBoss {
   }
 
   private paintHud(): void {
-    this.hudStars.forEach((s, i) => s.classList.toggle('lost', i >= this.stars));
+    this.hudStars.forEach((s, i) => {
+      s.classList.toggle('lost', i >= this.stars);
+      s.classList.toggle('half', i === this.stars - 1 && this.hitsGot > 0);
+    });
     this.hud.dataset.stars = String(this.stars);
   }
 
@@ -361,7 +375,9 @@ export class RakusBoss {
 
   /** Full stars, small again, waiting (a new fight after "kelelahan", or the first one). */
   reset(): void {
-    this.stars = this.C.stars;
+    this.stars = this.maxStars;
+    this.hitsGot = 0;
+    this.wave2 = false;
     this.level = 0;
     this.lvlVis = 0;
     this.phase = 'idle';
@@ -462,6 +478,10 @@ export class RakusBoss {
     this.squash = 1;
     this.waveT = 0;
     this.waveDone = false;
+    // From a big size on the slam is a double ring: a second wave follows the first (normal mode only).
+    this.wave2 = !this.easy && this.level >= this.C.doubleFrom;
+    this.wave2Wait = this.C.doubleGap;
+    if (this.wave2) this.doubles++;
     ctx.sfx.land(1);
     ctx.fx.flashes.spawn(this.x, 0.3, this.z, this.ringR * 1.3, 0.45, 0xffb347);
     for (let k = 0; k < 10; k++) {
@@ -475,6 +495,7 @@ export class RakusBoss {
     this.phase = 'dizzy';
     this.dizzyKind = 'miss';
     this.dizzyLeft = this.C.dizzyMiss * (this.easy ? this.C.dizzyEasyMul : 1);
+    this.hitsGot = 0;
     this.timer = 0;
     this.vulnerable = true;
     this.ctx.fx.stars.show(this.aimPt, 1.0 * this.scaleNow, this.dizzyLeft, 0.8);
@@ -502,7 +523,7 @@ export class RakusBoss {
   private endRound(): void {
     this.rounds++;
     this.phase = 'idle';
-    this.cool = this.easy ? 1.4 : 0.8;
+    this.cool = this.easy ? this.C.roundGapEasy : this.C.roundGap;
     this.vulnerable = false;
     this.hooks.onRoundEnd(this.rounds);
   }
@@ -560,13 +581,29 @@ export class RakusBoss {
       return;
     }
     this.laserCounted++;
-    this.takeStar();
+    this.hitsGot++;
+    if (this.hitsGot >= (this.easy ? this.C.hitsPerStarEasy : this.C.hitsPerStar)) this.takeStar();
+    else this.halfHit();
+  }
+
+  /** The first of two hits: a bonk, the star shows half, the window stays open a little longer for the second. */
+  private halfHit(): void {
+    const { ctx } = this;
+    this.partialHits++;
+    this.squash = 1;
+    this.dizzyLeft = Math.max(this.dizzyLeft, this.C.partialKeep);
+    this.paintHud();
+    ctx.synth.boing();
+    ctx.sfx.pop();
+    ctx.fx.sparkles.burst(this.aimPt.x, this.aimPt.y, this.aimPt.z, 12, 2.6, 0xffe14d, { gravity: 2, life: 0.6, up: 0.6 });
+    ctx.fx.flashes.spawn(this.aimPt.x, this.aimPt.y, this.aimPt.z, 1.4 * this.scaleNow, 0.4, 0xffd23f);
   }
 
   /** One star goes (a laser hit while he is out of breath; also the test hook): he shrinks one step and burps food out. */
   takeStar(): void {
     const { ctx } = this;
     this.stars = Math.max(0, this.stars - 1);
+    this.hitsGot = 0;
     this.vulnerable = false;
     this.squash = 1;
     this.paintHud();
@@ -577,7 +614,8 @@ export class RakusBoss {
     ctx.fx.sparkles.burst(this.aimPt.x, this.aimPt.y, this.aimPt.z, 22, 3.4, 0xffe14d, { gravity: 2, life: 0.8, up: 0.8 });
     ctx.fx.flashes.spawn(this.aimPt.x, this.aimPt.y, this.aimPt.z, 2.2 * sc, 0.5, 0xffd23f);
     for (let k = 0; k < FOOD_COLORS.length; k++) ctx.fx.sparkles.burst(this.x, 1.3 * sc, this.z, 5, 3.4, FOOD_COLORS[k], { gravity: 3, life: 0.9, up: 1.4 });
-    if (this.level > 0) {
+    // He stays big: one size step is lost only every `shrinkEvery` stars (every star in easy mode).
+    if (this.level > 0 && (this.easy || (this.maxStars - this.stars) % this.C.shrinkEvery === 0)) {
       this.level--;
       this.hooks.onEvent('shrunk');
     }
@@ -622,7 +660,7 @@ export class RakusBoss {
     // The size eases to its step (growing and shrinking are visible).
     const dv = this.level - this.lvlVis;
     if (dv !== 0) this.lvlVis += Math.sign(dv) * Math.min(Math.abs(dv), dt / C.grow);
-    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.active || ctx.health.resting;
+    const calm = this.muted || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     // Piles come back.
     for (let i = 0; i < C.pileCount; i++) {
       if (this.alive[i]) {
@@ -721,6 +759,8 @@ export class RakusBoss {
         this.dizzyLeft -= dt;
         if (this.dizzyLeft <= 0) {
           this.vulnerable = false;
+          this.hitsGot = 0;
+          this.paintHud();
           this.phase = 'recover';
           this.timer = 0;
         }
@@ -745,6 +785,16 @@ export class RakusBoss {
           const r = ctx.health.hurt(this.x, this.z);
           this.resolveWave(r === 'hit' ? 'hit' : r === 'blocked' ? 'blocked' : 'miss');
         } else if (this.waveT >= 1) this.resolveWave('miss');
+      }
+    } else if (this.wave2 && this.waveT < 90) {
+      // The first wave is over: the ring blinks, then the second wave runs out.
+      this.wave2Wait -= dt;
+      if (this.wave2Wait <= 0) {
+        this.wave2 = false;
+        this.waveT = 0;
+        this.waveDone = false;
+        ctx.sfx.land(1);
+        ctx.fx.flashes.spawn(this.x, 0.3, this.z, this.ringR * 1.3, 0.45, 0xffb347);
       }
     }
   }
@@ -844,11 +894,12 @@ export class RakusBoss {
       this.glowMat.opacity = 0.2 + 0.18 * k;
     }
     // The ring on the ground (wind-up), then it flashes away with the wave.
-    const showRing = this.phase === 'wind' || this.phase === 'hop';
+    const secondRing = this.wave2 && this.waveT < 90 && this.waveT >= 1;
+    const showRing = this.phase === 'wind' || this.phase === 'hop' || secondRing;
     this.ringOut.visible = this.ringFill.visible = showRing;
     if (showRing) {
       const wind = this.easy ? C.windEasy : C.wind;
-      const u = this.phase === 'hop' ? 1 : Math.min(1, this.timer / wind);
+      const u = this.phase === 'hop' || secondRing ? 1 : Math.min(1, this.timer / wind);
       const R = this.ringR;
       this.ringOut.position.set(this.lockedAt.x, 0.07, this.lockedAt.z);
       this.ringFill.position.set(this.lockedAt.x, 0.065, this.lockedAt.z);
@@ -906,6 +957,7 @@ export class RakusBoss {
     this.ringOut.visible = this.ringFill.visible = false;
     this.pile = -1;
     this.waveT = 99;
+    this.wave2 = false;
     this.body.geometry = this.geoHappy;
     this.syncTargets();
     for (let i = 0; i < this.C.pileCount; i++) {
@@ -973,6 +1025,7 @@ export class RakusBoss {
     this.pile = -1;
     this.waveT = 99;
     this.waveDone = true;
+    this.wave2 = false;
     this.ringOut.visible = this.ringFill.visible = false;
     this.syncTargets();
   }
@@ -1023,6 +1076,11 @@ export class RakusBoss {
       laserEarly: this.laserEarly,
       rounds: this.rounds,
       waveDone: this.waveDone,
+      maxStars: this.maxStars,
+      hitsGot: this.hitsGot,
+      partialHits: this.partialHits,
+      doubles: this.doubles,
+      wave2: this.wave2,
     };
   }
 }

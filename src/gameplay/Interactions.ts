@@ -162,7 +162,7 @@ export class Interactions {
   /** Once per fixed step, after Dialog.fixedUpdate. */
   fixedUpdate(): void {
     const p = this.player.visualPosition;
-    const blocked = !this.canInteract() || this.dialog.active;
+    const blocked = !this.canInteract() || this.dialog.blocking;
 
     // ---- Zones (also run while a dialog shows: story beats keep flowing) ----
     for (let i = this.zones.length - 1; i >= 0; i--) {

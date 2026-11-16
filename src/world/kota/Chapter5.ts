@@ -69,8 +69,11 @@ export class Chapter5 {
   ) {
     this.step = ctx.save.data.bab5.step as Ch5Step;
     this.lastExh = ctx.health.exhaustions;
+    // During the fight the story lines are small call-outs that never stop it (Dialog compact mode).
+    const dropRule = ctx.dialog.addCompactRule(() => this.engaged && !this.tamedScene);
     ctx.onDispose(() => {
       this.disposed = true;
+      dropRule();
     });
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
       const w = window as unknown as { __ch5?: unknown };

@@ -14,7 +14,8 @@
     "audio": "node scripts/generate-audio.mjs",
     "audio:voices": "node scripts/pick-voices.mjs",
     "audio:sfx": "node scripts/generate-sfx.mjs",
-    "models": "node scripts/build-models.mjs"
+    "models": "node scripts/build-models.mjs",
+    "env-assets": "node scripts/build-env-assets.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

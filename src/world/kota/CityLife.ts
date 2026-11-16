@@ -1,3 +1,4 @@
+import { envModels } from './EnvModels';
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
@@ -137,7 +138,7 @@ const W = 0xffffff;
 const DARK = 0x2b2a33;
 const SKIN = 0xf1c9a0;
 
-/** Pedestrian with swinging limbs: every vertex has (pivot xyz, part id): 0 body, 1/2 arms, 3/4 legs. About 84 triangles. */
+/** Pedestrian with swinging limbs: every vertex has (pivot xyz, part id): 0 body, 1/2 arms, 3/4 legs. About 130 triangles. */
 function walkerGeo(): THREE.BufferGeometry {
   const tag = (parts: Part[], id: number, px: number, py: number): THREE.BufferGeometry => {
     const g = merge(parts);
@@ -153,18 +154,20 @@ function walkerGeo(): THREE.BufferGeometry {
     g.setAttribute('pivotPart', new THREE.BufferAttribute(a, 4));
     return g;
   };
+  // Soft rounded figure (capsule torso, round head with a hair cap, round limbs): about 130 triangles, reads like the
+  // characters instead of a stack of boxes.
   const body = tag(
     [
-      { g: box(0.34, 0.4, 0.2), c: W, p: [0, 0.68, 0] },
-      { g: box(0.22, 0.22, 0.22), c: SKIN, p: [0, 1.0, 0] },
-      { g: box(0.24, 0.09, 0.24), c: DARK, p: [0, 1.13, -0.01] },
+      { g: new THREE.CapsuleGeometry(0.17, 0.2, 1, 6), c: W, p: [0, 0.7, 0], s: [1, 1, 0.68] },
+      { g: sph(0.14, 6, 4), c: SKIN, p: [0, 1.04, 0] },
+      { g: new THREE.SphereGeometry(0.152, 6, 2, 0, Math.PI * 2, 0, 1.25), c: DARK, p: [0, 1.055, -0.012] },
     ],
     0,
     0,
     0,
   );
-  const arm = (x: number, id: number): THREE.BufferGeometry => tag([{ g: box(0.09, 0.34, 0.09), c: SKIN, p: [0, -0.15, 0] }], id, x, 0.84);
-  const leg = (x: number, id: number): THREE.BufferGeometry => tag([{ g: box(0.13, 0.46, 0.13), c: 0x3d4a7a, p: [0, -0.23, 0] }], id, x, 0.46);
+  const arm = (x: number, id: number): THREE.BufferGeometry => tag([{ g: new THREE.CylinderGeometry(0.05, 0.042, 0.36, 5, 1, true), c: SKIN, p: [0, -0.16, 0] }], id, x, 0.86);
+  const leg = (x: number, id: number): THREE.BufferGeometry => tag([{ g: new THREE.CylinderGeometry(0.068, 0.056, 0.47, 5, 1, true), c: 0x3d4a7a, p: [0, -0.23, 0] }], id, x, 0.47);
   const list = [body, arm(-0.23, 1), arm(0.23, 2), leg(-0.09, 3), leg(0.09, 4)];
   return finish(list);
 }
@@ -501,7 +504,9 @@ export class CityLife {
     this.anim.setUsage(THREE.DynamicDrawUsage);
     pedGeo.setAttribute('aAnim', this.anim);
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
-    this.cars = mk(carGeo(), carMat, 70);
+    // Soft rounded car from the env models (scripts/build-env-assets.mjs); the box car is the fallback.
+    const envCar = envModels.geometry('car');
+    this.cars = mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
     this.motos = mk(motoGeo(), carMat, 40);
     this.bikes = mk(bikeGeo(), carMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));

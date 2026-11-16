@@ -7368,7 +7368,7 @@ async function kotaPerfScenario(page, check) {
   }, spots);
   report('calls/triangles per spot and view', JSON.stringify(r.out));
   check('kota perf: <= 60 draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= 60, `max ${r.maxCalls}`);
-  check('kota perf: <= 65000 triangles per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 65000, `max ${r.maxTris}`);
+  check('kota perf: <= 100000 triangles (raised from 65k for richer env models: native-app target, owner decision) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 100000, `max ${r.maxTris}`);
   check('kota perf: no shader program compiled after warm-up while visiting every district', r.p1 === r.p0 && r.p0 > 0, `${r.p0} -> ${r.p1}`);
 
   const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
@@ -7513,7 +7513,7 @@ async function kotaLifeScenario(page, check, touch) {
     return best;
   });
   console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
-  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 65000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 65000, JSON.stringify(busy));
+  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 100000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 100000, JSON.stringify(busy));
   check(`kota-life ${tag}: a busy street view shows at least 20 agents (${busy.n})`, busy.n >= 20, String(busy.n));
   await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
   await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
@@ -8848,14 +8848,14 @@ async function bab3RatsScenario(page, check, touch) {
   check(`bab3-rats ${tag}: seven little rats on the market streets with 3 bakpao, 2 kue, 2 vegetables`, rats.length === 7 && rats.filter((r) => r.food === 'bakpao').length === 3 && rats.filter((r) => r.food === 'kue').length === 2 && rats.every(inStreet) && rats.every((r) => r.state === 0 && r.fstate === 0), kinds);
   const d0 = await ch3Draw(page);
   console.log(`   [bab3-rats ${tag}] market draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 65000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 100000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // The rats circle (they move). Rats are big now: about knee-to-waist of Glen.
   await d3Go(page, 93, 12, 10);
   const a = await ch3Rats(page);
   await d3Adv(page, 60);
   const b = await ch3Rats(page);
   check(`bab3-rats ${tag}: a rat that loops moves by itself`, Math.hypot(b[3].x - a[3].x, b[3].z - a[3].z) > 0.4 || Math.hypot(b[1].x - a[1].x, b[1].z - a[1].z) > 0.4, '');
-  check(`bab3-rats ${tag}: every rat has 3 hit points`, a.every((r) => r.hp === 3), JSON.stringify(a.map((r) => r.hp)));
+  check(`bab3-rats ${tag}: every rat has 5 hit points`, a.every((r) => r.hp === 5), JSON.stringify(a.map((r) => r.hp)));
   // ---- Laser: three hits tame (rat 0, west, 73,0) ----
   await page.evaluate(() => { window.__superglen.setCameraYaw(0); window.__ch3.setRng(0.99); });
   const r0 = (await ch3Rats(page))[0];
@@ -8875,14 +8875,18 @@ async function bab3RatsScenario(page, check, touch) {
   await fire();
   c = await ch3Counts(page);
   rats = await ch3Rats(page);
-  check(`bab3-rats ${tag}: one laser hit is not enough: the rat is dizzy (stars), 2 hit points left, not tamed`, c.lasers === 1 && c.tamed === 0 && rats[0].hp === 2 && rats[0].state < 6, JSON.stringify({ c, r0: rats[0] }));
-  await keepClose();
-  await fire();
-  await keepClose();
-  await fire();
+  check(`bab3-rats ${tag}: one laser hit is not enough: the rat is dizzy (stars), 4 hit points left, not tamed`, c.lasers === 1 && c.tamed === 0 && rats[0].hp === 4 && rats[0].state < 6, JSON.stringify({ c, r0: rats[0] }));
+  for (let k = 0; k < 4; k++) {
+    await keepClose();
+    await fire();
+    if (k < 3) {
+      rats = await ch3Rats(page);
+      check(`bab3-rats ${tag}: hit ${k + 2} of 5 leaves ${3 - k} hit point(s), still not tamed`, rats[0].hp === 3 - k && (await ch3Counts(page)).tamed === 0, JSON.stringify(rats[0]));
+    }
+  }
   c = await ch3Counts(page);
   rats = await ch3Rats(page);
-  check(`bab3-rats ${tag}: the third hit tames it (dizzy, stars), its food drops`, c.tamed === 1 && rats[0].state >= 6 && rats[0].fstate >= 1, JSON.stringify({ c, r0: rats[0] }));
+  check(`bab3-rats ${tag}: the fifth hit tames it (dizzy, stars), its food drops`, c.tamed === 1 && rats[0].state >= 6 && rats[0].fstate >= 1, JSON.stringify({ c, r0: rats[0] }));
   const info = await d3Info(page);
   void info;
   check(`bab3-rats ${tag}: the tamed rat is saved`, JSON.stringify((await ch3Info(page)).save.bab3.tamed) === '[0]', JSON.stringify((await ch3Info(page)).save.bab3));
@@ -8892,8 +8896,7 @@ async function bab3RatsScenario(page, check, touch) {
   check(`bab3-rats ${tag}: after the dizzy hop the rat runs down a drain (gone, not hurt), the bakpao lies on the street`, rats[0].state === 8 && rats[0].fstate === 2 && c.dropped === 1, JSON.stringify({ r0: rats[0], c }));
   // ---- Stomp counts as one hit (Superglen landing next to rat 1, north on the x-street 93,-16) ----
   if (!touch) {
-    await page.evaluate(() => window.__ch3.hit(1)); // 3 -> 2 hit points so that one stomp finishes it
-    await page.evaluate(() => window.__ch3.hit(1)); // 2 -> 1
+    for (let k = 0; k < 4; k++) await page.evaluate(() => window.__ch3.hit(1)); // 5 -> 1 hit point so that one stomp finishes it
     const r1 = (await ch3Rats(page))[1];
     await d3Go(page, r1.x + 0.2, r1.z + 2.0, 3);
     await d3Press(page, 'Space', 70);
@@ -9095,7 +9098,7 @@ async function bab4AaraScenario(page, check, touch) {
   // Perf at the school with Aara in view.
   const d0 = await ch3Draw(page, -23, -93);
   console.log(`   [bab4-aara ${tag}] school draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   await d3Go(page, -24, -93, 20);
   await d3Adv(page, 20);
   h = await ch4Handle(page);
@@ -9146,7 +9149,7 @@ async function bab4CluesScenario(page, check, touch) {
   check(`bab4-clues ${tag}: the first board stands on the park's north path, the beam leads to it, no beacon yet`, c.phase === 'paper' && c.paper && c.paper.visible && Math.abs(c.paper.x + 113.5) < 0.5 && c.beacon && !c.beacon.visible && (await ch4Info(page)).obj === true, JSON.stringify(c));
   const d0 = await ch3Draw(page, -113.5, -111);
   console.log(`   [bab4-clues ${tag}] park draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // Walk in: Aara points out the board.
   await d3Go(page, -113.5, -102, 10);
   const seen = [];
@@ -9294,7 +9297,7 @@ async function combatScenario(page, check, touch) {
   // ---- Perf budget at the market with the fight on ----
   await page.evaluate(() => window.__ch3.mute(true));
   const d0 = await ch3Draw(page);
-  check(`combat ${tag}: at the market (rats calm, hit points hidden) <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`combat ${tag}: at the market (rats calm, hit points hidden) <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   await page.evaluate(() => { window.__ch3.mute(false); window.__ch3.attack(1, 0); window.__ch3.attack(2, 0); });
   await d3Adv(page, 20);
   const dd = await page.evaluate(() => window.__ch3.rats().map((r) => r.state));
@@ -9313,13 +9316,13 @@ async function combatScenario(page, check, touch) {
   await d3Adv(page, 14);
   const p1 = await d3Player(page);
   h = await hSt(page);
-  check(`combat ${tag}: a hit costs one heart (stars, boing), a small push away, and 1.5 s of being safe`, r1 === 'hit' && h.hearts === 4 && h.inv && p0.x - p1.x > 0.4, JSON.stringify({ r1, h, dx: p0.x - p1.x }));
+  check(`combat ${tag}: a hit costs one heart (stars, boing), a small push away, and 1.2 s of being safe`, r1 === 'hit' && h.hearts === 4 && h.inv && p0.x - p1.x > 0.4, JSON.stringify({ r1, h, dx: p0.x - p1.x }));
   const r2 = await page.evaluate(([x, z]) => window.__superglen.health.hurt(x, z), [p1.x + 2, p1.z]);
   check(`combat ${tag}: while safe nothing else hurts`, r2 === 'ignored' && (await hSt(page)).hearts === 4, r2);
   check(`combat ${tag}: hearts are saved`, (await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).hearts)) === 4, '');
   await d3Adv(page, 100);
   h = await hSt(page);
-  check(`combat ${tag}: after about 1.5 s he can be hurt again`, !h.inv, JSON.stringify(h));
+  check(`combat ${tag}: after about 1.2 s he can be hurt again`, !h.inv, JSON.stringify(h));
   // ---- Shield blocks a hit from the front ----
   await page.evaluate(() => window.__superglen.health.fill());
   await page.keyboard.down('k');
@@ -9331,7 +9334,7 @@ async function combatScenario(page, check, touch) {
   check(`combat ${tag}: the shield blocks a hit from the front (no heart lost)`, rb === 'blocked' && h.hearts === 5 && h.blocks === 1, JSON.stringify({ rb, h }));
   await page.keyboard.up('k');
   await d3Adv(page, 40);
-  // ---- The rat's charge: telegraph ~0.8 s, then it dashes; a hit costs one heart ----
+  // ---- The rat's charge: telegraph ~0.6 s, then it dashes; a hit costs one heart ----
   await page.evaluate(() => window.__ch3.mute(true));
   const rat3 = (await ch3Rats(page))[3];
   const along = Math.abs(rat3.z) <= 3.75 ? [-3.8, 0] : [0, 3.8];
@@ -9340,7 +9343,7 @@ async function combatScenario(page, check, touch) {
   await page.evaluate(() => window.__superglen.health.fill());
   await page.evaluate(() => window.__ch3.attack(3, 0));
   const w = await ratUntil(page, 3, (r) => r.state === 2, 120, 1);
-  check(`combat ${tag}: a charge is announced by a wind-up of about 0.8 s (shaking, puffs, arrow) before the dash`, w && w.f >= 38 && w.f <= 60, JSON.stringify(w));
+  check(`combat ${tag}: a charge is announced by a wind-up of about 0.6 s (shaking, puffs, arrow) before the dash`, w && w.f >= 30 && w.f <= 46, JSON.stringify(w));
   const ch = await ratUntil(page, 3, (r) => r.state === 3, 120, 1);
   h = await hSt(page);
   check(`combat ${tag}: the charge that touches Glen costs one heart; the rat then pants (easy to hit)`, ch && h.hearts === 4 && h.inv && (await page.evaluate(() => window.__ch3.combat().hurtGlen)) === hurt0 + 1, JSON.stringify({ ch, h, hurt0 }));
@@ -9455,11 +9458,11 @@ async function combatScenario(page, check, touch) {
 async function combatEasyScenario(page, check) {
   await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] }, settings: { easyJump: true, easyFight: true, sound: true, music: true, musicVol: 1, sfxVol: 1 } }));
   const rats = await ch3Rats(page);
-  check('combat easy: with "Mode mudah" every rat needs only 2 hits', rats.every((r) => r.hp === 2), JSON.stringify(rats.map((r) => r.hp)));
+  check('combat easy: with "Mode mudah" every rat needs only 3 hits (the old normal), not 5', rats.every((r) => r.hp === 3), JSON.stringify(rats.map((r) => r.hp)));
   await page.evaluate(() => window.__ch3.setRng(0.99));
-  await page.evaluate(() => { window.__ch3.hit(0); window.__ch3.hit(0); });
+  await page.evaluate(() => { window.__ch3.hit(0); window.__ch3.hit(0); window.__ch3.hit(0); });
   const c = await ch3Counts(page);
-  check('combat easy: two hits tame a rat', c.tamed === 1, JSON.stringify(c));
+  check('combat easy: three hits tame a rat', c.tamed === 1, JSON.stringify(c));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -9626,20 +9629,20 @@ async function bab5FightScenario(page, check, touch) {
   await d3Adv(page, 30);
   let h = await hSt(page);
   let b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: step "city": the snake is coiled in the school field, full stars (3), not awake yet`, b.stars === 3 && b.phase === 'idle' && b.enabled === false && Math.abs(b.pos.x - BOSS.x) < 0.1 && Math.abs(b.pos.z - BOSS.z) < 0.1, JSON.stringify(b));
+  check(`bab5-fight ${tag}: step "city": the snake is coiled in the school field, full stars (5), not awake yet`, b.stars === 5 && b.phase === 'idle' && b.enabled === false && Math.abs(b.pos.x - BOSS.x) < 0.1 && Math.abs(b.pos.z - BOSS.z) < 0.1, JSON.stringify(b));
   check(`bab5-fight ${tag}: the star counter is hidden until the fight`, await page.evaluate(() => !document.querySelector('.ch5-stars.show')), '');
   // ---- Perf at the fight spot (coiled, engaged) ----
   await page.evaluate(() => window.__ch5.mute(true));
   const d0 = await ch5Draw(page, -62, -62);
   console.log(`   [bab5-fight ${tag}] fight spot (coiled): ${d0.calls} draw calls, ${d0.tris} triangles`);
-  check(`bab5-fight ${tag}: at the fight spot <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab5-fight ${tag}: at the fight spot <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // ---- Intro (first time near): Nino explains the pattern; then the fight starts ----
   const wi = await ch4Watch(page, 700, 'ch5Scene', null, 'kota', 'fight');
   check(`bab5-fight ${tag}: coming close: Nino announces "melar lurus", jump aside or shield`, wi.seen.some((l) => /melar lurus/.test(l) && /perisai/.test(l)), JSON.stringify(wi.seen));
   h = await ch5Info(page);
   b = await ch5Boss(page);
   const eng = await page.evaluate(() => ({ e: window.__ch5.engaged(), hud: (() => { const e = document.querySelector('.ch5-stars'); if (!e) return null; const r = e.getBoundingClientRect(); const hr = window.__superglen.health.rect; return { shown: e.classList.contains('show'), n: e.querySelectorAll('.ch5-star:not(.lost)').length, r: { x: r.left, y: r.top, w: r.width, h: r.height }, hr }; })() }));
-  check(`bab5-fight ${tag}: after the intro step "fight" is saved, the snake is awake, 3 stars show under the hearts without overlap`, h.step === 'fight' && h.save.bab5.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 3 && eng.hud.r.y >= eng.hud.hr.y + eng.hud.hr.h - 2 && eng.hud.r.x >= 0 && eng.hud.r.x + eng.hud.r.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
+  check(`bab5-fight ${tag}: after the intro step "fight" is saved, the snake is awake, 5 stars show under the hearts without overlap`, h.step === 'fight' && h.save.bab5.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 5 && eng.hud.r.y >= eng.hud.hr.y + eng.hud.hr.h - 2 && eng.hud.r.x >= 0 && eng.hud.r.x + eng.hud.r.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
   // Mastered by hand from here: no attack starts on its own.
   await page.evaluate(() => window.__ch5.mute(true));
   await d3Adv(page, 420); // the dialog lines are over
@@ -9675,8 +9678,12 @@ async function bab5FightScenario(page, check, touch) {
   let k0 = await sk(page);
   await d3Press(page, 'j', 4);
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: a laser hit on the glowing head takes one star (3 -> 2)`, b.stars === 2 && b.laserCounted === 1 && (await sk(page)).hits === k0.hits + 1 && b.vulnerable === false, JSON.stringify([b.stars, b.laserCounted, await sk(page)]));
-  check(`bab5-fight ${tag}: the star counter shows 2 full stars`, (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 2, '');
+  check(`bab5-fight ${tag}: the first laser hit on the glowing head only makes a half hit (the star stays, shown faded), the head still glows`, b.stars === 5 && b.hitsGot === 1 && b.partialHits === 1 && b.laserCounted === 1 && b.vulnerable === true && (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star.half').length)) === 1, JSON.stringify([b.stars, b.hitsGot, b.partialHits, b.vulnerable]));
+  await d3Adv(page, 28); // the laser repeats every 0.45 s
+  await d3Press(page, 'j', 4);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: the second laser hit in the same window takes one star (5 -> 4)`, b.stars === 4 && b.laserCounted === 2 && (await sk(page)).hits === k0.hits + 2 && b.vulnerable === false && b.hitsGot === 0, JSON.stringify([b.stars, b.laserCounted, await sk(page)]));
+  check(`bab5-fight ${tag}: the star counter shows 4 full stars`, (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 4, '');
   await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
   const e0 = (await ch5Boss(page)).laserEarly;
   await ch5Stand(page, -64.5, -72.5);
@@ -9687,7 +9694,7 @@ async function bab5FightScenario(page, check, touch) {
   k0 = await sk(page);
   await d3Press(page, 'j', 4);
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: a laser hit on the head while it does NOT glow takes no star (still 2) and Nino says to wait`, b.stars === 2 && b.laserEarly === e0 + 1 && (await sk(page)).hits === k0.hits + 1, JSON.stringify([b.stars, b.laserEarly, e0]));
+  check(`bab5-fight ${tag}: a laser hit on the head while it does NOT glow takes no star (still 4) and Nino says to wait`, b.stars === 4 && b.laserEarly === e0 + 1 && (await sk(page)).hits === k0.hits + 1, JSON.stringify([b.stars, b.laserEarly, e0]));
   let sawBelum = false;
   for (let i = 0; i < 40 && !sawBelum; i++) {
     await d3Adv(page, 20);
@@ -9703,8 +9710,8 @@ async function bab5FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch5.lunge());
   const hit = await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
   h = await hSt(page);
-  check(`bab5-fight ${tag}: standing in the stripe the lunge costs one heart (5 -> 4), stars and boing, then he is safe for 1.5 s`, hit && h.hearts === 4 && h.inv && hit.b.hurtGlen === hp0 + 1 && hit.b.dizzyKind === 'hit', JSON.stringify([h, hit && hit.b.dizzyKind]));
-  check(`bab5-fight ${tag}: after a hit on Glen the snake's dizzy window is short (<= 2 s), after a miss it is longer`, hit && hit.b.dizzyLeft <= 1.85, JSON.stringify(hit && hit.b.dizzyLeft));
+  check(`bab5-fight ${tag}: standing in the stripe the lunge costs one heart (5 -> 4), stars and boing, then he is safe for 1.2 s`, hit && h.hearts === 4 && h.inv && hit.b.hurtGlen === hp0 + 1 && hit.b.dizzyKind === 'hit', JSON.stringify([h, hit && hit.b.dizzyKind]));
+  check(`bab5-fight ${tag}: after a hit on Glen the snake's dizzy window is short (1.4 s), after a miss it is longer (2.2 s)`, hit && hit.b.dizzyLeft <= 1.45, JSON.stringify(hit && hit.b.dizzyLeft));
   await bossUntil(page, (x) => x.phase === 'idle', 400, 4);
   // ---- Shield: the lunge is blocked, the snake bonks its nose, dizzy longer ----
   await page.evaluate(() => window.__superglen.health.fill());
@@ -9716,7 +9723,7 @@ async function bab5FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch5.lunge());
   const blk = await bossUntil(page, (x) => x.phase === 'dizzy', 200, 1);
   h = await hSt(page);
-  check(`bab5-fight ${tag}: with the shield up the lunge is blocked: no heart lost, the snake stops short and is dizzy (longer window)`, blk && h.hearts === 5 && blk.b.dizzyKind === 'block' && blk.b.ext < 8.5 && blk.b.dizzyLeft > 4 && (await sk(page)).blocks > bl0, JSON.stringify([h.hearts, blk && blk.b, await sk(page)]));
+  check(`bab5-fight ${tag}: with the shield up the lunge is blocked: no heart lost, the snake stops short and is dizzy (longer window)`, blk && h.hearts === 5 && blk.b.dizzyKind === 'block' && blk.b.ext < 8.5 && blk.b.dizzyLeft > 3.1 && blk.b.dizzyLeft < 3.3 && (await sk(page)).blocks > bl0, JSON.stringify([h.hearts, blk && blk.b, await sk(page)]));
   await page.keyboard.up('k');
   await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
   // ---- Jumping / flying over the stripe: feet above the body = no touch ----
@@ -9758,19 +9765,19 @@ async function bab5FightScenario(page, check, touch) {
   b = await ch5Boss(page);
   const pp = await d3Player(page);
   const resets = await page.evaluate(() => window.__ch5.counts().resets);
-  check(`bab5-fight ${tag}: at zero hearts he rests at the Rumah Sakit with full hearts (was ${starsBefore} stars) and the fight resets: snake back to 3 stars, asleep until he returns`, h.exh === 1 && h.hearts === 5 && b.stars === 3 && b.enabled === false && resets === 1 && Math.hypot(pp.x - BOSS.x, pp.z - BOSS.z) > 40, JSON.stringify([h, b.stars, b.enabled, resets, pp]));
+  check(`bab5-fight ${tag}: at zero hearts he rests at the Rumah Sakit with full hearts (was ${starsBefore} stars) and the fight resets: snake back to 5 stars, asleep until he returns`, h.exh === 1 && h.hearts === 5 && b.stars === 5 && b.enabled === false && resets === 1 && Math.hypot(pp.x - BOSS.x, pp.z - BOSS.z) > 40, JSON.stringify([h, b.stars, b.enabled, resets, pp]));
   check(`bab5-fight ${tag}: Nino encourages after the rest and says the snake still waits`, sawSemangat && sawLagi, JSON.stringify([sawSemangat, sawLagi]));
-  check(`bab5-fight ${tag}: the star counter is hidden again (3 full stars when he is back)`, await page.evaluate(() => !document.querySelector('.ch5-stars.show')), '');
+  check(`bab5-fight ${tag}: the star counter is hidden again (5 full stars when he is back)`, await page.evaluate(() => !document.querySelector('.ch5-stars.show')), '');
   // ---- Back at the field: awake again, no second intro ----
   await ch5Stand(page, ...EAST);
   await d3Adv(page, 60);
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: coming back the snake is awake again with 3 stars (no second intro scene)`, b.enabled === true && b.stars === 3 && (await page.evaluate(() => window.__ch5.engaged())), JSON.stringify(b));
+  check(`bab5-fight ${tag}: coming back the snake is awake again with 5 stars (no second intro scene)`, b.enabled === true && b.stars === 5 && (await page.evaluate(() => window.__ch5.engaged())), JSON.stringify(b));
   // ---- Reload at "fight" ----
   await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
   const r = await ch5Info(page);
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: after a reload at "fight" the snake has full stars again, the step stays "fight"`, r.step === 'fight' && b.stars === 3 && r.save.bab5.step === 'fight', JSON.stringify([r.step, b.stars]));
+  check(`bab5-fight ${tag}: after a reload at "fight" the snake has full stars again, the step stays "fight"`, r.step === 'fight' && b.stars === 5 && r.save.bab5.step === 'fight', JSON.stringify([r.step, b.stars]));
   // ---- Perf with the body stretched out and the glow on ----
   await page.evaluate(() => { window.__ch5.mute(true); });
   await ch5Stand(page, ...SIDE);
@@ -9793,22 +9800,60 @@ async function bab5FightScenario(page, check, touch) {
     return { calls, tris };
   }, SIDE);
   console.log(`   [bab5-fight ${tag}] fight spot (stretched, dizzy, glow): ${d1.calls} draw calls, ${d1.tris} triangles`);
-  check(`bab5-fight ${tag}: with the body stretched, the glow and particles still <= 60 draw calls and <= 65000 triangles`, d1.calls <= 60 && d1.tris <= 65000, JSON.stringify(d1));
-  // ---- The last star: tamed, sorry, slithers off, chapter done ----
+  check(`bab5-fight ${tag}: with the body stretched, the glow and particles still <= 60 draw calls and <= 100000 triangles`, d1.calls <= 60 && d1.tris <= 100000, JSON.stringify(d1));
+  // ---- Later stars: after 2 stars are lost a double lunge (two stripes in a row), after 4 a sweep (bent stripe) ----
+  await page.evaluate(() => { window.__ch5.takeStar(); window.__ch5.takeStar(); });
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch5Stand(page, ...EAST);
+  await d3Adv(page, 5);
+  b = await ch5Boss(page);
+  const l0 = b.lunges;
+  const dbl0 = b.doubles;
+  await page.evaluate(() => window.__ch5.lunge());
+  await bossUntil(page, (x) => x.phase === 'wind', 20, 1);
+  await d3Adv(page, 28);
+  await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), SIDE); // aside after the lock
+  await bossUntil(page, (x) => x.phase === 'retract', 120, 1);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: with 3 stars left the snake lunges twice: after the first lunge it pulls back quickly (not dizzy yet)`, b.vulnerable === false && b.phase === 'retract' && b.lunges === l0 + 1 && b.doubles === dbl0 + 1, JSON.stringify([b.phase, b.lunges, b.doubles, b.vulnerable]));
+  const w2 = await bossUntil(page, (x) => x.phase === 'wind', 40, 1);
+  await d3Adv(page, 22);
+  check(`bab5-fight ${tag}: the second stripe shows (shorter wind-up) and then the second lunge comes`, w2 && (await ch5Boss(page)).stripe === true, JSON.stringify(w2 && w2.f));
+  await ch5Stand(page, ...EAST);
+  const w2l = await bossUntil(page, (x) => x.phase === 'dizzy', 120, 1);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: the second lunge ends the combo: dizzy after it (only now the head glows), two lunges in all`, w2l && b.lunges === l0 + 2 && b.vulnerable === true && b.comboLeft === 0, JSON.stringify(b));
+  await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
   await page.evaluate(() => { window.__ch5.takeStar(); window.__ch5.takeStar(); });
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: with one star left the counter shows 1`, b.stars === 1 && (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 1, JSON.stringify(b.stars));
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch5Stand(page, -63.7, -72.5);
+  await d3Adv(page, 5);
+  const sw0 = b.sweeps;
+  const hp2 = b.hurtGlen;
+  await page.evaluate(() => window.__ch5.lunge());
+  await bossUntil(page, (x) => x.phase === 'wind', 20, 1);
+  await d3Adv(page, 20);
+  b = await ch5Boss(page);
+  check(`bab5-fight ${tag}: with 1 star left the lunge is a sweep: the stripe is bent (curve ${b.curve}), no double lunge any more`, Math.abs(b.curve) > 0.05 && b.sweeps === sw0 + 1 && b.stripe === true && b.stars === 1, JSON.stringify(b));
+  if (!touch) await ch5Shot(page, 'bab5-sweep'); else await ch5Shot(page, 'bab5-sweep-touch');
+  const swd = await bossUntil(page, (x) => x.phase === 'dizzy', 160, 1);
+  check(`bab5-fight ${tag}: the bent lunge still reaches Glen who stood in the stripe (one heart), the head ends near him`, swd && swd.b.hurtGlen === hp2 + 1 && (await hSt(page)).hearts === 4, JSON.stringify(swd && swd.b));
+  check(`bab5-fight ${tag}: with one star left the counter shows 1`, (await ch5Boss(page)).stars === 1 && (await page.evaluate(() => document.querySelectorAll('.ch5-stars .ch5-star:not(.lost)').length)) === 1, '');
   await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
   await ch5Stand(page, ...SIDE);
   await page.evaluate(() => window.__ch5.lunge());
-  const bd = (await bossUntil(page, (x) => x.phase === 'dizzy' && x.vulnerable, 300, 1));
+  const bd = (await bossUntil(page, (x) => x.phase === 'dizzy' && x.vulnerable, 400, 1));
   const hh = (await ch5Boss(page)).head;
   await ch5Stand(page, -62, -74.5, hh.x, hh.z);
   await d3Adv(page, 6);
   const coins0 = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).quiz.coins);
   await d3Press(page, 'j', 3);
+  await d3Adv(page, 28);
+  await d3Press(page, 'j', 3);
   const wt = await ch4Watch(page, 2100, 'ch5Scene', { tamed: `bab5-tamed${touch ? '-touch' : ''}` });
-  check(`bab5-fight ${tag}: the third star tames it: it says sorry (hissy), Nino cheers, it slithers off, Nino hints at the big rats (in order)`, bd && orderOk(wt.seen, ['Sssssori', 'Hebat, Superglen', 'aku pulang ke hutan', 'tikus besar']), JSON.stringify(wt.seen));
+  check(`bab5-fight ${tag}: the fifth star (second hit of the last one) tames it: it says sorry (hissy), Nino cheers, it slithers off, Nino hints at the big rats (in order)`, bd && orderOk(wt.seen, ['Sssssori', 'Hebat, Superglen', 'aku pulang ke hutan', 'tikus besar']), JSON.stringify(wt.seen));
   check(`bab5-fight ${tag}: controls were locked during the scene; "Chapter 5 selesai!" star shown`, wt.locked > 5 && wt.star, JSON.stringify([wt.locked, wt.star]));
   await d3Adv(page, 120);
   const fin = await ch5Info(page);
@@ -9830,7 +9875,8 @@ async function bab5EasyScenario(page, check) {
   const l = await bossUntil(page, (x) => x.phase === 'lunge', 300, 1);
   check('bab5-easy: with "Mode mudah" the wind-up is slower (about 1.8 s = 108 frames)', w && l && l.f >= 100 && l.f <= 118, JSON.stringify([w && w.f, l && l.f]));
   const d = await bossUntil(page, (x) => x.phase === 'dizzy', 100, 1);
-  check('bab5-easy: the dizzy window is longer (3.4 s x 1.5 = 5.1 s after a miss)', d && d.b.dizzyKind === 'miss' && d.b.dizzyLeft > 4.9, JSON.stringify(d && d.b.dizzyLeft));
+  check('bab5-easy: the snake has only 3 stars, one laser hit each, and never lunges twice or sweeps', d && d.b.maxStars === 3 && d.b.stars === 3 && d.b.doubles === 0 && d.b.sweeps === 0 && d.b.curve === 0, JSON.stringify(d && d.b));
+  check('bab5-easy: the dizzy window is longer (2.2 s x 2.2 = 4.84 s after a miss)', d && d.b.dizzyKind === 'miss' && d.b.dizzyLeft > 4.7, JSON.stringify(d && d.b.dizzyLeft));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -9932,14 +9978,14 @@ async function bab6FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch6.mute(true));
   const d0 = await ch6Draw(page, ARENA6.x, 36);
   console.log(`   [bab6-fight ${tag}] fight spot (asleep): ${d0.calls} draw calls, ${d0.tris} triangles`);
-  check(`bab6-fight ${tag}: at the fight spot <= 60 draw calls and <= 65000 triangles (city life present)`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab6-fight ${tag}: at the fight spot <= 60 draw calls and <= 100000 triangles (city life present)`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // The intro scene starts by itself when the child is near.
-  const wi = await ch4Watch(page, 1300, 'ch6Scene', null, 'kota', 'fight');
+  const wi = await ch4Watch(page, 2400, 'ch6Scene', null, 'kota', 'fight');
   check(`bab6-fight ${tag}: coming close: he eats and boasts, Glen demands the food, Nino explains "makanan bersinar" (in order)`, orderOk(wi.seen, ['Makin banyak kumakan', 'Kembalikan makanan', 'mahkotaku', 'makanannya bersinar']), JSON.stringify(wi.seen));
   let h = await ch6Info(page);
   let b = await ch6Boss(page);
   const eng = await page.evaluate(() => ({ e: window.__ch6.engaged(), hud: (() => { const e = document.querySelector('.ch6-stars'); if (!e) return null; const r = e.getBoundingClientRect(); return { shown: e.classList.contains('show'), n: e.querySelectorAll('.ch5-star:not(.lost)').length, y: r.top, x: r.left, w: r.width }; })() }));
-  check(`bab6-fight ${tag}: after the intro step "fight" is saved, he is awake and 3 stars show`, h.step === 'fight' && h.save.bab6.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 3 && eng.hud.x >= 0 && eng.hud.x + eng.hud.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
+  check(`bab6-fight ${tag}: after the intro step "fight" is saved, he is awake and 5 stars show`, h.step === 'fight' && h.save.bab6.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 5 && eng.hud.x >= 0 && eng.hud.x + eng.hud.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
   await page.evaluate(() => { window.__ch6.mute(true); window.__ch6.idle(); });
   await ch6Stand(page, ...FAR6);
   await d3Adv(page, 10);
@@ -9952,17 +9998,17 @@ async function bab6FightScenario(page, check, touch) {
   check(`bab6-fight ${tag}: the glowing pile is drawn with its glow`, b.pileGlow === true, JSON.stringify(b.pileGlow));
   await ch6Shot(page, sn('cue'));
   const toRun = await rakusUntil(page, (x) => x.phase === 'run', 200, 1);
-  check(`bab6-fight ${tag}: the cue lasts about 1.7 s (96-112 frames) before he runs to the pile`, toRun && toRun.f + 6 >= 94 && toRun.f + 6 <= 114, JSON.stringify(toRun && toRun.f));
+  check(`bab6-fight ${tag}: the cue lasts about 1.2 s (66-80 frames) before he runs to the pile`, toRun && toRun.f + 6 >= 66 && toRun.f + 6 <= 82, JSON.stringify(toRun && toRun.f));
   const toEat = await rakusUntil(page, (x) => x.phase === 'eat', 300, 1);
   check(`bab6-fight ${tag}: he runs to the pile and starts to eat`, !!toEat, JSON.stringify(toEat && toEat.f));
   await d3Adv(page, 30);
   await ch6Shot(page, sn('eat'));
   const grown = await rakusUntil(page, (x) => x.eaten === 1, 260, 1);
   b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: eating takes about 2 s (90-125 frames more), then he grows one size step (0 -> 1), the pile is eaten`, grown && b.level === 1 && b.piles[0].alive === false && b.eaten === 1 && grown.f + 30 >= 100 && grown.f + 30 <= 135, JSON.stringify([grown && grown.f, b.level, b.eaten]));
+  check(`bab6-fight ${tag}: eating takes about 1.4 s (78-110 frames in all), then he grows one size step (0 -> 1), the pile is eaten`, grown && b.level === 1 && b.piles[0].alive === false && b.eaten === 1 && grown.f + 30 >= 76 && grown.f + 30 <= 110, JSON.stringify([grown && grown.f, b.level, b.eaten]));
   await d3Adv(page, 40);
   b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: he really is bigger now (height > 2.0 m), still no heart lost`, b.height > 2.0 && b.stars === 3 && (await hSt(page)).hearts === 5, JSON.stringify([b.height, (await hSt(page)).hearts]));
+  check(`bab6-fight ${tag}: he really is bigger now (height > 2.0 m), still no heart lost`, b.height > 2.0 && b.stars === 5 && (await hSt(page)).hearts === 5, JSON.stringify([b.height, (await hSt(page)).hearts]));
   // ---- Saving a pile prevents growth ----
   await page.evaluate(() => { window.__ch6.idle(); window.__ch6.setLevel(0); });
   await ch6Stand(page, ...FAR6);
@@ -10058,25 +10104,61 @@ async function bab6FightScenario(page, check, touch) {
   await d3Adv(page, 20);
   await page.evaluate(() => window.__ch6.laser('tikusRakus'));
   b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: a laser hit on him while he goes for food takes no star (still 3, early hit counted)`, b.stars === 3 && b.laserEarly === le0 + 1, JSON.stringify([b.stars, b.laserEarly]));
+  check(`bab6-fight ${tag}: a laser hit on him while he goes for food takes no star (still 5, early hit counted)`, b.stars === 5 && b.laserEarly === le0 + 1, JSON.stringify([b.stars, b.laserEarly]));
   await page.evaluate(() => window.__ch6.idle());
   // ---- Shrink per star ----
   await page.evaluate(() => window.__ch6.setLevel(3));
   b = await ch6Rel(page, 8.0);
   check(`bab6-fight ${tag}: at the biggest step he is slower (2.4 vs 4.4 m/s) and the ring is bigger (6.0 vs 3.0 m), taller than 2.8 m`, b.level === 3 && b.speed === 2.4 && Math.abs(b.ringNow - 6.0) < 0.01 && b.height > 2.8, JSON.stringify([b.level, b.speed, b.ringNow, b.height]));
+  // The slam at the biggest size is a DOUBLE ring: a second wave follows the first one (Glen stands outside, 7 m).
+  const dbl0 = (await ch6Boss(page)).doubles;
   await page.evaluate(() => window.__ch6.slam());
   await rakusUntil(page, (x) => x.phase === 'dizzy', 140, 1);
   await d3Adv(page, 24);
+  b = await ch6Boss(page);
+  check(`bab6-fight ${tag}: at size step 3 the slam is a double ring: the first wave is over, a second one is announced (the ring blinks again)`, b.doubles === dbl0 + 1 && b.wave2 === true && b.ringShown === true && b.waveDone === true, JSON.stringify([b.doubles, b.wave2, b.ringShown, b.waveDone]));
+  await d3Adv(page, 36);
+  b = await ch6Boss(page);
+  check(`bab6-fight ${tag}: ... and then the second wave runs out (a second slam sound, no extra rest time)`, b.wave2 === false && b.waveDone === false || b.wave2 === false && b.waveDone === true, JSON.stringify([b.wave2, b.waveDone]));
+  await page.evaluate(() => window.__ch6.idle());
+  await d3Adv(page, 90);
+  // Standing in the ring: the first wave costs one heart, the second one cannot hurt in the same moment (the safe seconds).
+  await page.evaluate(() => window.__superglen.health.fill());
+  await ch6Rel(page, 2.5);
+  const hpd = (await ch6Boss(page)).hurtGlen;
+  await page.evaluate(() => window.__ch6.slam());
+  await rakusUntil(page, (x) => x.phase === 'dizzy', 140, 1);
+  await d3Adv(page, 80);
+  b = await ch6Boss(page);
+  check(`bab6-fight ${tag}: a double ring costs one heart in all (5 -> 4), never two`, b.hurtGlen === hpd + 1 && (await hSt(page)).hearts === 4, JSON.stringify([b.hurtGlen, hpd, (await hSt(page)).hearts]));
+  await page.evaluate(() => { window.__superglen.health.fill(); window.__ch6.idle(); });
+  await d3Adv(page, 120);
+  // Each star needs 2 hits in one out-of-breath window; he shrinks one step only every second star.
+  const rakusStar = async () => {
+    await page.evaluate(() => window.__ch6.slam());
+    await rakusUntil(page, (x) => x.phase === 'dizzy', 140, 1);
+    await d3Adv(page, 24);
+    const g = await ch6Boss(page);
+    await ch6Stand(page, g.pos.x + 7, g.pos.z, g.aim.x, g.aim.z);
+    await d3Adv(page, 4);
+    await d3Press(page, 'j', 3);
+    const first = await ch6Boss(page);
+    await d3Adv(page, 28);
+    await d3Press(page, 'j', 3);
+    await d3Adv(page, 50);
+    return { first, after: await ch6Boss(page) };
+  };
   const sh0 = (await ch6Boss(page)).height;
   const k0 = (await sk(page)).hits;
-  const gz = await ch6Boss(page);
-  await ch6Stand(page, gz.pos.x + 5, gz.pos.z, gz.aim.x, gz.aim.z);
-  await d3Adv(page, 4);
-  await d3Press(page, 'j', 3);
-  await d3Adv(page, 50);
-  b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: a laser hit while he is out of breath (glowing) takes one star (3 -> 2) and he shrinks one step (3 -> 2)`, b.stars === 2 && b.level === 2 && b.laserCounted === 1 && (await sk(page)).hits === k0 + 1 && b.height < sh0, JSON.stringify([b.stars, b.level, b.laserCounted, b.height, sh0, await sk(page)]));
-  check(`bab6-fight ${tag}: the star counter shows 2 full stars`, (await page.evaluate(() => document.querySelectorAll('.ch6-stars .ch5-star:not(.lost)').length)) === 2, '');
+  let rs = await rakusStar();
+  check(`bab6-fight ${tag}: the first laser hit while he is out of breath is a half hit (star stays, shown faded); the second takes the star (5 -> 4)`, rs.first.stars === 5 && rs.first.hitsGot === 1 && rs.after.stars === 4 && rs.after.laserCounted === 2 && (await sk(page)).hits === k0 + 2, JSON.stringify([rs.first.stars, rs.first.hitsGot, rs.after.stars, rs.after.laserCounted]));
+  check(`bab6-fight ${tag}: after the FIRST star he stays big (size step 3, no shrink yet)`, rs.after.level === 3 && rs.after.height >= sh0 - 0.01, JSON.stringify([rs.after.level, rs.after.height, sh0]));
+  await page.evaluate(() => window.__ch6.idle());
+  await d3Adv(page, 60);
+  await page.evaluate(() => window.__ch6.setLevel(3));
+  rs = await rakusStar();
+  check(`bab6-fight ${tag}: the second star (4 -> 3): he shrinks one step (3 -> 2)`, rs.after.stars === 3 && rs.after.level === 2 && rs.after.height < sh0, JSON.stringify([rs.after.stars, rs.after.level, rs.after.height, sh0]));
+  check(`bab6-fight ${tag}: the star counter shows 3 full stars`, (await page.evaluate(() => document.querySelectorAll('.ch6-stars .ch5-star:not(.lost)').length)) === 3, '');
   await page.evaluate(() => window.__ch6.idle());
   await d3Adv(page, 4);
   // ---- Helpers ----
@@ -10085,16 +10167,17 @@ async function bab6FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch6.endRound()); // round 1: two Curut Cemberut join
   await d3Adv(page, 10);
   let hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: after round 1 two Curut Cemberut join the fight (3 hit points each), Nino says so`, hs.counts.alive === 2 && hs.counts.spawned === 2 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 3), JSON.stringify(hs));
+  check(`bab6-fight ${tag}: after round 1 two Curut Cemberut join the fight (5 hit points each), Nino says so`, hs.counts.alive === 2 && hs.counts.spawned === 2 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 5), JSON.stringify(hs));
   let sawCurut = false;
   for (let i = 0; i < 80 && !sawCurut; i++) { sawCurut = /Curut Cemberut datang/.test((await ch6Info(page)).line); await d3Adv(page, 10); }
   check(`bab6-fight ${tag}: Nino: "Curut Cemberut datang membantu!"`, sawCurut, '');
   await page.evaluate(() => window.__ch6.endRound()); // round 2: no new wave
-  await page.evaluate(() => window.__ch6.endRound()); // round 3: tops up to 3 at most
+  await page.evaluate(() => window.__ch6.endRound()); // round 3: tops up to 4 at most
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: there are never more than 3 helpers at once`, hs.counts.alive === 3 && hs.counts.spawned === 3, JSON.stringify(hs.counts));
+  check(`bab6-fight ${tag}: there are never more than 4 helpers at once`, hs.counts.alive === 4 && hs.counts.spawned === 4, JSON.stringify(hs.counts));
   await ch6Shot(page, sn('helpers'));
   // A charge hits Glen standing in its line.
+  await page.evaluate(() => window.__superglen.health.fill());
   const hl = await ch6Hel(page);
   const h0 = hl.list.find((x) => x.state !== 0);
   const hd = Math.hypot(ARENA6.x - h0.x, ARENA6.z - h0.z);
@@ -10107,14 +10190,14 @@ async function bab6FightScenario(page, check, touch) {
   hs = await ch6Hel(page);
   check(`bab6-fight ${tag}: a charge that reaches Glen costs one heart (5 -> 4)`, hs.counts.hurtGlen === 1 && (await hSt(page)).hearts === 4 && hs.counts.charges >= 1, JSON.stringify([hs.counts, (await hSt(page)).hearts]));
   await page.evaluate(() => window.__superglen.health.fill());
-  // Three hits tame one: it spins, runs off.
-  await page.evaluate((i) => { window.__ch6.helperHit(i); window.__ch6.helperHit(i); }, h0.i);
+  // Five hits tame one: it spins, runs off.
+  await page.evaluate((i) => { for (let k = 0; k < 4; k++) window.__ch6.helperHit(i); }, h0.i);
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: two hits only make it dizzy (hp 1 left)`, hs.list[h0.i].hp === 1 && hs.counts.tamed === 0, JSON.stringify(hs.list[h0.i]));
+  check(`bab6-fight ${tag}: four hits only make it dizzy (hp 1 left)`, hs.list[h0.i].hp === 1 && hs.counts.tamed === 0, JSON.stringify(hs.list[h0.i]));
   await page.evaluate((i) => window.__ch6.helperHit(i), h0.i);
   await d3Adv(page, 160);
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: the third hit tames it: it runs away and is gone (2 left), nobody hurt`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 2, JSON.stringify([hs.counts, hs.list[h0.i]]));
+  check(`bab6-fight ${tag}: the fifth hit tames it: it runs away and is gone (3 left), nobody hurt`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 3, JSON.stringify([hs.counts, hs.list[h0.i]]));
   await page.evaluate(() => window.__ch6.helpers && 0);
   // ---- Perf: ring up, helpers around ----
   await page.evaluate(() => { window.__ch6.spawnHelpers(1); window.__ch6.setLevel(3); window.__ch6.slam(); });
@@ -10134,7 +10217,7 @@ async function bab6FightScenario(page, check, touch) {
     return { calls, tris };
   }, FAR6);
   console.log(`   [bab6-fight ${tag}] fight spot (ring up, 3 helpers, piles, glow): ${d1.calls} draw calls, ${d1.tris} triangles`);
-  check(`bab6-fight ${tag}: with the ring, helpers and piles <= 60 draw calls and <= 65000 triangles`, d1.calls <= 60 && d1.tris <= 65000, JSON.stringify(d1));
+  check(`bab6-fight ${tag}: with the ring, helpers and piles <= 60 draw calls and <= 100000 triangles`, d1.calls <= 60 && d1.tris <= 100000, JSON.stringify(d1));
   await page.evaluate(() => { window.__ch6.idle(); });
   await d3Adv(page, 60);
   // ---- All hearts gone: rest, reset ----
@@ -10156,18 +10239,18 @@ async function bab6FightScenario(page, check, touch) {
   hs = await ch6Hel(page);
   const pp = await d3Player(page);
   const resets = await page.evaluate(() => window.__ch6.counts().resets);
-  check(`bab6-fight ${tag}: at zero hearts he rests at the Rumah Sakit with full hearts and the fight resets: 3 stars, size step 0, asleep, helpers gone`, h.exh >= 1 && h.hearts === 5 && b.stars === 3 && b.level === 0 && b.enabled === false && hs.counts.alive === 0 && resets >= 1 && Math.hypot(pp.x - ARENA6.x, pp.z - ARENA6.z) > 40, JSON.stringify([h, b.stars, b.level, b.enabled, hs.counts, resets, pp]));
+  check(`bab6-fight ${tag}: at zero hearts he rests at the Rumah Sakit with full hearts and the fight resets: 5 stars, size step 0, asleep, helpers gone`, h.exh >= 1 && h.hearts === 5 && b.stars === 5 && b.level === 0 && b.enabled === false && hs.counts.alive === 0 && resets >= 1 && Math.hypot(pp.x - ARENA6.x, pp.z - ARENA6.z) > 40, JSON.stringify([h, b.stars, b.level, b.enabled, hs.counts, resets, pp]));
   check(`bab6-fight ${tag}: Nino encourages after the rest ("masih di jalan depan gudang")`, sawLagi, '');
   // ---- Reload at "fight" ----
   await ch3Open(page, await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1'))), touch);
   h = await ch6Info(page);
   b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: after a reload at "fight" the step stays "fight", he is back with 3 stars`, h.step === 'fight' && b.stars === 3 && h.save.bab6.step === 'fight', JSON.stringify([h.step, b.stars]));
+  check(`bab6-fight ${tag}: after a reload at "fight" the step stays "fight", he is back with 5 stars`, h.step === 'fight' && b.stars === 5 && h.save.bab6.step === 'fight', JSON.stringify([h.step, b.stars]));
   // ---- Last star: tamed, shrinks to normal, sorry, food goes back ----
   await page.evaluate(() => { window.__ch6.mute(true); });
   await ch6Stand(page, ...FAR6);
   await d3Adv(page, 60);
-  await page.evaluate(() => { window.__ch6.engage(); window.__ch6.idle(); window.__ch6.setLevel(2); window.__ch6.takeStar(); window.__ch6.takeStar(); });
+  await page.evaluate(() => { window.__ch6.engage(); window.__ch6.idle(); window.__ch6.setLevel(2); for (let k = 0; k < 4; k++) window.__ch6.takeStar(); });
   await d3Adv(page, 80);
   b = await ch6Boss(page);
   check(`bab6-fight ${tag}: with one star left the counter shows 1`, b.stars === 1 && (await page.evaluate(() => document.querySelectorAll('.ch6-stars .ch5-star:not(.lost)').length)) === 1, JSON.stringify([b.stars, b.level]));
@@ -10175,8 +10258,10 @@ async function bab6FightScenario(page, check, touch) {
   await rakusUntil(page, (x) => x.phase === 'dizzy' && x.waveDone, 160, 1);
   const coins0 = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).quiz.coins);
   await page.evaluate(() => window.__ch6.laser('tikusRakus'));
-  const wt = await ch4Watch(page, 2600, 'ch6Scene', { tamed: sn('tamed') });
-  check(`bab6-fight ${tag}: the third star tames him: burp, sorry, promise to share, the citizens cheer, Nino praises (in order)`, orderOk(wt.seen, ['Sendawa', 'Maaf ya', 'bagi bersama', 'Makanan kota sudah kembali', 'Hebat, Superglen']), JSON.stringify(wt.seen));
+  await d3Adv(page, 28);
+  await page.evaluate(() => window.__ch6.laser('tikusRakus'));
+  const wt = await ch4Watch(page, 4200, 'ch6Scene', { tamed: sn('tamed') });
+  check(`bab6-fight ${tag}: the fifth star (second hit of the last one) tames him: burp, sorry, promise to share, the citizens cheer, Nino praises (in order)`, orderOk(wt.seen, ['Sendawa', 'Maaf ya', 'bagi bersama', 'Makanan kota sudah kembali', 'Hebat, Superglen']), JSON.stringify(wt.seen));
   check(`bab6-fight ${tag}: controls were locked during the scene; "Chapter 6 selesai!" star shown`, wt.locked > 5 && wt.star, JSON.stringify([wt.locked, wt.star]));
   await d3Adv(page, 150);
   const fin = await ch6Info(page);
@@ -10192,6 +10277,8 @@ async function bab6EasyScenario(page, check) {
   await ch6Stand(page, ...FAR6);
   await d3Adv(page, 60);
   await page.evaluate(() => { window.__ch6.mute(true); window.__ch6.idle(); });
+  const e0 = await ch6Boss(page);
+  check('bab6-easy: with "Mode mudah" he has only 3 stars (one hit each), as before', e0.maxStars === 3 && e0.stars === 3, JSON.stringify([e0.maxStars, e0.stars]));
   await page.evaluate(() => window.__ch6.cue(0));
   const r = await rakusUntil(page, (x) => x.phase === 'run', 300, 1);
   check('bab6-easy: with "Mode mudah" the food cue is longer (2.6 s = about 156 frames)', r && r.f >= 150 && r.f <= 166, JSON.stringify(r && r.f));
@@ -10208,7 +10295,7 @@ async function bab6EasyScenario(page, check) {
   check('bab6-easy: the out-of-breath window is longer (3.0 s x 1.5 = about 4 s left after the wave)', d && d.b.dizzyLeft > 3.7, JSON.stringify(d && d.b.dizzyLeft));
   await page.evaluate(() => window.__ch6.spawnHelpers(1));
   const hs = await ch6Hel(page);
-  check('bab6-easy: helpers need only 2 hits', hs.list.find((x) => x.state !== 0).hp === 2, JSON.stringify(hs.list));
+  check('bab6-easy: helpers need only 3 hits', hs.list.find((x) => x.state !== 0).hp === 3, JSON.stringify(hs.list));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -10354,6 +10441,7 @@ async function hudLayoutScenario(page, check, touch) {
   });
   await sleep(500);
   let v = await verify('dialog');
+  check(`hud-layout ${tag}: the intro scene (before the fight) keeps the normal bubble, not the compact call-out`, await page.evaluate(() => { const d = document.querySelector('.dlg'); return !!d && !d.hidden && !d.classList.contains('compact'); }), '');
   if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `bab5-dialog-${touch ? 'touch' : 'desktop'}.png`) }); }
   check(`hud-layout ${tag}: during a dialog line hearts, pill, stars, food counter, map, gear, bubble and buttons overlap nothing and stay on screen`, v.bad.length === 0 && v.out.length === 0 && ['hearts', 'bubble', 'gear'].every((n) => v.names.includes(n)), JSON.stringify(v));
   // Food counter (chapter 3, never together with the boss stars) next to a dialog line.
@@ -10374,6 +10462,351 @@ async function hudLayoutScenario(page, check, touch) {
   // Tap targets: the gear stays >= 44 px.
   const gear = await page.evaluate(() => { const r = document.querySelector('.set-gear').getBoundingClientRect(); return Math.min(r.width, r.height); });
   check(`hud-layout ${tag}: the gear is >= 44 px`, gear >= 44, String(gear));
+}
+
+
+// ---- Fight length with a scripted competent player (groups `fightlen-snake`, `fightlen-rakus`, `fightlen-rats`) ----------------------------
+// The bot reacts like a good 5-year-old: it needs ~0.35 s to see a locked stripe/ring and then steps out of it (85% of the time, 60%
+// for the second stripe of a double lunge), it waits ~0.5 s after the head starts to glow, then shoots every 0.55 s with 80% accuracy,
+// and it never heals (hearts are refilled by the test only so that the run goes on; the number of refills is reported).
+async function fightBot(page, kind, easy, seed, prof) {
+  return page.evaluate(async ([kind, easy, seed, P]) => {
+    const g = window.__superglen;
+    let sd = seed >>> 0;
+    const rnd = () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296; };
+    const TICK = 3;
+    const out = { log: [], kind, easy, sec: 0, refills: 0, hits: 0, shots: 0, dodgeFails: 0, minHearts: 5, done: false };
+    const fill = () => { const h = g.health; if (h.hearts < out.minHearts) out.minHearts = h.hearts; if (h.hearts <= 1) { h.fill(); out.refills++; } };
+    const cap = 60 * 60 * 12;
+    if (kind === 'snake') {
+      const B = { x: -72.5, z: -72.5 };
+      const c = window.__ch5;
+      let stand = [B.x + 7, B.z];
+      g.placePlayer(stand[0], stand[1]);
+      let prev = '';
+      let decided = false, dodged = false, willDodge = false, dodgeAt = 0, dizzyAt = -1, nextShot = 0, second = false, lunges0 = 0;
+      for (let f = 0; f < cap; f += TICK) {
+        await g.advanceAsync(TICK, false);
+        const t = (f + TICK) / 60;
+        const b = c.boss();
+        out.sec = t;
+        out.stars = b.stars;
+        if (b.stars <= 0) { out.done = true; break; }
+        fill();
+        if (b.phase === 'wind' && prev !== 'wind') { decided = false; dodged = false; second = prev === 'retract'; }
+        if (b.phase === 'wind' && b.locked && !decided) {
+          decided = true;
+          willDodge = rnd() < (second ? P.dodge2 : P.dodge1);
+          if (!willDodge) out.dodgeFails++;
+          dodgeAt = t + P.delay + rnd() * 0.1;
+          out.log.push(`${t.toFixed(2)} lock dir=${b.dir.x.toFixed(2)},${b.dir.z.toFixed(2)} will=${willDodge} second=${second} curve=${b.curve} player=${g.player.x.toFixed(1)},${g.player.z.toFixed(1)} hurt=${b.hurtGlen}`);
+        }
+        if (b.phase === 'wind' && decided && willDodge && !dodged && t >= dodgeAt) {
+          dodged = true;
+          const p = g.player;
+          const px = -b.dir.z;
+          const pz = b.dir.x;
+          // Step aside, to the side that leads back toward the usual stand.
+          const sgn = ((p.x - stand[0]) * px + (p.z - stand[1]) * pz) > 0 ? -1 : 1;
+          g.placePlayer(p.x + px * 4.4 * sgn, p.z + pz * 4.4 * sgn);
+          out.log.push(`${t.toFixed(2)} dodge to ${(p.x + px * 4.4 * sgn).toFixed(1)},${(p.z + pz * 4.4 * sgn).toFixed(1)} phase=${b.phase}`);
+        }
+        if (b.phase === 'dizzy' && b.vulnerable) {
+          if (dizzyAt < 0) { dizzyAt = t; nextShot = t + P.react; }
+          if (t >= nextShot) {
+            nextShot = t + P.cadence;
+            out.shots++;
+            if (rnd() < P.acc) c.laser();
+          }
+        } else dizzyAt = -1;
+        // Far from the stand after a few dodges: walk back (a quick run while the snake rests).
+        if (b.phase === 'idle' || b.phase === 'retract') {
+          const p = g.player;
+          if (Math.hypot(p.x - stand[0], p.z - stand[1]) > 5) g.placePlayer(stand[0], stand[1]);
+        }
+        prev = b.phase;
+      }
+      const b = c.boss();
+      out.lunges = b.lunges; out.doubles = b.doubles; out.sweeps = b.sweeps; out.hits = b.hurtGlen; out.partial = b.partialHits; out.counted = b.laserCounted;
+    } else if (kind === 'rakus') {
+      const A = { x: 111, z: 49 };
+      const c = window.__ch6;
+      const stand = [111, 56.5];
+      g.placePlayer(stand[0], stand[1]);
+      const hWind = {}, hDodge = {}, hDone = {};
+      let prev = '', decided = false, dodgeAt = 0, willDodge = false, dodged = false, nextShot = 0, dizzyAt = -1, cueAt = 0, pileShot = false, pileRound = 0, helperShot = 0;
+      for (let f = 0; f < cap; f += TICK) {
+        await g.advanceAsync(TICK, false);
+        const t = (f + TICK) / 60;
+        const b = c.boss();
+        out.sec = t;
+        out.stars = b.stars;
+        if (b.stars <= 0) { out.done = true; break; }
+        fill();
+        if (b.phase === 'cue' && prev !== 'cue') { cueAt = t; pileShot = false; pileRound++; }
+        if (b.phase === 'cue' && !pileShot && pileRound % 2 === 0 && t >= cueAt + P.react) { pileShot = true; out.shots++; if (rnd() < P.acc) c.laser('rakusPile' + b.pile); }
+        if (b.phase === 'wind' && prev !== 'wind') { decided = false; dodged = false; }
+        if (b.phase === 'wind' && !decided && b.timer > 0.25) {
+          decided = true;
+          willDodge = rnd() < P.dodge1;
+          if (!willDodge) out.dodgeFails++;
+          dodgeAt = t + P.delay * 0.4 + rnd() * 0.15;
+        }
+        if (b.phase === 'wind' && decided && willDodge && !dodged && t >= dodgeAt) {
+          dodged = true;
+          const p = g.player;
+          const dx = p.x - b.pos.x, dz = p.z - b.pos.z;
+          const d = Math.hypot(dx, dz) || 1;
+          if (d < b.ringR + 1.2) g.placePlayer(b.pos.x + (dx / d) * (b.ringR + 1.6), b.pos.z + (dz / d) * (b.ringR + 1.6));
+        }
+        if (b.phase === 'dizzy' && b.vulnerable) {
+          if (dizzyAt < 0) { dizzyAt = t; nextShot = t + P.react; }
+          if (t >= nextShot) { nextShot = t + P.cadence; out.shots++; if (rnd() < P.acc) c.laser('tikusRakus'); }
+        } else {
+          dizzyAt = -1;
+          // The rats of the boss: the bot tames one every 0.7 s while the boss is not out of breath.
+          if (t >= helperShot) {
+            const hs = c.helpers();
+            const mine = hs && hs.list.filter((x) => x.state !== 0 && x.hp > 0);
+            if (mine && mine.length) { helperShot = t + P.cadence + 0.1; out.shots++; if (rnd() < P.acc) c.helperHit(mine[0].i); }
+          }
+        }
+        const hs2 = c.helpers();
+        if (hs2) {
+          for (const h of hs2.list) {
+            if (h.state === 2 && Math.hypot(h.x - g.player.x, h.z - g.player.z) < 10) {
+              if (hWind[h.i] === undefined) { hWind[h.i] = t; hDodge[h.i] = rnd() < P.dodge1; if (!hDodge[h.i]) out.dodgeFails++; }
+              if (hDodge[h.i] && !hDone[h.i] && t >= hWind[h.i] + (easy ? 0.72 : P.delay)) {
+                hDone[h.i] = true;
+                const q = g.player;
+                const dx = q.x - h.x, dz = q.z - h.z;
+                const d = Math.hypot(dx, dz) || 1;
+                g.placePlayer(q.x - (dz / d) * 2.4, q.z + (dx / d) * 2.4);
+              }
+            } else if (hWind[h.i] !== undefined && h.state !== 2) { delete hWind[h.i]; delete hDodge[h.i]; delete hDone[h.i]; }
+          }
+        }
+        const p = g.player;
+        if (b.phase !== 'wind' && b.phase !== 'hop' && Math.hypot(p.x - b.pos.x, p.z - b.pos.z) < 3) g.placePlayer(stand[0], stand[1]);
+        prev = b.phase;
+      }
+      const b = c.boss();
+      out.rounds = b.rounds; out.doubles = b.doubles; out.eaten = b.eaten; out.saved = b.saved; out.hits = b.hurtGlen + (c.helpers() ? c.helpers().counts.hurtGlen : 0);
+      out.helpersSpawned = c.helpers() ? c.helpers().counts.spawned : 0;
+      void A;
+    } else {
+      const c = window.__ch3;
+      g.placePlayer(93, 4);
+      let nextShot = 0;
+      let target = -1;
+      const windAt = {}, wDodge = {}, wDone = {};
+      for (let f = 0; f < cap; f += TICK) {
+        await g.advanceAsync(TICK, false);
+        const t = (f + TICK) / 60;
+        out.sec = t;
+        const cnt = c.counts();
+        out.tamed = cnt.tamed;
+        if (Math.floor(t) % 60 === 0 && Math.floor(t) !== out.lastLog) { out.lastLog = Math.floor(t); out.log.push(`${Math.floor(t)} s tamed=${cnt.tamed} hearts=${g.health.hearts} p=${g.player.x.toFixed(0)},${g.player.z.toFixed(0)} rats=${JSON.stringify(c.rats().filter((r) => r.state < 6).map((r) => [r.i, Math.round(r.x), Math.round(r.z), r.hp, r.state]))}`); }
+        if (cnt.tamed >= 7) { out.done = true; break; }
+        fill();
+        const p = g.player;
+        // Dodge: a rat that winds up (state 1) near the child: after the reaction time he steps sideways (toward the middle of the street).
+        for (const r of c.rats()) {
+          if (r.state === 1 && Math.hypot(r.x - p.x, r.z - p.z) < 10) {
+            if (windAt[r.i] === undefined) { windAt[r.i] = t; wDodge[r.i] = rnd() < P.dodge1; if (!wDodge[r.i]) out.dodgeFails++; }
+            if (wDodge[r.i] && !wDone[r.i] && t >= windAt[r.i] + (easy ? 0.72 : P.delay)) {
+              wDone[r.i] = true;
+              const onZ = Math.abs(p.z) < 3.8 && !(Math.abs(p.x - 93) < 3.8 && Math.abs(p.z) > 3.8);
+              const lat = 2.4;
+              if (onZ && Math.abs(p.x - 93) > 3.8) g.placePlayer(p.x, p.z + (p.z > 0 ? -lat : lat));
+              else g.placePlayer(p.x + (p.x > 93 ? -lat : lat), p.z);
+            }
+          } else if (windAt[r.i] !== undefined && r.state !== 1) { delete windAt[r.i]; delete wDodge[r.i]; delete wDone[r.i]; }
+        }
+        const rats = c.rats().filter((r) => r.state < 6);
+        if (!rats.length) continue;
+        let best = null, bd = 1e9;
+        for (const r of rats) { const d = Math.hypot(r.x - p.x, r.z - p.z); if (d < bd) { bd = d; best = r; } }
+        target = best.i;
+        if (bd > 4.5) {
+          // Walk along the streets (a cross: the z-street along x at z 0, the x-street along z at x 93), never through the kiosks.
+          let gx = best.x, gz = best.z;
+          const tZ = Math.abs(best.z) < 4.2;
+          const tX = Math.abs(best.x - 93) < 4.2;
+          const pZ = Math.abs(p.z) < 2.6;
+          const pX = Math.abs(p.x - 93) < 2.6;
+          if (tZ && !pZ) { gx = 93; gz = 0; }
+          else if (!tZ && tX && !pX) { gx = 93; gz = 0; }
+          const dx = gx - p.x, dz = gz - p.z;
+          const dd = Math.hypot(dx, dz) || 1;
+          const step = Math.min(dd, P.speed * (TICK / 60));
+          g.placePlayer(p.x + (dx / dd) * step, p.z + (dz / dd) * step);
+        } else if (t >= nextShot) {
+          nextShot = t + P.cadence;
+          out.shots++;
+          if (rnd() < P.acc) c.hit(target);
+        }
+      }
+      const k = c.combat();
+      out.hits = k.hurtGlen; out.attacks = k.attacks;
+    }
+    out.hearts = g.health.hearts;
+    return out;
+  }, [kind, easy, seed, prof]);
+}
+
+async function openRetry(page, save, touch = false) {
+  try {
+    await ch3Open(page, save, touch);
+  } catch (e) {
+    await page.goto(URL + '?level=kota&fps=0&reset=1');
+    await ch3Open(page, save, touch);
+  }
+}
+
+async function fightLenScenario(page, check, kind) {
+  const easy = { easyJump: true, easyFight: true, sound: true, music: true, musicVol: 1, sfxVol: 1 };
+  const results = [];
+  const PROFILES = {
+    // A 5-year-old who is getting good: sees the glow and aims after 1.0 s, taps the laser every 1.0 s, hits 45%, steps aside 90% (75% for the second stripe).
+    kid: { react: 1.0, cadence: 1.0, acc: 0.45, dodge1: 0.9, dodge2: 0.75, delay: 0.4, speed: 4.5 },
+    // A fast adult for comparison (information only).
+    // A beginner: slow, misses a lot (information only).
+    beginner: { react: 1.4, cadence: 1.2, acc: 0.3, dodge1: 0.8, dodge2: 0.6, delay: 0.5, speed: 4 },
+    expert: { react: 0.5, cadence: 0.55, acc: 0.8, dodge1: 0.9, dodge2: 0.7, delay: 0.3, speed: 5.5 },
+  };
+  for (const mode of ['normal', 'easy', 'expert', 'beginner']) {
+    for (const seed of mode === 'normal' ? [11, 23, 37] : [11]) {
+      if (kind === 'snake') {
+        await openRetry(page, ch5Save({ bab5: { step: 'fight' }, ...(mode === 'easy' ? { settings: easy } : {}) }));
+        await ch5Stand(page, BOSS.x + 7, BOSS.z);
+        await d3Adv(page, 420);
+        await page.evaluate(() => window.__ch5.engage());
+      } else if (kind === 'rakus') {
+        await openRetry(page, ch6Save({ bab6: { step: 'fight' }, ...(mode === 'easy' ? { settings: easy } : {}) }));
+        await ch6Stand(page, ...FAR6);
+        await d3Adv(page, 120);
+        await page.evaluate(() => window.__ch6.engage());
+      } else {
+        await openRetry(page, ch3Save({ bab3: { step: 'chase', tamed: [] }, ...(mode === 'easy' ? { settings: easy } : {}) }));
+        await d3Go(page, 93, 4, 30);
+        await d3Adv(page, 700);
+      }
+      const r = await fightBot(page, kind, mode === 'easy', seed, PROFILES[mode] || PROFILES.kid);
+      r.mode = mode;
+      r.seed = seed;
+      results.push(r);
+      if (process.env.FL_DEBUG) console.log(r.log.join('\n'));
+  console.log(`   [fightlen ${kind} ${mode} seed ${seed}] ${Math.round(r.sec)} s (${Math.floor(r.sec / 60)}:${String(Math.round(r.sec % 60)).padStart(2, '0')}) done=${r.done} hits taken=${r.hits} refills=${r.refills} minHearts=${r.minHearts} shots=${r.shots} ${JSON.stringify({ tamed: r.tamed, lunges: r.lunges, doubles: r.doubles, sweeps: r.sweeps, rounds: r.rounds, eaten: r.eaten, saved: r.saved, helpers: r.helpersSpawned, attacks: r.attacks })}`);
+    }
+  }
+  const normal = results.filter((r) => r.mode === 'normal');
+  const expertR = results.find((r) => r.mode === 'expert');
+  const avg = normal.reduce((a, r) => a + r.sec, 0) / normal.length;
+  const rng = { snake: [80, 260], rakus: [90, 330], rats: [70, 260] }[kind];
+  console.log(`   [fightlen ${kind}] normal average ${Math.round(avg)} s, easy ${Math.round(results.find((r) => r.mode === 'easy').sec)} s, expert ${Math.round(expertR.sec)} s, beginner ${Math.round(results.find((r) => r.mode === 'beginner').sec)} s`);
+  check(`fightlen ${kind}: every run is won (all stars / rats)`, results.filter((r) => r.mode !== 'beginner').every((r) => r.done), JSON.stringify(results.map((r) => [r.mode, r.done, Math.round(r.sec)])));
+  check(`fightlen ${kind}: the normal fight lasts ${rng[0]}-${rng[1]} s for a competent player (average ${Math.round(avg)} s)`, avg >= rng[0] && avg <= rng[1], String(Math.round(avg)));
+  const easyR = results.find((r) => r.mode === 'easy');
+  check(`fightlen ${kind}: "Mode mudah" is clearly shorter than normal (${Math.round(easyR.sec)} s < ${Math.round(avg)} s)`, easyR.sec < avg, '');
+  check(`fightlen ${kind}: winnable without healing on normal: hearts refills are rare (<= 3 per run, i.e. at most 3 rests with a kid-level dodge rate)`, normal.every((r) => r.refills <= 3), JSON.stringify(normal.map((r) => r.refills)));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+
+// ---- Compact call-out during fights (Dialog compact mode): groups `dlg-compact`, `dlg-compact-touch` ----------------------------------------
+async function dlgCompactScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vw = touch ? 844 : 1280;
+  const shotDir = process.env.DLG_SHOTS || OUT;
+  fs.mkdirSync(shotDir, { recursive: true });
+  const measure = () => page.evaluate(() => {
+    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-hint', jbase: '.tc-base', btn: '.tc-button', drums: '.drums' };
+    const boxes = [];
+    for (const [name, sel] of Object.entries(sels)) {
+      for (const e of document.querySelectorAll(sel)) {
+        const r = e.getBoundingClientRect();
+        const cs = getComputedStyle(e);
+        if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || (+cs.opacity === 0 && name !== 'bubble')) continue;
+        boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom });
+      }
+    }
+    return boxes;
+  });
+  const verify = async () => {
+    const boxes = await measure();
+    const bad = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], c = boxes[j];
+      if (a.name === c.name && a.name === 'btn') continue;
+      if (a.l < c.r && c.l < a.r && a.t < c.b && c.t < a.b) bad.push(a.name + '/' + c.name);
+    }
+    const bub = boxes.find((b) => b.name === 'bubble');
+    return { bad, names: [...new Set(boxes.map((b) => b.name))], bub, out: boxes.filter((a) => a.l < -1 || a.t < -1 || a.r > vw + 1).map((a) => a.name) };
+  };
+  const compactInfo = () => page.evaluate(() => {
+    const root = document.querySelector('.dlg');
+    const card = document.querySelector('.dlg-card');
+    const next = document.querySelector('.dlg-next');
+    const g = window.__superglen;
+    return { open: g.dialog.open, text: g.dialog.text, compact: !!root && root.classList.contains('compact') && !root.hidden, ctl: g.controlsEnabled, pe: card ? getComputedStyle(card).pointerEvents : '', next: next ? getComputedStyle(next).display : '', w: card ? card.getBoundingClientRect().width : 0 };
+  });
+  for (const boss of ['ch5', 'ch6']) {
+    const L = boss === 'ch5' ? 'bab5-fight' : 'bab6-fight';
+    if (boss === 'ch5') {
+      await ch3Open(page, ch5Save({ bab5: { step: 'fight' } }), touch);
+      await ch5Stand(page, ...EAST);
+    } else {
+      await ch3Open(page, ch6Save({ bab6: { step: 'fight' } }), touch);
+      await ch6Stand(page, ...FAR6);
+    }
+    await d3Adv(page, 420);
+    await page.evaluate((b) => { window[b].engage(); window.__superglen.health.fill(); }, boss === 'ch5' ? '__ch5' : '__ch6');
+    await d3Adv(page, 30);
+    // A story line (Nino's hint after a laser hit that does not count) in the middle of the fight: the boss has just been told to start.
+    const hand = boss === 'ch5' ? () => window.__ch5.setCool(0) : () => window.__ch6.setCool(0);
+    await page.evaluate(hand);
+    await page.evaluate((b) => { if (b === 'ch5') window.__ch5.laser(); else window.__ch6.laser('tikusRakus'); }, boss);
+    await d3Adv(page, 20);
+    let ci = await compactInfo();
+    check(`dlg-compact ${tag} ${L}: a story line during the fight shows as the compact call-out ("${ci.text}")`, ci.open && ci.compact && ci.text.length > 3, JSON.stringify(ci));
+    check(`dlg-compact ${tag} ${L}: it is a small pill (<= 40% of the screen width), takes no taps, has no "next" triangle`, ci.w > 60 && ci.w <= vw * 0.4 + 1 && ci.pe === 'none' && ci.next === 'none', JSON.stringify(ci));
+    check(`dlg-compact ${tag} ${L}: the controls stay enabled`, ci.ctl !== false, JSON.stringify(ci));
+    await sleep(500);
+    const v = await verify();
+    check(`dlg-compact ${tag} ${L}: hearts, stars, map, gear, touch buttons and the call-out overlap nothing and stay on screen`, v.bub && v.bad.length === 0 && v.out.length === 0 && v.names.includes('hearts'), JSON.stringify(v));
+    await page.evaluate(() => window.__superglen.advance(1, true));
+    await page.screenshot({ path: path.join(shotDir, `dlg-compact-${boss === 'ch5' ? 'snake' : 'rakus'}-${touch ? 'touch' : 'desktop'}.png`) });
+    // Walking works while the line is up.
+    const p0 = await d3Player(page);
+    await page.evaluate(() => window.__superglen.setCameraYaw(0));
+    await page.keyboard.down('d');
+    await d3Adv(page, 14);
+    await page.keyboard.up('d');
+    const p1 = await d3Player(page);
+    ci = await compactInfo();
+    check(`dlg-compact ${tag} ${L}: Glen can walk while the line is up (${Math.hypot(p1.x - p0.x, p1.z - p0.z).toFixed(2)} m in 14 frames)`, Math.hypot(p1.x - p0.x, p1.z - p0.z) > 0.3 || touch, JSON.stringify([p0, p1]));
+    // The enemy does not wait for the line: its next attack (wind-up / food cue) begins while the call-out is still showing.
+    let started = false;
+    for (let i = 0; i < 40 && !started; i++) {
+      const bb = await page.evaluate((b) => window[b].boss(), boss === 'ch5' ? '__ch5' : '__ch6');
+      started = boss === 'ch5' ? ['wind', 'lunge'].includes(bb.phase) : bb.phase !== 'idle';
+      if (!started) await d3Adv(page, 5);
+    }
+    const stillLine = (await compactInfo()).open;
+    check(`dlg-compact ${tag} ${L}: the enemy keeps fighting while the call-out is up (its next attack started${stillLine ? ', line still showing' : ''})`, started, '');
+    // It ends by itself (about 2.5 s) without any tap or key.
+    let gone = false;
+    const firstText = ci.text;
+    for (let i = 0; i < 40 && !gone; i++) {
+      await d3Adv(page, 10);
+      const c2 = await compactInfo();
+      gone = !c2.open || c2.text !== firstText; // gone, or replaced by the next call-out (the fight talks a lot)
+    }
+    check(`dlg-compact ${tag} ${L}: the line goes away by itself (no tap needed)`, gone, '');
+    // A press of the hand/interact key is not eaten by a call-out (the next one is on screen, E must stay free).
+    await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  }
 }
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
@@ -10627,6 +11060,11 @@ async function main() {
     results.push(await runScenario(browser, 'bab6-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab6FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-fight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab6FightScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-easy', { viewport: { width: 1280, height: 720 } }, bab6EasyScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'dlg-compact', { viewport: { width: 1280, height: 720 } }, (p, c) => dlgCompactScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'dlg-compact-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => dlgCompactScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'fightlen-snake', { viewport: { width: 1280, height: 720 } }, (p, c) => fightLenScenario(p, c, 'snake'), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'fightlen-rakus', { viewport: { width: 1280, height: 720 } }, (p, c) => fightLenScenario(p, c, 'rakus'), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'fightlen-rats', { viewport: { width: 1280, height: 720 } }, (p, c) => fightLenScenario(p, c, 'rats'), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3EndScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab3EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
 

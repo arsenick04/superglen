@@ -93,7 +93,8 @@ export class DialogBubble {
   }
 
   /** Show a line. Re-showing while visible swaps the content without replaying the pop-in. */
-  show(speakerId: string, text: string): void {
+  show(speakerId: string, text: string, compact = false): void {
+    this.element.classList.toggle('compact', compact);
     const speaker = this.faceFor ? this.faceFor(speakerId) : speakerId;
     if (speaker !== this.speaker || !this.face.firstChild) {
       this.face.innerHTML = faceSvg(speaker);

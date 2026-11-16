@@ -84,8 +84,11 @@ export class Chapter3 {
     private readonly hooks: Chapter3Hooks,
   ) {
     this.step = ctx.save.data.bab3.step as Ch3Step;
+    // Once the rats fight back, story lines are small call-outs that never stop the chase (Dialog compact mode).
+    const dropRule = ctx.dialog.addCompactRule(() => this.step === 'chase' && this.arrived && (this.rats.lasers > 0 || this.rats.tamedCount > 0 || this.rats.combatCounts().attacks > 0));
     ctx.onDispose(() => {
       this.disposed = true;
+      dropRule();
     });
     this.hud = document.createElement('div');
     this.hud.className = 'ch3-count';

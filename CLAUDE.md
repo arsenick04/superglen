@@ -31,7 +31,8 @@ Aturan hemat token:
 ## Aturan proyek
 
 - **Game 3D penuh** (Three.js + Rapier). Gambar di `art/reference/` hanya acuan untuk membuat model 3D, bukan sprite 2D.
-- **Browser dulu**: harus jalan di Chrome/Edge/Safari di PC dan Safari di iPhone. Satu kode, kontrol otomatis (keyboard + mouse di PC, joystick sentuh di HP).
+- **Target akhir aplikasi (APK dan app iOS)**; browser iPhone hanya untuk mencoba selama pengembangan. Utamakan kualitas visual; tetap bisa dimainkan lancar, tetapi jangan mengorbankan tampilan demi batas browser iPhone (keputusan pemilik proyek 16 November).
+- **Browser dulu untuk pengujian**: harus jalan di Chrome/Edge/Safari di PC dan Safari di iPhone. Satu kode, kontrol otomatis (keyboard + mouse di PC, joystick sentuh di HP).
 - **Tools gratis**, kecuali ElevenLabs dan Higgsfield yang sudah dilanggan pemilik proyek. Jangan menambah layanan berbayar.
 - Sebelum memakai kredit Higgsfield atau ElevenLabs dalam jumlah besar, buat 1 contoh dan minta persetujuan.
 - Konten anak-anak: tanpa kekerasan, musuh dijinakkan bukan mati, tanpa unsur mistis.

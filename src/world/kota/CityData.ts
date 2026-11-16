@@ -85,11 +85,11 @@ export interface District {
 }
 
 export const DISTRICTS: readonly District[] = [
-  { id: 'perumahan', name: 'Perumahan', color: 0xff8fb1, ground: 0x9fdc86, walls: [0xffe0e8, 0xffd6c2, 0xfff1d6, 0xffc9de, 0xe9f7d8], roofs: [0xe8577e, 0xd9432f, 0xc94f7c], cells: [[-1, 0], [-1, 1]] },
-  { id: 'sekolah', name: 'Sekolah', color: 0x4dabf7, ground: 0x93d987, walls: [0xd8ecff, 0xfff1d6, 0xcde8ff, 0xe8f4ff], roofs: [0x2f7fd1, 0x3b8fe0, 0x245fa8], cells: [[-1, -1], [0, -1]] },
-  { id: 'alun', name: 'Alun-alun', color: 0xf2b632, ground: 0x8fd67a, walls: [0xfff1d6, 0xffe8b0, 0xfff7e0], roofs: [0xd9432f, 0xc0392b, 0xe0a020], cells: [[0, 0]] },
-  { id: 'pasar', name: 'Pasar', color: 0xff9f43, ground: 0xa6d98a, walls: [0xffe2c0, 0xfff1d6, 0xffd29a, 0xfde7cf], roofs: [0xf07b1f, 0xd9632f, 0xe8902a], cells: [[1, 0], [1, 1]] },
-  { id: 'bank', name: 'Bank dan Rumah Sakit', color: 0x2ec4b6, ground: 0x96d98c, walls: [0xffffff, 0xe6faf7, 0xf1fbff, 0xdff5f0], roofs: [0x1e9e92, 0x2ec4b6, 0x23887e], cells: [[0, 1]] },
+  { id: 'perumahan', name: 'Perumahan', color: 0xff8fb1, ground: 0x9fdc86, walls: [0xffd3c8, 0xffe2a8, 0xffc3d6, 0xcdeabb, 0xffcfa0], roofs: [0xe8577e, 0xd9432f, 0xc94f7c], cells: [[-1, 0], [-1, 1]] },
+  { id: 'sekolah', name: 'Sekolah', color: 0x4dabf7, ground: 0x93d987, walls: [0xcfe6ff, 0xfff0c4, 0xbfdcff, 0xe3f0ff], roofs: [0x2f7fd1, 0x3b8fe0, 0x245fa8], cells: [[-1, -1], [0, -1]] },
+  { id: 'alun', name: 'Alun-alun', color: 0xf2b632, ground: 0x8fd67a, walls: [0xffecbd, 0xffdc9a, 0xfff2d2], roofs: [0xd9432f, 0xc0392b, 0xe0a020], cells: [[0, 0]] },
+  { id: 'pasar', name: 'Pasar', color: 0xff9f43, ground: 0xa6d98a, walls: [0xffd7ad, 0xffe7b8, 0xffc78a, 0xfbdcb8], roofs: [0xf07b1f, 0xd9632f, 0xe8902a], cells: [[1, 0], [1, 1]] },
+  { id: 'bank', name: 'Bank dan Rumah Sakit', color: 0x2ec4b6, ground: 0x96d98c, walls: [0xffffff, 0xd9f6f0, 0xeaf8ff, 0xcdeee6], roofs: [0x1e9e92, 0x2ec4b6, 0x23887e], cells: [[0, 1]] },
   { id: 'bukit', name: 'Bukit Pinggir Kota', color: 0x5fbf5a, ground: 0x7cc566, walls: [0xf3e2c4, 0xe9d6b0], roofs: [0x8a5a3c, 0x9c6b45], cells: [[1, -1]] },
 ];
 
