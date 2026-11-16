@@ -10,7 +10,10 @@ Pemilik proyek merasa potongan lagu tema terlalu mengganggu, jadi musik latar di
 
 Sekitar -20 LUFS (lebih pelan dari tema lama, -18), puncak sampel di bawah -8 dBFS, MP3 44,1 kHz stereo 112 kbps, sekitar 0,5 MB. Loop dirender dalam penyangga melingkar (ekor nada, gema, dan filter menyambung ke awal) sehingga sambungan akhir-awal tanpa letupan. Catatan: pemutar MP3 browser kadang menyisakan celah sangat kecil saat mengulang.
 
-`tracks.json`: `awal`, `jelajah`, `latihan` memakai A volume 0,6, `pertarungan` A volume 0,7, `berubah` tetap `theme_berubah_tagline.mp3` (tagline dari lagu tema). Untuk mencoba varian B, ganti `ringan_a.mp3` menjadi `ringan_b.mp3` di `tracks.json`.
+`tracks.json`: `awal`, `jelajah`, `latihan` memakai A volume 0,6, `pertarungan` `battle_a.mp3` volume 0,7 (lihat bagian Musik pertarungan), `berubah` tetap `theme_berubah_tagline.mp3` (tagline dari lagu tema). Untuk mencoba varian B, ganti `ringan_a.mp3` menjadi `ringan_b.mp3` di `tracks.json`.
+
+## Musik pertarungan (2026-11-16): `battle_a.mp3`
+Loop pertarungan yang bersemangat dan heroik (tidak menyeramkan), boleh pakai drum. Dibuat `python3 scripts/make-music.py --battle --check`. 144 BPM, 20 bar = 33,33 dtk, pentatonik C mayor (C Am F G C Am F G C G). Nuansa barongsai: gong tiap 8 bar, cymbal crash di awal tiap 4 bar, cymbal kecil di akhir bar ganjil, kick tiap ketukan, drum rendah "dong", fill tom dan snare. Melodi: synth mirip brass; pengiring: petikan pizzicato; bas bertenaga. -18,5 LUFS, puncak sampel -8,8 dBFS, MP3 112 kbps, 468 KB. Sambungan loop: lompatan sampel di sambungan 0,043 (MP3) di bawah persentil 99,9 langkah biasa 0,068, jadi tanpa letupan. RMS 50 ms sebelum sambungan lebih kecil dari sesudahnya karena bar terakhir diakhiri jeda sebelum kick dan crash di bar 1 (disengaja).
 
 ## Riwayat: potongan lagu tema (tidak dipakai lagi)
 Potongan `theme_awal.mp3`, `theme_jelajah.mp3`, `theme_latihan.mp3` sudah dihapus dari folder (supaya folder di bawah 6 MB); bisa dibuat ulang dari `superglen_theme.mp3` dengan cara di bawah. Yang masih ada: `superglen_theme.mp3`, `superglen_theme_vocal.mp3`, `theme_berubah.mp3`, `theme_berubah_tagline.mp3`.

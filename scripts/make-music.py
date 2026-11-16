@@ -3,6 +3,10 @@
 
   python3 scripts/make-music.py            -> public/audio/music/ringan_a.mp3, ringan_b.mp3
   python3 scripts/make-music.py --check    -> also prints seam / loudness checks
+  python3 scripts/make-music.py --battle [--check] -> public/audio/music/battle_a.mp3 only (see below)
+
+Battle loop (--battle): 144 BPM, 20 bars (33.3 s), C major pentatonic, lion-dance flavour (gong, cymbal crashes,
+taiko/kick pattern), brass-like lead, pizzicato stabs, punchy bass. Drums are allowed here (battle only).
 
 A: bouncy marimba, 104 BPM, 16 bars (36.9 s).  B: calm music box + pizzicato, 100 BPM, 16 bars (38.4 s).
 No drums or percussion. Every note is rendered into a circular buffer (tails wrap around), reverb is a circular
@@ -141,8 +145,120 @@ def seam_report(x, mp3):
         out[label] = dict(len_s=round(n / SR, 3), seam_step=float(seam), p99_9_step=float(typ), rms_before=float(before), rms_after=float(after))
     return out
 
+# ---------------------------------------------------------------- battle loop (drums allowed)
+def brass(f, length=0.5):
+    t = np.arange(int(SR * length)) / SR
+    s = np.zeros_like(t)
+    for k in range(1, 12):
+        if f * k > 8000: break
+        s += np.sin(2 * np.pi * k * f * t + 0.5 * k) / k ** 1.15 * np.minimum(1, t / (0.015 + 0.012 * k))
+    e = np.minimum(1, t / 0.02) * (0.75 + 0.25 * np.exp(-t / 0.15)) * np.minimum(1, (length - t) / 0.06)
+    return s * e
+
+def bass_punch(f, length=0.4):
+    t = np.arange(int(SR * length)) / SR
+    s = np.sin(2 * np.pi * f * t) + 0.35 * np.sin(4 * np.pi * f * t) + 0.18 * np.sin(6 * np.pi * f * t)
+    return s * env_decay(t, 0.16, 0.004) * np.minimum(1, (length - t) / 0.03)
+
+def sweep(f0, f1, tau, length, click=0.0):
+    t = np.arange(int(SR * length)) / SR
+    f = f1 + (f0 - f1) * np.exp(-t / 0.03)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = np.sin(ph) * env_decay(t, tau, 0.002)
+    if click: s += click * np.exp(-t / 0.004)
+    return s * np.minimum(1, (length - t) / 0.02)
+
+def render_battle():
+    bpm, bars = 144, 20
+    beat = 60 / bpm; step = beat / 2
+    n = int(round(bars * 4 * beat * SR)); mix = Mix(n)
+    at = lambda st: int(round(st * step * SR)) % n
+    rng = np.random.default_rng(11)
+    nz = rng.standard_normal(SR * 8)
+    hp = lambda x, fc: sosfiltfilt(butter(2, fc, 'high', fs=SR, output='sos'), x)
+    bp = lambda x, lo, hi: sosfiltfilt(butter(2, [lo, hi], 'band', fs=SR, output='sos'), x)
+    n_hat = hp(nz, 7000); n_snare = bp(nz, 1200, 6500); n_crash = hp(nz, 4500)
+    def noise(src, off, tau, length, atk=0.002):
+        t = np.arange(int(SR * length)) / SR
+        return src[off:off + len(t)] * env_decay(t, tau, atk) * np.minimum(1, (length - t) / 0.01)
+    def gong(f0=98.0, length=3.6):
+        t = np.arange(int(SR * length)) / SR
+        s = np.zeros_like(t)
+        for i, (r, a, tau) in enumerate(((1, 1, 1.6), (1.51, .8, 1.3), (2.07, .6, 1.0), (2.63, .5, .8), (3.2, .35, .6), (4.14, .25, .4), (5.4, .15, .3))):
+            s += a * np.sin(2 * np.pi * f0 * r * t + 0.17 * i * np.sin(2 * np.pi * 3.1 * t)) * np.exp(-t / tau)
+        return s * np.minimum(1, t / 0.006) * np.minimum(1, (length - t) / 0.2)
+    chords = ['C', 'Am', 'F', 'G', 'C', 'Am', 'F', 'G', 'C', 'G']
+    mel = [
+        'E5 - G5 G5 A5 - G5 - | E5 - D5 E5 G5 - - -',
+        'A5 - A5 G5 E5 - G5 - | A5 - C6 A5 G5 - - -',
+        'C6 - C6 A5 G5 - A5 - | C6 - A5 G5 E5 - - -',
+        'D6 - D6 C6 A5 - G5 - | D5 E5 G5 A5 D6 - - -',
+        'G5 - C6 C6 D6 - E6 - | D6 - C6 A5 G5 - - -',
+        'E6 - D6 C6 A5 - C6 - | D6 - C6 A5 G5 - E5 -',
+        'A5 - C6 D6 E6 - D6 - | C6 - A5 G5 A5 - - -',
+        'D6 - E6 D6 C6 - A5 - | G5 - A5 - D6 - - -',
+        'E6 - D6 C6 G5 - A5 - | C6 - E6 - G6 - - -',
+        'D6 - D6 C6 A5 - G5 - | A5 - G5 - D5 - - -']
+    for ci, ch in enumerate(chords):
+        base = ci * 16
+        root, third, fifth = CHORDS[ch]
+        for bar in range(2):
+            b0 = base + bar * 8
+            for st, which, octv, dur in ((0, 0, 2, .35), (2, 0, 2, .3), (3, 0, 2, .2), (4, 1, 2, .3), (6, 0, 2, .3), (7, 1, 2, .2)):
+                mix.add(bass_punch(hz(tone((root, fifth)[which], octv)), dur), at(b0 + st), pan=-0.05, gain=0.85)
+            for st in (1, 3, 5, 7):                       # pizzicato stabs on the off-beats
+                for nm, o, pn in ((third, 4, -0.3), (fifth, 4, 0.3), (root, 5, 0.0)):
+                    mix.add(pizz(hz(tone(nm, o)), 0.4), at(b0 + st), pan=pn, gain=0.11)
+        toks = mel[ci].replace('|', ' ').split()
+        assert len(toks) == 16, (ci, len(toks))
+        for k, tk in enumerate(toks):
+            if tk == '-': continue
+            d = 1
+            while k + d < 16 and toks[k + d] == '-': d += 1
+            mix.add(brass(hz(midi(tk)), d * step * 0.95 + 0.05), at(base + k), pan=0.1, gain=0.34)
+    for bar in range(bars):
+        b0 = bar * 8
+        for st in (0, 2, 4, 6):                           # driving kick
+            mix.add(sweep(130, 48, 0.13, 0.4, click=0.35), at(b0 + st), gain=1.0)
+        for st in (2, 6):                                 # snare backbeat
+            mix.add(noise(n_snare, 2000 + 5000 * st, 0.11, 0.3) * 0.5 + 0.5 * sweep(210, 170, 0.07, 0.3), at(b0 + st), pan=0.05, gain=0.7)
+        for st in (3, 5):                                 # low lion-dance drum ("dong")
+            mix.add(sweep(150, 80, 0.2, 0.5), at(b0 + st), pan=-0.1, gain=0.55)
+        for st in range(8):                               # hats
+            mix.add(noise(n_hat, 9000 + 777 * (bar * 8 + st) % 90000, 0.03, 0.12), at(b0 + st), pan=0.25 if st % 2 else -0.25, gain=0.17 if st % 2 else 0.1)
+        if bar % 2 == 1:                                  # small cymbal "chiang" at end of odd bars
+            mix.add(noise(n_crash, 70000 + 3000 * bar, 0.22, 0.7), at(b0 + 7), pan=0.3, gain=0.2)
+        if bar % 4 == 3:                                  # fill: tom + snare roll
+            for st, fr in ((4, 190), (5, 160), (6, 130), (7, 100)):
+                mix.add(sweep(fr + 60, fr, 0.15, 0.3), at(b0 + st), pan=(st - 5.5) * 0.15, gain=0.6)
+            for st in (6, 7):
+                mix.add(noise(n_snare, 40000 + 4000 * st, 0.08, 0.2), at(b0 + st) + int(step * SR / 2), gain=0.35)
+        if bar % 4 == 0:                                  # crash on the 1 of each phrase
+            mix.add(noise(n_crash, 20000 + 9000 * (bar // 4), 0.7, 2.0, 0.003), at(b0), pan=-0.2, gain=0.42)
+        if bar % 8 == 0:                                  # gong every 8 bars
+            mix.add(gong(), at(b0), gain=0.3)
+    x = mix.buf
+    L = int(0.9 * SR); tt = np.arange(L) / SR
+    wetsig = np.zeros_like(x)
+    for c in range(2):
+        ir = rng.standard_normal(L) * np.exp(-tt / 0.2)
+        ir = sosfiltfilt(butter(2, 5000, fs=SR, output='sos'), ir); ir /= np.sqrt(np.sum(ir ** 2))
+        irp = np.zeros(n); irp[:L] = ir
+        wetsig[c] = np.fft.irfft(np.fft.rfft(x[c]) * np.fft.rfft(irp), n)
+    x = x + 0.14 * wetsig
+    sos = np.vstack([butter(4, 9500, fs=SR, output='sos'), butter(2, 45, 'high', fs=SR, output='sos')])
+    x = sosfiltfilt(sos, np.tile(x, (1, 3)), axis=1)[:, n:2 * n]
+    return np.tanh(x / np.max(np.abs(x)) * 1.6) * 0.6        # gentle glue/limit (memoryless, keeps the loop seamless)
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
+    if '--battle' in sys.argv:
+        mp3, xf = finish(render_battle(), 'battle_a', target=-18.0)
+        lufs, tp = measure(mp3)
+        print(f'battle_a: {os.path.getsize(mp3)} bytes, {xf.shape[1]/SR:.2f} s, {lufs} LUFS, sample peak {tp} dBFS')
+        if '--check' in sys.argv:
+            for k, v in seam_report(xf, mp3).items(): print('  seam', k, v)
+        sys.exit(0)
     # ---- A: bouncy marimba, C major pentatonic, 104 BPM
     chA = ['C', 'Am', 'F', 'G', 'C', 'Am', 'F', 'G']
     melA = [

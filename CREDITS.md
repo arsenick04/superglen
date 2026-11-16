@@ -28,7 +28,7 @@ Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/mu
 
 | Adegan | File | Pencipta | Lisensi |
 |---|---|---|---|
-| Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3` | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
+| Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3`, `battle_a.mp3` (pertarungan) | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
 | Berubah jadi Superglen | `theme_berubah_tagline.mp3`, `theme_berubah.mp3`, `superglen_theme*.mp3` | lagu tema Superglen milik pemilik proyek (dibuat dengan Suno) | milik pemilik proyek |
 
 ## Suara hewan (domain publik / CC0)
