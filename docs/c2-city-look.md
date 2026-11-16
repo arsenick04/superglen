@@ -4,13 +4,15 @@ The city uses uniform model scaling, collider-aligned architectural supports, br
 
 Current validation: `npm run build` PASS; `npm run check:reach` PASS (0 errors, 0 warnings). CityData, gameplay, story and audio are unchanged.
 
-Follow-up: quiz validation PASS, kota-touch PASS on isolated port 4191, desktop hud-layout PASS. The first kota run passed functional checks but failed on the missing favicon; the app now explicitly uses its existing logo as the favicon. Desktop kota-life passed behavior checks but exceeded the geometry budget (105 calls / 806,198 triangles). City rendering now skips the extra GTAO/bloom chain to share the touch daylight pipeline; this change still requires a fresh performance run. Touch HUD verification exposed missing map/zoom and dialog DOM at measurement time; a visual frame flush was added before bounds measurement, and its rerun remains required.
+Quiz validation and kota-touch PASS. The app now explicitly uses its existing logo as the favicon, fixing the missing favicon request. City rendering skips the extra GTAO/bloom chain to share the touch daylight pipeline.
 
-The branch `codex/c2-city-look` was pushed successfully. Automatic PR creation failed with GitHub GraphQL `Forbidden`; a PR has not been created.
+Review: [PR #24](https://github.com/arsenick04/superglen/pull/24), branch `codex/c2-city-look`.
 
 Latest reruns: `kota` PASS, `bab1` PASS, `kota-life` PASS. The busiest desktop crowd view now renders at 44 calls / 403,090 triangles, within the unchanged 70 / 480,000 budgets after removing the additional city post pass.
 
-Final touch HUD rerun still FAILS: no overlapping/out-of-viewport rectangles were found, but map and zoom were absent in the exploration measurement and the dialog card was absent in its measurement. A frame flush did not fix it and was removed. This remains an unresolved visibility/state issue; the assertions remain strict. Desktop hud-layout PASS, touch hud-layout FAIL; C2 is still WIP.
+Touch hud-layout now PASS. Its exploration setup waits for the arrival greeting and the dialog's idle tail to finish; dialog measurement waits for the visible pop-in. This exposed a real map/laser overlap, fixed by moving the map to the upper left (164 px from the safe inset). All presence, bounds, overlap and 44 px zoom target assertions remain strict. Desktop hud-layout previously PASS; rerun after the shared test setup update is pending.
+
+Reproduce the visual views with the dev server running: `C2_PHASE=review node scripts/city-look-shots.cjs`. It captures six identical city views plus a Barongsai close-up on desktop and touch, under `/tmp/c2-shots/review`.
 
 ## Before / after
 
@@ -25,8 +27,7 @@ Desktop views, ordered bank/hospital, hill, market, housing, plaza, school:
 ## Still open
 
 - Final close-up review of all seven owner buildings, especially Barongsai door/lion-face and climbing attachments.
-- Run required smoke groups individually: kota, kota-touch, kota-life, hud-layout, hud-layout-touch, bab1; run quiz validation.
-- Diagnose remaining resource 404. Performance assertions passed at 60 calls / 470,788 triangles and 31 -> 31 shader programs; runner still reported failure for the resource error.
+- Repeat affected smoke groups after the remaining visual edits, one group at a time.
 - Verify final screenshots against the latest source; these contact sheets show the preceding visual iteration.
 - Kenney road tile integration and richer near-ground detail need further review.
 - Real iPhone performance and final owner visual approval remain unverified.

@@ -10418,6 +10418,19 @@ async function hudLayoutScenario(page, check, touch) {
   const shotDir = process.env.HUD_SHOTS;
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
   await d3Adv(page, 30);
+  // Finish the arrival greeting before measuring exploration: full dialogs
+  // intentionally hide the touch map and zoom column.
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false);
+  });
+  await page.waitForFunction(() => !window.__superglen.dialog.open);
+  // Finish the short bubble tail too: the live loop is paused.
+  await page.evaluate(async () => window.__superglen.advanceAsync(30, true));
+  await page.waitForFunction(() => {
+    const map = document.querySelector('.minimap');
+    return map && map.getBoundingClientRect().width > 2 && getComputedStyle(map).visibility !== 'hidden' && +getComputedStyle(map).opacity > 0;
+  });
   const measure = () => page.evaluate(() => {
     const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-hint, .tc-base', btn: '.tc-button', zoom: '.zoom-btn' };
     const boxes = [];
@@ -10468,6 +10481,12 @@ async function hudLayoutScenario(page, check, touch) {
     const e = document.querySelector('.ch5-stars'); if (e) { window.__starsWas = e.classList.contains('show'); e.classList.add('show'); }
   });
   await sleep(500);
+  // Wait for the actual pop-in animation rather than assuming a wall-clock
+  // delay guarantees that a software-rendered browser has painted it.
+  await page.waitForFunction(() => {
+    const e = document.querySelector('.dlg-card');
+    return e && e.getBoundingClientRect().width > 2 && +getComputedStyle(e).opacity > 0;
+  });
   v = await verify('dialog');
   check(`hud-layout ${tag}: the intro scene (before the fight) keeps the normal bubble, not the compact call-out`, await page.evaluate(() => { const d = document.querySelector('.dlg'); return !!d && !d.hidden && !d.classList.contains('compact'); }), '');
   if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `bab5-dialog-${touch ? 'touch' : 'desktop'}.png`) }); }

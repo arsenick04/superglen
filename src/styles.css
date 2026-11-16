@@ -1451,12 +1451,11 @@ html.game-started .set-gear {
   z-index: 1;
 }
 html.touch-ui .minimap {
-  /* Keep the map outside the whole left-hand joystick zone, including the
-     compact 281 px-high Safari layout.  The narrow slot immediately left of
-     the zoom column stays clear of all three Superglen action buttons. */
-  top: calc(env(safe-area-inset-top) + 70px);
-  left: auto;
-  right: calc(env(safe-area-inset-right) + 164px);
+  /* The top-left strip beside the gear clears the joystick below and all
+     Superglen action buttons on the right, including the compact layout. */
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: calc(env(safe-area-inset-left) + 164px);
+  right: auto;
   width: 80px;
   height: 80px;
   border-radius: 9px;
