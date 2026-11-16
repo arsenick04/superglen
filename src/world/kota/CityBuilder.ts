@@ -2,6 +2,7 @@ import { C } from '../bab1/Kit';
 import { EDGE_COLOR } from '../kits/ParkourKit';
 import { Parkour } from '../../config/parkour';
 import { Recipe, Sh, type Vec3 } from './CityMesher';
+import { ATLAS_TILES, T } from './CityAtlas';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -36,12 +37,8 @@ export interface BuiltCity {
 }
 
 const SIDEWALK = 0xeadcbf;
-const ASPHALT = 0x6b7280;
 const MARK = 0xfff3b0;
 const STONE = 0xe8d9b5;
-const WIN = 0x9fdcff;
-const WIN_FRAME = 0xffffff;
-const DOOR = 0x8a5a3c;
 /** Visual heights of the flat layers (the collider ground is y = 0): small steps so nothing z-fights. */
 const Y: Record<GroundKind | 'base' | 'walk' | 'road' | 'mark', number> = {
   base: -0.08,
@@ -125,21 +122,69 @@ function lighten(c: number, k = 50): number {
 // ---- Climbing pieces (same look as kits/ParkourKit: body, lighter cap, bright edge strip) -----------------------------------------
 
 function edge(B: Builder, x: number, z: number, w: number, d: number, top: number): void {
+  // Four flat bright strips on the top face (the bright edge of every climbing piece): 8 triangles instead of 48.
   const e = Parkour.world.edgeWidth;
-  const y = top + 0.02;
+  const y = top + 0.035;
   const g = B.ch.glow;
-  g.box([w + 0.04, 0.04, e], [x, y, z - d / 2 + e / 2 - 0.02], EDGE_COLOR);
-  g.box([w + 0.04, 0.04, e], [x, y, z + d / 2 - e / 2 + 0.02], EDGE_COLOR);
-  g.box([e, 0.04, d - 2 * e], [x - w / 2 + e / 2 - 0.02, y, z], EDGE_COLOR);
-  g.box([e, 0.04, d - 2 * e], [x + w / 2 - e / 2 + 0.02, y, z], EDGE_COLOR);
+  g.quad(w + 0.04, e, [x, y, z - d / 2 + e / 2 - 0.02], EDGE_COLOR);
+  g.quad(w + 0.04, e, [x, y, z + d / 2 - e / 2 + 0.02], EDGE_COLOR);
+  g.quad(e, d - 2 * e, [x - w / 2 + e / 2 - 0.02, y, z], EDGE_COLOR);
+  g.quad(e, d - 2 * e, [x + w / 2 - e / 2 + 0.02, y, z], EDGE_COLOR);
 }
 
-function block(B: Builder, p: CityPiece, base: number, color: number, cap = lighten(color)): void {
+/** Deterministic 0..1 from a position (variety per building without touching the city data's random stream). */
+function hsh(a: number, b: number, k = 0): number {
+  let h = Math.imul(Math.round(a * 8) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(Math.round(b * 8) + k * 7919, 0xc2b2ae35);
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x2c1b3c6d);
+  return ((h ^ (h >>> 12)) >>> 0) / 4294967295;
+}
+
+/** Facade yaw: a +z decal turned to face out of the building. */
+function facadeYaw(b: CityBuilding): number {
+  const [fx, fz] = FACE_VEC[b.face];
+  return Math.atan2(fx, fz);
+}
+
+/** A decal of `tile` standing on the facade, `h` m high (width from the tile's aspect), centre at (`at`, `y`). */
+function facadeDecal(r: Recipe, b: CityBuilding, tile: number, at: number, out: number, y: number, h: number, width?: number): void {
+  const w = width ?? h * ATLAS_TILES[tile].aspect;
+  r.decal(tile, w, h, fp(b, at, out, y), facadeYaw(b));
+}
+
+/** Awning stripe tile by district. */
+function stripeTile(district: string): number {
+  switch (district) {
+    case 'perumahan': return T.stripePink;
+    case 'sekolah': return T.stripeBlue;
+    case 'alun': return T.stripeYellow;
+    case 'pasar': return T.stripeOrange;
+    case 'bank':
+    case 'bukit': return T.stripeGreen;
+    default: return T.stripeRed;
+  }
+}
+
+function roofTile(b: CityBuilding): number {
+  return b.district === 'sekolah' || b.district === 'bank' ? T.roofZinc : T.roofTerra;
+}
+
+/** Wall paint with a little per-building variety (brightness and warmth). */
+function paint(c: number, a: number, b: number): number {
+  const k = 0.94 + 0.1 * hsh(a, b, 3);
+  const w = (hsh(a, b, 5) - 0.5) * 10;
+  const r = Math.max(0, Math.min(255, ((c >> 16) & 255) * k + w));
+  const g = Math.max(0, Math.min(255, ((c >> 8) & 255) * k));
+  const bl = Math.max(0, Math.min(255, (c & 255) * k - w));
+  return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(bl);
+}
+
+function block(B: Builder, p: CityPiece, base: number, color: number, cap = lighten(color), tile = 0, capTile = 0): void {
   const t = p.thick ?? p.top - base;
   const bottom = p.top - t;
   const capH = Math.min(0.16, t * 0.3);
-  B.ch.lit.box([p.w, t - capH, p.d], [p.x, bottom + (t - capH) / 2, p.z], color);
-  B.ch.lit.box([p.w + 0.04, capH, p.d + 0.04], [p.x, p.top - capH / 2, p.z], cap);
+  B.ch.lit.box([p.w, t - capH, p.d], [p.x, bottom + (t - capH) / 2, p.z], color, undefined, tile);
+  B.ch.lit.box([p.w + 0.04, capH, p.d + 0.04], [p.x, p.top - capH / 2, p.z], capTile ? 0xffffff : cap, undefined, capTile);
   edge(B, p.x, p.z, p.w, p.d, p.top);
 }
 
@@ -152,10 +197,10 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       const n = p.n ?? 1;
       const sz = (p.top - b.base) / n;
       for (let i = 0; i < n; i++) {
-        B.ch.deco.box([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + i * sz + 0.04, p.z], 0x8a5a2c);
+        B.ch.deco.boxNB([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + i * sz + 0.04, p.z], 0x8a5a2c);
         B.ch.deco.box([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + (i + 1) * sz - 0.04, p.z], 0x8a5a2c);
       }
-      block(B, p, b.base, 0xd9a05b, 0xe8bb7a);
+      block(B, p, b.base, 0xe6b27a, 0xf0c690, T.wood, T.wood);
       break;
     }
     case 'ac': {
@@ -166,34 +211,35 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       break;
     }
     case 'awning': {
-      const dist = districtById(b.district);
-      const stripe = b.kind === 'kiosk' ? dist.color : C.RED;
-      block(B, p, b.base, stripe, C.CREAM);
-      const t = p.thick ?? 0.25;
-      const n = 6;
-      for (let i = 0; i < n; i++) {
-        const c = i % 2 ? stripe : C.CREAM;
-        if (along) B.ch.deco.box([p.w / n, t * 0.8, 0.06], [p.x - p.w / 2 + (i + 0.5) * (p.w / n), p.top - t * 0.5, p.z + fz * (p.d / 2 + 0.03)], c);
-        else B.ch.deco.box([0.06, t * 0.8, p.d / n], [p.x + fx * (p.w / 2 + 0.03), p.top - t * 0.5, p.z - p.d / 2 + (i + 0.5) * (p.d / n)], c);
-      }
+      // Stripes come from the texture (no more 6 boxes per awning).
+      const st = old ? 0 : stripeTile(b.district);
+      block(B, p, b.base, old ? 0x9c8a74 : 0xffffff, old ? 0xb5a58c : 0xffffff, st, st);
       break;
     }
     case 'bay': {
       const col = old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
       block(B, p, b.base, col, old ? 0xb59a62 : C.GOLD);
       B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : C.RED);
+      // Railing: two rails and thin posts (boxes: a round post is 24 triangles).
+      const rc = old ? 0x8c7a5a : C.GOLD;
+      if (along) {
+        B.ch.deco.boxNB([p.w, 0.07, 0.07], [p.x, p.top + 0.5, p.z + fz * (p.d / 2 - 0.1)], rc);
+        B.ch.deco.boxNB([p.w, 0.05, 0.05], [p.x, p.top + 0.2, p.z + fz * (p.d / 2 - 0.1)], rc);
+      } else {
+        B.ch.deco.boxNB([0.07, 0.07, p.d], [p.x + fx * (p.w / 2 - 0.1), p.top + 0.5, p.z], rc);
+        B.ch.deco.boxNB([0.05, 0.05, p.d], [p.x + fx * (p.w / 2 - 0.1), p.top + 0.2, p.z], rc);
+      }
       for (let i = 0; i < 6; i++) {
         if (old && i % 2 === 1) continue; // missing rail posts
-        if (along) B.ch.deco.cyl(0.04, 0.5, [p.x - p.w / 2 + 0.2 + i * ((p.w - 0.4) / 5), p.top + 0.27, p.z + fz * (p.d / 2 - 0.1)], old ? 0x8c7a5a : C.GOLD);
-        else B.ch.deco.cyl(0.04, 0.5, [p.x + fx * (p.w / 2 - 0.1), p.top + 0.27, p.z - p.d / 2 + 0.2 + i * ((p.d - 0.4) / 5)], old ? 0x8c7a5a : C.GOLD);
+        if (along) B.ch.deco.boxNB([0.06, 0.5, 0.06], [p.x - p.w / 2 + 0.2 + i * ((p.w - 0.4) / 5), p.top + 0.27, p.z + fz * (p.d / 2 - 0.1)], rc);
+        else B.ch.deco.boxNB([0.06, 0.5, 0.06], [p.x + fx * (p.w / 2 - 0.1), p.top + 0.27, p.z - p.d / 2 + 0.2 + i * ((p.d - 0.4) / 5)], rc);
       }
-      // Shop door and window painted on its outer face.
+      // Shop door and window painted on its outer face (decals).
       const ox = p.x + fx * (p.w / 2 + 0.04);
       const oz = p.z + fz * (p.d / 2 + 0.04);
-      const sz = (h: number, l: number): Vec3 => (along ? [l, h, 0.08] : [0.08, h, l]);
-      B.ch.deco.box(sz(2.1, 1.0), [ox, b.base + 1.05, oz], old ? 0x5a3a2a : DOOR);
-      B.ch.deco.box(sz(1.1, 1.4), [ox, b.base + 3.2, oz], old ? 0x6b4a32 : WIN_FRAME);
-      if (!old) B.ch.glow.box(sz(0.85, 1.15), [ox + fx * 0.03, b.base + 3.2, oz + fz * 0.03], WIN);
+      const yaw = facadeYaw(b);
+      B.ch.deco.decal(old ? T.door0 : b.wallColor === 0xffffff ? T.door1 : T.door0, 1.0, 2.1, [ox, b.base + 1.05, oz], yaw);
+      B.ch.deco.decal(T.window0, 1.0, 1.2, [ox + fx * 0.01, b.base + 3.2, oz + fz * 0.01], yaw);
       break;
     }
     case 'sign':
@@ -208,23 +254,35 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
 
 // ---- Buildings -------------------------------------------------------------------------------------------------------------------
 
-function windows(B: Builder, b: CityBuilding, ats: number[], y: number, w = 1.1, h = 1.3): void {
+/** Window decals (frame, glass, sill painted in the atlas); `h` is the height. Shutters only on upper floors (they are wider). */
+function windows(B: Builder, b: CityBuilding, ats: number[], y: number, w = 1.1, h = 1.3, upper = true): void {
   for (const at of ats) {
-    B.ch.deco.box(fs(b, w, 0.1, h), fp(b, at, 0.03, y), WIN_FRAME);
-    B.ch.glow.box(fs(b, w - 0.25, 0.06, h - 0.25), fp(b, at, 0.07, y), b.abandoned ? 0x4a3a30 : WIN);
+    const r = hsh(b.x + at, b.z + y, 1);
+    const tile = b.abandoned ? T.window3 : r < 0.4 || !upper ? T.window0 : r < 0.7 ? T.window2 : T.window1;
+    // Keep the wide shuttered window inside the wall.
+    const ww = h * ATLAS_TILES[tile].aspect;
+    void w;
+    facadeDecal(B.ch.deco, b, tile, at, 0.05, y, h, ww);
   }
 }
 
 function drawBody(B: Builder, b: CityBuilding): void {
   const top = b.base + b.wall;
-  B.far.box([b.w, b.wall, b.d], [b.x, b.base + b.wall / 2, b.z], b.wallColor);
+  const wall = b.abandoned ? b.wallColor : paint(b.wallColor, b.x, b.z);
+  B.far.box([b.w, b.wall, b.d], [b.x, b.base + b.wall / 2, b.z], wall, undefined, T.plaster);
   if (b.roof === 'hip') {
-    B.far.pyr(b.roofW, b.roofH, b.roofD, [b.x, top + b.roofH / 2, b.z], b.roofColor);
+    // Visual overhang a little wider than the collider roof (cute deep eaves); the apex stays where the data puts it.
+    B.far.pyr(b.roofW + 0.5, b.roofH, b.roofD + 0.5, [b.x, top + b.roofH / 2 - 0.04, b.z], b.roofColor, roofTile(b));
     B.ch.deco.box([b.w + 0.3, 0.2, b.d + 0.3], [b.x, top - 0.08, b.z], b.abandoned ? 0x8a7a64 : C.CREAM); // eave trim
   } else {
-    B.far.box([b.w + 0.3, 0.3, b.d + 0.3], [b.x, top - 0.15, b.z], b.roofColor);
+    B.far.box([b.w + 0.3, 0.3, b.d + 0.3], [b.x, top - 0.15, b.z], b.roofColor, undefined, T.paving);
     edge(B, b.x, b.z, b.w, b.d, top);
   }
+  if (b.kind === 'tower' || b.abandoned) return;
+  // Brick plinth round the foot of the wall (a ring of 4 thin slabs would be 40 triangles: one slightly larger box is 10).
+  B.ch.deco.boxNB([b.w + 0.1, 0.55, b.d + 0.1], [b.x, b.base + 0.275, b.z], 0xffffff, undefined, T.brick);
+  // Downpipe at the facade's right corner.
+  B.ch.deco.boxNB(fs(b, 0.09, 0.09, b.wall - 0.3), fp(b, facadeLen(b) / 2 - 0.12, 0.05, b.base + (b.wall - 0.3) / 2 + 0.15), 0x9aa5b1);
 }
 
 function drawHouse(B: Builder, b: CityBuilding): void {
@@ -232,16 +290,26 @@ function drawHouse(B: Builder, b: CityBuilding): void {
   const y0 = b.base;
   const door = b.pieces.find((p) => p.type === 'awning');
   const doorAt = door ? alongOf(b, door) : 0;
-  B.ch.deco.box(fs(b, 1.1, 0.1, 2.1), fp(b, doorAt, 0.03, y0 + 1.05), b.kind === 'kiosk' ? 0x6b4a32 : DOOR);
   if (b.kind === 'kiosk') {
-    // Counter with fruit.
+    facadeDecal(B.ch.deco, b, T.door0, doorAt, 0.05, y0 + 1.05, 2.1, 1.1);
+    // Counter with fruit, a fruit sign above the awning.
     const fruit = [0xff6b6b, 0xffd23f, 0x7bd389, 0xff9f43];
-    B.ch.deco.box(fs(b, 2.4, 0.5, 0.9), fp(b, 0.45, 0.25, y0 + 0.45), 0xb07a4a);
-    for (let i = 0; i < 4; i++) B.ch.deco.box([0.32, 0.28, 0.32], fp(b, -0.4 + i * 0.55, 0.25, y0 + 1.04), fruit[i]);
+    B.ch.deco.box(fs(b, 2.4, 0.5, 0.9), fp(b, 0.45, 0.25, y0 + 0.45), 0xffffff, undefined, T.wood);
+    for (let i = 0; i < 4; i++) B.ch.deco.ball(0.18, fp(b, -0.4 + i * 0.55, 0.25, y0 + 1.1), fruit[i]);
+    facadeDecal(B.ch.deco, b, T.signApple, 0.45, 0.07, y0 + 2.68, 0.55);
     return;
   }
+  facadeDecal(B.ch.deco, b, T.door0, doorAt, 0.05, y0 + 1.05, 2.1, 1.1);
   const L = facadeLen(b);
   windows(B, b, [-L / 2 + 1.2, L / 2 - 1.2].filter((a) => Math.abs(a - doorAt) > 1.4), y0 + 1.9);
+  // Chimney on the back slope (not where anyone stands: the roof plateau is in the middle).
+  if (hsh(b.x, b.z, 8) < 0.55) {
+    const D = b.face < 2 ? b.d : b.w;
+    const side = (hsh(b.x, b.z, 9) < 0.5 ? -1 : 1) * L * 0.3;
+    const cy = b.base + b.wall + b.roofH * 0.32 + 0.45;
+    B.ch.deco.boxNB([0.55, 1.4, 0.55], fp(b, side, -D * 0.84, cy), 0xffffff, undefined, T.brick);
+    B.ch.deco.box([0.7, 0.14, 0.7], fp(b, side, -D * 0.84, cy + 0.74), 0xd9d2c4);
+  }
   if (b.glen) {
     // Glen's house: an orange flag with a star and a red mailbox (also in the far layer: you can find home from afar).
     const [x, , z] = fp(b, -L / 2 - 0.6, 1.2, 0);
@@ -261,21 +329,39 @@ function drawRuko(B: Builder, b: CityBuilding): void {
   drawBody(B, b);
   const fh = b.wall / b.floors;
   const L = facadeLen(b);
-  for (let f = 1; f < b.floors; f++) B.ch.deco.box(fs(b, L + 0.1, 0.16, 0.18), fp(b, 0, 0.06, b.base + f * fh), b.abandoned ? 0x8a7a64 : C.CREAM);
+  const old = b.abandoned === true;
+  for (let f = 1; f < b.floors; f++) B.ch.deco.box(fs(b, L + 0.1, 0.16, 0.18), fp(b, 0, 0.06, b.base + f * fh), old ? 0x8a7a64 : C.CREAM);
   const ats: number[] = [];
   if (b.kind === 'ruko' || b.kind === 'oldBarongsai') ats.push(-L / 2 + 1.0, L / 2 - 0.9);
   else for (let a = -L / 2 + 2; a <= L / 2 - 2; a += 3.4) ats.push(a);
   for (let f = 1; f < b.floors; f++) windows(B, b, ats, b.base + f * fh + fh * 0.5);
+  // Balconies with a plant, and an AC unit, under some upper windows of the shops (all decoration: no collider).
+  if (b.kind === 'ruko') {
+    for (let f = 2; f < b.floors; f++) {
+      const at = ats[hsh(b.x, b.z, f) < 0.5 ? 0 : 1];
+      const r = hsh(b.x + f, b.z, 4);
+      const fy = b.base + f * fh;
+      if (r < 0.55) {
+        B.ch.deco.boxNB(fs(b, 1.9, 0.8, 0.14), fp(b, at, 0.4, fy + 0.07), 0xf0e6d2);
+        B.ch.deco.boxNB(fs(b, 1.9, 0.07, 0.62), fp(b, at, 0.78, fy + 0.45), 0xffffff, undefined, T.wood);
+        B.ch.deco.ball(0.22, fp(b, at - 0.5, 0.45, fy + 0.35), 0x4f9f3a, [1, 0.8, 1]);
+        B.ch.deco.ball(0.14, fp(b, at - 0.5, 0.45, fy + 0.52), 0xff7aa8);
+      } else {
+        B.ch.deco.boxNB(fs(b, 0.75, 0.4, 0.5), fp(b, at + 0.5, 0.35, fy + 0.45), 0xe9eef3);
+      }
+    }
+  }
   // Ground floor: big shop windows / entrance away from the bay.
   const bay = b.pieces.find((p) => p.type === 'bay');
   const bayAt = bay ? alongOf(b, bay) : 0;
   const ground = ats.filter((a) => Math.abs(a - bayAt) > 2.6);
-  windows(B, b, ground, b.base + 1.5, 1.4, 1.6);
+  windows(B, b, ground, b.base + 1.5, 1.4, 1.6, false);
   const dist = districtById(b.district);
   if (b.kind === 'school') {
     B.far.cyl(0.08, 6, fp(b, -L / 2 - 1.2, 2, 3), C.GREY);
     B.far.box(fs(b, 1.6, 0.06, 1.0), fp(b, -L / 2 - 0.4, 2, 5.4), C.RED);
     B.ch.deco.box(fs(b, 6, 0.12, 0.9), fp(b, 4, 0.06, b.base + b.wall - 0.8), dist.color);
+    facadeDecal(B.ch.deco, b, T.signBook, -1.2, 0.1, b.base + 2.6, 1.0);
   } else if (b.kind === 'bank') {
     for (let a = -L / 2 + 1; a <= L / 2 - 1; a += 2.5) B.ch.deco.cyl(0.25, b.wall - 0.6, fp(b, a, 0.2, b.base + (b.wall - 0.6) / 2), 0xf4f1e8);
     B.far.cyl(1.0, 0.2, fp(b, 2, 0.15, b.base + b.wall - 1.2), C.GOLD, b.face < 2 ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]);
@@ -289,10 +375,20 @@ function drawRuko(B: Builder, b: CityBuilding): void {
     B.far.cyl(0.45, 0.12, off(0.35), 0xff5c8a, side);
     B.far.box(fs(b, 0.9, 0.12, 0.9), h, 0xff5c8a, b.face < 2 ? [0, 0, Math.PI / 4] : [Math.PI / 4, 0, 0]);
   } else if (b.kind === 'gudang') {
-    B.ch.deco.box(fs(b, 4, 0.12, 3.6), fp(b, -4, 0.06, b.base + 1.8), 0x9c6b45);
+    B.ch.deco.box(fs(b, 4, 0.12, 3.6), fp(b, -4, 0.06, b.base + 1.8), 0xffffff, undefined, T.wood);
     B.ch.deco.box(fs(b, 4, 0.14, 0.2), fp(b, -4, 0.08, b.base + 1.8), C.CREAM);
+    facadeDecal(B.ch.deco, b, T.signBag, 3, 0.1, b.base + b.wall - 1.3, 0.9);
   } else if (b.kind === 'ruko') {
-    B.ch.deco.box(fs(b, 1.9, 0.1, 0.6), fp(b, -2.1, 0.04, b.base + 2.6), C.GOLD);
+    const signs = [T.signBread, T.signBag, T.signCup, T.signBowl, T.signApple];
+    facadeDecal(B.ch.deco, b, signs[Math.floor(hsh(b.x, b.z, 6) * signs.length)], -2.1, 0.07, b.base + 2.6, 0.9);
+  }
+  if (!old && b.roof === 'flat' && b.kind !== 'tower' && hsh(b.x, b.z, 12) < 0.6) {
+    // A water tank on legs in the back corner of the roof.
+    const top = b.base + b.wall;
+    const t = fp(b, L / 2 - 0.9, -(b.face < 2 ? b.d : b.w) + 0.9, top);
+    for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]] as const) B.ch.deco.boxNB([0.08, 0.5, 0.08], [t[0] + dx, top + 0.25, t[2] + dz], 0x8a96a3);
+    B.ch.deco.cyl(0.55, 0.9, [t[0], top + 0.95, t[2]], 0x5aa9e6);
+    B.ch.deco.cone(0.58, 0.3, [t[0], top + 1.55, t[2]], 0x4a8fd1);
   }
 }
 
@@ -465,13 +561,13 @@ function drawTower(B: Builder, b: CityBuilding): void {
   const top = b.base + b.wall;
   const h = b.wall - pod;
   // Podium with a gold band and steps painted on its sides.
-  B.far.box([12, pod, 12], [b.x, b.base + pod / 2, b.z], STONE);
+  B.far.box([12, pod, 12], [b.x, b.base + pod / 2, b.z], STONE, undefined, T.paving);
   B.far.box([12.04, 0.25, 12.04], [b.x, b.base + pod - 0.125, b.z], C.GOLD);
   B.far.box([12.04, 0.3, 12.04], [b.x, b.base + 0.15, b.z], lighten(dist.color, 20));
   // Tower body.
   const ty = b.base + pod + h / 2;
   if (t.round) B.far.cyl(t.size / 2, h, [b.x, ty, b.z], dist.color);
-  else B.far.box([t.size, h, t.size], [b.x, ty, b.z], dist.color);
+  else B.far.box([t.size, h, t.size], [b.x, ty, b.z], dist.color, undefined, T.plaster);
   for (const k of [0.33, 0.66]) {
     const y = b.base + pod + h * k;
     if (t.round) B.far.cyl(t.size / 2 + 0.06, 0.3, [b.x, y, b.z], C.GOLD);
@@ -484,10 +580,7 @@ function drawTower(B: Builder, b: CityBuilding): void {
   for (let s = 0; s < 4; s++) {
     const [fx, fz] = FACE_VEC[s];
     const r = t.size / 2 + 0.04;
-    for (const y of [pod + h * 0.18, pod + h * 0.5]) {
-      B.ch.deco.box(fz !== 0 ? [1.0, 1.2, 0.08] : [0.08, 1.2, 1.0], [b.x + fx * r, b.base + y, b.z + fz * r], WIN_FRAME);
-      B.ch.glow.box(fz !== 0 ? [0.75, 0.95, 0.06] : [0.06, 0.95, 0.75], [b.x + fx * (r + 0.03), b.base + y, b.z + fz * (r + 0.03)], WIN);
-    }
+    for (const y of [pod + h * 0.18, pod + h * 0.5]) B.ch.deco.decal(T.window0, 1.0, 1.2, [b.x + fx * r, b.base + y, b.z + fz * r], Math.atan2(fx, fz));
   }
   // Style on top / near the top (decoration, no collider). Kept small so the deck stays a free place to stand.
   const y8 = top - 1.6;
@@ -538,34 +631,53 @@ function drawTower(B: Builder, b: CityBuilding): void {
 
 // ---- Props ---------------------------------------------------------------------------------------------------------------------
 
+const LEAF = [0x6fcf5a, 0x5cc04f, 0x86d85e, 0x4fb561];
+const LEAF_DARK = [0x4fae4a, 0x3f9f47, 0x5fbf4f, 0x3a9650];
+
 function drawProps(B: Builder, L: CityLayout): void {
   for (const t of L.trees) {
     const ch = B.at(t.x, t.z);
     const s = t.s;
+    const hv = hsh(t.x, t.z, 2);
     if (t.kind === 'pine') {
       const r = t.far ? B.far : ch.lit;
-      r.cyl(0.18 * s, 1.4 * s, [t.x, t.base + 0.7 * s, t.z], C.BROWN);
-      r.cone(1.35 * s, 2.6 * s, [t.x, t.base + 2.4 * s, t.z], 0x2f7f45);
-      r.cone(0.95 * s, 2.0 * s, [t.x, t.base + 3.9 * s, t.z], 0x3f9f4f);
+      const k = Math.floor(hv * 3);
+      r.trunk(0.18 * s, 1.4 * s, [t.x, t.base + 0.7 * s, t.z], C.BROWN);
+      r.add(Sh.Cone1, [t.x, t.base + 2.4 * s, t.z], [1.35 * s, 2.6 * s, 1.35 * s], [0x2f7f45, 0x2b7a4f, 0x35884a][k]);
+      r.coneOpen(0.95 * s, 2.0 * s, [t.x, t.base + 3.9 * s, t.z], [0x3f9f4f, 0x3b9a58, 0x47a851][k]);
     } else {
-      ch.lit.cyl(0.2 * s, 1.5 * s, [t.x, t.base + 0.75 * s, t.z], C.BROWN);
-      // Crowns capped at the middle sphere tier (a street tree does not need 168 triangles per ball).
-      ch.lit.add(Sh.Sph1, [t.x, t.base + 2.2 * s, t.z], [s, s, s], C.GREEN);
-      ch.lit.add(Sh.Sph1, [t.x + 0.4 * s, t.base + 2.85 * s, t.z + 0.2 * s], [0.7 * s, 0.7 * s, 0.7 * s], C.DARK_GREEN);
+      // Round crown: a main ball and three soft lobes (smooth normals make the cluster read as one round cloud). A few are in blossom.
+      const bloom = hv > 0.88;
+      const k = Math.floor(hv * 4) % 4;
+      const lc = bloom ? 0xff9fc0 : LEAF[k];
+      const ld = bloom ? 0xf07aa8 : LEAF_DARK[k];
+      ch.lit.trunk(0.2 * s, 1.5 * s, [t.x, t.base + 0.75 * s, t.z], 0x9a6a45);
+      ch.lit.add(Sh.Sph1, [t.x, t.base + 2.3 * s, t.z], [0.95 * s, 0.92 * s, 0.95 * s], lc);
+      ch.lit.ball(0.72 * s, [t.x + 0.62 * s, t.base + 2.0 * s, t.z - 0.2 * s], ld);
+      ch.lit.ball(0.66 * s, [t.x - 0.5 * s, t.base + 2.1 * s, t.z + 0.4 * s], ld);
+      ch.lit.ball(0.6 * s, [t.x + 0.1 * s, t.base + 2.95 * s, t.z + 0.1 * s], lc);
     }
   }
   for (const l of L.lamps) {
     const ch = B.at(l.x, l.z);
-    ch.deco.cyl(0.08, 3.3, [l.x, 1.65, l.z], C.GREY);
-    ch.deco.cyl(0.26, 0.1, [l.x, 3.42, l.z], C.GOLD);
-    ch.glow.sph(0.22, [l.x, 3.25, l.z], 0xffe9a0);
+    // Teal pole on a base, a short arm with a golden cap and a glowing lantern.
+    ch.deco.boxNB([0.3, 0.35, 0.3], [l.x, 0.175, l.z], 0x3d7f8a);
+    ch.deco.trunk(0.07, 3.1, [l.x, 1.9, l.z], 0x3d7f8a);
+    ch.deco.boxNB([0.5, 0.07, 0.07], [l.x + 0.2, 3.4, l.z], 0x3d7f8a);
+    ch.deco.cone(0.26, 0.2, [l.x + 0.4, 3.62, l.z], C.GOLD);
+    ch.glow.ball(0.22, [l.x + 0.4, 3.38, l.z], 0xffe9a0);
   }
   for (const b of L.benches) {
     const ch = B.at(b.x, b.z);
     const [w, d] = b.alongX ? [1.8, 0.6] : [0.6, 1.8];
-    ch.deco.box([w, 0.1, d], [b.x, 0.45, b.z], C.BROWN);
-    ch.deco.box(b.alongX ? [1.8, 0.5, 0.08] : [0.08, 0.5, 1.8], [b.x - (b.alongX ? 0 : 0.26), 0.75, b.z - (b.alongX ? 0.26 : 0)], C.BROWN);
-    for (const s of [-1, 1]) ch.deco.box([0.08, 0.4, 0.08], [b.x + (b.alongX ? s * 0.8 : 0), 0.2, b.z + (b.alongX ? 0 : s * 0.8)], 0x555b66);
+    ch.deco.box([w, 0.1, d], [b.x, 0.45, b.z], 0xffffff, undefined, T.wood);
+    ch.deco.boxNB(b.alongX ? [1.8, 0.5, 0.08] : [0.08, 0.5, 1.8], [b.x - (b.alongX ? 0 : 0.26), 0.75, b.z - (b.alongX ? 0.26 : 0)], 0xffffff, undefined, T.wood);
+    for (const s of [-1, 1]) ch.deco.boxNB([b.alongX ? 0.1 : 0.62, 0.42, b.alongX ? 0.62 : 0.1], [b.x + (b.alongX ? s * 0.8 : 0), 0.21, b.z + (b.alongX ? 0 : s * 0.8)], 0x3d7f8a);
+    // A flower pot at one end.
+    const px = b.x + (b.alongX ? 1.15 : 0);
+    const pz = b.z + (b.alongX ? 0 : 1.15);
+    ch.deco.boxNB([0.3, 0.28, 0.3], [px, 0.14, pz], 0xd9632f);
+    ch.deco.ball(0.22, [px, 0.46, pz], 0x4f9f3a, [1, 0.85, 1]);
   }
   for (const p of L.ponds) {
     const ch = B.at(p.x, p.z);
@@ -591,12 +703,12 @@ function drawProps(B: Builder, L: CityLayout): void {
       const y = f.base0 + (f.base1 - f.base0) * u;
       const ch = B.at(x, z);
       const tilt = f.broken && k % 3 === 1 ? 0.5 : 0;
-      ch.deco.box([0.12, 1.1, 0.12], [x, y + 0.5, z], 0x8a6a4a, [tilt, yaw, 0]);
+      ch.deco.boxNB([0.12, 1.1, 0.12], [x, y + 0.5, z], 0xe0b078, [tilt, yaw, 0], T.wood);
       if (k < n && !(f.broken && k % 2 === 0)) {
         const x2 = f.x0 + (f.x1 - f.x0) * ((k + 0.5) / n);
         const z2 = f.z0 + (f.z1 - f.z0) * ((k + 0.5) / n);
         const y2 = f.base0 + (f.base1 - f.base0) * ((k + 0.5) / n);
-        ch.deco.box([0.06, 0.1, len / n], [x2, y2 + 0.8, z2], 0x9a7a5a, [0, yaw, 0]);
+        ch.deco.boxNB([0.06, 0.1, len / n], [x2, y2 + 0.8, z2], 0xf0c48c, [0, yaw, 0], T.wood);
       }
     }
   }
@@ -619,24 +731,37 @@ function drawProps(B: Builder, L: CityLayout): void {
 
 // ---- Ground, roads, hills ----------------------------------------------------------------------------------------------------------
 
+const GROUND_TILE: Record<GroundKind, number> = {
+  grass: T.grass,
+  field: T.grass,
+  flowers: T.grass,
+  sand: T.grass,
+  dirt: T.grass,
+  plaza: T.paving,
+  paving: T.paving,
+  water: 0,
+};
+
 function drawGround(B: Builder, L: CityLayout): void {
   const F = B.flat;
-  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, Y.base, 0], 0x7cc566);
+  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, Y.base, 0], 0x7cc566, T.grass);
   for (const g of L.ground) {
     const w = g.x1 - g.x0;
     const d = g.z1 - g.z0;
     if (w <= 0 || d <= 0) continue;
-    F.quad(w, d, [(g.x0 + g.x1) / 2, Y[g.kind], (g.z0 + g.z1) / 2], g.color ?? GROUND_COLOR[g.kind]);
+    F.quad(w, d, [(g.x0 + g.x1) / 2, Y[g.kind], (g.z0 + g.z1) / 2], g.color ?? GROUND_COLOR[g.kind], GROUND_TILE[g.kind]);
   }
   for (const r of L.roads) {
     const cx = (r.x0 + r.x1) / 2;
     const cz = (r.z0 + r.z1) / 2;
     const w = r.x1 - r.x0;
     const d = r.z1 - r.z0;
-    F.quad(w, d, [cx, Y.walk, cz], SIDEWALK);
+    F.quad(w, d, [cx, Y.walk, cz], SIDEWALK, T.paving);
     const half = r.main ? CITY.main.road : CITY.local.road;
     const alongX = w > d;
-    F.quad(alongX ? w : half * 2, alongX ? half * 2 : d, [cx, Y.road, cz], ASPHALT);
+    // Asphalt strip: u across the road (lane wear, edge lines), v along it.
+    if (alongX) F.quad(half * 2, w, [cx, Y.road, cz], 0xffffff, T.asphalt, [0, Math.PI / 2, 0]);
+    else F.quad(half * 2, d, [cx, Y.road, cz], 0xffffff, T.asphalt);
   }
   // Centre-line dashes, skipped where another road crosses.
   for (const r of L.roads) {
