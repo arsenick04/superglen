@@ -1,3 +1,4 @@
+import { ninoLine } from '../../gameplay/NinoVariasi';
 import { BallThrower } from '../../gameplay/props/BallThrower';
 import { PADS, THROWER } from './Layout';
 import { GOAL, Limiter, type Env, type Exercise, type RunOptions } from './Env';
@@ -55,7 +56,7 @@ export class ShieldExercise implements Exercise {
     this.unsubs = [
       ctx.player.skills.on('shieldBlock', () => this.onBlock()),
       ctx.player.skills.on('ballHit', () => {
-        if (this.active && this.voice && this.cobaLagi.try(this.time)) void ctx.dialog.say('bab2_nino_coba_lagi');
+        if (this.active && this.voice && this.cobaLagi.try(this.time)) void ctx.dialog.say(ninoLine('coba_lagi'));
       }),
     ];
     return new Promise<void>((res) => {
@@ -86,7 +87,7 @@ export class ShieldExercise implements Exercise {
     this.idle = 0;
     this.fallbacks = 0;
     row.set(this.count);
-    if (this.voice && this.count < GOAL && this.count % 2 === 1) void ctx.dialog.say('bab2_nino_tangkis');
+    if (this.voice && this.count < GOAL && this.count % 2 === 1) void ctx.dialog.say(ninoLine('pujian'));
     if (this.count >= GOAL) {
       this.active = false;
       for (const u of this.unsubs) u();

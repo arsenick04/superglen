@@ -77,7 +77,7 @@ export class DemoLevel implements Level {
     ctx.seq.run(async () => {
       await ctx.dialog.sequence(
         [
-          { speaker: 'nino', text: 'Hebat, kamu sampai!' },
+          { speaker: 'nino', text: 'Wah, kamu sampai!' },
           { speaker: 'glen', text: 'Ayo kita main lagi!' },
         ],
         { lockControls: true },

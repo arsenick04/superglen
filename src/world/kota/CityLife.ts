@@ -1,4 +1,5 @@
 import { envModels } from './EnvModels';
+import { cityModels, paintMaterial } from './CityModels';
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
@@ -93,6 +94,26 @@ interface Agent {
   a0: number;
   /** Kid ball game: index of the ball (or -1). */
   ball: number;
+  /** Battle reaction: 0 normal, 1 running away, 2 watching from a distance, 3 walking back. `ox`/`oz` is the offset from the usual place. */
+  flee: number;
+  ox: number;
+  oz: number;
+  /** Unit direction away from the fight (set when fleeing starts) and the stand-off distance wanted (m). */
+  ux: number;
+  uz: number;
+  off: number;
+}
+
+/** What BattleMode tells the city (see `CityLife.battle`). */
+export interface CityBattle {
+  /** The fight's centre. */
+  x: number;
+  z: number;
+  /** People closer than this to the centre run away (m); they stop `watchR` from it and watch. */
+  fleeR: number;
+  watchR: number;
+  /** Vehicles closer than this stop (m). */
+  stopR: number;
 }
 
 interface Ball {
@@ -311,7 +332,23 @@ export class CityLife {
   private t = 0;
   /** A boss arena: nobody of the city life is drawn inside this circle (they carry no colliders, so they would drive through the fight). */
   clearZone: { x: number; z: number; r: number } | null = null;
+  /**
+   * A fight is on (BattleMode): pedestrians, children and bystanders nearby run away (a cheerful "Awas!"), then watch from a distance
+   * and cheer when a star breaks; vehicles near it stop. Null: normal life; everyone walks back.
+   */
+  battle: CityBattle | null = null;
+  setBattle(b: CityBattle | null): void {
+    this.battle = b;
+    this.shouts = 0;
+  }
+  /** Shout bubbles ("Awas!", "Hore!") are handed to the UI: world position and the word. */
+  onShout: ((x: number, y: number, z: number, text: string) => void) | null = null;
+  private cheerLeft = 0;
+  private shoutGap = 0;
+  private shouts = 0;
   /** Counters for tests. */
+  fleeing = 0;
+  watching = 0;
   simulated = 0;
   shown = 0;
   stopped = 0;
@@ -506,7 +543,9 @@ export class CityLife {
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
     // Soft rounded car from the env models (scripts/build-env-assets.mjs); the box car is the fallback.
     const envCar = envModels.geometry('car');
-    this.cars = mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
+    // L18: Kenney sedan (car kit, CC0) when loaded: only its paint takes the per-car colour (aMask), glass / tyres / lights keep theirs.
+    const kCar = cityModels.carGeometry();
+    this.cars = kCar ? mk(kCar, paintMaterial(), 70) : mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
     this.motos = mk(motoGeo(), carMat, 40);
     this.bikes = mk(bikeGeo(), carMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
@@ -551,7 +590,7 @@ export class CityLife {
   }
 
   private blank(kind: number): Agent {
-    return { kind, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1 };
+    return { kind, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
   }
 
   /** World position and yaw of a lane agent. */
@@ -574,6 +613,10 @@ export class CityLife {
     const p = this.ctx.player.visualPosition;
     const onGround = p.y < 2.3;
     const sim2 = LifeConfig.simRadius * LifeConfig.simRadius;
+    this.cheerLeft = Math.max(0, this.cheerLeft - d);
+    this.shoutGap = Math.max(0, this.shoutGap - d);
+    this.fleeing = 0;
+    this.watching = 0;
     const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
     const cam = this.ctx.cameraRig.camera;
     this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
@@ -593,8 +636,11 @@ export class CityLife {
       if (d2 > sim2 + 400 || sim >= LifeConfig.maxSim) continue;
       sim++;
       if (a.kind < 3) this.vehicle(a, d, p.x, p.z, onGround);
-      else if (a.kind === 3) this.walker(a, d, p.x, p.z, onGround);
-      else this.kid(a);
+      else if (a.kind === 3) {
+        if (a.flee !== 0) this.lanePlace(a);
+        else this.walker(a, d, p.x, p.z, onGround);
+      } else this.kid(a);
+      if (a.kind >= 3) this.react(a, d, p.x, p.z);
       if (a.v < 0.15 && a.kind < 4) stopped++;
       if (a.kind === 4 && a.mode === 1 && a.a0 === 0 && a.ball >= 0) this.ballStep(a);
       // Draw: near and in view.
@@ -692,6 +738,8 @@ export class CityLife {
         if (ahead < LifeConfig.carStopGap + 0.2) target = 0;
       }
     }
+    const bt = this.battle;
+    if (bt && (a.x - bt.x) * (a.x - bt.x) + (a.z - bt.z) * (a.z - bt.z) < bt.stopR * bt.stopR) target = 0;
     if (a.leader >= 0) {
       const o = this.agents[a.leader];
       const len = l.a1 - l.a0;
@@ -735,6 +783,88 @@ export class CityLife {
     a.y = 0;
     a.phase += dt * (3 + a.v * 4);
     a.amp = Math.min(1, a.v / 1.1) * 0.7;
+  }
+
+  /** Battle reaction of a walker, child or bystander (after its normal place was computed): run away, watch, cheer, walk back. */
+  private react(a: Agent, dt: number, px: number, pz: number): void {
+    const b = this.battle;
+    if (b) {
+      if (a.flee === 0 || a.flee === 3) {
+        const dx = a.x + a.ox - b.x;
+        const dz = a.z + a.oz - b.z;
+        const d = Math.hypot(dx, dz);
+        if (d < b.fleeR) {
+          a.flee = 1;
+          const inv = d > 0.01 ? 1 / d : 0;
+          a.ux = d > 0.01 ? dx * inv : Math.cos(a.a0 * 2.1);
+          a.uz = d > 0.01 ? dz * inv : Math.sin(a.a0 * 2.1);
+          // Stand-off: spread between the watch ring and a little further (no two stand on the same spot).
+          a.off = Math.max(0, b.watchR + ((a.jit * 7 + a.a0 * 3 + a.x * 0.37) % 1 + 1) % 1 * 5 - d);
+          if (this.shoutGap <= 0 && this.shouts < 8 && (a.x - px) ** 2 + (a.z - pz) ** 2 < 55 * 55) {
+            this.shoutGap = 0.28;
+            this.shouts++;
+            this.onShout?.(a.x, 1.9, a.z, 'Awas!');
+          }
+        }
+      }
+    } else if (a.flee === 1 || a.flee === 2) a.flee = 3;
+    if (a.flee === 0) return;
+    // Offset moves: away (running) / back (walking).
+    let tx = a.ux * a.off;
+    let tz = a.uz * a.off;
+    let sp = 5.2;
+    if (a.flee === 3) {
+      tx = 0;
+      tz = 0;
+      sp = 2.4;
+    }
+    const mx = tx - a.ox;
+    const mz = tz - a.oz;
+    const md = Math.hypot(mx, mz);
+    const step = sp * dt;
+    if (md <= step) {
+      a.ox = tx;
+      a.oz = tz;
+      if (a.flee === 3) {
+        a.flee = 0;
+        a.ox = a.oz = 0;
+        return;
+      }
+      a.flee = 2;
+    } else {
+      a.ox += (mx / md) * step;
+      a.oz += (mz / md) * step;
+    }
+    a.x += a.ox;
+    a.z += a.oz;
+    if (a.flee === 2) {
+      this.watching++;
+      // Face the fight; hop and wave when a star just broke.
+      a.yaw = Math.atan2(-a.ux, -a.uz);
+      const cheer = this.cheerLeft > 0;
+      a.y = cheer ? Math.abs(Math.sin(this.t * 9 + a.a0 * 5)) * 0.4 : 0;
+      a.amp = cheer ? 0.9 : 0.1;
+      a.phase = this.t * (cheer ? 12 : 1.5) + a.a0;
+      a.v = 1;
+    } else {
+      this.fleeing++;
+      a.yaw = Math.atan2(mx / (md || 1), mz / (md || 1));
+      a.y = 0;
+      a.amp = 1;
+      a.phase += dt * (a.flee === 1 ? 15 : 7);
+      a.v = 1;
+    }
+  }
+
+  /** A star broke: the watchers jump for joy ("Hore!"). */
+  cheer(px: number, pz: number): void {
+    this.cheerLeft = 1.8;
+    let n = 0;
+    for (const a of this.agents) {
+      if (a.flee !== 2 || (a.x - px) ** 2 + (a.z - pz) ** 2 > 40 * 40) continue;
+      this.onShout?.(a.x, 1.9, a.z, 'Hore!');
+      if (++n >= 2) break;
+    }
   }
 
   /** Child at play: 0 chase in a circle, 1 kicks a ball to a partner, 2 hops about. */

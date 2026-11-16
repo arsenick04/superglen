@@ -118,6 +118,11 @@ export class Flight {
    * flight box, so the world edge turns the child around gently instead of a wall. Reset on every level load.
    */
   groundBounds: FlightBounds | null = null;
+  /**
+   * A round battle arena (BattleMode): walking and flying are eased back inside the circle like the soft world edge, never a hard
+   * wall. Null outside fights. Cleared on every level load.
+   */
+  arena: { x: number; z: number; r: number; margin: number; push: number } | null = null;
   /** Filled by the Player every fixed step. */
   readonly inp: FlightInput = { can: false, jumpDown: false, jumpPressed: false, grounded: false, feetY: 0, groundY: NaN, ceilGap: Infinity, vy: 0 };
   /** Vertical velocity the flight wants this step (the Player applies it). */
@@ -195,6 +200,7 @@ export class Flight {
     this.maxFlyHeight = FlightConfig.defaultMaxHeight;
     this.bounds = null;
     this.groundBounds = null;
+    this.arena = null;
   }
 
   /**
@@ -307,6 +313,28 @@ export class Flight {
     }
     this.vy += (want - this.vy) * (1 - Math.exp(-ease * dt));
     if (this.state === GLIDE && this.vy < -FlightConfig.glideSpeed) this.vy = -FlightConfig.glideSpeed;
+  }
+
+  /** Ease the wanted velocity back inside the battle arena circle (see `arena`). Modifies `target` in place. */
+  limitArena(px: number, pz: number, target: THREE.Vector3): void {
+    const a = this.arena;
+    if (!a) return;
+    const dx = px - a.x;
+    const dz = pz - a.z;
+    const d = Math.hypot(dx, dz);
+    const t = (d - (a.r - a.margin)) / a.margin;
+    if (t <= 0 || d < 1e-6) return;
+    const k = Math.min(t, 1.5);
+    const ox = dx / d;
+    const oz = dz / d;
+    const radial = target.x * ox + target.z * oz;
+    if (radial > 0) {
+      const cut = radial * Math.min(1, k);
+      target.x -= ox * cut;
+      target.z -= oz * cut;
+    }
+    target.x -= ox * k * a.push;
+    target.z -= oz * k * a.push;
   }
 
   /**

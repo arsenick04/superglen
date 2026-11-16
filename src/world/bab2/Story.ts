@@ -1,3 +1,4 @@
+import { ninoLine } from '../../gameplay/NinoVariasi';
 import * as THREE from 'three';
 import { startGate } from '../../core/StartGate';
 import type { SkillName } from '../../core/Save';
@@ -180,7 +181,7 @@ export class Story {
     await this.p.rings.run({ voice: true });
     this.cheer();
     this.step = 'rings_done';
-    await dialog.say('bab2_nino_hebat');
+    await dialog.say(ninoLine('pujian'));
     row.hide();
 
     // ---- 2. Laser ----
@@ -193,7 +194,7 @@ export class Story {
     await this.p.laser.run({ voice: true });
     this.cheer();
     this.step = 'laser_done';
-    await dialog.say('bab2_nino_hebat');
+    await dialog.say(ninoLine('pujian'));
     row.hide();
 
     // ---- 3. Shield ----
@@ -206,7 +207,7 @@ export class Story {
     await this.p.shield.run({ voice: true });
     this.cheer();
     this.step = 'shield_done';
-    await dialog.say('bab2_nino_hebat');
+    await dialog.say(ninoLine('pujian'));
     row.hide();
 
     // ---- 4. Lunch ----

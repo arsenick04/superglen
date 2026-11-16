@@ -63,6 +63,7 @@ export class KeyboardMouseSource implements InputSource {
     window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('contextmenu', this.onContextMenu);
+    window.addEventListener('wheel', this.onWheel, { passive: true });
     if (this.canLock) document.addEventListener('pointerlockchange', this.onPointerLockChange);
   }
 
@@ -78,6 +79,21 @@ export class KeyboardMouseSource implements InputSource {
     this.move.x = x * inv;
     this.move.y = y * inv;
   }
+
+  /** Zoom steps from the wheel and the +/- keys (positive = farther). */
+  private zoomAcc = 0;
+
+  drainZoom(): number {
+    const z = this.zoomAcc;
+    this.zoomAcc = 0;
+    return z;
+  }
+
+  private readonly onWheel = (e: WheelEvent): void => {
+    const t = e.target as HTMLElement | null;
+    if (t && t.closest && t.closest('.settings, .parents, .fullmap, .qp')) return; // panels scroll on their own
+    this.zoomAcc += Math.max(-3, Math.min(3, e.deltaY / 100)) * 0.12;
+  };
 
   drainLook(out: Vec2): void {
     out.x += this.lookX;
@@ -115,6 +131,7 @@ export class KeyboardMouseSource implements InputSource {
     window.removeEventListener('mouseup', this.onMouseUp);
     window.removeEventListener('mousemove', this.onMouseMove);
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
+    window.removeEventListener('wheel', this.onWheel);
     if (this.canLock) document.removeEventListener('pointerlockchange', this.onPointerLockChange);
     if (this.pointerLocked) document.exitPointerLock();
   }
@@ -137,6 +154,8 @@ export class KeyboardMouseSource implements InputSource {
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser shortcuts alone
     if (PREVENT_DEFAULT.has(e.code)) e.preventDefault();
+    if (e.code === 'Equal' || e.code === 'NumpadAdd') this.zoomAcc -= 0.12;
+    else if (e.code === 'Minus' || e.code === 'NumpadSubtract') this.zoomAcc += 0.12;
     if (!this.keys.has(e.code) && !e.repeat) {
       const action = this.actionForKey(e.code);
       if (action) this.pressedLatch.add(action);

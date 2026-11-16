@@ -1,3 +1,4 @@
+import { characterModels } from '../../player/CharacterModels';
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { Easings } from '../../gameplay/Sequence';
@@ -300,6 +301,11 @@ export class Story {
     this.step = 'transform';
     this.setTarget(null);
     game.setControlsEnabled(false);
+    // The Superglen model is preloaded on the start screen; wait a moment for it if a slow connection has not finished yet,
+    // so the first transformation never shows the low-poly stand-in.
+    if (!characterModels.has('superglen') && !characterModels.failed.includes('superglen')) {
+      await Promise.race([seq.waitUntil(() => characterModels.has('superglen') || characterModels.failed.includes('superglen')), seq.wait(6)]);
+    }
     ctx.audio.music.setScene('berubah'); // one-shot sting; back to the exploring music after the line below
     const from = lab.costume.position.clone();
     const pp = pl.visualPosition;

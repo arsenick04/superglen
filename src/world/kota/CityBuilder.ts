@@ -4,6 +4,8 @@ import { Parkour } from '../../config/parkour';
 import { Recipe, Sh, type Vec3 } from './CityMesher';
 import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
+import { dressOf, type Dress } from './CityDressing';
+import { cityModels } from './CityModels';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -218,11 +220,13 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       break;
     }
     case 'bay': {
-      const col = old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
-      block(B, p, b.base, col, old ? 0xb59a62 : C.GOLD, T.plaster);
-      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : C.RED);
+      // L18: next to a Kenney / owner model the bay takes the kit's look (pale wall, slate trim and rails).
+      const kit = dressOf(b) !== null;
+      const col = kit ? (old ? 0xb08a6a : 0xf3ece0) : old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
+      block(B, p, b.base, col, kit ? 0x5a5f70 : old ? 0xb59a62 : C.GOLD, T.plaster);
+      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], kit ? 0x4a4f5e : old ? 0x7a5048 : C.RED);
       // Railing: two rails and thin posts (boxes: a round post is 24 triangles).
-      const rc = old ? 0x8c7a5a : C.GOLD;
+      const rc = kit ? 0x4a4f5e : old ? 0x8c7a5a : C.GOLD;
       if (along) {
         B.ch.deco.boxNB([p.w, 0.07, 0.07], [p.x, p.top + 0.5, p.z + fz * (p.d / 2 - 0.1)], rc);
         B.ch.deco.boxNB([p.w, 0.05, 0.05], [p.x, p.top + 0.2, p.z + fz * (p.d / 2 - 0.1)], rc);
@@ -244,7 +248,8 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       break;
     }
     case 'sign':
-      block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
+      if (dressOf(b) !== null && !old) block(B, p, b.base, 0x4a4f5e, 0xf2b632);
+      else block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
       break;
     case 'podium':
       // Drawn by the tower (far layer); only the bright edge belongs to the chunk.
@@ -566,7 +571,11 @@ function barongsaiFacade(B: Builder, b: CityBuilding, c: number): void {
   lit.cone(0.1, 0.5, [b.x, top + 2.95, b.z], OF.gold);
 }
 
-function drawTower(B: Builder, b: CityBuilding): void {
+function drawTowerDressed(B: Builder, b: CityBuilding): void {
+  drawTower(B, b, true);
+}
+
+function drawTower(B: Builder, b: CityBuilding, dressed = false): void {
   const t = b.tower as NonNullable<CityBuilding['tower']>;
   const dist = districtById(b.district);
   const pod = t.podium;
@@ -576,6 +585,7 @@ function drawTower(B: Builder, b: CityBuilding): void {
   B.far.box([12, pod, 12], [b.x, b.base + pod / 2, b.z], STONE, undefined, T.paving);
   B.far.box([12.04, 0.25, 12.04], [b.x, b.base + pod - 0.125, b.z], C.GOLD);
   B.far.box([12.04, 0.3, 12.04], [b.x, b.base + 0.15, b.z], lighten(dist.color, 20));
+  if (!dressed) {
   // Tower body.
   const ty = b.base + pod + h / 2;
   if (t.round) B.far.cyl(t.size / 2, h, [b.x, ty, b.z], dist.color);
@@ -588,12 +598,13 @@ function drawTower(B: Builder, b: CityBuilding): void {
   // Deck rim (flush with the top) and windows.
   if (t.round) B.far.cyl(t.size / 2 + 0.04, 0.35, [b.x, top - 0.175, b.z], C.CREAM);
   else B.far.box([t.size + 0.08, 0.35, t.size + 0.08], [b.x, top - 0.175, b.z], C.CREAM);
-  edge(B, b.x, b.z, t.size - (t.round ? 1.4 : 0), t.size - (t.round ? 1.4 : 0), top);
   for (let s = 0; s < 4; s++) {
     const [fx, fz] = FACE_VEC[s];
     const r = t.size / 2 + 0.04;
     for (const y of [pod + h * 0.18, pod + h * 0.5]) B.ch.deco.decal(T.window0, 1.0, 1.2, [b.x + fx * r, b.base + y, b.z + fz * r], Math.atan2(fx, fz));
   }
+  }
+  edge(B, b.x, b.z, t.size - (t.round ? 1.4 : 0), t.size - (t.round ? 1.4 : 0), top);
   // Style on top / near the top (decoration, no collider). Kept small so the deck stays a free place to stand.
   const y8 = top - 1.6;
   const disc = (fx: number, fz: number, y: number, r: number, color: number, glow = false): void => {
@@ -643,6 +654,9 @@ function drawTower(B: Builder, b: CityBuilding): void {
 
 // ---- Props ---------------------------------------------------------------------------------------------------------------------
 
+const KENNEY_ROUND: [string, number][] = [['nat_tree_oak', 1.23], ['nat_tree_default', 1.71], ['nat_tree_detailed', 1.33], ['nat_tree_plateau', 1.25], ['nat_tree_fat', 1.15], ['nat_tree_oak_fall', 1.23]];
+const KENNEY_PINE: [string, number][] = [['nat_tree_pineRoundA', 1.37], ['nat_tree_pineTallA_detailed', 1.53], ['nat_tree_pineRoundC', 1.25], ['nat_tree_pineDefaultA', 1.55]];
+
 const LEAF = [0x6fcf5a, 0x5cc04f, 0x86d85e, 0x4fb561];
 const LEAF_DARK = [0x4fae4a, 0x3f9f47, 0x5fbf4f, 0x3a9650];
 
@@ -654,11 +668,23 @@ function drawProps(B: Builder, L: CityLayout): void {
     lamp: envModels.shape('lamp'),
     bench: envModels.shape('bench'),
   };
+  // L18: Kenney nature kit trees (CC0) when loaded: [model, height at s = 1].
+  const ROUND = KENNEY_ROUND.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const PINES = KENNEY_PINE.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const lampK = cityModels.template('road_light-curved');
   for (const t of L.trees) {
     const ch = B.at(t.x, t.z);
     const s = t.s;
     const hv = hsh(t.x, t.z, 2);
     const yaw = hv * 6.283;
+    const kl = t.kind === 'pine' ? PINES : ROUND;
+    if (kl.length) {
+      const [id, h] = kl[Math.floor(hv * 997) % kl.length];
+      const r = t.far ? B.far : ch.lit;
+      const k = (t.kind === 'pine' ? 5.4 : 4.0) * s / h * (0.9 + hsh(t.x, t.z, 5) * 0.2);
+      r.add(id as Sh, [t.x, t.base, t.z], [k, k, k], 0xffffff, [0, yaw, 0]);
+      continue;
+    }
     if (t.kind === 'pine' && E.pine >= 0) {
       // Stylised pine (env model, own colours; 37 triangles): scalloped soft tiers, about 5.2 m at s = 1.
       const r = t.far ? B.far : ch.lit;
@@ -691,6 +717,12 @@ function drawProps(B: Builder, L: CityLayout): void {
   }
   for (const l of L.lamps) {
     const ch = B.at(l.x, l.z);
+    if (lampK >= 0) {
+      // Kenney curved street light, 3.7 m, arm turned to +x; the bulb stays in the glow layer.
+      ch.deco.add(lampK as Sh, [l.x, 0, l.z], [5.5, 5.5, 5.5], 0xffffff, [0, -Math.PI / 2, 0]);
+      ch.glow.ball(0.16, [l.x + 1.0, 3.62, l.z], 0xffe9a0);
+      continue;
+    }
     if (E.lamp >= 0) {
       // Env model: rounded plinth, tapered pole, curved arm, golden hood; the bulb stays in the glow layer.
       ch.deco.add(E.lamp as Sh, [l.x, 0, l.z], [1, 1, 1], 0xffffff);
@@ -755,6 +787,7 @@ function drawProps(B: Builder, L: CityLayout): void {
       }
     }
   }
+  scatterGreen(B, L);
   for (const gl of L.goals) {
     const ch = B.at(gl.x, gl.z);
     const W = 3.2;
@@ -769,6 +802,56 @@ function drawProps(B: Builder, L: CityLayout): void {
     B.far.cyl(0.08, 6.5, [bn.x, 3.25, bn.z], C.GREY);
     B.far.box([0.06, 2.2, 1.1], [bn.x, 5.0, bn.z + 0.6], bn.color);
     B.far.sph(0.16, [bn.x, 6.6, bn.z], C.GOLD);
+  }
+}
+
+/**
+ * L18: Kenney nature kit bushes, flowers and grass tufts (decoration, no collider): in front of every house and shop and scattered
+ * over the grass of the blocks, never on a building, a climbing piece or a path. Deterministic (hash of the position).
+ */
+function scatterGreen(B: Builder, L: CityLayout): void {
+  const bush = ['nat_plant_bushDetailed', 'nat_plant_bushLarge', 'nat_plant_bush'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  const flower = ['nat_flower_redA', 'nat_flower_yellowB', 'nat_flower_purpleA', 'nat_flower_redB', 'nat_flower_purpleC'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  const tuft = ['nat_grass_large', 'nat_grass_leafsLarge'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
+  if (!bush.length || !flower.length || !tuft.length) return;
+  const blocked = (x: number, z: number, m: number): boolean =>
+    L.buildings.some((b) => Math.abs(x - b.x) < b.w / 2 + m && Math.abs(z - b.z) < b.d / 2 + m) ||
+    L.buildings.some((b) => b.pieces.some((p) => Math.abs(x - p.x) < p.w / 2 + m && Math.abs(z - p.z) < p.d / 2 + m)) ||
+    L.trees.some((t) => Math.abs(x - t.x) < 1 && Math.abs(z - t.z) < 1) ||
+    L.benches.some((t) => Math.abs(x - t.x) < 1.6 && Math.abs(z - t.z) < 1.6) ||
+    L.ponds.some((p) => Math.abs(x - p.x) < p.r + 1 && Math.abs(z - p.z) < p.r + 1);
+  const put = (list: number[], x: number, z: number, size: number, k: number): void => {
+    if (blocked(x, z, 0.4)) return;
+    const h = hsh(x, z, k);
+    const ch = B.at(x, z);
+    ch.deco.add(list[Math.floor(h * 97) % list.length] as Sh, [x, 0, z], [size, size * (0.85 + h * 0.3), size], 0xffffff, [0, h * 6.283, 0]);
+  };
+  // Front gardens: a bush at both front corners, flowers between.
+  for (const b of L.buildings) {
+    if (b.base > 0 || (b.kind !== 'house' && b.kind !== 'ruko' && b.kind !== 'kiosk')) continue;
+    const L2 = facadeLen(b) / 2;
+    for (const s of [-1, 1]) {
+      const [x, , z] = fp(b, s * (L2 - 0.3), 0.75, 0);
+      put(bush, x, z, 2.6, 1);
+      const [fx, , fz] = fp(b, s * (L2 - 1.3), 0.6, 0);
+      put(flower, fx, fz, 3.2, 2);
+    }
+  }
+  // Grass of the blocks: a tuft or a flower every ~9 m (jittered grid).
+  for (const g of L.ground) {
+    if (g.kind !== 'grass' && g.kind !== 'flowers') continue;
+    const step = g.kind === 'flowers' ? 1.6 : 9;
+    for (let x = g.x0 + step / 2; x < g.x1; x += step)
+      for (let z = g.z0 + step / 2; z < g.z1; z += step) {
+        const jx = x + (hsh(x, z, 3) - 0.5) * step * 0.8;
+        const jz = z + (hsh(x, z, 4) - 0.5) * step * 0.8;
+        if (jx < g.x0 + 0.5 || jx > g.x1 - 0.5 || jz < g.z0 + 0.5 || jz > g.z1 - 0.5) continue;
+        const r = hsh(jx, jz, 5);
+        if (g.kind === 'flowers') put(flower, jx, jz, 3.0, 6);
+        else if (r < 0.55) put(tuft, jx, jz, 2.4, 7);
+        else if (r < 0.8) put(flower, jx, jz, 2.8, 8);
+        else put(bush, jx, jz, 2.2, 9);
+      }
   }
 }
 
@@ -827,6 +910,33 @@ function drawGround(B: Builder, L: CityLayout): void {
       F.quad(alongX ? 1.6 : 0.2, alongX ? 0.2 : 1.6, [x, Y.mark, z], MARK);
     }
   }
+  // L18: raised kerbs along the asphalt (Kenney roads look; visual only, 12 cm), broken at the crossings.
+  for (const r of L.roads) {
+    const alongX = r.x1 - r.x0 > r.z1 - r.z0;
+    const len = alongX ? r.x1 - r.x0 : r.z1 - r.z0;
+    const half = r.main ? CITY.main.road : CITY.local.road;
+    const cx = (r.x0 + r.x1) / 2;
+    const cz = (r.z0 + r.z1) / 2;
+    const seg = 2;
+    for (let t = seg / 2; t < len; t += seg) {
+      for (const sd of [-1, 1]) {
+        const x = alongX ? r.x0 + t : cx + sd * (half + 0.1);
+        const z = alongX ? cz + sd * (half + 0.1) : r.z0 + t;
+        let skip = false;
+        for (const o of L.roads) {
+          if (o === r) continue;
+          const oAlongX = o.x1 - o.x0 > o.z1 - o.z0;
+          if (oAlongX === alongX) continue;
+          const oh = (o.main ? CITY.main.road : CITY.local.road) + 0.6;
+          const ocx = (o.x0 + o.x1) / 2;
+          const ocz = (o.z0 + o.z1) / 2;
+          if (oAlongX ? Math.abs(z - ocz) < oh && x > o.x0 && x < o.x1 : Math.abs(x - ocx) < oh && z > o.z0 && z < o.z1) skip = true;
+        }
+        if (skip) continue;
+        F.boxNB(alongX ? [seg, 0.12, 0.2] : [0.2, 0.12, seg], [x, 0.06, z], 0xd9d6cf);
+      }
+    }
+  }
   for (const h of L.hills) {
     const edgeHill = isEdgeHill(h);
     B.at(h.x, h.z);
@@ -859,12 +969,41 @@ function drawGround(B: Builder, L: CityLayout): void {
 }
 
 /** Build every recipe and collider list of the city. */
+/** The procedural parts a model does not replace: hip roofs of the shops, the towers' podium and style, flat-roof edges. */
+function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
+  const top = b.base + b.wall;
+  if (!d.skipRoof && b.roof === 'hip') {
+    B.far.pyr(b.roofW + 0.5, b.roofH, b.roofD + 0.5, [b.x, top + b.roofH / 2 - 0.04, b.z], b.roofColor, roofTile(b));
+    B.ch.deco.box([b.w + 0.3, 0.2, b.d + 0.3], [b.x, top - 0.08, b.z], C.CREAM);
+  }
+  if (b.roof === 'flat' && b.kind !== 'tower') edge(B, b.x, b.z, b.w, b.d, top);
+  if (b.kind === 'tower' && b.tower) drawTowerDressed(B, b);
+  if (b.kind === 'kiosk' && !d.skipFacade) {
+    const fruit = [0xff6b6b, 0xffd23f, 0x7bd389, 0xff9f43];
+    B.ch.deco.box(fs(b, 2.4, 0.5, 0.9), fp(b, 0.45, 0.25, b.base + 0.45), 0xffffff, undefined, T.wood);
+    for (let i = 0; i < 4; i++) B.ch.deco.ball(0.18, fp(b, -0.4 + i * 0.55, 0.25, b.base + 1.1), fruit[i]);
+  }
+  if (b.glen && !d.model.startsWith('custom:')) {
+    const L = facadeLen(b);
+    const [x, , z] = fp(b, -L / 2 - 0.6, 1.2, 0);
+    B.far.cyl(0.06, 5.2, [x, 2.6, z], C.GREY);
+    B.far.box([1.4, 0.8, 0.06], [x + 0.7, 4.7, z], C.ORANGE);
+  }
+}
+
 export function buildCity(L: CityLayout): BuiltCity {
   const B = new Builder();
   envModels.cityBuilt = true;
   drawGround(B, L);
   for (const b of L.buildings) {
     B.at(b.x, b.z);
+    // L18: buildings dressed with a model (CityDressing.ts) keep only what the model does not show (climbing pieces always).
+    const dress = dressOf(b);
+    if (dress) {
+      drawDressed(B, b, dress);
+      for (const p of b.pieces) drawPiece(B, b, p);
+      continue;
+    }
     if (b.kind === 'tower') drawTower(B, b);
     else if (b.kind === 'oldBarongsai') drawOld(B, b);
     else if (b.cls === 'house') drawHouse(B, b);

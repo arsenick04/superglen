@@ -12,6 +12,10 @@ File ini dibaca otomatis oleh Claude Code. Detail game ada di `SUPERGLEN_GAME_DE
 
 Jangan menulis kode besar sendiri. Pakai kemampuanmu untuk keputusan arsitektur, review, dan memperbaiki masalah yang gagal diselesaikan subagent dua kali.
 
+## Kerja sama dengan Codex (keputusan pemilik proyek 16 November)
+
+Codex (ChatGPT, terhubung ke repo GitHub) yang menulis kode untuk tugas-tugas berikutnya. Claude: memecah tugas, menulis instruksi Codex yang lengkap (pemilik proyek menempelnya ke Codex), lalu memeriksa PR Codex (membaca diff, menjalankan build, check:reach, smoke test, tangkapan layar) dan memberi catatan atau menyetujui. Aturan untuk Codex ada di `AGENTS.md`. Subagent Claude tetap boleh dipakai untuk pemeriksaan dan perbaikan kecil.
+
 ## Pembagian model
 
 | Subagent | Model | Dipakai untuk |

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { setSkyRenderer } from '../world/kota/Sky';
 import { Renderer } from './Renderer';
 import { Physics, FIXED_DT } from './Physics';
 import { Input, type Action, type InputSource, type Vec2 } from '../input/Input';
@@ -52,6 +53,8 @@ import { wireQuizVoice } from '../audio/QuizVoice';
 import { ParentsPage } from '../ui/ParentsPage';
 import { SettingsMenu } from '../ui/SettingsMenu';
 import { MapView } from '../ui/MapView';
+import { BattleMode } from '../gameplay/BattleMode';
+import { ZoomButtons } from '../ui/ZoomButtons';
 import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -169,6 +172,10 @@ export interface DebugHandle {
   settings: Record<string, unknown>;
   /** Glen's hearts (gameplay/Health.ts): counts and test helpers. */
   health: Record<string, unknown>;
+  /** Battle mode (gameplay/BattleMode.ts): state and test helpers. */
+  battle: Record<string, unknown>;
+  /** Camera zoom: shown / wanted / saved multiplier and test helpers. */
+  zoom: Record<string, unknown>;
   /** Mini map / full map state (see ui/MapView.ts). */
   map: Record<string, unknown>;
   /** Test helper: reset the adaptive-resolution logic to full resolution. */
@@ -283,6 +290,7 @@ export class Game {
   readonly save: SaveStore;
   readonly dialog: Dialog;
   readonly health: Health;
+  readonly battle: BattleMode;
   private fadeUi!: Fade;
   private resting = false;
   readonly interactions: Interactions;
@@ -380,6 +388,8 @@ export class Game {
     parents: undefined as unknown as DebugHandle['parents'],
     settings: {},
     health: {},
+    battle: {},
+    zoom: {},
     map: {},
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
@@ -454,6 +464,7 @@ export class Game {
 
   constructor(container: HTMLElement) {
     this.renderer = new Renderer(container);
+    setSkyRenderer(this.renderer.renderer);
     this.physics = new Physics();
 
     this.input = new Input();
@@ -562,6 +573,7 @@ export class Game {
       quiz: this.quiz,
       setEasyJump: (on) => this.setEasyJump(on),
       setEasyFight: (on) => this.save.setEasyFight(on),
+      setReduceShake: (on) => this.save.setReduceShake(on),
       setSound: (on) => this.setSound(on),
       setMusic: (on) => this.setMusic(on),
       afterReset: () => {
@@ -603,6 +615,7 @@ export class Game {
       restart: () => {
         void this.levels.load(this.levels.currentId);
       },
+      resetZoom: () => this.resetZoom(),
     });
     startGate.onStart(() => this.maps.setShown(true));
     this.padUi = new PadUi({
@@ -682,6 +695,21 @@ export class Game {
     this.health = new Health(uiRoot, this.save, this.player, { stars: this.stars, sparkles: this.sparkles }, this.synth, this.sfx);
     this.health.onExhausted = () => void this.rest();
     this.debug.health = this.health.debugHandle();
+    // Camera zoom: the saved multiplier, saved again (debounced) when the child changes it; two buttons on touch.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self0 = this;
+    this.cameraRig.setZoom(this.save.data.settings.zoom, true, false);
+    this.cameraRig.onZoomChange = (z) => this.save.setZoom(z);
+    new ZoomButtons(uiRoot, this.input);
+    this.debug.zoom = {
+      get value() { return self0.cameraRig.zoomNow; },
+      get target() { return self0.cameraRig.zoomTarget; },
+      get saved() { return self0.save.data.settings.zoom; },
+      set: (z: number, instant = true) => self0.cameraRig.setZoom(z, instant),
+      reset: () => self0.resetZoom(),
+    };
+    this.battle = new BattleMode({ ui: uiRoot, scene: this.scene, cameraRig: this.cameraRig, player: this.player, audio: this.audio, sfx: this.sfx, save: this.save, health: this.health, sparkles: this.sparkles, rings: this.rings });
+    this.debug.battle = this.battle.debugHandle();
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -735,6 +763,7 @@ export class Game {
         audio: this.audio,
         quiz: this.quiz,
         health: this.health,
+        battle: this.battle,
       },
       player: this.player,
       cameraRig: this.cameraRig,
@@ -771,6 +800,7 @@ export class Game {
         this.updateControls();
       },
       onBeforeUnload: () => {
+        this.battle.reset();
         this.quiz.cancel();
         this.sfx.stopAll(); // the jet loop and any voice belong to the level that is going away
         // Targets, balls, rings and subscribers belong to the level that is going away.
@@ -871,7 +901,7 @@ export class Game {
     this.input.update();
     this.cameraRig.handleInput();
 
-    this.accumulator += dt;
+    this.accumulator += dt * this.battle.timeScale;
     let steps = 0;
     while (this.accumulator >= FIXED_DT && steps < MAX_SUBSTEPS) {
       this.fixedStep(FIXED_DT);
@@ -956,6 +986,7 @@ export class Game {
   private frameUpdate(dt: number): void {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
     this.skillFrame(dt);
+    this.battle.update(dt);
     this.levels.update(dt);
     {
       const mp = this.player.visualPosition;
@@ -1034,6 +1065,11 @@ export class Game {
     this.profile.shield = u.shield;
     this.hud?.setSkillHelp(u);
     this.applyLayout();
+  }
+
+  /** Settings: back to the default camera distance (saved). */
+  resetZoom(): void {
+    this.cameraRig.setZoom(1);
   }
 
   /** Parents' page hook: easy jump mode on/off (saved). */
@@ -1234,6 +1270,7 @@ export class Game {
     this.updateControls();
     this.input.reset();
     this.sfx.stopAll();
+    this.battle.exit(); // he is resting: the fight is over for now (the chapter resets it)
     try {
       await this.fadeUi.out();
       const spot = this.health.hospital;
@@ -1316,7 +1353,7 @@ export class Game {
       this.rings.update(FIXED_DT);
     }
     this.frameUpdate(frames * FIXED_DT);
-    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderFrame(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 
@@ -1326,7 +1363,7 @@ export class Game {
       this.advance(1, false);
       for (let k = 0; k < 8; k++) await Promise.resolve();
     }
-    if (render) this.renderer.renderer.render(this.scene, this.cameraRig.camera);
+    if (render) this.renderer.renderFrame(this.scene, this.cameraRig.camera);
     this.syncDebug();
   }
 

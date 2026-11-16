@@ -228,6 +228,15 @@ export class Chapter5 {
     this.boss.setEnabled(true);
     this.boss.showHud(true);
     ctx.objectives.clear();
+    const b = this.boss;
+    ctx.battle.enter({
+      id: 'ular_melar',
+      name: 'Ular Melar',
+      focus: () => ({ x: b.x, y: 1.1, z: b.z }),
+      arena: { x: b.x, z: b.z, r: 15 },
+      stars: () => ({ left: b.stars, max: b.maxStars }),
+      aura: 0x6fe08a,
+    });
     ctx.game.debugInfo.ch5Engaged = true;
   }
 
@@ -235,6 +244,7 @@ export class Chapter5 {
     this.engaged = false;
     this.boss?.setEnabled(false);
     this.boss?.showHud(false);
+    this.ctx.battle.exit();
     this.ctx.game.setTransformAllowed(true);
     this.ctx.game.debugInfo.ch5Engaged = false;
   }
@@ -276,6 +286,7 @@ export class Chapter5 {
       b.setEnabled(false);
       b.showHud(false);
       this.engaged = false;
+      ctx.battle.exit(true);
       cameraRig.setFraming(b.headAt, { weight: 0.55, distance: 8 });
       await b.tameLook();
       await dialog.say(L.ularMaaf, { lockControls: true });

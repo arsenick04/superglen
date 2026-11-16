@@ -52,7 +52,7 @@ export const BAB5_LINES = {
   // Tamed.
   ularMaaf: { id: 'bab5_ular_maaf', speaker: 'ular', text: 'Sssssori ya! Aku tidak mau menakuti. Aku cuma tersesat, sss!' },
   ularPergi: { id: 'bab5_ular_pergi', speaker: 'ular', text: 'Sss... aku pulang ke hutan. Dadah, sss!' },
-  ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Hebat, Superglen! Ular Melar sudah jinak.' },
+  ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Keren, Superglen! Ular Melar sudah jinak.' },
   ninoTikus: { id: 'bab5_nino_tikus', speaker: 'nino', text: 'Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.' },
 } as const;
 

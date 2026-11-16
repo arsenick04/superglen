@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import { Combat, CombatRng } from '../../config/combat';
 import type { HitInfo, Target } from '../../gameplay/Targets';
 import { box, cone, cyl, merge, sph } from './ColorMesh';
+import { enemyModels } from './EnemyModels';
 import { RAKUS_GUDANG } from './Bab6Data';
 
 const FUR = 0x8d7a93;
@@ -230,11 +231,14 @@ export class RakusBoss {
     const C = Combat.rakus;
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
-    this.geoAngry = rakusGeo(false);
-    this.geoHappy = rakusGeo(true);
+    // The owner's Tikus Rakus model (static, 1.7 m tall like the old figure; code animation below). The same model is the happy one
+    // (the tame scene uses scale pulses, burp and stars); the procedural figures stay as the fallback.
+    const model = enemyModels.geometry('tikus_rakus', 1.7);
+    this.geoAngry = model ?? rakusGeo(false);
+    this.geoHappy = model ?? rakusGeo(true);
     const pg = pileGeo();
-    this.geos.push(this.geoAngry, this.geoHappy, pg);
-    this.body = new THREE.Mesh(this.geoAngry, lit);
+    this.geos.push(this.geoAngry, ...(this.geoHappy === this.geoAngry ? [] : [this.geoHappy]), pg);
+    this.body = new THREE.Mesh(this.geoAngry, model ? (enemyModels.material('tikus_rakus') as THREE.Material) : lit);
     this.glowMat = new THREE.MeshBasicMaterial({ color: 0xfff08a, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
     this.pileGlowMat = this.glowMat.clone();
     this.pileGlowMat.opacity = 0.45;
@@ -483,6 +487,7 @@ export class RakusBoss {
     this.wave2Wait = this.C.doubleGap;
     if (this.wave2) this.doubles++;
     ctx.sfx.land(1);
+    ctx.battle.impact(this.x, this.z, Math.min(1.5, this.scaleNow / 1.7), 'slam');
     ctx.fx.flashes.spawn(this.x, 0.3, this.z, this.ringR * 1.3, 0.45, 0xffb347);
     for (let k = 0; k < 10; k++) {
       const a = (k / 10) * Math.PI * 2;

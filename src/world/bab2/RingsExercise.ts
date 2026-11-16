@@ -1,3 +1,4 @@
+import { ninoLine } from '../../gameplay/NinoVariasi';
 import * as THREE from 'three';
 import { FlyRing } from '../../gameplay/props/FlyRing';
 import { RING_PATH, RING_RADIUS } from './Layout';
@@ -102,7 +103,7 @@ export class RingsExercise implements Exercise {
     ctx.player.skills.stats.ringsPassed++;
     row.set(this.count);
     this.fading.push({ ring: this.rings[i], t: 0.7 });
-    if (this.voice && this.count === 2) void ctx.dialog.say('bab2_nino_cincin_bagus');
+    if (this.voice && this.count === 2) void ctx.dialog.say(ninoLine('pujian'));
     if (this.count >= GOAL) {
       this.active = false;
       this.current = -1;

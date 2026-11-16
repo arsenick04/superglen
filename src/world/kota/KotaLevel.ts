@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { CityDressing } from './CityDressing';
+import { applySky } from './Sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
 import { makeCityMaterial } from './CityMaterial';
@@ -79,6 +81,7 @@ export class KotaLevel implements Level {
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
+  private dressing!: CityDressing;
   private follower: ShadowFollower | null = null;
   private readonly sunOffset = new THREE.Vector3(30, 45, 18);
   private glimmer!: THREE.Mesh;
@@ -144,8 +147,18 @@ export class KotaLevel implements Level {
     const sky = 0x9fd8ff;
     scene.background = new THREE.Color(sky);
     scene.fog = new THREE.Fog(0xc6e6fa, Quality.cameraFar * 0.35, Quality.cameraFar * 0.95);
-    root.add(new THREE.HemisphereLight(0xd6ecff, 0xb4c76e, 1.5)); // soft sky fill with a warm grass bounce
+    const hemi = new THREE.HemisphereLight(0xd6ecff, 0xb4c76e, 1.5); // soft sky fill with a warm grass bounce
+    root.add(hemi);
     this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
+    // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
+    // the fog takes the horizon colour of the picture.
+    applySky(scene, () => {
+      hemi.intensity = 0.4;
+      hemi.groundColor.setHex(0x9fb86a);
+      this.sun.intensity = 2.5;
+      this.sun.color.setHex(0xffe6c4);
+      (scene.fog as THREE.Fog).color.setHex(0xcfe0ef);
+    });
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
@@ -168,6 +181,10 @@ export class KotaLevel implements Level {
     this.lit = mats.lit;
     this.cityLit = makeCityMaterial();
     this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow);
+    // L18: buildings dressed with Kenney / owner models (one batched draw call + the custom buildings).
+    this.dressing = new CityDressing(CITY_LAYOUT, root);
+    ctx.onDispose(() => this.dressing.dispose());
+    this.dressing.update(this.spawn.x, this.spawn.z, true);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);
@@ -209,6 +226,8 @@ export class KotaLevel implements Level {
     if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
 
     this.life = new CityLife(ctx);
+    ctx.battle.setCity(this.life);
+    ctx.onDispose(() => ctx.battle.setCity(null));
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
@@ -355,6 +374,7 @@ export class KotaLevel implements Level {
   prepareTeleport(x: number, z: number): void {
     this.streamer.ensureNear(x, z, STREAM.colIn);
     this.streamer.flushVisuals(x, z);
+    this.dressing.update(x, z, true);
   }
 
   fixedUpdate(dt = 1 / 60): void {
@@ -379,6 +399,7 @@ export class KotaLevel implements Level {
     const p = this.ctx.player.visualPosition;
     this.t += dt;
     this.streamer.update(p.x, p.z);
+    this.dressing.update(p.x, p.z);
     if (this.follower) this.follower.follow(p);
     else {
       this.sun.position.copy(p).add(this.sunOffset);

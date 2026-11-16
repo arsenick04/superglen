@@ -41,7 +41,7 @@ export const BAB6_LINES = {
   rakusMaaf: { id: 'bab6_rakus_maaf', speaker: 'rakus', text: 'Maaf ya, aku rakus sekali. Makanannya kukembalikan.' },
   rakusBagi: { id: 'bab6_rakus_bagi', speaker: 'rakus', text: 'Aku janji, mulai sekarang makanan kita bagi bersama!' },
   wargaHore: { id: 'bab6_warga_hore', speaker: 'warga', text: 'Hore! Makanan kota sudah kembali! Terima kasih, Superglen!' },
-  ninoHebat: { id: 'bab6_nino_hebat', speaker: 'nino', text: 'Hebat, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.' },
+  ninoHebat: { id: 'bab6_nino_hebat', speaker: 'nino', text: 'Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.' },
 } as const;
 
 export type Bab6Line = (typeof BAB6_LINES)[keyof typeof BAB6_LINES];

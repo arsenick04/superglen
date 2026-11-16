@@ -1,0 +1,168 @@
+{
+ "generated": "2026-11-16",
+ "buildings": {
+  "bank": {
+   "file": "buildings/bank.glb",
+   "tris": 15989,
+   "bytes": 528176,
+   "min": [
+    -0.4996,
+    0,
+    -0.3875
+   ],
+   "max": [
+    0.5,
+    0.5521,
+    0.3876
+   ],
+   "kind": "bank",
+   "body": [
+    -0.4,
+    0.4,
+    -0.36,
+    0.18
+   ],
+   "yard": 4.5,
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "gudang": {
+   "file": "buildings/gudang.glb",
+   "tris": 15976,
+   "bytes": 662752,
+   "min": [
+    -0.3703,
+    0,
+    -0.4993
+   ],
+   "max": [
+    0.3702,
+    0.4548,
+    0.5
+   ],
+   "kind": "gudang",
+   "body": [
+    -0.42,
+    0.42,
+    -0.42,
+    0.24
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "hospital": {
+   "file": "buildings/hospital.glb",
+   "tris": 16000,
+   "bytes": 447352,
+   "min": [
+    -0.4997,
+    0,
+    -0.372
+   ],
+   "max": [
+    0.4995,
+    0.6001,
+    0.372
+   ],
+   "kind": "hospital",
+   "body": [
+    -0.4,
+    0.22,
+    -0.3,
+    0.16
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "old_barongsai": {
+   "file": "buildings/old_barongsai.glb",
+   "tris": 15955,
+   "bytes": 413616,
+   "min": [
+    -0.4995,
+    0,
+    -0.4648
+   ],
+   "max": [
+    0.4997,
+    0.7046,
+    0.4633
+   ],
+   "kind": "oldBarongsai",
+   "body": [
+    -0.3,
+    0.3,
+    -0.3,
+    0.16
+   ],
+   "shift": 0,
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "pasar": {
+   "file": "buildings/pasar.glb",
+   "tris": 20033,
+   "bytes": 634168,
+   "min": [
+    -0.4568,
+    0.0012,
+    -0.4997
+   ],
+   "max": [
+    0.4561,
+    0.4866,
+    0.5
+   ],
+   "kind": "pasar",
+   "body": [
+    -0.44,
+    0.44,
+    -0.44,
+    0.38
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "rumah_glen": {
+   "file": "buildings/rumah_glen.glb",
+   "tris": 16000,
+   "bytes": 422228,
+   "min": [
+    -0.4995,
+    0,
+    -0.3893
+   ],
+   "max": [
+    0.4997,
+    0.6387,
+    0.3893
+   ],
+   "kind": "glen",
+   "body": [
+    -0.24,
+    0.26,
+    -0.36,
+    0.12
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "school": {
+   "file": "buildings/school.glb",
+   "tris": 15981,
+   "bytes": 503044,
+   "min": [
+    -0.5,
+    0,
+    -0.3462
+   ],
+   "max": [
+    0.5,
+    0.4556,
+    0.3453
+   ],
+   "kind": "school",
+   "body": [
+    -0.45,
+    0.45,
+    -0.4,
+    0.08
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  }
+ }
+}

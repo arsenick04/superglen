@@ -6,6 +6,7 @@ import { box, cone, cyl, merge, sph } from './ColorMesh';
 import { Combat, CombatRng } from '../../config/combat';
 import type { HitInfo } from '../../gameplay/Targets';
 import { personGeo } from './CityPeople';
+import { enemyModels } from './EnemyModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /** Numbers of the little rats in one place (all gentle: slow, and they never come at the child). */
@@ -180,6 +181,8 @@ export class MarketRats {
   private readonly windup: number;
   private readonly cooldown: number;
   private readonly pipMesh: THREE.InstancedMesh;
+  /** True when the rats are the Curut Cemberut model (code animation: lean, waddle, shake), false for the procedural bun rat. */
+  private readonly ratModel: boolean;
   private readonly arrowMesh: THREE.InstancedMesh;
   // Foods (index = the rat that carried it).
   private readonly fs = new Uint8Array(this.n);
@@ -198,6 +201,9 @@ export class MarketRats {
   private readonly mats: THREE.Material[] = [];
   private readonly m4 = new THREE.Matrix4();
   private readonly q = new THREE.Quaternion();
+  private readonly q2 = new THREE.Quaternion();
+  private readonly ax = new THREE.Vector3(1, 0, 0);
+  private readonly az = new THREE.Vector3(0, 0, 1);
   private readonly p = new THREE.Vector3();
   private readonly sc = new THREE.Vector3();
   private readonly col = new THREE.Color();
@@ -234,7 +240,15 @@ export class MarketRats {
   ) {
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
-    const rg = ratGeo();
+    // The owner's Curut Cemberut model (light copy: up to 8 rats at once) at the old rat's height; the procedural bun rat if it is missing.
+    const procRat = ratGeo();
+    procRat.computeBoundingBox();
+    const ratH = (procRat.boundingBox as THREE.Box3).max.y;
+    const modelRat = enemyModels.geometry('curut_cemberut_lo', ratH);
+    const rg = modelRat ?? procRat;
+    if (modelRat) procRat.dispose();
+    this.ratModel = !!modelRat;
+    const ratMat = modelRat ? (enemyModels.material('curut_cemberut_lo') as THREE.Material) : lit;
     const fg = foodGeo();
     const pg = propsGeo();
     this.geos.push(rg, fg, pg);
@@ -253,7 +267,7 @@ export class MarketRats {
     this.arrowMesh = new THREE.InstancedMesh(ag, arrowMat, this.n);
     this.pipMesh = new THREE.InstancedMesh(pgp, lit, this.n * this.hpMax);
     this.arrowMesh.renderOrder = 3;
-    this.ratMesh = new THREE.InstancedMesh(rg, lit, this.n);
+    this.ratMesh = new THREE.InstancedMesh(rg, ratMat, this.n);
     this.foodMesh = new THREE.InstancedMesh(fg, lit, this.n);
     this.props = new THREE.Mesh(pg, lit);
     for (const m of [this.ratMesh, this.foodMesh, this.arrowMesh, this.pipMesh]) {
@@ -348,6 +362,25 @@ export class MarketRats {
     return best;
   }
 
+  /** Where the nearest rat that is still around is (body centre, `out` is filled); false when none is left. */
+  nearestPos(x: number, z: number, out: { x: number; y: number; z: number }): boolean {
+    let best = Infinity;
+    let at = -1;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] >= ST_DIZZY) continue;
+      const d = Math.hypot(this.rx[i] - x, this.rz[i] - z);
+      if (d < best) {
+        best = d;
+        at = i;
+      }
+    }
+    if (at < 0) return false;
+    out.x = this.rx[at];
+    out.y = 0.9;
+    out.z = this.rz[at];
+    return true;
+  }
+
   /** Position of the nearest bakpao / kue that lies on the ground (null: none). */
   nearestFood(x: number, z: number): { x: number; z: number } | null {
     let best = Infinity;
@@ -371,9 +404,14 @@ export class MarketRats {
 
   /** The big rat of the scene (Si Tikus Rakus): one extra mesh, only drawn while he is around. */
   makeRakus(): THREE.Mesh {
-    const g = ratGeo(0x8d7a93, true);
+    // The owner's Tikus Rakus model at the old figure's height (the caller scales it up); the procedural fat rat when it is missing.
+    const proc = ratGeo(0x8d7a93, true);
+    proc.computeBoundingBox();
+    const model = enemyModels.geometry('tikus_rakus', (proc.boundingBox as THREE.Box3).max.y);
+    const g = model ?? proc;
+    if (model) proc.dispose();
     this.geos.push(g);
-    const m = new THREE.Mesh(g, this.mats[0]);
+    const m = new THREE.Mesh(g, model ? (enemyModels.material('tikus_rakus') as THREE.Material) : this.mats[0]);
     m.castShadow = false;
     m.visible = false;
     this.ctx.root.add(m);
@@ -824,35 +862,59 @@ export class MarketRats {
         let sxz = 1;
         let jx = 0;
         let jz = 0;
-        if (s === ST_LOOP || s === ST_BACK) y = Math.abs(Math.sin(t * 9 + i)) * 0.05;
+        // Code animation of the static model: forward lean (rad), sideways tilt (rad), extra turn (rad).
+        let lean = 0;
+        let roll = 0;
+        let turn = 0;
+        if (s === ST_LOOP || s === ST_BACK) {
+          // Grumpy waddle: little hops, the body rocks side to side.
+          y = Math.abs(Math.sin(t * 9 + i)) * 0.05;
+          roll = Math.sin(t * 9 + i) * 0.1;
+          lean = 0.06;
+        }
         else if (s === ST_RUN) {
           y = Math.abs(Math.sin(t * 15 + i)) * 0.09;
           sy = 1 + Math.sin(t * 30 + i) * 0.04;
+          lean = 0.3;
+          roll = Math.sin(t * 15 + i) * 0.14;
         } else if (s === ST_WIND) {
           // Telegraph: the rat shakes harder and crouches (a crumb thrower puffs its cheeks), and a charge shows its arrow.
           const u = Math.min(1, this.timer[i] / this.windup);
           jx = Math.sin(t * 70 + i) * 0.05 * (0.4 + u);
           jz = Math.cos(t * 63 + i) * 0.05 * (0.4 + u);
           sy = 1 - 0.18 * u;
+          lean = -0.28 * u; // winds up: leans back, then shakes
+          roll = Math.sin(t * 55 + i) * 0.12 * u;
           sxz = 1 + (this.kind[i] === K_CRUMB ? 0.3 : 0.12) * u;
           if (this.kind[i] === K_CHARGE) arrow = 0.75 + 0.25 * Math.sin(t * 20);
         } else if (s === ST_CHARGE) {
           y = Math.abs(Math.sin(t * 24 + i)) * 0.06;
           sy = 0.92;
+          lean = 0.55;
+          roll = Math.sin(t * 24 + i) * 0.08;
         } else if (s === ST_RECOVER) {
           sy = 1 + Math.sin(t * 16 + i) * 0.05; // panting
+          lean = 0.12 + Math.sin(t * 16 + i) * 0.04;
         } else if (s === ST_STUN) {
           const u = Math.min(1, this.timer[i] / Combat.rat.stun);
           y = Math.sin(Math.PI * u) * 0.25;
+          roll = Math.sin(t * 38 + i) * 0.3 * (1 - u); // hit: shakes its head
+          turn = Math.sin(t * 17 + i) * 0.25 * (1 - u);
         } else if (s === ST_DIZZY) {
           const u = Math.min(1, this.timer[i] / RatConfig.dizzyTime);
           y = Math.sin(Math.PI * Math.min(1, u * 2)) * 0.5;
           sy = 1 + 0.15 * Math.sin(u * 20);
+          turn = u * 18; // dizzy spin (it pops up and twirls; the stars come from fx)
+          roll = Math.sin(u * 30) * 0.18;
         }
         const sq = this.squash[i];
         sy *= 1 - 0.25 * sq;
         sxz *= 1 + 0.2 * sq;
-        this.q.setFromAxisAngle(this.up, this.yaw[i]);
+        this.q.setFromAxisAngle(this.up, this.yaw[i] + turn);
+        if (this.ratModel && (lean !== 0 || roll !== 0)) {
+          this.q.multiply(this.q2.setFromAxisAngle(this.ax, lean));
+          this.q.multiply(this.q2.setFromAxisAngle(this.az, roll));
+        }
         this.m4.compose(this.p.set(this.rx[i] + jx, y * SC, this.rz[i] + jz), this.q, this.sc.set(SC * sxz, SC * sy, SC * sxz));
       }
       this.ratMesh.setMatrixAt(i, this.m4);

@@ -51,6 +51,8 @@ export class TouchSource implements InputSource {
   private stickKy = 0;
   private lookX = 0;
   private lookY = 0;
+  private zoomAcc = 0;
+  private pinchPrev = 0;
   private stickId = -1;
   private cx = 0;
   private cy = 0;
@@ -97,6 +99,26 @@ export class TouchSource implements InputSource {
       this.stickDirty = false;
       this.controls.showStick(this.cx, this.cy, this.stickKx, this.stickKy);
     }
+  }
+
+  drainZoom(): number {
+    const z = this.zoomAcc;
+    this.zoomAcc = 0;
+    return z;
+  }
+
+  /** Distance between the two look fingers (0 when there are not exactly two). */
+  private pinchDistance(): number {
+    let a: Held | null = null;
+    let b: Held | null = null;
+    let n = 0;
+    for (const h of this.held.values()) {
+      if (h.kind !== 'look') continue;
+      n++;
+      if (!a) a = h;
+      else b = h;
+    }
+    return n === 2 && a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   }
 
   drainLook(out: Vec2): void {
@@ -236,6 +258,17 @@ export class TouchSource implements InputSource {
     if (h.kind === 'stick') {
       this.updateStick(x, y);
     } else if (h.kind === 'look') {
+      const two = this.pinchDistance() > 0;
+      if (two) {
+        // Two fingers: pinch zoom (apart = closer); no camera turning meanwhile.
+        h.x = x;
+        h.y = y;
+        const d = this.pinchDistance();
+        if (this.pinchPrev > 0 && d > 0) this.zoomAcc += Math.log(this.pinchPrev / d);
+        this.pinchPrev = d;
+        return;
+      }
+      this.pinchPrev = 0;
       this.lookX += (x - h.x) * TouchConfig.lookSensitivity;
       this.lookY += (y - h.y) * TouchConfig.lookSensitivity * TouchConfig.pitchFactor;
       h.x = x;
@@ -251,6 +284,7 @@ export class TouchSource implements InputSource {
     const h = this.held.get(e.pointerId);
     if (!h) return;
     this.release(e.pointerId);
+    this.pinchPrev = 0;
     if (h.kind === 'stick') {
       this.stickDirty = false;
       this.stickId = -1;

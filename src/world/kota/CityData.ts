@@ -147,7 +147,7 @@ export interface CityPiece {
   n?: number;
 }
 
-export type BuildingKind = 'house' | 'ruko' | 'kiosk' | 'school' | 'bank' | 'hospital' | 'gudang' | 'tower' | 'oldBarongsai';
+export type BuildingKind = 'house' | 'ruko' | 'kiosk' | 'school' | 'bank' | 'hospital' | 'gudang' | 'pasar' | 'tower' | 'oldBarongsai';
 export type TowerStyle = 'clock' | 'bell' | 'water' | 'pagoda' | 'coin';
 
 export interface CityBuilding {
@@ -785,7 +785,7 @@ const PLANS: { cell: [number, number]; district: DistrictId; blocks: [BlockPlan,
   { cell: [-1, 0], district: 'perumahan', blocks: [{ t: 'houses', axis: 'x' }, { t: 'houses', axis: 'z' }, { t: 'landmark', style: 'water', round: true, face: 2 }, { t: 'park' }] },
   { cell: [-1, 1], district: 'perumahan', blocks: [{ t: 'houses', axis: 'z' }, { t: 'park', playground: true }, { t: 'houses', axis: 'x' }, { t: 'houses', axis: 'x' }] },
   { cell: [1, 0], district: 'pasar', blocks: [{ t: 'landmark', style: 'pagoda', round: false, face: 3 }, { t: 'kiosks', axis: 'x' }, { t: 'kiosks', axis: 'z' }, { t: 'rukos', axis: 'x' }] },
-  { cell: [1, 1], district: 'pasar', blocks: [{ t: 'kiosks', axis: 'x' }, { t: 'big', kind: 'gudang', wall: 0xffd29a, roof: 0xd9632f, face: 1 }, { t: 'park' }, { t: 'kiosks', axis: 'z' }] },
+  { cell: [1, 1], district: 'pasar', blocks: [{ t: 'kiosks', axis: 'x' }, { t: 'big', kind: 'gudang', wall: 0xffd29a, roof: 0xd9632f, face: 1 }, { t: 'big', kind: 'pasar', wall: 0xffe2b0, roof: 0xd9632f, face: 1 }, { t: 'kiosks', axis: 'z' }] },
   { cell: [0, 1], district: 'bank', blocks: [{ t: 'big', kind: 'bank', wall: 0xffffff, roof: 0x1e9e92, face: 1 }, { t: 'big', kind: 'hospital', wall: 0xf1fbff, roof: 0x2ec4b6, face: 1 }, { t: 'landmark', style: 'coin', round: false, face: 1 }, { t: 'rukos', axis: 'x' }] },
 ];
 
@@ -853,7 +853,7 @@ function fillBlock(g: Gen, district: DistrictId, bx: Rect, p: BlockPlan): void {
 }
 
 function bigName(k: BuildingKind): string {
-  return k === 'school' ? 'Sekolah Glen dan Aara' : k === 'bank' ? 'Bank' : k === 'hospital' ? 'Rumah Sakit' : k === 'gudang' ? 'Gudang Pasar' : 'Gedung';
+  return k === 'school' ? 'Sekolah Glen dan Aara' : k === 'bank' ? 'Bank' : k === 'hospital' ? 'Rumah Sakit' : k === 'gudang' ? 'Gudang Pasar' : k === 'pasar' ? 'Pasar Botanica' : 'Gedung';
 }
 
 /** Centre cell: the alun-alun with the clock tower, ponds, gardens and two rows of shops. */

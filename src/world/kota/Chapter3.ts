@@ -3,7 +3,7 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
-import { CombatRng } from '../../config/combat';
+import { Combat, CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
 import { Celebration } from '../Celebration';
 import { Easings } from '../../gameplay/Sequence';
@@ -287,11 +287,16 @@ export class Chapter3 {
         const d = MARKET.drains[MARKET.rakus.drain];
         const x0 = mesh.position.x;
         const z0 = mesh.position.z;
+        mesh.rotation.order = 'YXZ';
         mesh.rotation.y = Math.atan2(d.x - x0, d.z - z0);
         void dialog.say(L.rakusRaja, { lockControls: true });
         const dur = Math.hypot(d.x - x0, d.z - z0) / 8;
         await seq.tween(dur, (t) => {
           mesh.position.set(x0 + (d.x - x0) * t, Math.abs(Math.sin(t * dur * 7)) * 0.22, z0 + (d.z - z0) * t);
+          // Waddling run (the model is static): rocks side to side and leans forward, with a squash on every hop.
+          mesh.rotation.z = Math.sin(t * dur * 7) * 0.1;
+          mesh.rotation.x = 0.16;
+          mesh.scale.set(3.2 * (1 + Math.sin(t * dur * 14) * 0.03), 3.2 * (1 - Math.sin(t * dur * 14) * 0.04), 3.2);
           cameraRig.setFraming(this.tmp.set(mesh.position.x, 1.2, mesh.position.z), { weight: 0.6, distance: 5 });
         });
         ctx.fx.sparkles.burst(d.x, 0.4, d.z, 18, 3, 0xdfe6f2, { gravity: 1.5, life: 0.7, up: 0.7 });
@@ -340,9 +345,46 @@ export class Chapter3 {
     this.ctx.objectives.set(this.tmp.set(MARKET.hub.x, 0, MARKET.hub.z));
   }
 
+  // ---- battle mode: the rats fight back once the child is close to one ----
+  private fighting = false;
+  private calmFor = 0;
+  private readonly ratAt = { x: 0, y: 0.9, z: 0 };
+
+  private battleCheck(dt: number): void {
+    const { ctx } = this;
+    const p = ctx.player.position;
+    const near = this.step === 'chase' && this.arrived && !ctx.health.resting && this.rats.nearestPos(p.x, p.z, this.ratAt);
+    const d = near ? Math.hypot(this.ratAt.x - p.x, this.ratAt.z - p.z) : Infinity;
+    if (!this.fighting) {
+      if (d < Combat.rat.aggroRadius && startGate.started && ctx.game.controlsEnabled) {
+        this.fighting = true;
+        this.calmFor = 0;
+        const total = this.rats.n;
+        ctx.battle.enter({
+          id: 'curut_cemberut',
+          name: 'Curut Cemberut',
+          focus: () => (this.rats.nearestPos(ctx.player.position.x, ctx.player.position.z, this.ratAt) ? this.ratAt : null),
+          city: { x: p.x, z: p.z, r: 6 },
+          stars: () => ({ left: this.rats.remaining, max: total }),
+          ownBar: true,
+          intro: false,
+          punchy: false,
+          aura: 0xff7a59,
+        });
+      }
+    } else {
+      this.calmFor = d > Combat.rat.aggroRadius + 10 ? this.calmFor + dt : 0;
+      if (this.calmFor > 1.5 || this.step !== 'chase' || ctx.health.resting) {
+        this.fighting = false;
+        ctx.battle.exit(this.rats.allTamed);
+      }
+    }
+  }
+
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
     this.rats.fixedUpdate(dt);
+    this.battleCheck(dt);
     this.foodBeam();
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {
@@ -388,6 +430,10 @@ export class Chapter3 {
   complete(): void {
     if (this.over) return;
     this.over = true;
+    if (this.fighting) {
+      this.fighting = false;
+      this.ctx.battle.exit();
+    }
     this.ctx.game.pulseButton('transform', false);
     this.hud.classList.remove('show');
     this.ctx.save.markChapterDone('bab3');

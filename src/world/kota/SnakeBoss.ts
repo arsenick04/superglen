@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import { Combat } from '../../config/combat';
 import type { HitInfo, Target } from '../../gameplay/Targets';
 import { box, cone, merge, sph } from './ColorMesh';
+import { enemyModels } from './EnemyModels';
 
 /** Body segments (index 0 is the neck, the last one the tail tip). */
 const N = 20;
@@ -71,6 +72,34 @@ function headGeo(friendly: boolean): THREE.BufferGeometry {
   ]);
 }
 
+/** Camo colours sampled from the model's texture (olive green, mustard yellow, cream belly). */
+const CAMO_GREEN = new THREE.Color(0x66804a);
+const CAMO_YELLOW = new THREE.Color(0xcaa94e);
+const CAMO_BELLY = new THREE.Color(0xdccb94);
+
+/**
+ * One body segment of the model snake: a unit sphere painted like the model (green with soft mustard blotches on the back, cream belly),
+ * so the chain of stretched segments reads as the same snake as the head. Vertex colours; a blotch is a smooth threshold of a few sines.
+ */
+function camoBallGeo(): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(1, 14, 10);
+  const P = g.getAttribute('position');
+  const col = new Float32Array(P.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < P.count; i++) {
+    const x = P.getX(i);
+    const y = P.getY(i);
+    const z = P.getZ(i);
+    const blot = Math.sin(x * 5.3 + 1.3) * Math.sin(z * 3.1 + 0.7 + y * 2) + 0.55 * Math.sin(y * 6.5 + x * 2);
+    const yellow = smooth((blot - 0.35) / 0.35);
+    c.copy(CAMO_GREEN).lerp(CAMO_YELLOW, yellow);
+    c.lerp(CAMO_BELLY, smooth((-y - 0.25) / 0.35));
+    c.toArray(col, i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
 const smooth = (x: number): number => {
   const t = Math.max(0, Math.min(1, x));
   return t * t * (3 - 2 * t);
@@ -119,6 +148,8 @@ export class SnakeBoss {
   private readonly group = new THREE.Group();
   private readonly bodyMesh: THREE.InstancedMesh;
   private readonly headMesh: THREE.Mesh;
+  /** True when the head is the owner's model (code animation: roll, wobble, lunge stretch of the camo body). */
+  private readonly modelHead: boolean;
   private readonly headAngry: THREE.BufferGeometry;
   private readonly headHappy: THREE.BufferGeometry;
   private readonly glow: THREE.Mesh;
@@ -176,17 +207,20 @@ export class SnakeBoss {
     this.stars = this.maxStars;
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
-    this.bodyGeo = merge([{ g: sph(1, 9, 6), c: 0xffffff }]);
-    this.headAngry = headGeo(false);
-    this.headHappy = headGeo(true);
+    // The owner's Ular Melar head (the cut-off head of the model, textured) on a chain of camo balls; procedural head + balls if the file is missing.
+    const modelHead = enemyModels.geometry('ular_melar_head', 1.45, true);
+    this.bodyGeo = modelHead ? camoBallGeo() : merge([{ g: sph(1, 9, 6), c: 0xffffff }]);
+    this.headAngry = modelHead ?? headGeo(false);
+    this.headHappy = modelHead ?? headGeo(true);
+    this.modelHead = !!modelHead;
     this.bodyMesh = new THREE.InstancedMesh(this.bodyGeo, lit, N);
     for (let i = 0; i < N; i++) {
-      this.bodyMesh.setColorAt(i, this.col.setHex(i % 3 === 1 ? PURPLE : i % 3 === 0 ? GREEN : LIGHT));
+      this.bodyMesh.setColorAt(i, this.col.setHex(modelHead ? 0xffffff : i % 3 === 1 ? PURPLE : i % 3 === 0 ? GREEN : LIGHT));
       this.segs.push(new THREE.Vector3());
       const u = i / (N - 1);
-      this.rad.push(0.62 * (1 - 0.65 * u));
+      this.rad.push(modelHead ? 0.6 * (1 - 0.45 * u) : 0.62 * (1 - 0.65 * u));
     }
-    this.headMesh = new THREE.Mesh(this.headAngry, lit);
+    this.headMesh = new THREE.Mesh(this.headAngry, modelHead ? (enemyModels.material('ular_melar_head') as THREE.Material) : lit);
     this.glowMat = new THREE.MeshBasicMaterial({ color: 0xfff08a, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
     this.mats.push(this.glowMat);
     this.glow = new THREE.Mesh(new THREE.SphereGeometry(1.5, 12, 8), this.glowMat);
@@ -248,7 +282,7 @@ export class SnakeBoss {
       this.bodyMesh.dispose();
       this.bodyGeo.dispose();
       this.headAngry.dispose();
-      this.headHappy.dispose();
+      if (this.headHappy !== this.headAngry) this.headHappy.dispose();
       this.glow.geometry.dispose();
       this.stripe.geometry.dispose();
       this.arcStripe.geometry.dispose();
@@ -373,6 +407,7 @@ export class SnakeBoss {
     this.timer = 0;
     this.lunges++;
     this.ctx.synth.boing();
+    this.ctx.battle.shake(0.1, 0.25);
   }
 
   private beginDizzy(kind: DizzyKind): void {
@@ -667,7 +702,15 @@ export class SnakeBoss {
     const fwd = 0.55 * sc;
     this.head.set(s0.x + fx * fwd + hx * sc, s0.y + hy * sc + 0.45 * sc, s0.z + fz * fwd + hz * sc);
     const sq = 1 + this.squash * 0.18;
-    this.e.set(pitch, headYaw, 0);
+    this.e.order = 'YXZ';
+    let roll = 0;
+    if (this.modelHead) {
+      // Static model: tilt it by code. Dizzy: the head droops and rolls; wind-up: it rocks like a rattle; lunge: it stays level.
+      if (this.phase === 'dizzy' || this.phase === 'beaten') roll = Math.sin(t * 4 + 1) * 0.35;
+      else if (this.phase === 'wind') roll = Math.sin(t * 24) * 0.1 * wind;
+      else roll = Math.sin(t * 1.6) * 0.04;
+    }
+    this.e.set(pitch, headYaw, roll);
     this.q.setFromEuler(this.e);
     this.headMesh.position.copy(this.head);
     this.headMesh.quaternion.copy(this.q);
@@ -679,11 +722,11 @@ export class SnakeBoss {
       const next = this.segs[Math.min(N - 1, i + 1)];
       const prev = this.segs[Math.max(0, i - 1)];
       const gap = Math.hypot(prev.x - next.x, prev.z - next.z) / 2;
-      const along = Math.max(1, gap / Math.max(0.1, r * 0.9));
+      const along = Math.max(1, (this.modelHead ? gap * 1.2 : gap) / Math.max(0.1, r * 0.9));
       const yaw = Math.atan2(prev.x - next.x, prev.z - next.z);
       this.e.set(0, yaw, 0);
       this.q.setFromEuler(this.e);
-      this.m4.compose(sg, this.q, this.v2.set(r, r, r * Math.min(2.2, along)));
+      this.m4.compose(sg, this.q, this.v2.set(r, r, r * Math.min(this.modelHead ? 6 : 2.2, along)));
       this.bodyMesh.setMatrixAt(i, this.m4);
     }
     this.bodyMesh.instanceMatrix.needsUpdate = true;

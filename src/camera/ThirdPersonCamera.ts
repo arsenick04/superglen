@@ -63,6 +63,28 @@ export const CameraConfig = {
   flyExtraDistance: 2.8,
   flySharpness: 2.5,
 
+  // --- Manual zoom (wheel, +/-, pinch, buttons, R3/L3): a multiplier on the whole follow distance ---
+  zoomMin: 0.55,
+  zoomMax: 1.9,
+  /** Sharpness of the zoom easing (1/s) and seconds without change before it is saved. */
+  zoomSharpness: 7,
+  zoomSaveDelay: 0.6,
+
+  // --- Battle camera (BattleMode): lock-on that keeps the enemy in view ---
+  /** How far the look target moves from Glen toward the enemy (0..1). */
+  battleLook: 0.42,
+  /** Extra pull-back (m): a base plus a share of the Glen-enemy distance, capped. */
+  battleBack: 1.8,
+  battleBackPerM: 0.5,
+  battleBackMax: 8,
+  /** Lower, more dramatic pitch while fighting (rad). */
+  battlePitch: 11 * DEG,
+  /** Auto-orbit sharpness (1/s) and the pause after the child drags the camera himself (s). */
+  battleYawSharpness: 2.6,
+  battleManualHold: 1.4,
+  /** Sharpness of blending in and out of the battle camera (1/s). */
+  battleBlendSharpness: 2.2,
+
   // --- Landing bump (stomp) ---
   bumpDuration: 0.1,
   /** Peak downward camera dip (m). */
@@ -135,6 +157,49 @@ export class ThirdPersonCamera {
   private pitchRestore: number | null = null;
   private readonly framePoint = new THREE.Vector3();
 
+  // ---- Battle lock-on, shake and zoom punch ----
+  private battleFocus: THREE.Vector3 | null = null;
+  private battleBlend = 0;
+  private battleExtra = 0;
+  private battleHold = 0;
+  private shakeAmp = 0;
+  private shakeTime = 0;
+  private shakeLen = 0;
+  private shakeClock = 0;
+  private punchAmt = 0;
+  private punchTime = 0;
+  private punchLen = 0;
+  private fovShown: number = CameraConfig.fov;
+  /** The camera is locked on an enemy (or still easing out of it). */
+  get battleActive(): boolean {
+    return this.battleFocus !== null || this.battleBlend > 0.02;
+  }
+  /** 0..1: how much of the battle camera is in effect (tests, UI). */
+  get battleWeight(): number {
+    return this.battleBlend;
+  }
+
+  // ---- Manual zoom ----
+  /** Wanted and shown zoom multiplier (1 = the old default distance). */
+  zoomTarget = 1;
+  zoomNow = 1;
+  private zoomSaveIn = -1;
+  /** Called (debounced) with the multiplier after the child changed the zoom: the game saves it. */
+  onZoomChange: ((z: number) => void) | null = null;
+
+  /** Set the zoom multiplier (clamped). `instant`: no easing. */
+  setZoom(z: number, instant = false, notify = true): void {
+    const c = CameraConfig;
+    this.zoomTarget = THREE.MathUtils.clamp(Number.isFinite(z) ? z : 1, c.zoomMin, c.zoomMax);
+    if (instant) this.zoomNow = this.zoomTarget;
+    if (notify) this.zoomSaveIn = c.zoomSaveDelay;
+  }
+
+  /** Zoom by log steps (positive = farther). */
+  zoomBy(logSteps: number): void {
+    if (logSteps !== 0) this.setZoom(this.zoomTarget * Math.exp(logSteps));
+  }
+
   private readonly ray: RAPIER.Ray;
   private readonly dir = new THREE.Vector3();
   private readonly desiredTarget = new THREE.Vector3();
@@ -200,6 +265,35 @@ export class ThirdPersonCamera {
     this.frameExtra = opts.distance ?? 0;
   }
 
+  /**
+   * Lock-on: frame the enemy at `focus` (a live vector the caller keeps updating) together with the player: the camera orbits to stay
+   * behind Glen on the line to the enemy, a little further back and lower. `null` returns to the normal follow camera.
+   */
+  setBattle(focus: THREE.Vector3 | null): void {
+    this.battleFocus = focus;
+    if (!focus) this.pitchRestore ??= CameraConfig.defaultPitch;
+  }
+
+  /** A short shake (m at the camera, seconds). Callers pass 0 when the parents chose "kurangi guncangan". */
+  shake(amount: number, seconds: number): void {
+    if (this.reducedMotion || amount <= 0) return;
+    if (amount >= this.shakeAmp * this.shakeLeft()) {
+      this.shakeAmp = amount;
+      this.shakeLen = this.shakeTime = seconds;
+    }
+  }
+
+  private shakeLeft(): number {
+    return this.shakeLen > 0 ? Math.max(0, this.shakeTime / this.shakeLen) : 0;
+  }
+
+  /** A brief zoom-in: the field of view dips by `deg` and returns over `seconds`. */
+  punch(deg: number, seconds: number): void {
+    if (this.reducedMotion || deg <= 0) return;
+    this.punchAmt = deg;
+    this.punchLen = this.punchTime = seconds;
+  }
+
   /** Tiny camera dip on a hard landing. Ignored under prefers-reduced-motion. */
   bump(): void {
     if (!this.reducedMotion) this.bumpTime = 0;
@@ -207,9 +301,12 @@ export class ThirdPersonCamera {
 
   /** Apply look input. Call once per frame BEFORE the fixed steps so movement uses the new yaw. */
   handleInput(): void {
+    const zs = this.input.consumeZoom();
+    if (zs !== 0) this.zoomBy(zs);
     const look = this.input.consumeLookDelta();
     if (Math.abs(look.x) > CameraConfig.followManualEpsilon || Math.abs(look.y) > CameraConfig.followManualEpsilon) {
       this.manualThisFrame = true;
+      this.battleHold = CameraConfig.battleManualHold;
     }
     // Latch the steering frame (see steeringYaw). Once per rendered frame, before the fixed steps,
     // so every fixed step in the frame sees the same value.
@@ -254,6 +351,26 @@ export class ThirdPersonCamera {
         this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
       }
     }
+    // Battle lock-on: look partway toward the enemy, back off with the distance, orbit behind Glen on the line to it, lower pitch.
+    const bf = this.battleFocus;
+    this.battleBlend += ((bf ? 1 : 0) - this.battleBlend) * (1 - Math.exp(-c.battleBlendSharpness * dt));
+    if (this.battleHold > 0) this.battleHold -= dt;
+    let extraWant = 0;
+    if (bf) {
+      const sep = Math.hypot(focus.x - bf.x, focus.z - bf.z);
+      extraWant = Math.min(c.battleBackMax, c.battleBack + sep * c.battleBackPerM);
+      const w = c.battleLook * this.battleBlend;
+      this.desiredTarget.x += (bf.x - this.desiredTarget.x) * w;
+      this.desiredTarget.z += (bf.z - this.desiredTarget.z) * w;
+      this.desiredTarget.y += (Math.max(bf.y, focus.y + 0.3) - this.desiredTarget.y) * w * 0.6;
+      if (!this.frameOn && this.battleHold <= 0 && sep > 0.8) {
+        const want = Math.atan2(focus.x - bf.x, focus.z - bf.z);
+        this.yaw += angleDelta(this.yaw, want) * (1 - Math.exp(-c.battleYawSharpness * dt)) * this.battleBlend;
+        this.pitch += (c.battlePitch - this.pitch) * (1 - Math.exp(-1.6 * dt)) * this.battleBlend;
+        this.pitchRestore = null;
+      }
+    }
+    this.battleExtra += (extraWant - this.battleExtra) * (1 - Math.exp(-2 * dt));
     if (this.frameOn && this.framePitch !== null) {
       this.pitch += (this.framePitch - this.pitch) * (1 - Math.exp(-2 * dt));
     } else if (this.pitchRestore !== null) {
@@ -279,7 +396,13 @@ export class ThirdPersonCamera {
     const pitch = Math.min(this.pitch + lift * c.airExtraPitch + fly * c.flyExtraPitch + rExtraPitch, 75 * DEG);
     const cp = Math.cos(pitch);
     this.dir.set(Math.sin(this.yaw) * cp, Math.sin(pitch), Math.cos(this.yaw) * cp);
-    const maxDist = c.distance + lift * c.airExtraDistance + fly * c.flyExtraDistance + rExtraDist + this.frameExtra * this.frameBlend;
+    const zk = 1 - Math.exp(-c.zoomSharpness * dt);
+    this.zoomNow += (this.zoomTarget - this.zoomNow) * zk;
+    if (this.zoomSaveIn >= 0) {
+      this.zoomSaveIn -= dt;
+      if (this.zoomSaveIn < 0) this.onZoomChange?.(this.zoomTarget);
+    }
+    const maxDist = this.zoomNow * (c.distance + lift * c.airExtraDistance + fly * c.flyExtraDistance + rExtraDist + this.frameExtra * this.frameBlend + this.battleExtra);
 
     // Wall avoidance: cast from the target toward the desired camera spot.
     let allowed: number = maxDist;
@@ -322,6 +445,27 @@ export class ThirdPersonCamera {
       this.bumpTime += dt;
       const t = Math.min(this.bumpTime / c.bumpDuration, 1);
       this.camera.position.y -= Math.sin(t * Math.PI) * c.bumpAmount;
+    }
+    if (this.shakeTime > 0) {
+      this.shakeTime = Math.max(0, this.shakeTime - dt);
+      this.shakeClock += dt;
+      const k = this.shakeLeft();
+      const a = this.shakeAmp * k * k;
+      const t = this.shakeClock;
+      this.camera.position.x += Math.sin(t * 61) * a;
+      this.camera.position.y += Math.sin(t * 47 + 1.3) * a * 0.8;
+      this.camera.position.z += Math.sin(t * 53 + 2.1) * a;
+    }
+    let fov: number = c.fov as number;
+    if (this.punchTime > 0) {
+      this.punchTime = Math.max(0, this.punchTime - dt);
+      const u = this.punchLen > 0 ? this.punchTime / this.punchLen : 0;
+      fov -= this.punchAmt * Math.sin(Math.min(1, u) * Math.PI) ** 0.7;
+    }
+    if (Math.abs(fov - this.fovShown) > 0.01) {
+      this.fovShown = fov;
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
     }
   }
 

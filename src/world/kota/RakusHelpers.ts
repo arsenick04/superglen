@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import type { HitInfo, Target } from '../../gameplay/Targets';
 import { Combat, CombatRng } from '../../config/combat';
 import { arrowGeo, pipGeo, ratGeo, RatConfig } from './MarketRats';
+import { enemyModels } from './EnemyModels';
 
 const S_OFF = 0;
 const S_CHASE = 1;
@@ -42,6 +43,10 @@ export class RakusHelpers {
   private readonly aim: THREE.Vector3[] = [];
   private readonly targets: Target[] = [];
   private readonly ratMesh: THREE.InstancedMesh;
+  private readonly ratModel: boolean;
+  private readonly q2 = new THREE.Quaternion();
+  private readonly ax = new THREE.Vector3(1, 0, 0);
+  private readonly az = new THREE.Vector3(0, 0, 1);
   private readonly arrowMesh: THREE.InstancedMesh;
   private readonly pipMesh: THREE.InstancedMesh;
   private readonly geos: THREE.BufferGeometry[] = [];
@@ -89,11 +94,18 @@ export class RakusHelpers {
     arrowMat.polygonOffset = true;
     arrowMat.polygonOffsetFactor = -2;
     this.mats.push(lit, arrowMat);
-    const rg = ratGeo();
+    // The Curut Cemberut model (light copy) at the old rat's height; the procedural bun rat if it is missing.
+    const procRat = ratGeo();
+    procRat.computeBoundingBox();
+    const modelRat = enemyModels.geometry('curut_cemberut_lo', (procRat.boundingBox as THREE.Box3).max.y);
+    const rg = modelRat ?? procRat;
+    if (modelRat) procRat.dispose();
+    this.ratModel = !!modelRat;
+    const ratMat = modelRat ? (enemyModels.material('curut_cemberut_lo') as THREE.Material) : lit;
     const ag = arrowGeo();
     const pg = pipGeo();
     this.geos.push(rg, ag, pg);
-    this.ratMesh = new THREE.InstancedMesh(rg, lit, this.n);
+    this.ratMesh = new THREE.InstancedMesh(rg, ratMat, this.n);
     this.arrowMesh = new THREE.InstancedMesh(ag, arrowMat, this.n);
     this.pipMesh = new THREE.InstancedMesh(pg, lit, this.n * this.hpMax);
     this.arrowMesh.renderOrder = 3;
@@ -450,8 +462,16 @@ export class RakusHelpers {
         let sxz = 1;
         let jx = 0;
         let jz = 0;
-        if (s === S_CHASE) y = Math.abs(Math.sin(t * 9 + i)) * 0.05;
-        else if (s === S_RUN) {
+        let lean = 0;
+        let roll = 0;
+        let turn = 0;
+        if (s === S_CHASE) {
+          y = Math.abs(Math.sin(t * 9 + i)) * 0.05;
+          roll = Math.sin(t * 9 + i) * 0.1;
+          lean = 0.1;
+        } else if (s === S_RUN) {
+          lean = 0.3;
+          roll = Math.sin(t * 15 + i) * 0.14;
           y = Math.abs(Math.sin(t * 15 + i)) * 0.09;
           sy = 1 + Math.sin(t * 30 + i) * 0.04;
         } else if (s === S_WIND) {
@@ -459,14 +479,25 @@ export class RakusHelpers {
           jx = Math.sin(t * 70 + i) * 0.05 * (0.4 + u);
           jz = Math.cos(t * 63 + i) * 0.05 * (0.4 + u);
           sy = 1 - 0.18 * u;
+          lean = -0.28 * u;
+          roll = Math.sin(t * 55 + i) * 0.12 * u;
           sxz = 1 + (this.kind[i] === K_CRUMB ? 0.3 : 0.12) * u;
           if (this.kind[i] === K_CHARGE) arrow = 0.75 + 0.25 * Math.sin(t * 20);
         } else if (s === S_CHARGE) {
           y = Math.abs(Math.sin(t * 24 + i)) * 0.06;
           sy = 0.92;
-        } else if (s === S_RECOVER) sy = 1 + Math.sin(t * 16 + i) * 0.05;
-        else if (s === S_STUN) y = Math.sin(Math.PI * Math.min(1, this.timer[i] / Combat.rat.stun)) * 0.25;
-        else if (s === S_TAME) {
+          lean = 0.55;
+          roll = Math.sin(t * 24 + i) * 0.08;
+        } else if (s === S_RECOVER) {
+          sy = 1 + Math.sin(t * 16 + i) * 0.05;
+          lean = 0.12;
+        } else if (s === S_STUN) {
+          const u = Math.min(1, this.timer[i] / Combat.rat.stun);
+          y = Math.sin(Math.PI * u) * 0.25;
+          roll = Math.sin(t * 38 + i) * 0.3 * (1 - u);
+          turn = Math.sin(t * 17 + i) * 0.25 * (1 - u);
+        } else if (s === S_TAME) {
+          turn = Math.min(1, this.timer[i] / RatConfig.dizzyTime) * 18;
           const u = Math.min(1, this.timer[i] / RatConfig.dizzyTime);
           y = Math.sin(Math.PI * Math.min(1, u * 2)) * 0.5;
           sy = 1 + 0.15 * Math.sin(u * 20);
@@ -474,7 +505,11 @@ export class RakusHelpers {
         const sq = this.squash[i];
         sy *= 1 - 0.25 * sq;
         sxz *= 1 + 0.2 * sq;
-        this.q.setFromAxisAngle(this.up, this.yaw[i]);
+        this.q.setFromAxisAngle(this.up, this.yaw[i] + turn);
+        if (this.ratModel && (lean !== 0 || roll !== 0)) {
+          this.q.multiply(this.q2.setFromAxisAngle(this.ax, lean));
+          this.q.multiply(this.q2.setFromAxisAngle(this.az, roll));
+        }
         this.m4.compose(this.p.set(this.hx[i] + jx, y * SC, this.hz[i] + jz), this.q, this.sc.set(SC * sxz, SC * sy, SC * sxz));
       }
       this.ratMesh.setMatrixAt(i, this.m4);

@@ -27,6 +27,8 @@ export class Health {
   blocks = 0;
   exhaustions = 0;
   private invuln = 0;
+  /** Quiet protection (no blinking): the fight's entrance shot. */
+  private calm = 0;
   private exhaustTimer = -1;
   private blinkHidden = false;
   private readonly root: HTMLDivElement;
@@ -87,7 +89,7 @@ export class Health {
    * Otherwise one heart goes.
    */
   hurt(srcX: number, srcZ: number): HurtResult {
-    if (this.invuln > 0 || this.exhaustTimer >= 0) return 'ignored';
+    if (this.invuln > 0 || this.calm > 0 || this.exhaustTimer >= 0) return 'ignored';
     const p = this.player.position;
     const dx = srcX - p.x;
     const dz = srcZ - p.z;
@@ -127,6 +129,11 @@ export class Health {
     return 'hit';
   }
 
+  /** Nothing can hurt Glen for `seconds` (no blinking): the entrance shot of a fight. */
+  grace(seconds: number): void {
+    this.calm = Math.max(this.calm, seconds);
+  }
+
   /** Give hearts back (food, hospital). Returns how many were really added. */
   heal(n: number): number {
     const before = this.hearts;
@@ -145,6 +152,7 @@ export class Health {
 
   /** Fixed step. */
   fixedUpdate(dt: number): void {
+    if (this.calm > 0) this.calm = Math.max(0, this.calm - dt);
     if (this.invuln > 0) {
       this.invuln = Math.max(0, this.invuln - dt);
       // Blinking while safe after a real hit.

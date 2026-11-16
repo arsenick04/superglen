@@ -1,3 +1,4 @@
+import { ninoVariasiIds } from '../gameplay/NinoVariasi';
 import type { SaveStore, QuizCategorySave } from '../core/Save';
 import type { DrumSynth } from '../audio/DrumSynth';
 import type { Sfx } from '../audio/Sfx';
@@ -173,7 +174,7 @@ export class QuizEngine {
   private async runOne(q: Question, reason: QuizReason): Promise<QuizResult> {
     const result: QuizResult = { category: q.category, reason, completed: false, answers: [], coins: 0, sticker: null, stickerNew: false, fragment: false };
     this.panel.openChallenge(reason, false);
-    this.deps.audio.preload(Object.values(QuizLines).map((l) => l.id));
+    this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
     this.deps.audio.preload(this.audioIds(q));
     const out = await this.panel.ask(this.prepare(q), 0, 1, (wrong) => {
       const rec = this.record(q, wrong);
@@ -210,7 +211,7 @@ export class QuizEngine {
     const taken = new Set<string>();
     this.panel.openChallenge(reason, reason === 'terminal');
     // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
-    this.deps.audio.preload(Object.values(QuizLines).map((l) => l.id));
+    this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
     for (let i = 0; i < count; i++) {
       const q = this.choose(cats[i], taken);
       taken.add(q.id);

@@ -28,7 +28,7 @@ Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/mu
 
 | Adegan | File | Pencipta | Lisensi |
 |---|---|---|---|
-| Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3` | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
+| Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3`, `battle_a.mp3`, `battle_b.mp3` (pertarungan) | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
 | Berubah jadi Superglen | `theme_berubah_tagline.mp3`, `theme_berubah.mp3`, `superglen_theme*.mp3` | lagu tema Superglen milik pemilik proyek (dibuat dengan Suno) | milik pemilik proyek |
 
 ## Suara hewan (domain publik / CC0)
@@ -48,7 +48,7 @@ Semua diambil dari Wikimedia Commons, hanya berlisensi CC0 atau Domain Publik (d
 Catatan: akses ke commons.wikimedia.org dan upload.wikimedia.org terbuka (dengan pembatasan laju yang ketat). Host sumber lain (bigsoundbank.com, freesound.org, pixabay.com, archive.org) belum dicoba dan sebelumnya diblokir proxy.
 
 ## Model 3D (Tripo, CC BY)
-Diisi di Fase C.
+Diisi di Fase C. Model musuh (Curut Cemberut, Ular Melar, Tikus Rakus, Elang Belang, Gorilla Gembira): buatan pemilik proyek (Tripo), tanpa rig, `art/models/source/enemies/`, dioptimalkan ke `public/models/enemies/` oleh `npm run models`; animasi lewat kode.
 
 ## Musik
 
@@ -62,3 +62,10 @@ Diisi di Fase C.
 Dibuat dengan `npm run env-assets` (scripts/build-env-assets.mjs); daftar lengkap di `public/env/manifest.json`.
 - Bangku kayu: "Painted Wooden Bench" oleh Kirill Sannikov, Poly Haven (https://polyhaven.com/a/painted_wooden_bench), CC0 1.0. Tekstur dipanggang ke warna verteks, disederhanakan.
 - Pohon bulat, pohon cemara, lampu jalan, mobil: dibuat oleh proyek Superglen (geometri prosedural), CC0 1.0.
+
+## Kota: Kenney, gedung pemilik proyek, langit (L18)
+Dibuat dengan `npm run env-assets` (scripts/build-env-assets.mjs + scripts/env-kenney.mjs).
+- Model kota dari Kenney (https://kenney.nl), lisensi CC0 1.0 (Creative Commons Zero), file asli di `art/kenney/*.zip` (masing-masing dengan License.txt): City Kit (Suburban) 2.0 (rumah), City Kit (Commercial) 2.1 (ruko, kios, menara), City Kit (Roads) (lampu jalan), Car Kit (mobil), Nature Kit (pohon, semak, bunga, batu). Warna palet dipanggang ke warna verteks; daftar model di `public/env/kenney.json`. Terima kasih, Kenney!
+- Gedung khusus (gedung tua Barongsai, sekolah, pasar, gudang, bank, rumah sakit, rumah Glen): milik pemilik proyek (Higgsfield + Tripo), `art/models/buildings/`, dioptimalkan ke `public/env/buildings/`.
+- Langit dan cahaya: "Kloofendal 48d Partly Cloudy (Pure Sky)" oleh Greg Zaal, Poly Haven (https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky), CC0 1.0. `public/env/sky/`.
+
