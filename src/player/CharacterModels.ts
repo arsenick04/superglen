@@ -95,11 +95,9 @@ class CharacterModels {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const kinds: ModelKind[] = ['glen', 'superglen', 'nino', 'aara'];
-    const lo = Quality.level === 'low' || !DESKTOP_FULL_MODELS;
     const one = async (kind: ModelKind): Promise<void> => {
       try {
-        const file = lo && LOW_LOD.has(kind) ? `${kind}_lo` : kind;
-        const url = `${base}models/${file}.glb`;
+        const url = `${base}models/${kind}.glb`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`${url}: ${res.status}`);
         const buf = await res.arrayBuffer();
@@ -149,16 +147,6 @@ class CharacterModels {
     return t ? new CharacterRig(kind, t, tint, shadows) : null;
   }
 }
-
-/**
- * The 16k-triangle models (`glen.glb` ...) are not used yet, even on desktop: the older smoke budgets (combat market <= 65k, Chapter 1
- * street <= 60k triangles incl. the shadow pass) count the figure twice and leave room for about 5k triangles per model. Switch this on
- * after those budgets are raised for the desktop preset.
- */
-const DESKTOP_FULL_MODELS = false;
-
-/** Kinds that have a `_lo` file for the phone preset (filled by the build script when needed). */
-const LOW_LOD = new Set<ModelKind>(['glen', 'superglen', 'nino', 'aara']);
 
 export const characterModels = new CharacterModels();
 

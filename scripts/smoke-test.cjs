@@ -9,6 +9,10 @@ const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.SMOKE_PORT) || 4173;
 const URL = `http://localhost:${PORT}/`;
 const OUT = path.join(ROOT, 'test-results');
+// Triangle budget per frame (incl. shadow pass). History: 60k / 65k / 100k; raised after the owner asked for quality-first hero models
+// (full ~92k-triangle Glen/Superglen/Nino/Aara, native-app target; measured kota worst view ~172k with the hero drawn twice) and the
+// full-quality enemy models. Measured peaks: kota 172k. One constant so the next change is a single edit.
+const TRI_MAX = 300000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function ping() {
@@ -1928,7 +1932,7 @@ async function playBab2(page, check, d, inp, tag, beat, opts = {}) {
     await page.evaluate(() => window.__superglen.advance(2, true));
     const c = await page.evaluate(countsOf);
     areas.push(`${name}: ${hallTris(c)}`);
-    check(`${tag}: draw calls and triangles at ${name} within budget (< 150 calls, <= 60k tris)`, c.calls < 150 && c.triangles <= 60000, hallTris(c));
+    check(`${tag}: draw calls and triangles at ${name} within budget (< 150 calls, <= TRI_MAX tris)`, c.calls < 150 && c.triangles <= TRI_MAX, hallTris(c));
     check(`${tag}: no new shader programs at ${name}`, c.programs === programs0, `${c.programs} vs ${programs0}`);
   };
   const actions = () => page.evaluate(() => [...document.querySelectorAll('.tc-button')].map((e) => e.dataset.action).join(','));
@@ -2857,7 +2861,7 @@ async function perfScenario(page, check) {
   });
   report('programs / triangles', JSON.stringify(prog));
   check('shader programs: none compiled after warm-up while walking all areas and switching mode', prog.p1 === prog.p0 && prog.p0 > 0, `${prog.p0} -> ${prog.p1}`);
-  check('bab1 triangles per frame (incl. shadow pass) <= 60000 at every sampled spot', prog.maxTris <= 60000, `max ${prog.maxTris}: ${JSON.stringify(prog.tris)}`);
+  check('bab1 triangles per frame (incl. shadow pass) <= TRI_MAX at every sampled spot', prog.maxTris <= TRI_MAX, `max ${prog.maxTris}: ${JSON.stringify(prog.tris)}`);
 
   // ---- 7. ?perf=1 panel ----
   await loadFresh(page, '?level=test&fps=0');
@@ -4641,7 +4645,7 @@ async function arenaDesktopScenario(page, check) {
   }
   console.log('   [arena] draw calls / triangles per viewpoint:', JSON.stringify(calls));
   const worst = Object.values(calls).map((v) => v.split(' ').map(Number)).reduce((m, v) => [Math.max(m[0], v[0]), Math.max(m[1], v[2])], [0, 0]);
-  check('perf: arena viewpoints stay inside the budget (< 150 draw calls, <= 60k triangles)', worst[0] < 150 && worst[1] <= 60000, JSON.stringify(calls));
+  check('perf: arena viewpoints stay inside the budget (< 150 draw calls, <= TRI_MAX triangles)', worst[0] < 150 && worst[1] <= TRI_MAX, JSON.stringify(calls));
   await page.evaluate(() => window.__superglen.lookFrom(null));
 
   // ---- walkable roofs of the arena houses ----
@@ -5285,7 +5289,7 @@ async function bab1RoutesScenario(page, check) {
   await page.evaluate(() => window.__superglen.lookFrom(null));
   console.log('   [street] draw calls / triangles per viewpoint:', JSON.stringify(calls));
   const worst = Object.values(calls).map((v) => v.split(' ').map(Number)).reduce((m, v) => [Math.max(m[0], v[0]), Math.max(m[1], v[2])], [0, 0]);
-  check('perf: street viewpoints stay inside the budget (< 150 draw calls, <= 60k triangles)', worst[0] < 150 && worst[1] <= 60000, JSON.stringify(calls));
+  check('perf: street viewpoints stay inside the budget (< 150 draw calls, <= TRI_MAX triangles)', worst[0] < 150 && worst[1] <= TRI_MAX, JSON.stringify(calls));
 
   // ---- Safety: nothing leaves the playable area from the new routes ----
   const out = await page.evaluate(() => {
@@ -7376,7 +7380,7 @@ async function kotaPerfScenario(page, check) {
   }, spots);
   report('calls/triangles per spot and view', JSON.stringify(r.out));
   check('kota perf: <= 60 draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= 60, `max ${r.maxCalls}`);
-  check('kota perf: <= 100000 triangles (raised from 65k for richer env models: native-app target, owner decision) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 100000, `max ${r.maxTris}`);
+  check('kota perf: <= TRI_MAX triangles (raised from 65k for richer env models: native-app target, owner decision) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= TRI_MAX, `max ${r.maxTris}`);
   check('kota perf: no shader program compiled after warm-up while visiting every district', r.p1 === r.p0 && r.p0 > 0, `${r.p0} -> ${r.p1}`);
 
   const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
@@ -7521,7 +7525,7 @@ async function kotaLifeScenario(page, check, touch) {
     return best;
   });
   console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
-  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 100000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 100000, JSON.stringify(busy));
+  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= TRI_MAX triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= TRI_MAX, JSON.stringify(busy));
   check(`kota-life ${tag}: a busy street view shows at least 20 agents (${busy.n})`, busy.n >= 20, String(busy.n));
   await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
   await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
@@ -8856,7 +8860,7 @@ async function bab3RatsScenario(page, check, touch) {
   check(`bab3-rats ${tag}: seven little rats on the market streets with 3 bakpao, 2 kue, 2 vegetables`, rats.length === 7 && rats.filter((r) => r.food === 'bakpao').length === 3 && rats.filter((r) => r.food === 'kue').length === 2 && rats.every(inStreet) && rats.every((r) => r.state === 0 && r.fstate === 0), kinds);
   const d0 = await ch3Draw(page);
   console.log(`   [bab3-rats ${tag}] market draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 100000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= TRI_MAX triangles with the rats in view`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   // The rats circle (they move). Rats are big now: about knee-to-waist of Glen.
   await d3Go(page, 93, 12, 10);
   const a = await ch3Rats(page);
@@ -9106,7 +9110,7 @@ async function bab4AaraScenario(page, check, touch) {
   // Perf at the school with Aara in view.
   const d0 = await ch3Draw(page, -23, -93);
   console.log(`   [bab4-aara ${tag}] school draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= TRI_MAX triangles`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   await d3Go(page, -24, -93, 20);
   await d3Adv(page, 20);
   h = await ch4Handle(page);
@@ -9157,7 +9161,7 @@ async function bab4CluesScenario(page, check, touch) {
   check(`bab4-clues ${tag}: the first board stands on the park's north path, the beam leads to it, no beacon yet`, c.phase === 'paper' && c.paper && c.paper.visible && Math.abs(c.paper.x + 113.5) < 0.5 && c.beacon && !c.beacon.visible && (await ch4Info(page)).obj === true, JSON.stringify(c));
   const d0 = await ch3Draw(page, -113.5, -111);
   console.log(`   [bab4-clues ${tag}] park draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= TRI_MAX triangles`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   // Walk in: Aara points out the board.
   await d3Go(page, -113.5, -102, 10);
   const seen = [];
@@ -9305,7 +9309,7 @@ async function combatScenario(page, check, touch) {
   // ---- Perf budget at the market with the fight on ----
   await page.evaluate(() => window.__ch3.mute(true));
   const d0 = await ch3Draw(page);
-  check(`combat ${tag}: at the market (rats calm, hit points hidden) <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`combat ${tag}: at the market (rats calm, hit points hidden) <= 60 draw calls and <= TRI_MAX triangles`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   await page.evaluate(() => { window.__ch3.mute(false); window.__ch3.attack(1, 0); window.__ch3.attack(2, 0); });
   await d3Adv(page, 20);
   const dd = await page.evaluate(() => window.__ch3.rats().map((r) => r.state));
@@ -9643,7 +9647,7 @@ async function bab5FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch5.mute(true));
   const d0 = await ch5Draw(page, -62, -62);
   console.log(`   [bab5-fight ${tag}] fight spot (coiled): ${d0.calls} draw calls, ${d0.tris} triangles`);
-  check(`bab5-fight ${tag}: at the fight spot <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`bab5-fight ${tag}: at the fight spot <= 60 draw calls and <= TRI_MAX triangles`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   // ---- Intro (first time near): Nino explains the pattern; then the fight starts ----
   const wi = await ch4Watch(page, 700, 'ch5Scene', null, 'kota', 'fight');
   check(`bab5-fight ${tag}: coming close: Nino announces "melar lurus", jump aside or shield`, wi.seen.some((l) => /melar lurus/.test(l) && /perisai/.test(l)), JSON.stringify(wi.seen));
@@ -9808,7 +9812,7 @@ async function bab5FightScenario(page, check, touch) {
     return { calls, tris };
   }, SIDE);
   console.log(`   [bab5-fight ${tag}] fight spot (stretched, dizzy, glow): ${d1.calls} draw calls, ${d1.tris} triangles`);
-  check(`bab5-fight ${tag}: with the body stretched, the glow and particles still <= 60 draw calls and <= 100000 triangles`, d1.calls <= 60 && d1.tris <= 100000, JSON.stringify(d1));
+  check(`bab5-fight ${tag}: with the body stretched, the glow and particles still <= 60 draw calls and <= TRI_MAX triangles`, d1.calls <= 60 && d1.tris <= TRI_MAX, JSON.stringify(d1));
   // ---- Later stars: after 2 stars are lost a double lunge (two stripes in a row), after 4 a sweep (bent stripe) ----
   await page.evaluate(() => { window.__ch5.takeStar(); window.__ch5.takeStar(); });
   await bossUntil(page, (x) => x.phase === 'idle', 600, 4);
@@ -9986,7 +9990,7 @@ async function bab6FightScenario(page, check, touch) {
   await page.evaluate(() => window.__ch6.mute(true));
   const d0 = await ch6Draw(page, ARENA6.x, 36);
   console.log(`   [bab6-fight ${tag}] fight spot (asleep): ${d0.calls} draw calls, ${d0.tris} triangles`);
-  check(`bab6-fight ${tag}: at the fight spot <= 60 draw calls and <= 100000 triangles (city life present)`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
+  check(`bab6-fight ${tag}: at the fight spot <= 60 draw calls and <= TRI_MAX triangles (city life present)`, d0.calls <= 60 && d0.tris <= TRI_MAX, JSON.stringify(d0));
   // The intro scene starts by itself when the child is near.
   const wi = await ch4Watch(page, 2400, 'ch6Scene', null, 'kota', 'fight');
   check(`bab6-fight ${tag}: coming close: he eats and boasts, Glen demands the food, Nino explains "makanan bersinar" (in order)`, orderOk(wi.seen, ['Makin banyak kumakan', 'Kembalikan makanan', 'mahkotaku', 'makanannya bersinar']), JSON.stringify(wi.seen));
@@ -10225,7 +10229,7 @@ async function bab6FightScenario(page, check, touch) {
     return { calls, tris };
   }, FAR6);
   console.log(`   [bab6-fight ${tag}] fight spot (ring up, 3 helpers, piles, glow): ${d1.calls} draw calls, ${d1.tris} triangles`);
-  check(`bab6-fight ${tag}: with the ring, helpers and piles <= 60 draw calls and <= 100000 triangles`, d1.calls <= 60 && d1.tris <= 100000, JSON.stringify(d1));
+  check(`bab6-fight ${tag}: with the ring, helpers and piles <= 60 draw calls and <= TRI_MAX triangles`, d1.calls <= 60 && d1.tris <= TRI_MAX, JSON.stringify(d1));
   await page.evaluate(() => { window.__ch6.idle(); });
   await d3Adv(page, 60);
   // ---- All hearts gone: rest, reset ----

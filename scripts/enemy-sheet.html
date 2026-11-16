@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>enemy sheet</title></head>
+<body style="margin:0;background:#8aa">
+<canvas id="c" width="1600" height="400"></canvas>
+<script type="module">
+// Contact sheet of one enemy GLB (front / left / back / 3-4 / top) for scripts/make-enemy-sheet.mjs. ?id=curut_cemberut&lo=1
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+const q = new URLSearchParams(location.search);
+window.__done = false;
+try {
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setClearColor(0x88a0aa, 1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const gltf = await loader.loadAsync(q.get('url') ?? `/public/models/enemies/${q.get('id')}${q.get('lo') ? '_lo' : ''}.glb`);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.position.set(1.5, 2.5, 3);
+  scene.add(sun);
+  scene.add(gltf.scene);
+  const box = new THREE.Box3().setFromObject(gltf.scene);
+  const c = box.getCenter(new THREE.Vector3());
+  const s = box.getSize(new THREE.Vector3());
+  let r = Math.max(s.x, s.y, s.z) * 0.62;
+  let views = [[0, 0.1], [Math.PI / 2, 0.1], [Math.PI, 0.1], [Math.PI / 4, 0.35], [0, 1.45]];
+  if (q.get('face')) {
+    // Close-up of the head: three views at the top 14% of the height (front, 3/4, side).
+    c.y = box.max.y - s.y * 0.13;
+    r = s.y * 0.1;
+    views = [[0, 0.05], [Math.PI / 4, 0.1], [Math.PI / 2, 0.05], [Math.PI, 0.05], [-Math.PI / 4, 0.3]];
+  }
+  const w = 320;
+  renderer.setScissorTest(true);
+  views.forEach(([az, el], i) => {
+    const cam = new THREE.OrthographicCamera(-r, r, r, -r, 0.01, 50);
+    cam.position.set(c.x + Math.sin(az) * Math.cos(el) * 5, c.y + Math.sin(el) * 5, c.z + Math.cos(az) * Math.cos(el) * 5);
+    cam.up.set(0, 1, 0);
+    if (el > 1.4) cam.up.set(0, 0, -1);
+    cam.lookAt(c);
+    renderer.setViewport(i * w, 0, w, 400);
+    renderer.setScissor(i * w, 0, w, 400);
+    renderer.render(scene, cam);
+  });
+  window.__info = { size: s.toArray(), center: c.toArray() };
+} catch (e) {
+  window.__error = String(e);
+}
+window.__done = true;
+</script></body></html>
