@@ -55,8 +55,8 @@ export function applySky(scene: THREE.Scene, onApplied: () => void): void {
   }
   if (!env || !back) return;
   scene.environment = env;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.36;
   scene.background = back;
-  scene.backgroundIntensity = 1.05;
+  scene.backgroundIntensity = 1.15;
   onApplied();
 }

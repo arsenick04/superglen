@@ -3,8 +3,8 @@
  "buildings": {
   "bank": {
    "file": "buildings/bank.glb",
-   "tris": 15989,
-   "bytes": 528176,
+   "tris": 11997,
+   "bytes": 492664,
    "min": [
     -0.4996,
     0,
@@ -13,7 +13,7 @@
    "max": [
     0.5,
     0.5521,
-    0.3876
+    0.387
    ],
    "kind": "bank",
    "body": [
@@ -27,15 +27,15 @@
   },
   "gudang": {
    "file": "buildings/gudang.glb",
-   "tris": 15976,
-   "bytes": 662752,
+   "tris": 11992,
+   "bytes": 622048,
    "min": [
     -0.3703,
     0,
     -0.4993
    ],
    "max": [
-    0.3702,
+    0.3701,
     0.4548,
     0.5
    ],
@@ -50,17 +50,17 @@
   },
   "hospital": {
    "file": "buildings/hospital.glb",
-   "tris": 16000,
-   "bytes": 447352,
+   "tris": 11998,
+   "bytes": 414452,
    "min": [
     -0.4997,
-    0,
+    0.0001,
     -0.372
    ],
    "max": [
     0.4995,
     0.6001,
-    0.372
+    0.3717
    ],
    "kind": "hospital",
    "body": [
@@ -73,15 +73,15 @@
   },
   "old_barongsai": {
    "file": "buildings/old_barongsai.glb",
-   "tris": 15955,
-   "bytes": 413616,
+   "tris": 11983,
+   "bytes": 376188,
    "min": [
     -0.4995,
     0,
     -0.4648
    ],
    "max": [
-    0.4997,
+    0.4981,
     0.7046,
     0.4633
    ],
@@ -97,15 +97,15 @@
   },
   "pasar": {
    "file": "buildings/pasar.glb",
-   "tris": 20033,
-   "bytes": 634168,
+   "tris": 16653,
+   "bytes": 602940,
    "min": [
     -0.4568,
     0.0012,
     -0.4997
    ],
    "max": [
-    0.4561,
+    0.4569,
     0.4866,
     0.5
    ],
@@ -120,8 +120,8 @@
   },
   "rumah_glen": {
    "file": "buildings/rumah_glen.glb",
-   "tris": 16000,
-   "bytes": 422228,
+   "tris": 11998,
+   "bytes": 389056,
    "min": [
     -0.4995,
     0,
@@ -130,7 +130,7 @@
    "max": [
     0.4997,
     0.6387,
-    0.3893
+    0.3882
    ],
    "kind": "glen",
    "body": [
@@ -143,17 +143,17 @@
   },
   "school": {
    "file": "buildings/school.glb",
-   "tris": 15981,
-   "bytes": 503044,
+   "tris": 11997,
+   "bytes": 468196,
    "min": [
     -0.5,
     0,
     -0.3462
    ],
    "max": [
-    0.5,
-    0.4556,
-    0.3453
+    0.4995,
+    0.4551,
+    0.345
    ],
    "kind": "school",
    "body": [

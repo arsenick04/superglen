@@ -16,9 +16,9 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 export const PostConfig = {
   enabled: Quality.level === 'high' && new URLSearchParams(window.location.search).get('post') !== '0',
   aoScale: 0.5,
-  aoRadius: 1.6,
-  aoBlend: 1,
-  bloomStrength: 0.12,
+  aoRadius: 0.8,
+  aoBlend: 0.32,
+  bloomStrength: 0.055,
   bloomRadius: 0.45,
   bloomThreshold: 1.6,
 };
@@ -165,6 +165,9 @@ export class Renderer {
   /** One frame: with the post chain on the high preset, else a plain render. */
   renderFrame(scene: THREE.Scene, camera: THREE.Camera): void {
     const r = this.renderer;
+    // City colour grading is shared by direct and post renders, and ends when the level unloads.
+    r.toneMapping = scene.userData.cityDaylight ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = scene.userData.cityDaylight ? 0.95 : 1;
     r.info.autoReset = false;
     r.info.reset();
     if (!PostConfig.enabled || !(camera instanceof THREE.PerspectiveCamera)) {
@@ -206,6 +209,8 @@ export class Renderer {
    */
   prewarm(scene: THREE.Scene, camera: THREE.Camera): void {
     try {
+      this.renderer.toneMapping = scene.userData.cityDaylight ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = scene.userData.cityDaylight ? 0.95 : 1;
       // three's compile() skips hidden objects: show them for the compile only (cars that appear later, effects, ...).
       const hidden: THREE.Object3D[] = [];
       scene.traverse((o) => {

@@ -4,7 +4,7 @@ import { Parkour } from '../../config/parkour';
 import { Recipe, Sh, type Vec3 } from './CityMesher';
 import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
-import { dressOf, type Dress } from './CityDressing';
+import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
@@ -58,9 +58,9 @@ const Y: Record<GroundKind | 'base' | 'walk' | 'road' | 'mark', number> = {
   mark: 0.05,
 };
 const GROUND_COLOR: Record<GroundKind, number> = {
-  grass: 0x8fd67a,
-  field: 0x6cc35a,
-  flowers: 0xf7a8c4,
+  grass: 0x69bc61,
+  field: 0x5bb04f,
+  flowers: 0x7dc86b,
   sand: 0xf0d9a4,
   dirt: 0xc9a46f,
   plaza: 0xf3dfb0,
@@ -195,6 +195,28 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
   const [fx, fz] = FACE_VEC[b.face];
   const along = b.face < 2; // piece long side along x
   const old = b.abandoned === true;
+  const dress = dressOf(b);
+  if (dress && p.type !== 'crate' && p.type !== 'podium') {
+    const body = dressedBody(dress);
+    const face = fz > 0 ? body.max.z : fz < 0 ? body.min.z : fx > 0 ? body.max.x : body.min.x;
+    const rear = fz !== 0 ? p.z - fz * p.d / 2 : p.x - fx * p.w / 2;
+    const gap = Math.max(0, (rear - face) * (fx || fz));
+    // A real mounting ledge joins the unchanged foothold to the model wall; it can never hang in midair.
+    if (gap > 0.025) {
+      const thick = p.type === 'bay' ? p.top - b.base : Math.min(p.thick ?? 0.22, 0.22);
+      const x = fz !== 0 ? p.x : (rear + face) / 2;
+      const z = fz !== 0 ? (rear + face) / 2 : p.z;
+      B.ch.lit.box(fz !== 0 ? [p.w, thick, gap + 0.08] : [gap + 0.08, thick, p.d], [x, p.top - thick / 2, z], old ? 0x91775c : 0xf2e5cb);
+    }
+    if (p.type === 'awning') {
+      for (const s of [-1, 1]) {
+        const x = p.x + (along ? s * (p.w / 2 - 0.12) : fx * (p.w / 2 - 0.12));
+        const z = p.z + (along ? fz * (p.d / 2 - 0.12) : s * (p.d / 2 - 0.12));
+        const h = p.top - (p.thick ?? 0.25) - b.base;
+        B.ch.deco.boxNB([0.09, h, 0.09], [x, b.base + h / 2, z], old ? 0x81684d : 0xeee4cb);
+      }
+    }
+  }
   switch (p.type) {
     case 'crate': {
       const n = p.n ?? 1;
@@ -582,9 +604,19 @@ function drawTower(B: Builder, b: CityBuilding, dressed = false): void {
   const top = b.base + b.wall;
   const h = b.wall - pod;
   // Podium with a gold band and steps painted on its sides.
-  B.far.box([12, pod, 12], [b.x, b.base + pod / 2, b.z], STONE, undefined, T.paving);
+  B.far.add(Sh.Body, [b.x, b.base + (pod - 0.25) / 2, b.z], [12, pod - 0.25, 12], STONE, undefined, T.plaster);
   B.far.box([12.04, 0.25, 12.04], [b.x, b.base + pod - 0.125, b.z], C.GOLD);
   B.far.box([12.04, 0.3, 12.04], [b.x, b.base + 0.15, b.z], lighten(dist.color, 20));
+  // Recessed arches, pilasters and a cornice give the climbable podium an architectural scale.
+  for (let side = 0; side < 4; side++) {
+    const [fx, fz] = FACE_VEC[side];
+    const yaw = Math.atan2(fx, fz);
+    for (const a of [-3.8, 0, 3.8]) {
+      B.far.decal(T.window2, 1.8, Math.min(2.3, pod - 0.8), [b.x + fx * 6.015 - fz * a, b.base + pod * 0.5, b.z + fz * 6.015 + fx * a], yaw);
+      B.far.box(fz !== 0 ? [0.24, pod - 0.4, 0.16] : [0.16, pod - 0.4, 0.24], [b.x + fx * 6.03 - fz * (a + 1.1), b.base + pod / 2, b.z + fz * 6.03 + fx * (a + 1.1)], 0xffedcc);
+    }
+    B.far.box(fz !== 0 ? [12.12, 0.16, 0.16] : [0.16, 0.16, 12.12], [b.x + fx * 6, b.base + pod - 0.48, b.z + fz * 6], 0xfff1d9);
+  }
   if (!dressed) {
   // Tower body.
   const ty = b.base + pod + h / 2;
@@ -681,7 +713,7 @@ function drawProps(B: Builder, L: CityLayout): void {
     if (kl.length) {
       const [id, h] = kl[Math.floor(hv * 997) % kl.length];
       const r = t.far ? B.far : ch.lit;
-      const k = (t.kind === 'pine' ? 5.4 : 4.0) * s / h * (0.9 + hsh(t.x, t.z, 5) * 0.2);
+      const k = (t.kind === 'pine' ? 4.25 : 4.0) * s / h * (0.9 + hsh(t.x, t.z, 5) * 0.2);
       r.add(id as Sh, [t.x, t.base, t.z], [k, k, k], 0xffffff, [0, yaw, 0]);
       continue;
     }
@@ -824,7 +856,8 @@ function scatterGreen(B: Builder, L: CityLayout): void {
     if (blocked(x, z, 0.4)) return;
     const h = hsh(x, z, k);
     const ch = B.at(x, z);
-    ch.deco.add(list[Math.floor(h * 97) % list.length] as Sh, [x, 0, z], [size, size * (0.85 + h * 0.3), size], 0xffffff, [0, h * 6.283, 0]);
+    const scale = size * (0.92 + h * 0.16);
+    ch.deco.add(list[Math.floor(h * 97) % list.length] as Sh, [x, 0, z], [scale, scale, scale], 0xffffff, [0, h * 6.283, 0]);
   };
   // Front gardens: a bush at both front corners, flowers between.
   for (const b of L.buildings) {
@@ -870,12 +903,35 @@ const GROUND_TILE: Record<GroundKind, number> = {
 
 function drawGround(B: Builder, L: CityLayout): void {
   const F = B.flat;
-  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, Y.base, 0], 0x7cc566, T.grass);
+  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, Y.base, 0], 0x6eb85a, T.grass);
   for (const g of L.ground) {
     const w = g.x1 - g.x0;
     const d = g.z1 - g.z0;
     if (w <= 0 || d <= 0) continue;
     F.quad(w, d, [(g.x0 + g.x1) / 2, Y[g.kind], (g.z0 + g.z1) / 2], g.color ?? GROUND_COLOR[g.kind], GROUND_TILE[g.kind]);
+  }
+  // Zebra crossings sit just outside every intersection. Paint and road stay in the same flat batch.
+  const crossingKeys = new Set<string>();
+  for (const r of L.roads) {
+    const ax = r.x1 - r.x0 > r.z1 - r.z0;
+    const half = r.main ? CITY.main.road : CITY.local.road;
+    const cx = (r.x0 + r.x1) / 2;
+    const cz = (r.z0 + r.z1) / 2;
+    for (const o of L.roads) {
+      if ((o.x1 - o.x0 > o.z1 - o.z0) === ax) continue;
+      const ix = ax ? (o.x0 + o.x1) / 2 : cx;
+      const iz = ax ? cz : (o.z0 + o.z1) / 2;
+      if (ix < r.x0 || ix > r.x1 || iz < r.z0 || iz > r.z1) continue;
+      const off = (o.main ? CITY.main.road : CITY.local.road) + 2;
+      for (const side of [-1, 1]) {
+        const x = ix + (ax ? off * side : 0);
+        const z = iz + (ax ? 0 : off * side);
+        const key = `${ax}:${x.toFixed(2)}:${z.toFixed(2)}`;
+        if (crossingKeys.has(key)) continue;
+        crossingKeys.add(key);
+        for (let a = -half + 0.55; a < half - 0.2; a += 1.05) F.quad(ax ? 2.2 : 0.58, ax ? 0.58 : 2.2, [x + (ax ? 0 : a), Y.mark + 0.005, z + (ax ? a : 0)], 0xfff9df);
+      }
+    }
   }
   for (const r of L.roads) {
     const cx = (r.x0 + r.x1) / 2;
@@ -940,7 +996,11 @@ function drawGround(B: Builder, L: CityLayout): void {
   for (const h of L.hills) {
     const edgeHill = isEdgeHill(h);
     B.at(h.x, h.z);
-    B.far.hill(h.rBottom, h.h, [h.x, h.h / 2 - (edgeHill ? 0 : 0.0), h.z], edgeHill ? (Math.abs(h.x * 3 + h.z) % 2 > 1 ? 0x5aa34f : 0x4f9a4a) : 0x86c96c);
+    if (edgeHill) {
+      // Distant, non-playable hills are broad overlapping domes rather than a wall of identical cut-off cones.
+      const r = hsh(h.x, h.z, 41);
+      B.far.add(Sh.BackHill, [h.x, -0.1, h.z], [h.rBottom * (1.15 + r * 0.35), h.h * (0.82 + r * 0.23), h.rBottom * 1.2], r > 0.5 ? 0x7ab278 : 0x89be79);
+    } else B.far.hill(h.rBottom, h.h, [h.x, h.h / 2, h.z], 0x78bb60);
   }
   // The old dirt path up the hill (short tilted strips following the slope).
   const hill = L.hills.find((h) => h.id === L.lab.hill);
@@ -972,12 +1032,55 @@ function drawGround(B: Builder, L: CityLayout): void {
 /** The procedural parts a model does not replace: hip roofs of the shops, the towers' podium and style, flat-roof edges. */
 function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
   const top = b.base + b.wall;
+  const body = dressedBody(d);
+  const custom = d.model.startsWith('custom:');
+  const [fx, fz] = FACE_VEC[b.face];
+  const alongX = fz !== 0;
+  // Owner facades repeat as uniform architectural modules across wide lots (CityDressing).
+  // A detailed rear wing fills only the space BEHIND those facades; never put a blanket slab over their roofs.
+  if (custom && b.kind !== 'oldBarongsai' && b.kind !== 'house') {
+    const back = alongX ? b.z - fz * b.d / 2 : b.x - fx * b.w / 2;
+    const envelope = dressedBody(d, true);
+    const modelBack = fz > 0 ? envelope.min.z : fz < 0 ? envelope.max.z : fx > 0 ? envelope.min.x : envelope.max.x;
+    const depth = Math.max(0, (modelBack - back) * (fx || fz));
+    if (depth > 0.1) {
+      const cx = alongX ? b.x : (back + modelBack) / 2;
+      const cz = alongX ? (back + modelBack) / 2 : b.z;
+      const w = alongX ? b.w : depth;
+      const deep = alongX ? depth : b.d;
+      B.far.add(Sh.Body, [cx, b.base + (b.wall - 0.16) / 2, cz], [w, b.wall - 0.16, deep], b.kind === 'hospital' ? 0xffe9e3 : 0xf0dfbd, undefined, T.plaster);
+      B.far.box([w, 0.16, deep], [cx, top - 0.08, cz], b.roofColor, undefined, T.paving);
+      for (let side = 0; side < 4; side++) {
+        const [nx, nz] = FACE_VEC[side];
+        const len = nz !== 0 ? w : deep;
+        for (let a = -len / 2 + 1; a < len / 2 - 0.4; a += 2) {
+          for (const y of [1.6, 4.5]) B.far.decal(T.window0, 1.05, 1.5, [cx + nx * (w / 2 + 0.02) - nz * a, b.base + y, cz + nz * (deep / 2 + 0.02) + nx * a], Math.atan2(nx, nz));
+        }
+        for (const y of [0.3, 3.2, b.wall - 0.3]) B.far.box(nz !== 0 ? [w, 0.14, 0.12] : [0.12, 0.14, deep], [cx + nx * w / 2, b.base + y, cz + nz * deep / 2], 0xfff1d5);
+      }
+    }
+  }
+  const modelBase = Math.max(b.base, body.min.y);
+  if (modelBase > b.base + 0.08) {
+    B.far.box([Math.min(b.w, body.max.x - body.min.x), modelBase - b.base, Math.min(b.d, body.max.z - body.min.z)], [(body.min.x + body.max.x) / 2, (modelBase + b.base) / 2, (body.min.z + body.max.z) / 2], 0xe5d3b4, undefined, T.brick);
+  }
+  if (!custom && b.roof === 'flat' && b.kind !== 'tower') B.far.box([b.w, 0.12, b.d], [b.x, top - 0.06, b.z], 0xf3e6ce);
+  if (b.kind === 'oldBarongsai') {
+    // Keep the owner's original carved door and complete lion face; the step marks CityData's interaction axis.
+    B.ch.deco.boxNB([1.8, 0.12, 0.9], [b.x - 1.5, b.base + 0.06, b.z + b.d / 2 + 0.45], 0xbba780);
+  }
   if (!d.skipRoof && b.roof === 'hip') {
     B.far.pyr(b.roofW + 0.5, b.roofH, b.roofD + 0.5, [b.x, top + b.roofH / 2 - 0.04, b.z], b.roofColor, roofTile(b));
     B.ch.deco.box([b.w + 0.3, 0.2, b.d + 0.3], [b.x, top - 0.08, b.z], C.CREAM);
   }
   if (b.roof === 'flat' && b.kind !== 'tower') edge(B, b.x, b.z, b.w, b.d, top);
-  if (b.kind === 'tower' && b.tower) drawTowerDressed(B, b);
+  if (b.kind === 'tower' && b.tower) {
+    drawTowerDressed(B, b);
+    const t = b.tower;
+    const h = b.wall - t.podium;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B.far.box([0.38, h, 0.38], [b.x + sx * (t.size / 2 - 0.19), b.base + t.podium + h / 2, b.z + sz * (t.size / 2 - 0.19)], 0xf3e6c9);
+    B.far.box([t.size, 0.18, t.size], [b.x, top - 0.09, b.z], 0xf3e6c9);
+  }
   if (b.kind === 'kiosk' && !d.skipFacade) {
     const fruit = [0xff6b6b, 0xffd23f, 0x7bd389, 0xff9f43];
     B.ch.deco.box(fs(b, 2.4, 0.5, 0.9), fp(b, 0.45, 0.25, b.base + 0.45), 0xffffff, undefined, T.wood);

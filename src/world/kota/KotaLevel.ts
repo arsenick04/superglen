@@ -144,20 +144,23 @@ export class KotaLevel implements Level {
     ctx.player.flight.groundBounds = box;
 
     // Bright morning: sky, a long fog (the far layer is cheap), one shadow-casting sun that follows the player.
+    scene.userData.cityDaylight = true;
+    ctx.onDispose(() => { delete scene.userData.cityDaylight; });
     const sky = 0x9fd8ff;
     scene.background = new THREE.Color(sky);
-    scene.fog = new THREE.Fog(0xc6e6fa, Quality.cameraFar * 0.35, Quality.cameraFar * 0.95);
-    const hemi = new THREE.HemisphereLight(0xd6ecff, 0xb4c76e, 1.5); // soft sky fill with a warm grass bounce
+    // Physical fog distances keep the same colour on touch and desktop; draw distance can still follow the preset.
+    scene.fog = new THREE.Fog(0xc6e6fa, 140, 300);
+    const hemi = new THREE.HemisphereLight(0xe1f3ff, 0xd3d9b5, 1.15);
     root.add(hemi);
     this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
     // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
     // the fog takes the horizon colour of the picture.
     applySky(scene, () => {
-      hemi.intensity = 0.4;
-      hemi.groundColor.setHex(0x9fb86a);
-      this.sun.intensity = 2.5;
-      this.sun.color.setHex(0xffe6c4);
-      (scene.fog as THREE.Fog).color.setHex(0xcfe0ef);
+      hemi.intensity = 1.0;
+      hemi.groundColor.setHex(0xd3d9b5);
+      this.sun.intensity = 2.15;
+      this.sun.color.setHex(0xfff1d8);
+      (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {

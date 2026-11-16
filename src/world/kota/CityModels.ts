@@ -178,7 +178,9 @@ class CityModels {
                       mat.map.minFilter = THREE.LinearMipmapLinearFilter;
                     }
                     mat.metalness = 0;
-                    mat.envMapIntensity = 0.8;
+                    mat.envMapIntensity = 0.65;
+                    // A back-facing scan triangle should not turn a cheek or roof into a see-through opening.
+                    mat.side = THREE.DoubleSide;
                   });
                   this.buildings.set(name, { name, scene: gltf.scene, min: bb.min.clone(), max: bb.max.clone(), hint: e });
                 })

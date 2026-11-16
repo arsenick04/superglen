@@ -53,6 +53,8 @@ export const Sh = {
    * one wall to the next, so the corner shades soft). 22 triangles. Fits inside the box of the same size (visual only).
    */
   Body: 19,
+  /** Smooth upper hemisphere, base at y=0: distant scenery, never a climbable surface. */
+  BackHill: 20,
 } as const;
 export type Sh = (typeof Sh)[keyof typeof Sh];
 
@@ -221,6 +223,7 @@ const TEMPLATES: Template[] = [
   tpl(new THREE.ConeGeometry(1, 1, 8, 1, true)),
   ico(),
   body(),
+  tpl(new THREE.SphereGeometry(1, 18, 7, 0, Math.PI * 2, 0, Math.PI / 2)),
 ];
 
 /**

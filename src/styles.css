@@ -1451,10 +1451,20 @@ html.game-started .set-gear {
   z-index: 1;
 }
 html.touch-ui .minimap {
-  top: calc(env(safe-area-inset-top) + 94px);
-  width: 120px;
-  height: 120px;
-  border-radius: 10px;
+  /* Keep the map outside the whole left-hand joystick zone, including the
+     compact 281 px-high Safari layout.  The narrow slot immediately left of
+     the zoom column stays clear of all three Superglen action buttons. */
+  top: calc(env(safe-area-inset-top) + 70px);
+  left: auto;
+  right: calc(env(safe-area-inset-right) + 164px);
+  width: 80px;
+  height: 80px;
+  border-radius: 9px;
+}
+/* A full dialog already owns the usable top strip on a phone. */
+html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
+  opacity: 0;
+  visibility: hidden;
 }
 .minimap canvas {
   position: absolute;

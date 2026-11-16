@@ -10419,7 +10419,7 @@ async function hudLayoutScenario(page, check, touch) {
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
   await d3Adv(page, 30);
   const measure = () => page.evaluate(() => {
-    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-joystick', btn: '.tc-button', zoom: '.zoom-btn' };
+    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-hint, .tc-base', btn: '.tc-button', zoom: '.zoom-btn' };
     const boxes = [];
     for (const [name, sel] of Object.entries(sels)) {
       for (const e of document.querySelectorAll(sel)) {
@@ -10441,8 +10441,15 @@ async function hudLayoutScenario(page, check, touch) {
     }
     const out = boxes.filter((a) => a.l < -1 || a.t < -1 || a.r > vw + 1 || a.b > vh + 1).map((a) => a.name);
     const names = [...new Set(boxes.map((b) => b.name))];
-    return { bad, out, names, label };
+    const counts = Object.fromEntries(names.map((name) => [name, boxes.filter((b) => b.name === name).length]));
+    return { bad, out, names, counts, label };
   };
+  // Exploration is the only state where the mini map and the idle joystick
+  // are both visible.  Measure it before walking into the boss sequence.
+  let v = await verify('exploration');
+  check(`hud-layout ${tag}: exploration map, joystick, zoom and buttons overlap nothing and stay on screen`,
+    v.bad.length === 0 && v.out.length === 0 && ['map', 'gear'].every((n) => v.names.includes(n)) &&
+      (!touch || (v.names.includes('joy') && v.counts.zoom === 2 && v.names.includes('btn'))), JSON.stringify(v));
   await page.evaluate(() => window.__ch5.mute(true));
   await ch5Draw(page, -62, -62); // walk to the fight spot like bab5-fight
   // Walk the intro (same wait as bab5-fight); at the first dialog line measure, pill and food counter forced on for the geometry.
@@ -10453,12 +10460,15 @@ async function hudLayoutScenario(page, check, touch) {
     seenDialog = true;
   check(`hud-layout ${tag}: a bab5 dialog line is on screen`, !!seenDialog, '');
   await page.evaluate(() => {
+    // Freeze the live RAF while the test exposes the other HUD rows. The
+    // settle delay used to let the short dialog close before measurement.
+    window.__superglen.pause(true);
     const t = document.querySelector('.city-toast'); if (t) { t.textContent = 'Lapangan'; t.classList.add('show'); }
       const ch = document.querySelector('.coin-hud'); if (ch) ch.classList.add('show');
     const e = document.querySelector('.ch5-stars'); if (e) { window.__starsWas = e.classList.contains('show'); e.classList.add('show'); }
   });
   await sleep(500);
-  let v = await verify('dialog');
+  v = await verify('dialog');
   check(`hud-layout ${tag}: the intro scene (before the fight) keeps the normal bubble, not the compact call-out`, await page.evaluate(() => { const d = document.querySelector('.dlg'); return !!d && !d.hidden && !d.classList.contains('compact'); }), '');
   if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `bab5-dialog-${touch ? 'touch' : 'desktop'}.png`) }); }
   check(`hud-layout ${tag}: during a dialog line hearts, pill, stars, food counter, map, gear, bubble and buttons overlap nothing and stay on screen`, v.bad.length === 0 && v.out.length === 0 && ['hearts', 'bubble', 'gear'].every((n) => v.names.includes(n)), JSON.stringify(v));
@@ -10468,7 +10478,7 @@ async function hudLayoutScenario(page, check, touch) {
   v = await verify('food');
   if (shotDir) await page.screenshot({ path: path.join(shotDir, `food-dialog-${touch ? 'touch' : 'desktop'}.png`) });
   check(`hud-layout ${tag}: the food counter next to the dialog line overlaps nothing`, v.names.includes('food') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
-  await page.evaluate(() => { const c = document.querySelector('.ch3-count'); if (c) c.classList.remove('show'); });
+  await page.evaluate(() => { const c = document.querySelector('.ch3-count'); if (c) c.classList.remove('show'); window.__superglen.pause(false); });
   });
   await page.evaluate(() => { window.__ch5.mute(true); });
   await d3Adv(page, 20);
@@ -10476,10 +10486,16 @@ async function hudLayoutScenario(page, check, touch) {
   v = await verify('fight');
   if (process.env.HUD_DEBUG) console.log('DBG', await page.evaluate(() => JSON.stringify({ e: window.__ch5.engaged(), cls: document.querySelector('.ch5-stars').className, sc: window.__superglen.levelInfo.ch5Scene, was: window.__starsWas })));
   if (shotDir) await page.screenshot({ path: path.join(shotDir, `bab5-fight-${touch ? 'touch' : 'desktop'}.png`) });
-  check(`hud-layout ${tag}: during the fight the stars are shown and nothing overlaps`, v.names.includes('stars') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
-  // Tap targets: the gear stays >= 44 px.
-  const gear = await page.evaluate(() => { const r = document.querySelector('.set-gear').getBoundingClientRect(); return Math.min(r.width, r.height); });
+  check(`hud-layout ${tag}: during the fight the stars and touch zoom buttons are shown and nothing overlaps`,
+    v.names.includes('stars') && (!touch || v.counts.zoom === 2) && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
+  // Tap targets: the gear and both touch zoom buttons stay >= 44 px.
+  const { gear, zoom } = await page.evaluate(() => {
+    const g = document.querySelector('.set-gear').getBoundingClientRect();
+    const z = [...document.querySelectorAll('.zoom-btn')].map((e) => { const r = e.getBoundingClientRect(); return Math.min(r.width, r.height); });
+    return { gear: Math.min(g.width, g.height), zoom: z };
+  });
   check(`hud-layout ${tag}: the gear is >= 44 px`, gear >= 44, String(gear));
+  check(`hud-layout ${tag}: touch zoom buttons are >= 44 px`, !touch || (zoom.length === 2 && zoom.every((n) => n >= 44)), JSON.stringify(zoom));
 }
 
 
