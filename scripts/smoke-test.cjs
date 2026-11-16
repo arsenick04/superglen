@@ -7368,7 +7368,7 @@ async function kotaPerfScenario(page, check) {
   }, spots);
   report('calls/triangles per spot and view', JSON.stringify(r.out));
   check('kota perf: <= 60 draw calls per frame (incl. shadow pass) at every sampled spot and view', r.maxCalls <= 60, `max ${r.maxCalls}`);
-  check('kota perf: <= 65000 triangles per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 65000, `max ${r.maxTris}`);
+  check('kota perf: <= 100000 triangles (raised from 65k for richer env models: native-app target, owner decision) per frame (incl. shadow pass) at every sampled spot and view', r.maxTris <= 100000, `max ${r.maxTris}`);
   check('kota perf: no shader program compiled after warm-up while visiting every district', r.p1 === r.p0 && r.p0 > 0, `${r.p0} -> ${r.p1}`);
 
   const heapOk = await page.evaluate(() => typeof performance.memory !== 'undefined' && typeof window.gc === 'function');
@@ -7513,7 +7513,7 @@ async function kotaLifeScenario(page, check, touch) {
     return best;
   });
   console.log(`   [kota-life] ${tag} busiest spot: ${JSON.stringify(busy)}`);
-  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 65000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 65000, JSON.stringify(busy));
+  check(`kota-life ${tag}: busiest spot draws <= 60 calls and <= 100000 triangles (${busy.calls} / ${busy.tris}, ${busy.n} agents)`, busy.calls <= 60 && busy.tris <= 100000, JSON.stringify(busy));
   check(`kota-life ${tag}: a busy street view shows at least 20 agents (${busy.n})`, busy.n >= 20, String(busy.n));
   await page.evaluate((b) => { const g = window.__superglen; g.placePlayer(b.x, b.z); g.setCameraYaw(b.yaw); g.advance(30, false); g.advance(1, true); }, busy);
   await page.screenshot({ path: path.join(dir, `kota-life-${tag}.png`) });
@@ -8848,7 +8848,7 @@ async function bab3RatsScenario(page, check, touch) {
   check(`bab3-rats ${tag}: seven little rats on the market streets with 3 bakpao, 2 kue, 2 vegetables`, rats.length === 7 && rats.filter((r) => r.food === 'bakpao').length === 3 && rats.filter((r) => r.food === 'kue').length === 2 && rats.every(inStreet) && rats.every((r) => r.state === 0 && r.fstate === 0), kinds);
   const d0 = await ch3Draw(page);
   console.log(`   [bab3-rats ${tag}] market draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 65000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab3-rats ${tag}: at the market <= 60 draw calls and <= 100000 triangles with the rats in view`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // The rats circle (they move). Rats are big now: about knee-to-waist of Glen.
   await d3Go(page, 93, 12, 10);
   const a = await ch3Rats(page);
@@ -9095,7 +9095,7 @@ async function bab4AaraScenario(page, check, touch) {
   // Perf at the school with Aara in view.
   const d0 = await ch3Draw(page, -23, -93);
   console.log(`   [bab4-aara ${tag}] school draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab4-aara ${tag}: at the school with Aara in view <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   await d3Go(page, -24, -93, 20);
   await d3Adv(page, 20);
   h = await ch4Handle(page);
@@ -9146,7 +9146,7 @@ async function bab4CluesScenario(page, check, touch) {
   check(`bab4-clues ${tag}: the first board stands on the park's north path, the beam leads to it, no beacon yet`, c.phase === 'paper' && c.paper && c.paper.visible && Math.abs(c.paper.x + 113.5) < 0.5 && c.beacon && !c.beacon.visible && (await ch4Info(page)).obj === true, JSON.stringify(c));
   const d0 = await ch3Draw(page, -113.5, -111);
   console.log(`   [bab4-clues ${tag}] park draw calls ${d0.calls}, triangles ${d0.tris}`);
-  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 65000 triangles`, d0.calls <= 60 && d0.tris <= 65000, JSON.stringify(d0));
+  check(`bab4-clues ${tag}: in the park with Aara, the board and the beacon <= 60 draw calls and <= 100000 triangles`, d0.calls <= 60 && d0.tris <= 100000, JSON.stringify(d0));
   // Walk in: Aara points out the board.
   await d3Go(page, -113.5, -102, 10);
   const seen = [];
