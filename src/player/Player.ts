@@ -200,7 +200,7 @@ export class Player {
   private glowing = false;
   private glenFig!: Avatar;
   private superFig!: Avatar;
-  private figState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, shield: false };
+  private figState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, shield: false, tuck: false, power: 0 };
   private shadow!: THREE.Mesh;
   private shadowMat!: THREE.MeshBasicMaterial;
   private aura!: THREE.Mesh;
@@ -1055,6 +1055,8 @@ export class Player {
       fs.flying = F.isFlying;
       fs.riding = this.rideLift > 0.01;
       fs.shield = this.skills.shield.up;
+      fs.tuck = this.spinning;
+      fs.power = this._mode === 'superglen' ? Math.min(1, this.rhythm.level / 4) : 0;
       const av = this.avatar;
       av.pose(dt, fs);
       // The rhythm glow and the dark fill follow the player's own material onto the animated model.

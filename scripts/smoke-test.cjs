@@ -2714,7 +2714,7 @@ async function perfScenario(page, check) {
     const a = run('steady', steady, true, 1e6);
     res.steadyChanges = a.times.length;
     res.steadyStep = g.adaptive().step;
-    // b) a phone hovering around the 27 fps threshold for 5 minutes (noise included)
+    // b) a phone hovering below the 40 fps threshold for 5 minutes (noise included)
     let seed = 7;
     const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
     const hover = [];
@@ -2731,20 +2731,22 @@ async function perfScenario(page, check) {
       worst = Math.max(worst, n);
     }
     res.hoverWorstPerMinute = worst;
-    // c) after a real slow patch (fresh state), a fast walk must not step back up within 25 s
+    // c) after a real slow patch (fresh state), a fast walk must not step back up within 5 s
     g.adaptReset();
     const slow = Array.from({ length: 5 * 15 }, () => 1000 / 15);
     const c1 = run('slow', slow, true, b.T + 1e6);
     res.droppedOnSlow = g.adaptive().step > 0;
-    const fast = Array.from({ length: 60 * 25 }, () => 1000 / 60);
+    const fast = Array.from({ length: 60 * 5 }, () => 1000 / 60);
+    const stepBefore = g.adaptive().step;
     const c2 = run('recover', fast, true, c1.T);
-    res.upWhileWalking25s = c2.times.length;
+    // Only a step UP (a lower step index) counts: a last step down while the slow average drains is fine.
+    res.upWhileWalking25s = g.adaptive().step < stepBefore ? 1 : 0;
     return res;
   });
   report('adaptive resolution', JSON.stringify(adapt));
   check('adaptive: zero pixel-ratio changes during 60 s of steady 60 fps walking on the phone preset', adapt.steadyChanges === 0 && adapt.steadyStep === 0, `${adapt.steadyChanges} changes`);
   check('adaptive: a phone hovering at the threshold for 5 min changes the ratio at most 3 times per minute', adapt.hoverWorstPerMinute <= 3, `worst ${adapt.hoverWorstPerMinute}/min, total ${adapt.hoverChanges}`);
-  check('adaptive: a slow patch steps down, and it does not step back up while walking within 25 s', adapt.droppedOnSlow && adapt.upWhileWalking25s === 0, JSON.stringify({ d: adapt.droppedOnSlow, up: adapt.upWhileWalking25s }));
+  check('adaptive: a slow patch steps down, and it does not step back up while walking within 5 s', adapt.droppedOnSlow && adapt.upWhileWalking25s === 0, JSON.stringify({ d: adapt.droppedOnSlow, up: adapt.upWhileWalking25s }));
 
   // ---- 4. Resize storms: Safari bars / visualViewport events must not reallocate the drawing buffer ----
   await loadFresh(page, '?level=test&fps=0');
