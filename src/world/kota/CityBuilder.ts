@@ -218,7 +218,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
     }
     case 'bay': {
       const col = old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
-      block(B, p, b.base, col, old ? 0xb59a62 : C.GOLD);
+      block(B, p, b.base, col, old ? 0xb59a62 : C.GOLD, T.plaster);
       B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : C.RED);
       // Railing: two rails and thin posts (boxes: a round post is 24 triangles).
       const rc = old ? 0x8c7a5a : C.GOLD;
@@ -263,6 +263,7 @@ function windows(B: Builder, b: CityBuilding, ats: number[], y: number, w = 1.1,
     const ww = h * ATLAS_TILES[tile].aspect;
     void w;
     facadeDecal(B.ch.deco, b, tile, at, 0.05, y, h, ww);
+    if (!b.abandoned) B.ch.deco.boxNB(fs(b, ww * 0.92, 0.14, 0.07), fp(b, at, 0.1, y - h / 2 + 0.035), 0xf4ecdc); // real sill
   }
 }
 
@@ -300,6 +301,15 @@ function drawHouse(B: Builder, b: CityBuilding): void {
     return;
   }
   facadeDecal(B.ch.deco, b, T.door0, doorAt, 0.05, y0 + 1.05, 2.1, 1.1);
+  B.ch.deco.boxNB(fs(b, 1.5, 0.4, 0.1), fp(b, doorAt, 0.2, y0 + 0.05), 0xd9d2c4); // door step
+  if (hsh(b.x, b.z, 14) < 0.6) {
+    for (const o of [-0.95, 0.95]) {
+      const q = fp(b, doorAt + o, 0.3, y0);
+      B.ch.deco.boxNB([0.3, 0.28, 0.3], [q[0], y0 + 0.14, q[2]], 0xd9632f);
+      B.ch.deco.ball(0.24, [q[0], y0 + 0.5, q[2]], o < 0 ? 0x4f9f3a : 0x5fb347, [1, 0.9, 1]);
+      if (o > 0) B.ch.deco.ball(0.1, [q[0] + 0.1, y0 + 0.68, q[2]], 0xff7aa8);
+    }
+  }
   const L = facadeLen(b);
   windows(B, b, [-L / 2 + 1.2, L / 2 - 1.2].filter((a) => Math.abs(a - doorAt) > 1.4), y0 + 1.9);
   // Chimney on the back slope (not where anyone stands: the roof plateau is in the middle).
@@ -653,8 +663,8 @@ function drawProps(B: Builder, L: CityLayout): void {
       const ld = bloom ? 0xf07aa8 : LEAF_DARK[k];
       ch.lit.trunk(0.2 * s, 1.5 * s, [t.x, t.base + 0.75 * s, t.z], 0x9a6a45);
       ch.lit.add(Sh.Sph1, [t.x, t.base + 2.3 * s, t.z], [0.95 * s, 0.92 * s, 0.95 * s], lc);
-      ch.lit.ball(0.72 * s, [t.x + 0.62 * s, t.base + 2.0 * s, t.z - 0.2 * s], ld);
-      ch.lit.ball(0.66 * s, [t.x - 0.5 * s, t.base + 2.1 * s, t.z + 0.4 * s], ld);
+      ch.lit.add(Sh.Sph0, [t.x + 0.62 * s, t.base + 2.0 * s, t.z - 0.2 * s], [0.72 * s, 0.7 * s, 0.72 * s], ld);
+      ch.lit.add(Sh.Sph0, [t.x - 0.5 * s, t.base + 2.1 * s, t.z + 0.4 * s], [0.66 * s, 0.64 * s, 0.66 * s], ld);
       ch.lit.ball(0.6 * s, [t.x + 0.1 * s, t.base + 2.95 * s, t.z + 0.1 * s], lc);
     }
   }
