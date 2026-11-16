@@ -237,6 +237,14 @@ export class Chapter6 {
     this.boss.showHud(true);
     if (this.helpers) this.helpers.enabled = true;
     ctx.objectives.clear();
+    const b = this.boss;
+    ctx.battle.enter({
+      id: 'tikus_rakus',
+      name: 'Tikus Rakus',
+      focus: () => ({ x: b.x, y: b.headAt.y * 0.7, z: b.z }),
+      arena: { x: RAKUS_ARENA.x, z: RAKUS_ARENA.z, r: Combat.rakus.arenaRadius + 3.5 },
+      stars: () => ({ left: b.stars, max: b.maxStars }),
+    });
     ctx.game.debugInfo.ch6Engaged = true;
   }
 
@@ -245,6 +253,7 @@ export class Chapter6 {
     this.boss?.setEnabled(false);
     this.boss?.showHud(false);
     this.helpers?.clear();
+    this.ctx.battle.exit();
     this.ctx.game.setTransformAllowed(true);
     this.ctx.game.debugInfo.ch6Engaged = false;
   }
@@ -290,6 +299,7 @@ export class Chapter6 {
       b.showHud(false);
       this.helpers?.clear();
       this.engaged = false;
+      ctx.battle.exit(true);
       cameraRig.setFraming(b.headAt, { weight: 0.55, distance: 9 });
       await b.tameLook();
       await dialog.say(L.rakusSendawa, { lockControls: true });

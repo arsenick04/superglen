@@ -23,6 +23,8 @@ export interface SettingsDeps {
   saveSlot: () => boolean;
   loadSlot: () => void;
   restart: () => void;
+  /** Camera zoom back to the default distance. */
+  resetZoom: () => void;
 }
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: string): HTMLElementTagNameMap[K] {
@@ -124,7 +126,12 @@ export class SettingsMenu {
     this.btnLoad.dataset.act = 'load';
     this.btnRestart = this.button('menu-btn set-restart warn', MenuIcons.restart, 'Ulang dari awal level', () => this.ask(true));
     this.btnRestart.dataset.act = 'restart';
-    grid.append(this.btnMap, this.btnHome, this.btnRestart, this.btnSave, this.btnLoad);
+    const btnZoom = this.button('menu-btn set-zoom', MenuIcons.zoom, 'Atur ulang zoom kamera', () => {
+      deps.resetZoom();
+      this.toastText('Zoom kembali normal');
+    });
+    btnZoom.dataset.act = 'zoom';
+    grid.append(this.btnMap, this.btnHome, this.btnRestart, this.btnSave, this.btnLoad, btnZoom);
 
     this.confirm = make('div', 'settings-confirm');
     this.confirm.hidden = true;

@@ -35,6 +35,8 @@ export interface InputSource {
   readonly move: Readonly<Vec2>;
   /** Add the look delta (radians: x = yaw, y = pitch) accumulated since the last call to `out`, then reset it. */
   drainLook(out: Vec2): void;
+  /** Camera zoom asked since the last call, in log steps (positive = farther), then reset. Optional. */
+  drainZoom?(): number;
   isDown(action: Action): boolean;
   /** True if `action` was pressed since the last call; clears the source's own latch. */
   drainPressed(action: Action): boolean;
@@ -49,6 +51,7 @@ export class Input {
 
   private readonly sources: InputSource[] = [];
   private readonly look: Vec2 = { x: 0, y: 0 };
+  private zoomAcc = 0;
   private readonly lookOut: Vec2 = { x: 0, y: 0 };
   private readonly down = new Map<Action, boolean>();
   private readonly pressed = new Map<Action, boolean>();
@@ -82,6 +85,7 @@ export class Input {
       mx += s.move.x;
       my += s.move.y;
       s.drainLook(this.look);
+      if (s.drainZoom) this.zoomAcc += s.drainZoom();
     }
     const len = Math.hypot(mx, my);
     if (len > 1) {
@@ -129,6 +133,18 @@ export class Input {
     this.look.x = 0;
     this.look.y = 0;
     return this.lookOut;
+  }
+
+  /** Camera zoom in log steps (positive = farther) since the previous call. */
+  consumeZoom(): number {
+    const z = this.zoomAcc;
+    this.zoomAcc = 0;
+    return z;
+  }
+
+  /** On-screen zoom buttons (and tests) ask for a zoom step here. */
+  pushZoom(steps: number): void {
+    this.zoomAcc += steps;
   }
 
   /** Drop all held input (e.g. when the tab is hidden) so nothing keeps moving by itself. */

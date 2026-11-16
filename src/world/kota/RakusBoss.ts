@@ -487,6 +487,7 @@ export class RakusBoss {
     this.wave2Wait = this.C.doubleGap;
     if (this.wave2) this.doubles++;
     ctx.sfx.land(1);
+    ctx.battle.impact(this.x, this.z, Math.min(1.5, this.scaleNow / 1.7), 'slam');
     ctx.fx.flashes.spawn(this.x, 0.3, this.z, this.ringR * 1.3, 0.45, 0xffb347);
     for (let k = 0; k < 10; k++) {
       const a = (k / 10) * Math.PI * 2;

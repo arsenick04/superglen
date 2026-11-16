@@ -407,6 +407,7 @@ export class SnakeBoss {
     this.timer = 0;
     this.lunges++;
     this.ctx.synth.boing();
+    this.ctx.battle.shake(0.1, 0.25);
   }
 
   private beginDizzy(kind: DizzyKind): void {

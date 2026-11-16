@@ -362,6 +362,25 @@ export class MarketRats {
     return best;
   }
 
+  /** Where the nearest rat that is still around is (body centre, `out` is filled); false when none is left. */
+  nearestPos(x: number, z: number, out: { x: number; y: number; z: number }): boolean {
+    let best = Infinity;
+    let at = -1;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] >= ST_DIZZY) continue;
+      const d = Math.hypot(this.rx[i] - x, this.rz[i] - z);
+      if (d < best) {
+        best = d;
+        at = i;
+      }
+    }
+    if (at < 0) return false;
+    out.x = this.rx[at];
+    out.y = 0.9;
+    out.z = this.rz[at];
+    return true;
+  }
+
   /** Position of the nearest bakpao / kue that lies on the ground (null: none). */
   nearestFood(x: number, z: number): { x: number; z: number } | null {
     let best = Infinity;
@@ -856,28 +875,37 @@ export class MarketRats {
         else if (s === ST_RUN) {
           y = Math.abs(Math.sin(t * 15 + i)) * 0.09;
           sy = 1 + Math.sin(t * 30 + i) * 0.04;
+          lean = 0.3;
+          roll = Math.sin(t * 15 + i) * 0.14;
         } else if (s === ST_WIND) {
           // Telegraph: the rat shakes harder and crouches (a crumb thrower puffs its cheeks), and a charge shows its arrow.
           const u = Math.min(1, this.timer[i] / this.windup);
           jx = Math.sin(t * 70 + i) * 0.05 * (0.4 + u);
           jz = Math.cos(t * 63 + i) * 0.05 * (0.4 + u);
           sy = 1 - 0.18 * u;
+          lean = -0.28 * u; // winds up: leans back, then shakes
+          roll = Math.sin(t * 55 + i) * 0.12 * u;
           sxz = 1 + (this.kind[i] === K_CRUMB ? 0.3 : 0.12) * u;
           if (this.kind[i] === K_CHARGE) arrow = 0.75 + 0.25 * Math.sin(t * 20);
         } else if (s === ST_CHARGE) {
           y = Math.abs(Math.sin(t * 24 + i)) * 0.06;
           sy = 0.92;
+          lean = 0.55;
+          roll = Math.sin(t * 24 + i) * 0.08;
         } else if (s === ST_RECOVER) {
           sy = 1 + Math.sin(t * 16 + i) * 0.05; // panting
+          lean = 0.12 + Math.sin(t * 16 + i) * 0.04;
         } else if (s === ST_STUN) {
           const u = Math.min(1, this.timer[i] / Combat.rat.stun);
           y = Math.sin(Math.PI * u) * 0.25;
+          roll = Math.sin(t * 38 + i) * 0.3 * (1 - u); // hit: shakes its head
+          turn = Math.sin(t * 17 + i) * 0.25 * (1 - u);
         } else if (s === ST_DIZZY) {
           const u = Math.min(1, this.timer[i] / RatConfig.dizzyTime);
           y = Math.sin(Math.PI * Math.min(1, u * 2)) * 0.5;
-          lean = 0.3;
-          roll = Math.sin(t * 15 + i) * 0.14;
           sy = 1 + 0.15 * Math.sin(u * 20);
+          turn = u * 18; // dizzy spin (it pops up and twirls; the stars come from fx)
+          roll = Math.sin(u * 30) * 0.18;
         }
         const sq = this.squash[i];
         sy *= 1 - 0.25 * sq;
@@ -887,29 +915,20 @@ export class MarketRats {
           this.q.multiply(this.q2.setFromAxisAngle(this.ax, lean));
           this.q.multiply(this.q2.setFromAxisAngle(this.az, roll));
         }
-          lean = -0.28 * u; // winds up: leans back, then shakes
-          roll = Math.sin(t * 55 + i) * 0.12 * u;
         this.m4.compose(this.p.set(this.rx[i] + jx, y * SC, this.rz[i] + jz), this.q, this.sc.set(SC * sxz, SC * sy, SC * sxz));
       }
       this.ratMesh.setMatrixAt(i, this.m4);
       // ---- charge arrow on the ground (in front of the rat, along the locked line) ----
       if (arrow > 0) {
-          lean = 0.55;
-          roll = Math.sin(t * 24 + i) * 0.08;
         this.q.setFromAxisAngle(this.up, Math.atan2(this.dirX[i], this.dirZ[i]));
         this.m4.compose(this.p.set(this.rx[i] + this.dirX[i] * 0.7, 0.06, this.rz[i] + this.dirZ[i] * 0.7), this.q, this.sc.set(1.1, 1, arrow * 1.6));
-          lean = 0.12 + Math.sin(t * 16 + i) * 0.04;
       } else this.m4.makeScale(0, 0, 0);
       this.arrowMesh.setMatrixAt(i, this.m4);
       if (arrow > 0) anyArrow = true;
-          roll = Math.sin(t * 38 + i) * 0.3 * (1 - u); // hit: shakes its head
-          turn = Math.sin(t * 17 + i) * 0.25 * (1 - u);
       // ---- hit points: little hearts above a rat that is in the fight (camera-aligned row) ----
       const fighting = s !== ST_GONE && s < ST_DIZZY && (s !== ST_LOOP || this.hp[i] < this.hpMax);
       const cyaw = this.ctx.cameraRig.yaw;
       if (fighting) anyPips = true;
-          turn = u * 18; // dizzy spin (it pops up and twirls; the stars come from fx)
-          roll = Math.sin(u * 30) * 0.18;
       const rxv = Math.cos(cyaw);
       const rzv = -Math.sin(cyaw);
       for (let k = 0; k < this.hpMax; k++) {

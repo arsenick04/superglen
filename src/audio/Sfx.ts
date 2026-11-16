@@ -43,12 +43,13 @@ export type SfxId =
   | 'quizWrong'
   | 'quizRight'
   | 'sparkle'
-  | 'bell';
+  | 'bell'
+  | 'battleStart';
 
 export const SFX_IDS: readonly SfxId[] = [
   'coin', 'coinDone', 'laserFire', 'laserHit', 'laserMiss', 'targetFlip', 'jetStart', 'shieldUp', 'shieldDown', 'shieldBlock',
   'ballHit', 'jump', 'jumpSuper', 'doubleJump', 'land', 'wallKick', 'mantle', 'ringPass', 'pop', 'quizTap', 'blip', 'bling',
-  'transformUp', 'transformDown', 'fanfare', 'quizWrong', 'quizRight', 'sparkle', 'bell',
+  'transformUp', 'transformDown', 'fanfare', 'quizWrong', 'quizRight', 'sparkle', 'bell', 'battleStart',
 ];
 
 /** Every tuning number of the effects. Seconds, Hz and linear gains. */
@@ -64,14 +65,14 @@ export const SfxConfig = {
     coin: 0.05, coinDone: 0.5, laserFire: 0.1, laserHit: 0.08, laserMiss: 0.2, targetFlip: 0.15, jetStart: 0.25,
     shieldUp: 0.15, shieldDown: 0.15, shieldBlock: 0.1, ballHit: 0.2, jump: 0.08, jumpSuper: 0.08, doubleJump: 0.15,
     land: 0.12, wallKick: 0.1, mantle: 0.2, ringPass: 0.2, pop: 0.06, quizTap: 0.06, blip: 0.08, bling: 0.3,
-    transformUp: 0.4, transformDown: 0.4, fanfare: 1, quizWrong: 0.2, quizRight: 0.2, sparkle: 0.5, bell: 0.25,
+    transformUp: 0.4, transformDown: 0.4, fanfare: 1, quizWrong: 0.2, quizRight: 0.2, sparkle: 0.5, bell: 0.25, battleStart: 1,
   } as Record<SfxId, number>,
   /** Per sound: trim on top of `level` (1 = as designed). */
   trim: {
     coin: 0.9, coinDone: 0.9, laserFire: 0.9, laserHit: 0.9, laserMiss: 0.8, targetFlip: 0.9, jetStart: 0.9,
     shieldUp: 0.9, shieldDown: 0.8, shieldBlock: 1, ballHit: 1, jump: 0.7, jumpSuper: 0.85, doubleJump: 0.9,
     land: 0.9, wallKick: 0.9, mantle: 0.8, ringPass: 1, pop: 0.8, quizTap: 0.8, blip: 0.7, bling: 0.8,
-    transformUp: 1, transformDown: 0.9, fanfare: 1, quizWrong: 0.9, quizRight: 1, sparkle: 0.8, bell: 0.9,
+    transformUp: 1, transformDown: 0.9, fanfare: 1, quizWrong: 0.9, quizRight: 1, sparkle: 0.8, bell: 0.9, battleStart: 0.9,
   } as Record<SfxId, number>,
   /** C major pentatonic from C5: coins, rings and twinkles pick their notes from here (they fit the drum notes). */
   pentatonic: [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093, 2349.32, 2637.02] as readonly number[],
@@ -654,6 +655,18 @@ export class Sfx {
     });
   }
 
+  /** A fight begins: a short bold rising "ta-ta-TAAA" (bright, never scary) with a low thump. */
+  battleStart(): void {
+    const v = this.open('battleStart');
+    if (!v) return;
+    this.tone(v, 'sine', 140, 60, 0, 0.3, 0.4, 0.28);
+    [0, 0.11, 0.22].forEach((t, i) => {
+      const f = this.note(2 + i * 2);
+      this.tone(v, 'sawtooth', f, f, t, i === 2 ? 0.55 : 0.12, i === 2 ? 0.2 : 0.14);
+      this.tone(v, 'triangle', f * 2, f * 2, t, i === 2 ? 0.55 : 0.12, 0.12);
+    });
+  }
+
   /** A wrong quiz pick: a gentle wobbly boing (never a buzzer). */
   quizWrong(): void {
     const v = this.open('quizWrong');
@@ -821,6 +834,7 @@ export class Sfx {
     const self = this;
     const table: Record<SfxId, (a: number) => void> = {
       coin: () => self.coin(),
+      battleStart: () => self.battleStart(),
       coinDone: () => self.coinDone(),
       laserFire: () => self.laserFire(),
       laserHit: () => self.laserHit(),

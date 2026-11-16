@@ -226,6 +226,8 @@ export class KotaLevel implements Level {
     if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
 
     this.life = new CityLife(ctx);
+    ctx.battle.setCity(this.life);
+    ctx.onDispose(() => ctx.battle.setCity(null));
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);

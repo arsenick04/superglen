@@ -22,6 +22,7 @@ import type { Sfx } from '../audio/Sfx';
 import type { AudioManager } from '../audio/AudioManager';
 import type { QuizEngine } from '../quiz/QuizEngine';
 import type { MapSource } from './MapSource';
+import type { BattleMode } from '../gameplay/BattleMode';
 
 /**
  * A level (story chapter or test area). The LevelManager owns its whole life cycle:
@@ -131,6 +132,8 @@ export interface LevelContext {
   readonly quiz: QuizEngine;
   /** Glen's hearts (see gameplay/Health.ts): hurt, heal, hospital spot. */
   readonly health: Health;
+  /** Battle mode (HUD, camera, arena, city reaction, music): every fight enters and exits it (see gameplay/BattleMode.ts). */
+  readonly battle: BattleMode;
   /** Register a cleanup that runs when the level unloads (after Level.dispose, in reverse order). */
   onDispose(fn: () => void): void;
 }

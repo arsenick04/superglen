@@ -10417,13 +10417,13 @@ async function hudLayoutScenario(page, check, touch) {
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
   await d3Adv(page, 30);
   const measure = () => page.evaluate(() => {
-    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-joystick', btn: '.tc-button' };
+    const sels = { hearts: '.hearts', pill: '.city-toast', stars: '.ch5-stars', food: '.ch3-count', map: '.minimap', gear: '.set-gear', coins: '.coin-hud', bubble: '.dlg-card', joy: '.tc-joystick', btn: '.tc-button', zoom: '.zoom-btn' };
     const boxes = [];
     for (const [name, sel] of Object.entries(sels)) {
       for (const e of document.querySelectorAll(sel)) {
         const r = e.getBoundingClientRect();
         const cs = getComputedStyle(e);
-        if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity === 0) continue;
+        if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity === 0 || (name === 'zoom' && +getComputedStyle(e.parentElement).opacity === 0)) continue;
         boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom });
       }
     }
@@ -10825,6 +10825,311 @@ async function dlgCompactScenario(page, check, touch) {
   }
 }
 
+// ---- Battle mode (src/gameplay/BattleMode.ts): groups `battle`, `battle-touch` -------------------------------------------------------------
+const BATTLE_SHOTS = process.env.BATTLE_SHOTS || path.join(OUT, 'battle');
+async function battleScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vw = touch ? 844 : 1280;
+  const vh = touch ? 390 : 720;
+  fs.mkdirSync(BATTLE_SHOTS, { recursive: true });
+  const suffix = touch ? 'touch' : 'desktop';
+  const bshot = async (name) => {
+    await page.evaluate(() => window.__superglen.advance(1, true));
+    await shot(page, 'battle-' + name);
+    try { await page.screenshot({ path: path.join(BATTLE_SHOTS, `${name}-${suffix}.png`), timeout: 20000 }); } catch { /* ignore */ }
+  };
+  const hudState = () => page.evaluate(() => {
+    const vis = (sel) => { const e = document.querySelector(sel); if (!e) return false; const cs = getComputedStyle(e); const r = e.getBoundingClientRect(); return cs.display !== 'none' && cs.visibility !== 'hidden' && !e.hidden && +cs.opacity > 0.05 && r.width > 2 && r.height > 2; };
+    const btn = document.querySelector('.tc-button[data-action="interact"]');
+    const gear = document.querySelector('.set-gear').getBoundingClientRect();
+    const b = document.querySelector('.battle-banner');
+    const br = b.getBoundingClientRect();
+    const hr = document.querySelector('.hearts').getBoundingClientRect();
+    const sb = document.querySelector('.ch5-stars.show, .bb-bar:not([hidden])');
+    return {
+      battle: document.documentElement.classList.contains('battle'),
+      minimap: vis('.minimap'), pill: vis('.city-toast'), coins: vis('.coin-hud'), food: vis('.ch3-count'), arrow: vis('.edge-arrow'),
+      gear: vis('.set-gear'), gearW: gear.width, hearts: vis('.hearts'), heartsL: hr.left,
+      banner: vis('.battle-banner'), bannerText: b.querySelector('.bb-name').textContent, bannerBox: { l: br.left, t: br.top, r: br.right, b: br.bottom },
+      bar: !!sb && vis('.ch5-stars.show') || vis('.bb-bar'),
+      interact: btn ? getComputedStyle(btn).display !== 'none' : null,
+      btnOpacity: [...document.querySelectorAll('.tc-button')].map((e) => +getComputedStyle(e).opacity),
+      scene: window.__superglen.audio.musicScene,
+    };
+  });
+  const overlaps = () => page.evaluate(() => {
+    const sels = { hearts: '.hearts', gear: '.set-gear', banner: '.battle-banner', stars: '.ch5-stars', ownbar: '.bb-bar', food: '.ch3-count', bubble: '.dlg-card', btn: '.tc-button', star: '[data-action="transform"]' };
+    const boxes = [];
+    for (const [name, sel] of Object.entries(sels)) for (const e of document.querySelectorAll(sel)) {
+      const r = e.getBoundingClientRect();
+      const cs = getComputedStyle(e);
+      if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity < 0.05) continue;
+      boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom });
+    }
+    const bad = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], c = boxes[j];
+      if (a.name === 'btn' && c.name === 'btn') continue;
+      if (a.name === 'star' && c.name === 'btn' || a.name === 'btn' && c.name === 'star') continue;
+      if (a.l < c.r - 1 && c.l < a.r - 1 && a.t < c.b - 1 && c.t < a.b - 1) bad.push(a.name + '/' + c.name);
+    }
+    return { bad, out: boxes.filter((a) => a.l < -1 || a.t < -1 || a.r > innerWidth + 1 || a.b > innerHeight + 1).map((a) => a.name), n: boxes.length };
+  });
+  const ndc = () => page.evaluate(() => window.__superglen.battle.focusNdc);
+  const inFrame = (n) => n.z < 1 && Math.abs(n.x) < 0.9 && Math.abs(n.y) < 0.9;
+  const calls = () => page.evaluate(() => { const c = window.__superglen.debugCounts(); return { calls: c.calls, tris: c.triangles }; });
+
+  for (const boss of ['ch5', 'ch6', 'ch3']) {
+    const L = `battle ${tag} ${boss === 'ch5' ? 'snake' : boss === 'ch6' ? 'rakus' : 'rats'}`;
+    const nm = boss === 'ch5' ? 'snake' : boss === 'ch6' ? 'rakus' : 'rats';
+    const A = boss === 'ch5' ? { x: -72.5, z: -72.5, r: 15 } : boss === 'ch6' ? { x: 111, z: 49, r: 12.1 } : null;
+    if (boss === 'ch5') {
+      await ch3Open(page, ch5Save({ bab5: { step: 'fight' } }), touch);
+      await ch5Stand(page, -72.5 + 70, -72.5);
+    } else if (boss === 'ch6') {
+      await ch3Open(page, ch6Save({ bab6: { step: 'fight' } }), touch);
+      await ch6Stand(page, 111, 49 + 75);
+    } else {
+      await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] } }), touch);
+      await d3Go(page, 93, 70, 20);
+      await d3Adv(page, 30);
+    }
+    // ---- before: the normal exploration HUD ----
+    await d3Adv(page, 60);
+    let h = await hudState();
+    check(`${L}: before the fight the city HUD shows (minimap, gear) and there is no battle class`, !h.battle && h.minimap && h.gear && h.gearW >= 50 && h.scene !== 'pertarungan', JSON.stringify(h));
+    const life0 = await page.evaluate((a) => ({ agents: window.__life.agents().filter((x) => x.kind >= 3), }), A);
+    const near0 = A ? life0.agents.filter((x) => Math.hypot(x.x - A.x, x.z - A.z) < A.r + 14).length : -1;
+    // ---- enter ----
+    if (boss === 'ch5') await ch5Stand(page, A.x + 30, A.z);
+    else if (boss === 'ch6') await ch6Stand(page, A.x, A.z + 30);
+    else {
+      await d3Go(page, 93, 12, 30);
+      await d3Adv(page, 400);
+      const r0 = (await ch3Rats(page))[0];
+      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [r0.x, r0.z + 9]);
+      await d3Adv(page, 20);
+    }
+    await page.evaluate(() => window.__superglen.health.fill());
+    await d3Adv(page, 20);
+    let bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+    check(`${L}: the fight enters battle mode (active, banner, intro shot for the bosses)`, bs.active && bs.entered === 1 && (boss === 'ch3' || bs.intro), JSON.stringify(bs));
+    await sleep(700); // CSS transitions
+    await bshot(`${nm}-1-intro`);
+    h = await hudState();
+    check(`${L}: minimap, place pill, coins, mission arrow are hidden; the gear is a small pause icon (<= 44 px) and still on screen`, h.battle && !h.minimap && !h.pill && !h.coins && !h.arrow && h.gear && h.gearW <= 44.5, JSON.stringify(h));
+    check(`${L}: hearts and the boss banner show with the enemy name`, h.hearts && h.banner && h.bannerText === (boss === 'ch5' ? 'Ular Melar' : boss === 'ch6' ? 'Tikus Rakus' : 'Curut Cemberut'), JSON.stringify(h));
+    const fxs = await page.evaluate(() => { const e = document.querySelector('.battle-fx'); const cs = getComputedStyle(e); const r = e.getBoundingClientRect(); return { op: +cs.opacity, w: r.width, h: r.height, bg: cs.backgroundImage.length > 20 }; });
+    check(`${L}: the vignette and warm tint overlay is on and covers the screen`, fxs.op > 0.95 && fxs.w >= vw - 1 && fxs.h >= vh - 1 && fxs.bg, JSON.stringify(fxs));
+    check(`${L}: the music scene switched to "pertarungan"`, h.scene === 'pertarungan', h.scene);
+    if (touch) check(`${L}: touch buttons see-through (<= 0.7) and Talk is hidden while nothing can be talked to`, h.interact === false && h.btnOpacity.every((o) => o <= 0.7), JSON.stringify([h.interact, h.btnOpacity]));
+    // Skip the intro by a tap / key.
+    if (boss !== 'ch3') {
+      await d3Adv(page, 20);
+      await page.evaluate(() => window.__superglen.battle.skip());
+      await d3Adv(page, 5);
+      bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+      check(`${L}: the entrance shot can be skipped`, !bs.intro && bs.skipped === 1, JSON.stringify(bs));
+    }
+    await d3Adv(page, 120);
+    await sleep(800); // the banner settles from the entrance size
+    h = await hudState();
+    const ov = await overlaps();
+    check(`${L}: the battle HUD overlaps nothing and stays on screen (${ov.n} boxes)`, ov.bad.length === 0 && ov.out.length === 0 && h.bar, JSON.stringify([ov, h.bar]));
+    if (boss !== 'ch3') {
+      // The ring: exists, and the wall arms once Glen is inside.
+      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [A.x + 6, A.z]);
+      await d3Adv(page, 20);
+      bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+      check(`${L}: the arena ring exists and its soft wall is armed once Glen is inside`, bs.ring && bs.armed, JSON.stringify(bs));
+      // Walking out through the ring is eased back: hold the stick away for 4 s.
+      await page.evaluate(([x, z]) => { window.__superglen.placePlayer(x, z); window.__superglen.setCameraYaw(0); }, [A.x + A.r - 2, A.z]);
+      await page.keyboard.down('d');
+      await d3Adv(page, 240);
+      await page.keyboard.up('d');
+      const pe = await d3Player(page);
+      const dd = Math.hypot(pe.x - A.x, pe.z - A.z);
+      check(`${L}: walking out of the ring is turned back (stays within ${A.r + 1.2} m, now ${dd.toFixed(1)} m) with no fall or respawn`, dd < A.r + 1.2 && pe.feet > -1, JSON.stringify(pe));
+    }
+    // ---- camera keeps the enemy in frame while Glen moves around ----
+    const frames = [];
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const fx = await page.evaluate(() => window.__superglen.battle.focus);
+      const px = fx.x + Math.cos(ang) * 7.5;
+      const pz = fx.z + Math.sin(ang) * 7.5;
+      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [px, pz]);
+      await d3Adv(page, 150);
+      frames.push(await ndc());
+    }
+    check(`${L}: the camera keeps the enemy on screen from every side (|x|,|y| < 0.9)`, frames.every(inFrame), JSON.stringify(frames.map((f) => [+f.x.toFixed(2), +f.y.toFixed(2)])));
+    await bshot(`${nm}-2-fight`);
+    const pc = await calls();
+    console.log(`   [${L}] battle view: ${pc.calls} draw calls, ${pc.tris} triangles`);
+    check(`${L}: battle view <= 60 draw calls and <= TRI_MAX triangles`, pc.calls <= 60 && pc.tris <= TRI_MAX, JSON.stringify(pc));
+    // ---- city people react ----
+    bs = await page.evaluate(() => ({ fleeing: window.__superglen.battle.fleeing, watching: window.__superglen.battle.watching, shouts: window.__superglen.battle.shouts }));
+    const inside = A ? await page.evaluate((a) => window.__life.agents().filter((x) => x.kind >= 3 && Math.hypot(x.x - a.x, x.z - a.z) < a.r * 0.9).length, A) : 0;
+    console.log(`   [${L}] people near at start ${near0}, now fleeing ${bs.fleeing} watching ${bs.watching}, inside ring ${inside}`);
+    check(`${L}: people nearby ran away and watch from a distance (${near0} were near; ${bs.watching + bs.fleeing} reacting)`, near0 <= 0 || bs.watching + bs.fleeing > 0, JSON.stringify(bs));
+    check(`${L}: nobody of the city life stands inside the ring`, inside === 0, String(inside));
+    // ---- a broken star: slow motion, zoom punch, shake ----
+    const s0 = await page.evaluate(() => ({ b: window.__superglen.battle.starsBroken, k: window.__superglen.battle.shakes }));
+    if (boss === 'ch5') {
+      await page.evaluate(() => window.__ch5.takeStar());
+    } else if (boss === 'ch6') {
+      await page.evaluate(() => window.__ch6.takeStar && window.__ch6.takeStar());
+    } else {
+      await page.evaluate(() => window.__ch3.tame(0));
+    }
+    await d3Adv(page, 3);
+    bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+    check(`${L}: a broken star counts (${s0.b} -> ${bs.starsBroken}); ${boss === 'ch3' ? 'no slow motion for the many small rats' : 'slow motion (0.3x) for a moment and a shake'}`, bs.starsBroken === s0.b + 1 && (boss === 'ch3' || (bs.timeScale < 1 && bs.shakes > s0.k)), JSON.stringify(bs));
+    await bshot(`${nm}-3-star`);
+    await d3Adv(page, 40);
+    // Slow motion runs on real time: wait it out.
+    await sleep(400);
+    await page.evaluate(() => window.__superglen.advance(2, false));
+    bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+    check(`${L}: the slow motion is over after a moment (time scale back to 1)`, bs.timeScale === 1, JSON.stringify(bs));
+    // ---- reduce shake option ----
+    await page.evaluate(() => { window.__superglen.save.data.settings.reduceShake = true; });
+    const k1 = await page.evaluate(() => window.__superglen.battle.shakes);
+    await page.evaluate(() => window.__superglen.battle.impact(window.__superglen.battle.focus.x, window.__superglen.battle.focus.z, 1));
+    const k2 = await page.evaluate(() => window.__superglen.battle.shakes);
+    check(`${L}: with "kurangi guncangan" the shake stays off`, k2 === k1, `${k1} ${k2}`);
+    await page.evaluate(() => { window.__superglen.save.data.settings.reduceShake = false; });
+    // ---- exit: walk far away (ch5/ch6) or lose the rats ----
+    if (boss === 'ch5' || boss === 'ch6') {
+      const far = boss === 'ch5' ? [A.x + 70, A.z] : [A.x - 70, A.z];
+      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), far);
+      await d3Adv(page, 40);
+    } else {
+      await page.evaluate(() => window.__superglen.placePlayer(93, 200));
+      await d3Adv(page, 200);
+    }
+    await sleep(700);
+    h = await hudState();
+    bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
+    check(`${L}: leaving the fight restores the HUD (battle class gone, minimap and gear back) and the exploration music`, !bs.active && bs.exited >= 1 && !h.battle && h.minimap && h.gearW >= 50 && h.scene !== 'pertarungan', JSON.stringify([bs, h.battle, h.minimap, h.gearW, h.scene]));
+    const hh = await page.evaluate(() => window.__superglen.health.rect);
+    check(`${L}: hearts are back at the top centre after the fight`, hh.x > vw * 0.3 && hh.x < vw * 0.6, JSON.stringify(hh));
+    check(`${L}: the soft wall is gone (no arena on the player)`, await page.evaluate(() => window.__superglen.battle.ring === false), '');
+    await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  }
+}
+
+// ---- Camera zoom (wheel, +/- keys, pinch, buttons, pad, persistence, battle multiplier): groups `zoom`, `zoom-touch` ----------------------------
+async function zoomScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await kotaBoot(page, touch);
+  await d3Adv(page, 30);
+  const dist = () => page.evaluate(() => { const g = window.__superglen; return Math.hypot(g.camera.x - g.player.x, g.camera.y - g.player.y, g.camera.z - g.player.z); });
+  const zv = () => page.evaluate(() => ({ v: window.__superglen.zoom.value, t: window.__superglen.zoom.target, s: window.__superglen.zoom.saved }));
+  const settle = () => d3Adv(page, 90);
+  await page.evaluate(() => window.__superglen.zoom.reset());
+  await settle();
+  const base = await dist();
+  let z = await zv();
+  check(`zoom ${tag}: default multiplier is 1`, Math.abs(z.v - 1) < 0.02, JSON.stringify(z));
+  if (!touch) {
+    await page.mouse.move(640, 300);
+    await page.mouse.wheel(0, 300);
+    await settle();
+    z = await zv();
+    const far = await dist();
+    check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base + 1, JSON.stringify(z));
+    await page.mouse.wheel(0, -900);
+    await settle();
+    z = await zv();
+    const near = await dist();
+    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.56 && near < base - 1.5, JSON.stringify([z, near]));
+    await page.keyboard.press('Equal');
+    await page.keyboard.press('Minus');
+    await page.keyboard.press('Minus');
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: the - key zooms out and + in (net one step out, ${z.t.toFixed(2)})`, z.t > 0.58 && z.t < 0.75, JSON.stringify(z));
+    await page.mouse.wheel(0, 20000);
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: far overview is clamped (${z.t.toFixed(2)} <= 1.9)`, z.t <= 1.9 + 1e-6 && z.t > 1.5, JSON.stringify(z));
+    // Pad: R3 closer, L3 farther (stubbed through the pad hub is covered by the pad tests; here the input layer call).
+  } else {
+    const f = await makeFingers(page);
+    await f.down(1, 560, 150);
+    await f.down(2, 640, 150);
+    await f.move(2, 800, 150, 8);
+    await f.upAll();
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: pinching the fingers apart zooms in (${z.t.toFixed(2)})`, z.t < 0.8, JSON.stringify(z));
+    await page.evaluate(() => window.__superglen.zoom.reset());
+    await f.down(1, 500, 150);
+    await f.down(2, 700, 150);
+    await f.move(2, 560, 150, 8);
+    await f.upAll();
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: pinching together zooms out (${z.t.toFixed(2)})`, z.t > 1.3, JSON.stringify(z));
+    // Buttons.
+    await page.evaluate(() => window.__superglen.zoom.reset());
+    await settle();
+    const bb = await page.evaluate(() => [...document.querySelectorAll('.zoom-btn')].map((e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height, op: +getComputedStyle(e).opacity }; }));
+    check(`zoom ${tag}: two stacked buttons >= 44 px, semi-transparent, on screen`, bb.length === 2 && bb.every((b) => b.w >= 44 && b.h >= 44 && b.op < 1) && bb[1].y > bb[0].y && bb.every((b) => b.x < 844 && b.y < 390), JSON.stringify(bb));
+    for (let i = 0; i < 3; i++) { await page.touchscreen.tap(bb[0].x, bb[0].y); await d3Adv(page, 4); }
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: the + button zooms in (${z.t.toFixed(2)}) and does not turn the camera or jump`, z.t < 0.7, JSON.stringify(z));
+    for (let i = 0; i < 12; i++) { await page.touchscreen.tap(bb[1].x, bb[1].y); await d3Adv(page, 4); }
+    await settle();
+    z = await zv();
+    check(`zoom ${tag}: the - button zooms out up to the clamp (${z.t.toFixed(2)})`, z.t > 1.5 && z.t <= 1.9 + 1e-6, JSON.stringify(z));
+    // A full dialog bubble hides them.
+    await page.evaluate(() => window.__superglen.say({ speaker: 'nino', text: 'Halo!' }, { lockControls: true }));
+    await d3Adv(page, 20);
+    const hid = await page.evaluate(() => +getComputedStyle(document.querySelector('.zoom-col')).opacity);
+    check(`zoom ${tag}: the buttons step aside while a dialog bubble is open`, hid === 0, String(hid));
+    await page.evaluate(() => document.querySelector('.dlg-card').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await d3Adv(page, 40);
+  }
+  // Persistence.
+  await page.evaluate(() => window.__superglen.zoom.set(0.8, false));
+  await d3Adv(page, 90);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).settings.zoom);
+  check(`zoom ${tag}: the chosen zoom is written to the save (0.8)`, Math.abs(saved - 0.8) < 1e-6, String(saved));
+  await page.goto(URL + '?level=kota&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  z = await zv();
+  check(`zoom ${tag}: after a reload the zoom is back (${z.v.toFixed(2)})`, Math.abs(z.v - 0.8) < 0.02, JSON.stringify(z));
+  // Reset in the settings panel.
+  await sleep(600);
+  if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => { document.querySelector('.set-gear').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+  await sleep(400);
+  await page.evaluate(() => document.querySelector('.set-zoom').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })));
+  await sleep(300);
+  z = await zv();
+  check(`zoom ${tag}: "Atur ulang zoom kamera" in the settings brings it back to 1`, Math.abs(z.t - 1) < 1e-6, JSON.stringify(z));
+  await page.evaluate(() => { document.querySelector('.settings-close').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); });
+  await sleep(300);
+  // Battle: the zoom multiplies the battle framing and the enemy stays in view.
+  await ch3Open(page, ch5Save({ bab5: { step: 'fight' } }), touch);
+  await ch5Stand(page, -72.5 + 30, -72.5);
+  await d3Adv(page, 60);
+  const inView = async () => { const n = await page.evaluate(() => window.__superglen.battle.focusNdc); return n.z < 1 && Math.abs(n.x) < 0.95 && Math.abs(n.y) < 0.95; };
+  const res = {};
+  for (const zz of [0.55, 1, 1.9]) {
+    await page.evaluate((zz) => window.__superglen.zoom.set(zz, true), zz);
+    await page.evaluate(() => window.__superglen.placePlayer(-72.5 + 7, -72.5));
+    await d3Adv(page, 200);
+    res[zz] = { d: await dist(), view: await inView() };
+  }
+  check(`zoom ${tag}: in battle the camera distance grows with the zoom (${JSON.stringify(res)}) and the boss stays in view`, res[0.55].d < res[1].d && res[1].d < res[1.9].d && Object.values(res).every((r) => r.view), JSON.stringify(res));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 // ---- Dialog fit: every line in the game fits the bubble (no "...", no cut text, at most 3 lines, bubble on screen): groups `dlg-fit`, `dlg-fit-touch` ----
 function allDialogTexts() {
   const texts = new Map();
@@ -11195,6 +11500,10 @@ async function main() {
     results.push(await runScenario(browser, 'bab6-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab6FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-fight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab6FightScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab6-easy', { viewport: { width: 1280, height: 720 } }, bab6EasyScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'battle', { viewport: { width: 1280, height: 720 } }, (p, c) => battleScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'battle-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => battleScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'zoom', { viewport: { width: 1280, height: 720 } }, (p, c) => zoomScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'zoom-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => zoomScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dlg-fit', { viewport: { width: 1280, height: 720 } }, (p, c) => dlgFitScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dlg-fit-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => dlgFitScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dlg-compact', { viewport: { width: 1280, height: 720 } }, (p, c) => dlgCompactScenario(p, c, false), '?level=kota&fps=0&reset=1'));

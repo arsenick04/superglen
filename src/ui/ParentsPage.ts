@@ -7,6 +7,7 @@ export interface ParentsDeps {
   quiz: QuizEngine;
   setEasyJump: (on: boolean) => void;
   setEasyFight: (on: boolean) => void;
+  setReduceShake: (on: boolean) => void;
   setSound: (on: boolean) => void;
   setMusic: (on: boolean) => void;
   /** Called after "reset progres" has cleared the save (the game reloads so every level starts clean). */
@@ -109,6 +110,10 @@ export class ParentsPage {
     }));
     right.append(this.toggle('Mode mudah (musuh lebih lemah)', 'easyfight', save.data.settings.easyFight, (on) => {
       this.deps.setEasyFight(on);
+      this.render();
+    }));
+    right.append(this.toggle('Kurangi guncangan (kamera saat bertarung)', 'reduceshake', save.data.settings.reduceShake, (on) => {
+      this.deps.setReduceShake(on);
       this.render();
     }));
     right.append(this.toggle('Suara', 'sound', save.data.settings.sound, (on) => {

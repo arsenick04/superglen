@@ -28,6 +28,10 @@ export interface SaveData {
     easyJump: boolean;
     /** Easy fight (parents' page): the small rats need 2 hits and attack more slowly. Default off. */
     easyFight: boolean;
+    /** Parents' page: "kurangi guncangan" (battle camera shake and zoom punch off). */
+    reduceShake: boolean;
+    /** Camera zoom multiplier chosen by the child (1 = default distance). */
+    zoom: number;
     /** Sound on/off (voice, effects and the synthesized drum; off also silences the music). */
     sound: boolean;
     /** Background music on/off (default on). */
@@ -131,7 +135,7 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, sound: true, music: true, musicVol: 1, sfxVol: 1 },
+    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, reduceShake: false, zoom: 1, sound: true, music: true, musicVol: 1, sfxVol: 1 },
     slot: null,
     discovered: { lab: false },
     where: '',
@@ -217,6 +221,8 @@ function sanitize(raw: unknown): SaveData {
     const st = r.settings as Record<string, unknown>;
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.easyFight === 'boolean') out.settings.easyFight = st.easyFight;
+    if (typeof st.reduceShake === 'boolean') out.settings.reduceShake = st.reduceShake;
+    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) out.settings.zoom = Math.max(0.55, Math.min(1.9, st.zoom));
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
     if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
@@ -324,6 +330,20 @@ export class SaveStore {
   setEasyFight(on: boolean): void {
     if (this.data.settings.easyFight === on) return;
     this.data.settings.easyFight = on;
+    this.persist();
+  }
+
+  /** Parents' page: reduce camera shake in fights (default off). */
+  setReduceShake(on: boolean): void {
+    if (this.data.settings.reduceShake === on) return;
+    this.data.settings.reduceShake = on;
+    this.persist();
+  }
+
+  /** The camera zoom the child chose (saved). */
+  setZoom(z: number): void {
+    if (this.data.settings.zoom === z) return;
+    this.data.settings.zoom = z;
     this.persist();
   }
 

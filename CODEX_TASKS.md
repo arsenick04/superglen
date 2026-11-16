@@ -28,3 +28,14 @@ Model 5.6 dan 6 Sol tidak dipakai (generasi lama). Aturan: paling banyak 2 tugas
 | C7 | Pengembang | Penutup: pesta kota + pancingan Sosok Misterius | |
 | C8 | Pengembang | Pemutar sinematik (video dari pemilik proyek, bisa dilewati) | menunggu video |
 | C9 | Konten (6 Luna) | Tambahan soal kuis dan perbaikan teks | kapan saja |
+
+## Serah terima dari Claude (16 November 2026) — keadaan `main`
+
+Build, `check:reach`, `check:quiz` lulus. Smoke `kota` lulus. Semua pekerjaan berikut sudah ada di kode tetapi **belum terverifikasi penuh**:
+
+- **Beban grafik terlalu besar (prioritas C1).** Model tokoh penuh (~90k segitiga per tokoh), model musuh penuh, 7 gedung pemilik (~16k per gedung), kota Kenney, bayangan: terukur 314k sampai 1,2 juta segitiga dan sampai 121 draw call di PC. Halaman tes sering crash kehabisan memori (`Target crashed`, contoh: smoke `bab1` di jalan kota). `TRI_MAX` di `scripts/smoke-test.cjs` dinaikkan ke 1.200.000 hanya sebagai penanda sementara, bukan target.
+- **Mode pertarungan (L17)** `src/gameplay/BattleMode.ts`, `src/battle.css`, kamera di `src/camera/ThirdPersonCamera.ts`: grup `battle` desktop 54/57 (3 gagal karena anggaran grafik dan satu crash di intro Rakus); `battle-touch` belum diulang setelah perubahan CSS terakhir (sebelumnya spanduk nama menumpuk dengan bintang pada ular).
+- **Zoom kamera** `src/ui/ZoomButtons.ts`, `src/zoom.css` (roda mouse, +/-, cubit, tombol sentuh, R3/L3): grup `zoom`, `zoom-touch` belum pernah selesai dijalankan; posisi tombol belum dicek terhadap tombol bintang.
+- **Musuh model pemilik (L19)** `src/world/kota/EnemyModels.ts`: grup `combat`, `bab3`, `bab5-fight`, `bab6-fight` belum lulus bersih; cek "tames it, in order" di bab5/bab6 gagal (kemungkinan karena teks dialog yang diubah).
+- **Kota Kenney (L18)** `CityModels.ts`, `CityDressing.ts`, `scripts/env-kenney.mjs`: pijakan panjat menonjol dari gedung pemilik, atap gedung pemilik lebih tinggi dari collider, pintu gedung Barongsai belum lurus, lubang di wajah singa, ubin jalan Kenney dan alas menara belum, tanah dan bukit jauh masih polos.
+- `hud-layout`, `hud-layout-touch`, `dlg-compact`: hasil terakhir tidak bisa dipercaya (dijalankan sebelum tombol zoom ada, sebagian crash).

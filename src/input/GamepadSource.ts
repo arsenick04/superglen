@@ -30,6 +30,7 @@ export class GamepadSource implements InputSource {
   private lookX = 0;
   private lookY = 0;
   private lastSeq = -1;
+  private zoomAcc = 0;
 
   update(): void {
     const h = padHub;
@@ -48,6 +49,12 @@ export class GamepadSource implements InputSource {
       this.lookX += h.look.x * PadConfig.lookYawRate * h.dt;
       this.lookY += h.look.y * PadConfig.lookPitchRate * h.dt;
     }
+    // Camera zoom: R3 (right stick click) = closer, L3 = farther (the D-pad is the move).
+    for (const [b, dir] of [[PadBtn.r3, -1], [PadBtn.l3, 1]] as const) {
+      const fresh = h.count[b] !== this.seen[b];
+      this.seen[b] = h.count[b];
+      if (fresh && !h.swallowed[b]) this.zoomAcc += dir * 0.15;
+    }
     for (let k = 0; k < ACTIONS.length; k++) {
       const a = ACTIONS[k];
       const btns = PAD_ACTIONS[a];
@@ -62,6 +69,12 @@ export class GamepadSource implements InputSource {
       }
       this.downNow[a] = down;
     }
+  }
+
+  drainZoom(): number {
+    const z = this.zoomAcc;
+    this.zoomAcc = 0;
+    return z;
   }
 
   drainLook(out: Vec2): void {
