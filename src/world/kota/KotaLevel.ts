@@ -21,6 +21,8 @@ import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
 import { Chapter5 } from './Chapter5';
 import { Chapter6 } from './Chapter6';
+import { Kit } from '../bab1/Kit';
+import { JumpTutorial } from '../bab1/JumpTutorial';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -192,6 +194,14 @@ export class KotaLevel implements Level {
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);
     this.streamer.flushVisuals(sp.x, sp.z);
+    // CityData keeps the jump-bar collider after Chapter 1. Keep its striped
+    // visual too, otherwise returning players trip over an invisible bar.
+    if (sandbox || bab1) {
+      const b = CITY_LAYOUT.chapter1.bar;
+      const kit = new Kit(ctx.physics, mats, true);
+      new JumpTutorial(ctx, kit, ctx.fx.sparkles, { x: b.x, z: b.z, half: b.w / 2, h: b.h, plankDx: 1.6, collider: false, y: 0 });
+      kit.build(root);
+    }
 
     // The hidden old Barongsai building: a faint golden glimmer at its door and the hook zone.
     const door = CITY_LAYOUT.lab.door;

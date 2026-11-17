@@ -179,14 +179,26 @@ html.touch-ui.game-started .touch-layer {
   position: absolute;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 5px solid rgba(255, 255, 255, 0.9);
-  opacity: 0.82;
+  border: 0;
+  opacity: 0.9;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   transition: transform 0.06s, opacity 0.06s, filter 0.06s;
   pointer-events: none; /* the layer does the hit testing */
+}
+.tc-button-visual {
+  width: 82%;
+  height: 82%;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.26);
+  transition: transform 0.06s, filter 0.06s;
 }
 .tc-button svg {
   width: 62%;
@@ -194,10 +206,12 @@ html.touch-ui.game-started .touch-layer {
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
 }
 .tc-button.pressed {
-  transform: scale(0.9);
   opacity: 1;
+}
+.tc-button.pressed .tc-button-visual {
+  transform: scale(0.9);
   filter: brightness(1.25);
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.45);
 }
 
 /* ---- Start screen (logo) ---- */
@@ -641,7 +655,9 @@ html.touch-ui .dlg.compact .dlg-text {
   color: #2b3a55;
   font-size: 24px;
   font-weight: 800;
-  line-height: 1.22;
+  /* Exact pixel line box avoids a 1 px scroll overflow from fractional
+     rounding in Safari/Chromium at phone scale. */
+  line-height: 30px;
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
@@ -671,7 +687,7 @@ html.touch-ui .dlg.compact .dlg-text {
   }
   .dlg-text {
     font-size: 19px;
-    line-height: 1.18;
+    line-height: 24px;
   }
   .dlg-card {
     gap: 10px;
@@ -818,9 +834,11 @@ html:not(.touch-ui) .prompt-key {
 
 /* Touch button pulse: "something is in reach" */
 .tc-button.pulse {
-  animation: tc-pulse 0.85s ease-in-out infinite;
-  box-shadow: 0 0 0 6px rgba(255, 210, 63, 0.75), 0 4px 12px rgba(0, 0, 0, 0.3);
   opacity: 1;
+}
+.tc-button.pulse .tc-button-visual {
+  animation: tc-pulse 0.85s ease-in-out infinite;
+  box-shadow: 0 0 0 5px rgba(255, 210, 63, 0.75), 0 3px 9px rgba(0, 0, 0, 0.26);
 }
 @keyframes tc-pulse {
   0%,
@@ -833,9 +851,9 @@ html:not(.touch-ui) .prompt-key {
 }
 
 /* Flying: the jump button glows and flickers like a jet while it is held */
-.tc-button.jets {
+.tc-button.jets .tc-button-visual {
   background: radial-gradient(circle at 50% 80%, #fff3b0 0%, #ffb020 45%, #ff6a00 100%) !important;
-  box-shadow: 0 0 0 6px rgba(255, 190, 40, 0.8), 0 0 26px 10px rgba(255, 140, 0, 0.65);
+  box-shadow: 0 0 0 5px rgba(255, 190, 40, 0.8), 0 0 22px 8px rgba(255, 140, 0, 0.65);
   opacity: 1;
   animation: tc-jets 0.16s ease-in-out infinite;
 }
@@ -850,7 +868,7 @@ html:not(.touch-ui) .prompt-key {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tc-button.jets {
+  .tc-button.jets .tc-button-visual {
     animation: none;
   }
   .dlg-card.pop,
@@ -1903,6 +1921,8 @@ html.touch-ui .city-toast {
 html.touch-ui .ch5-stars,
 html.touch-ui .ch3-count {
   top: calc(env(safe-area-inset-top) + 44px);
+  left: calc(env(safe-area-inset-left) + 14px);
+  transform: none;
 }
 html.touch-ui .ch5-stars {
   padding: 1px 10px;

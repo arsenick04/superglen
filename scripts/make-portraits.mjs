@@ -38,7 +38,9 @@ async function main() {
       } catch {}
       await new Promise((r) => setTimeout(r, 300));
     }
-    const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    const launch = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] };
+    if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
+    const browser = await chromium.launch(launch);
     const page = await browser.newPage({ viewport: { width: 512, height: 512 } });
     page.on('pageerror', (e) => console.error('page error', e));
     for (const kind of HEROES) {

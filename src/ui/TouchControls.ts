@@ -7,7 +7,7 @@ export interface TouchButtonDef {
   /** Inline SVG markup (no text: the player cannot read). */
   icon: string;
   color: string;
-  /** CSS px, must stay >= 80. */
+  /** CSS px hit target, must stay >= 80. */
   size: number;
   /** Distance of the button's right/bottom edge from the screen corner (safe area is added). */
   right: number;
@@ -70,7 +70,7 @@ const JOYSTICK_ZONE = 0.45;
 const isShort = (m: ViewMetrics): boolean => m.h < SHORT_HEIGHT;
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
-/** Jump is the biggest button. Short: scales with the height, 88..100. Tall: 104. */
+/** Jump is the biggest hit target; its visible disc is smaller (CSS). */
 function jumpSize(m: ViewMetrics): number {
   return isShort(m) ? Math.round(clamp(m.h * 0.34, 88, 100)) : 104;
 }
@@ -306,8 +306,7 @@ export class TouchControls {
     for (const d of defs) {
       const b = div('tc-button');
       b.dataset.action = d.action;
-      b.style.background = d.color;
-      b.innerHTML = d.icon;
+      b.innerHTML = `<span class="tc-button-visual" style="background:${d.color}">${d.icon}</span>`;
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
       if (this.pulsing.has(d.action)) b.classList.add('pulse');
