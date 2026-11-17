@@ -9550,7 +9550,7 @@ async function curutArenaScenario(page, check, touch) {
     s.setBab3('rakus', [0, 1, 2, 3, 4, 5, 6]);
     s.setSlot({ level: 'battle-curut', x: 93, y: 0, z: 0, yaw: 0, mode: 'superglen', t: Date.now() });
   });
-  await page.reload();
+  await page.goto(URL + '?fps=0');
   await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
   const stale = await page.evaluate(() => ({ level: window.__superglen.level, step: window.__superglen.save.data.bab3.step }));
   check(`curut-arena ${tag}: a stale arena slot cannot reopen or rewind a later Chapter 3 step`, stale.level === 'kota' && stale.step === 'rakus', JSON.stringify(stale));

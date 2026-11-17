@@ -49,6 +49,7 @@ export class CurutArena implements Level {
       ctx.cameraRig.setArenaPose(null);
       ctx.health.setShown(false);
       document.documentElement.classList.remove('curut-arena');
+      if (ctx.save.data.slot?.level === 'battle-curut') ctx.save.setSlot(null);
     });
     // Keep seven persistent rat identities, but stage their loops close enough
     // for a single stable arena composition rather than a city-wide chase.
