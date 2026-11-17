@@ -10465,6 +10465,27 @@ async function hudLayoutScenario(page, check, touch) {
   check(`hud-layout ${tag}: exploration map, joystick, zoom and buttons overlap nothing and stay on screen`,
     v.bad.length === 0 && v.out.length === 0 && ['map', 'gear'].every((n) => v.names.includes(n)) &&
       (!touch || (v.names.includes('joy') && v.counts.zoom === 2 && v.names.includes('btn'))), JSON.stringify(v));
+  // Chapter 3 shows the food row during ordinary exploration, without a
+  // dialog. Open that real saved state so the test covers its actual DOM.
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [0] } }), touch);
+  await d3Adv(page, 30);
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false);
+    await g.advanceAsync(30, true);
+  });
+  await page.waitForFunction(() => document.querySelector('.ch3-count.show')?.getBoundingClientRect().width > 2);
+  v = await verify('food-exploration');
+  check(`hud-layout ${tag}: exploration food counter stays at the edge without overlapping controls`,
+    v.names.includes('food') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
+  // Return to Chapter 5 for the dialog/fight layouts below.
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
+  await d3Adv(page, 30);
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false);
+    await g.advanceAsync(30, true);
+  });
   await page.evaluate(() => window.__ch5.mute(true));
   await ch5Draw(page, -62, -62); // walk to the fight spot like bab5-fight
   // Walk the intro (same wait as bab5-fight); at the first dialog line measure, pill and food counter forced on for the geometry.

@@ -875,7 +875,7 @@ html:not(.touch-ui) .prompt-key {
   .dlg-next,
   .prompt-bob,
   .edge-arrow-icon,
-  .tc-button.pulse {
+  .tc-button.pulse .tc-button-visual {
     animation: none;
   }
   .fade {
@@ -1920,7 +1920,7 @@ html.touch-ui .city-toast {
 }
 html.touch-ui .ch5-stars,
 html.touch-ui .ch3-count {
-  top: calc(env(safe-area-inset-top) + 44px);
+  top: calc(env(safe-area-inset-top) + 96px);
   left: calc(env(safe-area-inset-left) + 14px);
   transform: none;
 }
