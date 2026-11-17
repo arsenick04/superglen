@@ -1,13 +1,12 @@
 # PROGRESS Superglen
 
-## C2 city look (16 November 2026): masih dikerjakan
+## C2 city look (17 November 2026): siap direview
 
-- Branch `codex/c2-city-look`: skala model seragam, dukungan pijakan, pencahayaan kota, podium/jalan/bukit, warga membulat, posisi minimap sentuh dan pemeriksaan zoom. Ringkasan dan gambar sebelum/sesudah: `docs/c2-city-look.md`.
-- Build, check:reach (0 error/warning), check:quiz, kota-touch, hud-layout desktop dan bab1 lulus. Kota-life desktop sebelumnya gagal anggaran grafik; jalur render kota kini disamakan dengan touch dan menunggu tes ulang. HUD touch masih perlu verifikasi setelah sinkronisasi frame pengukuran.
-- Branch sudah dipush, PR #24 dibuat pemilik. Tidak ada perubahan gameplay/cerita/audio atau CityData.
-- Untuk dicoba setelah review: bandingkan semua gedung dari dekat; pintu/wajah singa Barongsai; minimap/joystick/zoom di iPhone. C2 belum dinyatakan selesai.
-- Tes ulang kota dan kota-life lulus setelah renderer disamakan (44 calls / 403.090 segitiga). HUD touch masih gagal: peta/zoom dan kartu dialog tidak terlihat pada kondisi pengukuran, meskipun tidak ada bounding box bertumpuk. Hipotesis sinkronisasi frame tidak menyelesaikan masalah; perubahan percobaannya dibuang.
-- Lanjutan: HUD touch kini LULUS. Persiapan tes menyelesaikan dialog sambutan beserta jeda penutupnya dan menunggu animasi tampil. Overlap nyata minimap/tombol laser ditemukan lalu diperbaiki dengan posisi peta kiri atas. Semua assertion tetap ketat. Skrip `scripts/city-look-shots.cjs` menyimpan kamera review yang dapat diulang.
+- Branch `codex/c2-city-look`, PR #24. Gedung pemilik sudah dipasang tanpa peregangan non-uniform; sisi sekolah, rumah sakit, dan rumah Glen ditutup; wajah singa/pintu Barongsai utuh; semua elemen panjat terlihat tersambung.
+- Kota memakai langit biru dan daylight yang lebih cerah, warna distrik pastel, modul jalan Kenney, detail podium/kerb/crossing, bukit membulat, serta warga instanced yang lebih ramah. Touch dan desktop memakai tone yang sama.
+- Minimap touch dipindah dari joystick/laser. Pemeriksaan HUD mencakup joystick, dialog, minimap, dan kedua tombol zoom.
+- `build`, `check:reach` (0 error/warning), `check:quiz`, serta smoke `kota`, `kota-touch`, `kota-life`, `hud-layout`, `hud-layout-touch`, dan `bab1` semuanya lulus. View crowd tersibuk: 44 calls / 403.208 segitiga, di bawah batas 70 / 480.000.
+- Gambar sebelum/sesudah dan close-up: `docs/c2-city-look.md`. Yang tersisa hanya review visual/FPS pada iPhone fisik; angka headless bukan pengukuran perangkat asli.
 
 ## Paket malam A1 (11 November 2026): selesai
 
