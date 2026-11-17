@@ -9526,11 +9526,35 @@ async function curutArenaScenario(page, check, touch) {
     window.__superglen.placePlayer(130, 30);
     window.__superglen.advance(12, true);
   });
-  const stable = await page.evaluate(() => ({ camera: { ...window.__superglen.camera }, player: { ...window.__superglen.player } }));
+  const stable = await page.evaluate(() => ({ camera: { ...window.__superglen.camera }, player: { ...window.__superglen.player }, cameraYaw: window.__superglen.cameraYaw, steeringYaw: window.__superglen.steeringYaw }));
   const cameraShift = Math.hypot(stable.camera.x - entered.camera.x, stable.camera.y - entered.camera.y, stable.camera.z - entered.camera.z);
   const playerRadius = Math.hypot(stable.player.x - 93, stable.player.z);
-  check(`curut-arena ${tag}: battle camera stays fixed after look input and Glen is kept inside the arena`, cameraShift < 0.02 && playerRadius < 8, JSON.stringify({ cameraShift, playerRadius, entered: entered.camera, stable }));
+  check(`curut-arena ${tag}: battle camera and movement heading stay fixed after look input, and Glen stays inside`, cameraShift < 0.02 && Math.abs(stable.cameraYaw) < 0.001 && Math.abs(stable.steeringYaw) < 0.001 && playerRadius < 5.2, JSON.stringify({ cameraShift, playerRadius, entered: entered.camera, stable }));
+  const envelope = await page.evaluate(() => {
+    const a = window.__arena;
+    return [[-5, 0], [5, 0], [0, -5], [0, 5]].flatMap(([x, z]) => [0, 9].map((y) => a.project(93 + x, y, z)));
+  });
+  check(`curut-arena ${tag}: the full ground-to-max-jump envelope stays inside the fixed camera`, envelope.every((p) => p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98), JSON.stringify(envelope));
   await shot(page, `curut-arena-${touch ? 'touch' : 'desktop'}`);
+  await page.evaluate(() => {
+    const g = window.__superglen;
+    g.save.setSlot({ level: 'battle-curut', x: g.player.x, y: g.player.y, z: g.player.z, yaw: 0, mode: 'superglen', t: Date.now() });
+    for (let i = 0; i < 7; i++) window.__arena.tame(i);
+    g.advance(120, false);
+  });
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  const won = await page.evaluate(() => ({ level: window.__superglen.level, step: window.__superglen.save.data.bab3.step, tamed: window.__superglen.save.data.bab3.tamed.length, slot: window.__superglen.save.data.slot }));
+  check(`curut-arena ${tag}: victory returns to the city at counting, preserves all tames and clears the transient slot`, won.level === 'kota' && won.step === 'count' && won.tamed === 7 && won.slot === null, JSON.stringify(won));
+  await page.evaluate(() => {
+    const s = window.__superglen.save;
+    s.setBab3('rakus', [0, 1, 2, 3, 4, 5, 6]);
+    s.setSlot({ level: 'battle-curut', x: 93, y: 0, z: 0, yaw: 0, mode: 'superglen', t: Date.now() });
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+  const stale = await page.evaluate(() => ({ level: window.__superglen.level, step: window.__superglen.save.data.bab3.step }));
+  check(`curut-arena ${tag}: a stale arena slot cannot reopen or rewind a later Chapter 3 step`, stale.level === 'kota' && stale.step === 'rakus', JSON.stringify(stale));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
 // ---- Chapter 5 "Ular Melar" (package L11b, src/world/kota/Chapter5.ts, SnakeBoss.ts, bab1/LabVisit.ts): groups `bab5-flow`, `bab5-fight` ----------
@@ -11005,7 +11029,7 @@ async function battleScenario(page, check, touch) {
     await d3Adv(page, 60);
     let h = await hudState();
     check(`${L}: before the fight the city HUD shows (minimap, gear) and there is no battle class`, !h.battle && h.minimap && h.gear && h.gearW >= 50 && h.scene !== 'pertarungan', JSON.stringify(h));
-    const life0 = await page.evaluate((a) => ({ agents: window.__life.agents().filter((x) => x.kind >= 3), }), A);
+    const life0 = A ? await page.evaluate(() => ({ agents: window.__life.agents().filter((x) => x.kind >= 3), })) : { agents: [] };
     const near0 = A ? life0.agents.filter((x) => Math.hypot(x.x - A.x, x.z - A.z) < A.r + 14).length : -1;
     // ---- enter ----
     if (boss === 'ch5') await ch5Stand(page, A.x + 30, A.z);
@@ -11014,8 +11038,10 @@ async function battleScenario(page, check, touch) {
       await d3Go(page, 93, 12, 30);
       await d3Adv(page, 400);
       const r0 = (await ch3Rats(page))[0];
-      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [r0.x, r0.z + 9]);
-      await d3Adv(page, 20);
+      await page.evaluate(([x, z]) => { window.__ch3.setArenaEnabled(true); window.__superglen.placePlayer(x, z); }, [r0.x, r0.z]);
+      await d3Adv(page, 4);
+      await page.waitForFunction(() => window.__superglen.level === 'battle-curut' && !window.__superglen.loading && !!window.__arena, null, { timeout: 30000 });
+      await page.evaluate(() => { window.__arena.mute(true); window.__superglen.advance(20, true); });
     }
     await page.evaluate(() => window.__superglen.health.fill());
     await d3Adv(page, 20);
@@ -11087,7 +11113,7 @@ async function battleScenario(page, check, touch) {
     } else if (boss === 'ch6') {
       await page.evaluate(() => window.__ch6.takeStar && window.__ch6.takeStar());
     } else {
-      await page.evaluate(() => window.__ch3.tame(0));
+      await page.evaluate(() => window.__arena.tame(0));
     }
     await d3Adv(page, 3);
     bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
@@ -11112,8 +11138,9 @@ async function battleScenario(page, check, touch) {
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), far);
       await d3Adv(page, 40);
     } else {
-      await page.evaluate(() => window.__superglen.placePlayer(93, 200));
-      await d3Adv(page, 200);
+      await page.evaluate(() => window.__arena.leave());
+      await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+      await page.evaluate(() => window.__superglen.advance(20, true));
     }
     await sleep(700);
     h = await hudState();

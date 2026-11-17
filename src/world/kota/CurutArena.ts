@@ -13,6 +13,8 @@ export class CurutArena implements Level {
   private rats!: MarketRats;
   private leaving = false;
   private victoryLeft = -1;
+  private readonly battleFocus = { x: MARKET.hub.x, y: Combat.rat.arena.cameraLookY, z: 0 };
+  private readonly screenPoint = new THREE.Vector3();
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -35,10 +37,13 @@ export class CurutArena implements Level {
     ctx.physics.addFixedCuboid({ x: 40, y: 0.5, z: 40 }, { x: MARKET.hub.x, y: -0.5, z: 0 });
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
-    ctx.game.setSkills({ laser: true, shield: true, fly: true });
+    // Double jump remains part of Superglen's movement. Free flight is
+    // disabled here because a fixed battle composition cannot follow him to
+    // the city's normal flight ceiling.
+    ctx.game.setSkills({ laser: true, shield: true, fly: false });
     ctx.health.setShown(true);
     const arena = Combat.rat.arena;
-    ctx.cameraRig.setArenaPose([MARKET.hub.x, arena.cameraHeight, arena.cameraBack, MARKET.hub.x, arena.cameraLookY, arena.cameraLookZ]);
+    ctx.cameraRig.setArenaPose([MARKET.hub.x, arena.cameraHeight, arena.cameraBack, MARKET.hub.x, arena.cameraLookY, arena.cameraLookZ], arena.cameraFov);
     document.documentElement.classList.add('curut-arena');
     ctx.onDispose(() => {
       ctx.cameraRig.setArenaPose(null);
@@ -55,7 +60,7 @@ export class CurutArena implements Level {
       },
       onCollect: () => {},
     }, ctx.save.data.bab3.tamed, specs, false);
-    ctx.battle.enter({ id: 'curut_cemberut', name: 'Curut Cemberut', focus: () => ({ x: MARKET.hub.x, y: arena.cameraLookY, z: 0 }), arena: { x: MARKET.hub.x, z: 0, r: arena.radius }, stars: () => ({ left: this.rats.remaining, max: this.rats.n }), ownBar: true, intro: false, punchy: false });
+    ctx.battle.enter({ id: 'curut_cemberut', name: 'Curut Cemberut', focus: () => this.battleFocus, arena: { x: MARKET.hub.x, z: 0, r: arena.radius }, stars: () => ({ left: this.rats.remaining, max: this.rats.n }), ownBar: true, intro: false, punchy: false });
     const exit = document.createElement('button');
     exit.className = 'arena-return';
     exit.textContent = 'Kembali ke kota';
@@ -74,6 +79,10 @@ export class CurutArena implements Level {
         counts: () => ({ ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
         mute: (on: boolean) => { this.rats.muted = on; },
         setRng: (v: number | null) => { CombatRng.next = v === null ? Math.random : () => v; },
+        project: (x: number, y: number, z: number) => {
+          const p = this.screenPoint.set(x, y, z).project(ctx.cameraRig.camera);
+          return { x: p.x, y: p.y, z: p.z };
+        },
         leave: () => this.leave(false),
       };
       ctx.onDispose(() => { delete w.__arena; });
@@ -85,7 +94,10 @@ export class CurutArena implements Level {
     this.leaving = true;
     const ctx = this.ctx;
     this.rats.muted = true;
-    if (won) ctx.save.setBab3('count', ctx.save.data.bab3.tamed);
+    if (won && ctx.save.data.bab3.step === 'chase') ctx.save.setBab3('count', ctx.save.data.bab3.tamed);
+    // A position inside this transient encounter must never remain the
+    // preferred Continue slot after the encounter has ended.
+    if (ctx.save.data.slot?.level === 'battle-curut') ctx.save.setSlot(null);
     ctx.battle.exit(won);
     void travel(ctx.game, 'kota', 'marketBattle');
   }

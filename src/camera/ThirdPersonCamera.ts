@@ -137,9 +137,11 @@ export class ThirdPersonCamera {
   testPose: [number, number, number, number, number, number] | null = null;
   /** Dedicated arena composition; gameplay steering stays aligned to this camera. */
   private arenaPose: [number, number, number, number, number, number] | null = null;
+  private arenaFov: number = CameraConfig.fov;
 
-  setArenaPose(pose: [number, number, number, number, number, number] | null): void {
+  setArenaPose(pose: [number, number, number, number, number, number] | null, fov: number = CameraConfig.fov): void {
     this.arenaPose = pose;
+    this.arenaFov = fov;
     if (pose) this.yaw = this.steeringYaw = Math.atan2(pose[0] - pose[3], pose[2] - pose[5]);
   }
 
@@ -344,9 +346,13 @@ export class ThirdPersonCamera {
   update(dt: number, focus: THREE.Vector3, subject?: CameraSubject): void {
     if (this.arenaPose) {
       const p = this.arenaPose;
+      // Respawn/load may call snapBehind after the level has selected this
+      // pose. Reassert the arena heading so movement never rotates while the
+      // visible camera remains fixed.
+      this.yaw = this.steeringYaw = Math.atan2(p[0] - p[3], p[2] - p[5]);
       this.camera.position.set(p[0], p[1], p[2]);
       this.camera.lookAt(p[3], p[4], p[5]);
-      this.camera.fov = CameraConfig.fov;
+      this.camera.fov = this.arenaFov;
       this.camera.updateProjectionMatrix();
       return;
     }

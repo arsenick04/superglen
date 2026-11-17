@@ -84,7 +84,11 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
   const slot = save.data.slot;
-  if (slot && slot.t > 0 && slot.t >= (save.data.doneAt.bab2 ?? 0)) return { level: slot.level, slot: { ...slot } };
+  // An encounter slot is valid only while that encounter's story step is
+  // still active. This also protects old saves made just before a delayed
+  // victory return completed.
+  const validSlot = slot?.level !== 'battle-curut' || save.data.bab3.step === 'chase';
+  if (slot && validSlot && slot.t > 0 && slot.t >= (save.data.doneAt.bab2 ?? 0)) return { level: slot.level, slot: { ...slot } };
   return { level: 'kota', arrival: 'hillDoor' };
 }
 

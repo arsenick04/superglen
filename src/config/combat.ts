@@ -60,16 +60,17 @@ export const Combat = {
     globalGap: 0.5,
     /** Dedicated real-time Curut arena and fixed camera composition. */
     arena: {
-      radius: 6.5,
+      radius: 5.2,
       returnInset: 0.2,
       victoryDelay: 1.5,
       ratRingX: 3,
       ratRingZ: 4,
       ratLoopRadius: 1.1,
-      cameraHeight: 6.5,
+      cameraHeight: 8,
       cameraBack: 11.5,
-      cameraLookY: 0.8,
+      cameraLookY: 3,
       cameraLookZ: 0.5,
+      cameraFov: 72,
     },
   },
   /** Ular Melar (Chapter 5 mini-boss): 5 stars of 2 laser hits each; the head glows when dizzy and only then does the laser count. */
