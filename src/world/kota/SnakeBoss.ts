@@ -81,7 +81,7 @@ const CAMO_BELLY = new THREE.Color(0xdccb94);
  * One body segment of the model snake: a unit sphere painted like the model (green with soft mustard blotches on the back, cream belly),
  * so the chain of stretched segments reads as the same snake as the head. Vertex colours; a blotch is a smooth threshold of a few sines.
  */
-function camoBallGeo(): THREE.BufferGeometry {
+export function camoBallGeo(): THREE.BufferGeometry {
   const g = new THREE.SphereGeometry(1, 14, 10);
   const P = g.getAttribute('position');
   const col = new Float32Array(P.count * 3);
