@@ -88,11 +88,28 @@ export class Hangar {
       kit.lit.box([0.1, 0.18, L], [s * (maxX - 0.02), 7.2, cz], C.GOLD);
       kit.glow.box([0.08, 0.12, L], [s * (maxX - 0.04), 12.4, cz], 0x6ff4ff);
     }
+    // Timber-and-gold lower wall panels keep the training room in the same Barongsai world as the old building.
+    for (const s of [-1, 1]) {
+      for (let z = minZ + 2; z < maxZ; z += 4) {
+        kit.deco.box([0.08, 2.5, 3.65], [s * (maxX - 0.2), 1.45, z], (Math.round(z / 4) & 1) ? 0xb96d43 : 0x9f5939);
+        kit.deco.box([0.1, 2.75, 0.16], [s * (maxX - 0.15), 1.5, z - 1.9], C.GOLD);
+      }
+      kit.deco.box([0.1, 0.18, L], [s * (maxX - 0.14), 2.82, cz], C.GOLD);
+    }
     kit.lit.box([W, 3.4, 0.1], [0, 1.7, minZ + 0.1], 0x3f7fd0);
     kit.lit.box([W, 0.5, 0.1], [0, 4.4, minZ + 0.1], C.RED);
     kit.lit.box([W, 0.35, 0.1], [0, 3.4, minZ + 0.18], C.GOLD);
     kit.lit.box([SCREEN.w + 7, SCREEN.h + 4.5, 0.1], [SCREEN.x, SCREEN.y + 1.2, minZ + 0.1], 0x16264f); // dark backdrop: the screen stands out
     for (let z = minZ + 4; z < maxZ; z += 8) kit.lit.box([W, 0.4, 0.6], [0, ceil - 0.2, z], C.GOLD);
+    // Deep roof trusses replace the flat-box silhouette without adding gameplay collision.
+    for (let z = minZ + 4; z < maxZ; z += 8) {
+      kit.deco.box([W - 1.4, 0.32, 0.34], [0, ceil - 1.0, z], 0x75442e);
+      for (const s of [-1, 1]) {
+        kit.deco.box([W * 0.52, 0.3, 0.34], [s * W * 0.235, ceil - 0.48, z], 0x75442e, [0, 0, s * 0.04]);
+        kit.deco.box([0.28, 0.9, 0.3], [s * 0.06, ceil - 0.52, z], C.GOLD, [0, 0, s * 0.08]);
+      }
+      kit.glow.box([3.8, 0.08, 0.48], [0, ceil - 1.18, z], 0xffefbd);
+    }
     for (const x of [-9, 0, 9]) {
       kit.lit.box([0.6, 0.4, L], [x, ceil - 0.2, cz], 0x8fb4e6);
       kit.glow.box([5.2, 0.05, L - 2], [x + (x === 0 ? 0 : 4.5 * Math.sign(x)), ceil - 0.03, cz], 0xfff0c0);
@@ -105,6 +122,13 @@ export class Hangar {
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), 0.15, z], C.GOLD);
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), ceil - 0.65, z], C.GOLD);
       }
+    }
+    // Red training pennants and round lanterns soften the industrial shell.
+    for (const s of [-1, 1]) for (let z = minZ + 7; z < maxZ - 2; z += 12) {
+      kit.deco.box([0.08, 2.2, 1.65], [s * (maxX - 0.16), 6.1, z], C.RED);
+      kit.deco.box([0.1, 0.12, 1.9], [s * (maxX - 0.12), 7.23, z], C.GOLD);
+      kit.deco.sph(0.42, [s * (maxX - 0.55), 7.8, z], 0xff684f, [0.8, 1.15, 0.8]);
+      kit.glow.sph(0.18, [s * (maxX - 0.48), 7.8, z], 0xffd46a);
     }
 
     // ---- High windows (sky-blue glass) ----
