@@ -135,6 +135,13 @@ export class ThirdPersonCamera {
   steeringYaw = 0;
   /** Test-only fixed pose [x, y, z, targetX, targetY, targetZ] (smoke-test screenshots from above); null = follow the player. */
   testPose: [number, number, number, number, number, number] | null = null;
+  /** Dedicated arena composition; gameplay steering stays aligned to this camera. */
+  private arenaPose: [number, number, number, number, number, number] | null = null;
+
+  setArenaPose(pose: [number, number, number, number, number, number] | null): void {
+    this.arenaPose = pose;
+    if (pose) this.yaw = this.steeringYaw = Math.atan2(pose[0] - pose[3], pose[2] - pose[5]);
+  }
 
   private readonly target = new THREE.Vector3();
   private currentDistance: number = CameraConfig.distance;
@@ -303,6 +310,11 @@ export class ThirdPersonCamera {
 
   /** Apply look input. Call once per frame BEFORE the fixed steps so movement uses the new yaw. */
   handleInput(): void {
+    if (this.arenaPose) {
+      this.input.consumeZoom();
+      this.input.consumeLookDelta();
+      return;
+    }
     const zs = this.input.consumeZoom();
     if (zs !== 0) this.zoomBy(zs);
     const look = this.input.consumeLookDelta();
@@ -330,6 +342,14 @@ export class ThirdPersonCamera {
 
   /** Call once per frame after the player visual was interpolated. `focus` = capsule center. */
   update(dt: number, focus: THREE.Vector3, subject?: CameraSubject): void {
+    if (this.arenaPose) {
+      const p = this.arenaPose;
+      this.camera.position.set(p[0], p[1], p[2]);
+      this.camera.lookAt(p[3], p[4], p[5]);
+      this.camera.fov = CameraConfig.fov;
+      this.camera.updateProjectionMatrix();
+      return;
+    }
     const c = CameraConfig;
     if (subject) {
       this.autoFollow(dt, subject);

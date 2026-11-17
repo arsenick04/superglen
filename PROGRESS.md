@@ -1,5 +1,15 @@
 # PROGRESS Superglen
 
+## Laporan Codex
+
+### Arena Curut Cemberut (17 November 2026): checkpoint siap uji
+
+- Pertarungan Curut sekarang berpindah dari kota ke arena real-time khusus. Kamera tetap tidak lagi terputar/ter-zoom saat bertarung, Glen dibatasi di dalam arena, dan framing touch dibuat lebih dekat agar Glen serta tujuh Curut tetap terlihat.
+- HUD arena hanya menampilkan bintang di tepi; model bakpao/kue pasar tidak memenuhi tengah arena. Tombol kembali ke kota tersedia, dan kehabisan hati mengembalikan Glen ke Rumah Sakit.
+- Save tame terakhir dipulihkan langsung ke tahap menghitung, sehingga reload pada jeda kemenangan tidak membuat Bab 3 macet. Selesai bertarung kembali ke kota dan melanjutkan alur Bab 3.
+- Lulus: `npm run build`, `npm run check:reach`, smoke `bab3-flow` (12/12), `combat` (23/23), `curut-arena` desktop (3/3), dan `curut-arena-touch` 844x390 (3/3).
+- Berikutnya: efek benturan atap hanggar, alarm + musik intens, lalu misi parkour Barongsai lanjutan sebelum Tikus Rakus.
+
 ## C2 city look (17 November 2026): siap direview
 
 - Branch `codex/c2-city-look`, PR #24. Gedung pemilik sudah dipasang tanpa peregangan non-uniform; sisi sekolah, rumah sakit, dan rumah Glen ditutup; wajah singa/pintu Barongsai utuh; semua elemen panjat terlihat tersambung.

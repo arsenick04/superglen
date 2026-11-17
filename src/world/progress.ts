@@ -21,6 +21,7 @@ import { Z } from './bab1/Layout';
 
 /** Where a level should put the player when it was entered through a door (consumed by the level's build). */
 export type Arrival =
+  | 'marketBattle'
   /** City: in front of the old building's door on the hill, facing away from it. */
   | 'hillDoor'
   /** Lab: just inside the old building's front door. */
