@@ -4,9 +4,10 @@ import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { AaraActor } from './Aara';
 import { Celebration } from '../Celebration';
-import { box, merge, type Part } from './ColorMesh';
 import { ClueProps } from './ClueProps';
 import { AARA, AARA_QUESTIONS, BAB4_LINES as L, CLUE_ARRIVE, CLUE_HELP_AFTER, CLUE_PAPER0, CLUE_PRAISE, CLUES, PARK, TRACK } from './Bab4Data';
+import { enemyModels } from './EnemyModels';
+import { camoBallGeo } from './SnakeBoss';
 
 /** What the level gives Chapter 4 (so this file does not need to know the level class). */
 export interface Chapter4Hooks {
@@ -341,21 +342,58 @@ export class Chapter4 {
     void ctx.dialog.say(L.aaraLagi);
   }
 
-  /** The shed skin: a long flat strip that wiggles along its length (one merged mesh, vertex colours). */
-  private makeSkin(): THREE.Mesh {
-    const parts: Part[] = [];
+  /** A pale, flattened copy of Ular Melar: textured owner head plus its camo body, lying empty on the grass. */
+  private makeSkin(): { group: THREE.Group; dispose: () => void } {
+    const group = new THREE.Group();
+    group.position.set(TRACK.pos.x, 0, TRACK.pos.z);
+    group.rotation.y = TRACK.yaw;
+    const bodyGeo = camoBallGeo();
+    const bodyMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.68, depthWrite: false });
     const n = 18;
+    const body = new THREE.InstancedMesh(bodyGeo, bodyMat, n);
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    const s = new THREE.Vector3();
     for (let i = 0; i < n; i++) {
       const t = i / (n - 1);
-      const w = 0.55 + 0.5 * Math.sin(Math.PI * Math.min(1, t * 1.15)); // thin tail, fat middle, head end
-      parts.push({ g: box(w, 0.05, TRACK.length / n + 0.05), c: i % 2 ? 0xb9d6a0 : 0x9cc58a, p: [Math.sin(t * Math.PI * 3) * 0.9, 0.04, (t - 0.5) * TRACK.length] });
-      if (i % 3 === 1) parts.push({ g: box(w * 0.4, 0.06, 0.5), c: 0x6fa05f, p: [Math.sin(t * Math.PI * 3) * 0.9, 0.06, (t - 0.5) * TRACK.length] });
+      const radius = 0.72 * (0.45 + 0.55 * t);
+      p.set(Math.sin(t * Math.PI * 3) * 0.72, 0.055, (t - 0.5) * (TRACK.length - 1));
+      s.set(radius, 0.075, 0.78);
+      body.setMatrixAt(i, m.compose(p, q, s));
     }
-    const m = new THREE.Mesh(merge(parts), this.lit);
-    m.castShadow = false;
-    m.position.set(TRACK.pos.x, 0, TRACK.pos.z);
-    m.rotation.y = TRACK.yaw;
-    return m;
+    body.instanceMatrix.needsUpdate = true;
+    body.castShadow = false;
+    body.receiveShadow = false;
+    group.add(body);
+
+    const headGeo = enemyModels.geometry('ular_melar_head', 1.45, true);
+    let headMat: THREE.Material | null = null;
+    if (headGeo) {
+      const source = enemyModels.material('ular_melar_head');
+      headMat = source?.clone() ?? bodyMat.clone();
+      if (headMat instanceof THREE.MeshStandardMaterial) {
+        headMat.color.set(0xdde6bd);
+        headMat.transparent = true;
+        headMat.opacity = 0.72;
+        headMat.depthWrite = false;
+      }
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.set(0.12, 0.075, TRACK.length * 0.5 - 0.1);
+      head.scale.set(1.05, 0.09, 1.12);
+      head.castShadow = false;
+      head.receiveShadow = false;
+      group.add(head);
+    }
+    return {
+      group,
+      dispose: () => {
+        bodyGeo.dispose();
+        bodyMat.dispose();
+        headGeo?.dispose();
+        headMat?.dispose();
+      },
+    };
   }
 
   /**
@@ -379,16 +417,16 @@ export class Chapter4 {
       this.stage(TRACK.stage, 5);
       this.putAara(PARK.aara.x, PARK.aara.z, PARK.aara.yaw);
       const skin = this.makeSkin();
-      skin.scale.setScalar(0.01);
-      ctx.root.add(skin);
+      skin.group.scale.setScalar(0.01);
+      ctx.root.add(skin.group);
       ctx.onDispose(() => {
-        skin.removeFromParent();
-        skin.geometry.dispose();
+        skin.group.removeFromParent();
+        skin.dispose();
       });
       cameraRig.setFraming(this.tmp.set(TRACK.pos.x, 0.6, TRACK.pos.z), { weight: 0.45, distance: 4 });
       ctx.sfx.bling();
       fx.sparkles.burst(TRACK.pos.x, 0.5, TRACK.pos.z, 18, 2.6, 0xdfeccd, { gravity: 0.8, life: 1, up: 0.6 });
-      await seq.tween(0.7, (t) => skin.scale.setScalar(0.01 + 0.99 * t));
+      await seq.tween(0.7, (t) => skin.group.scale.setScalar(0.01 + 0.99 * t));
       await dialog.say(L.aaraKulit, { lockControls: true });
       await dialog.say(L.glenKulit, { lockControls: true });
       await dialog.say(L.aaraBantuan, { lockControls: true });
