@@ -7919,16 +7919,16 @@ async function gamepadScenario(page, check, kind, touch) {
 
   // ---- Start by pad: tilting a stick only switches the glyphs, a button starts the game ----
   await padDo(page, (k) => window.__pad.on(k) || window.__pad.left(1, 0), kind);
-  await sleep(500);
+  // Drive the controller poll deterministically. A fixed wall-clock sleep is
+  // unreliable while the first city shaders/models are still warming up.
+  await padAdv(page, 2);
   s = await padSt(page);
   check(`gamepad ${tag}: a stick tilt connects the pad and does not start the game`, s.pad.c && s.pad.a && !s.started, JSON.stringify(s.pad));
   check(`gamepad ${tag}: the pad is detected with the right table (${kind === 'std' ? 'standard' : 'dualsense fallback'})`, s.pad.table === (kind === 'std' ? 'standard' : 'dualsense'), s.pad.table);
   check(`gamepad ${tag}: the start pill shows the pad text and hides the click/tap text`, (await padCss(page, '.start-text-pad', 'display')) !== 'none' && (await padCss(page, '.start-text-pc', 'display')) === 'none' && (await padCss(page, '.start-text-touch', 'display')) === 'none');
   await padDo(page, () => window.__pad.left(0, 0));
-  await padDo(page, () => window.__pad.btn('cross', true));
-  await sleep(500);
-  await padDo(page, () => window.__pad.btn('cross', false));
-  await sleep(300);
+  await padTap(page, 'cross');
+  await page.waitForFunction(() => !document.querySelector('.start-overlay'), null, { timeout: 5000 });
   s = await padSt(page);
   check(`gamepad ${tag}: a pad button starts the game`, s.started, JSON.stringify({ started: s.started }));
   check(`gamepad ${tag}: the start overlay is gone and the start press did not jump`, (await page.evaluate(() => !document.querySelector('.start-overlay'))) && s.jumps === 0, `jumps ${s.jumps}`);
@@ -8186,7 +8186,7 @@ async function gamepadNoneScenario(page, check, noApi) {
   await sleep(1000);
   check(`gamepad ${tag}: the start pill still says "Klik untuk mulai"`, await page.evaluate(() => { const t = document.querySelector('.start-text-pc'); return getComputedStyle(t).display !== 'none' && t.textContent === 'Klik untuk mulai'; }));
   await page.mouse.click(640, 360);
-  await sleep(700);
+  await page.waitForFunction(() => window.__superglen.started, null, { timeout: 5000 });
   await page.evaluate(() => window.__superglen.pause(true));
   const a = await padSt(page);
   await page.keyboard.down('w');
@@ -9871,7 +9871,7 @@ async function bab5FightScenario(page, check, touch) {
   await d3Adv(page, 28);
   await d3Press(page, 'j', 3);
   const wt = await ch4Watch(page, 2100, 'ch5Scene', { tamed: `bab5-tamed${touch ? '-touch' : ''}` });
-  check(`bab5-fight ${tag}: the fifth star (second hit of the last one) tames it: it says sorry (hissy), Nino cheers, it slithers off, Nino hints at the big rats (in order)`, bd && orderOk(wt.seen, ['Sssssori', 'Hebat, Superglen', 'aku pulang ke hutan', 'tikus besar']), JSON.stringify(wt.seen));
+  check(`bab5-fight ${tag}: the fifth star (second hit of the last one) tames it: it says sorry (hissy), Nino cheers, it slithers off, Nino hints at the big rats (in order)`, bd && orderOk(wt.seen, ['Sssssori', 'Keren, Superglen', 'aku pulang ke hutan', 'tikus besar']), JSON.stringify(wt.seen));
   check(`bab5-fight ${tag}: controls were locked during the scene; "Chapter 5 selesai!" star shown`, wt.locked > 5 && wt.star, JSON.stringify([wt.locked, wt.star]));
   await d3Adv(page, 120);
   const fin = await ch5Info(page);
@@ -10279,7 +10279,7 @@ async function bab6FightScenario(page, check, touch) {
   await d3Adv(page, 28);
   await page.evaluate(() => window.__ch6.laser('tikusRakus'));
   const wt = await ch4Watch(page, 4200, 'ch6Scene', { tamed: sn('tamed') });
-  check(`bab6-fight ${tag}: the fifth star (second hit of the last one) tames him: burp, sorry, promise to share, the citizens cheer, Nino praises (in order)`, orderOk(wt.seen, ['Sendawa', 'Maaf ya', 'bagi bersama', 'Makanan kota sudah kembali', 'Hebat, Superglen']), JSON.stringify(wt.seen));
+  check(`bab6-fight ${tag}: the fifth star (second hit of the last one) tames him: burp, sorry, promise to share, the citizens cheer, Nino praises (in order)`, orderOk(wt.seen, ['Sendawa', 'Maaf ya', 'bagi bersama', 'Makanan kota sudah kembali', 'Mantap, Superglen']), JSON.stringify(wt.seen));
   check(`bab6-fight ${tag}: controls were locked during the scene; "Chapter 6 selesai!" star shown`, wt.locked > 5 && wt.star, JSON.stringify([wt.locked, wt.star]));
   await d3Adv(page, 150);
   const fin = await ch6Info(page);
@@ -11076,7 +11076,10 @@ async function zoomScenario(page, check, touch) {
     z = await zv();
     const far = await dist();
     check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base + 1, JSON.stringify(z));
-    await page.mouse.wheel(0, -900);
+    // Wheel input intentionally caps one event to three notches. Send several
+    // real events to exercise the clamp instead of assuming one huge delta is
+    // applied without the production safety cap.
+    for (let i = 0; i < 4; i++) await page.mouse.wheel(0, -900);
     await settle();
     z = await zv();
     const near = await dist();
@@ -11087,7 +11090,7 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     check(`zoom ${tag}: the - key zooms out and + in (net one step out, ${z.t.toFixed(2)})`, z.t > 0.58 && z.t < 0.75, JSON.stringify(z));
-    await page.mouse.wheel(0, 20000);
+    for (let i = 0; i < 5; i++) await page.mouse.wheel(0, 20000);
     await settle();
     z = await zv();
     check(`zoom ${tag}: far overview is clamped (${z.t.toFixed(2)} <= 1.9)`, z.t <= 1.9 + 1e-6 && z.t > 1.5, JSON.stringify(z));
