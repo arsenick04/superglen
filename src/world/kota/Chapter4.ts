@@ -388,6 +388,7 @@ export class Chapter4 {
     return {
       group,
       dispose: () => {
+        body.dispose();
         bodyGeo.dispose();
         bodyMat.dispose();
         headGeo?.dispose();
