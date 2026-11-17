@@ -63,11 +63,12 @@
     0.3717
    ],
    "kind": "hospital",
+   "roof": 0.72,
    "body": [
     -0.4,
     0.22,
     -0.3,
-    0.16
+    0.30
    ],
    "source": "Pemilik proyek (Higgsfield + Tripo)"
   },

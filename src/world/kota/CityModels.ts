@@ -42,6 +42,8 @@ export interface BuildingHint {
   ySquash?: number;
   /** Ground plate thickness as a fraction of the model height: sunk under the city ground (default 0.03). */
   sink?: number;
+  /** Actual walkable roof height as a fraction of the model bounds; excludes signs / crosses above a flat roof. */
+  roof?: number;
   /** Metres of the model's yard kept in front of the facade (the rest is clipped; default 3). */
   yard?: number;
   /** Shift along the facade (m, after scaling): e.g. to put the model's door on the city's door. */

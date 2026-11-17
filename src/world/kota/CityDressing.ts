@@ -73,8 +73,9 @@ function customFit(cb: CustomBuilding, b: CityBuilding, yaw: number, along: numb
   const bw = (x1 - x0) * size.x;
   const bd = (z1 - z0) * size.z;
   const sinkFraction = h.sink ?? (b.kind === 'oldBarongsai' ? 0.08 : 0.03);
+  const roofFraction = h.roof ?? 1;
   const height = b.wall + (b.roof === 'hip' ? b.roofH * (1 - Parkour.world.roofPlateau) : 0);
-  const s = Math.min(along / bw, deep / bd, height / (size.y * (1 - sinkFraction)));
+  const s = Math.min(along / bw, deep / bd, height / (size.y * (roofFraction - sinkFraction)));
   const y = (h.yaw ?? 0) + yaw;
   // Body centre in model units -> must land on the building centre (plus `shift` along the facade).
   // The Barongsai door projects forward of its wall; anchor that door, rather than clipping the projecting lion mask.
@@ -87,7 +88,7 @@ function customFit(cb: CustomBuilding, b: CityBuilding, yaw: number, along: numb
   const rz = -fx;
   tmpQ.setFromAxisAngle(UP, y);
   // `sink`: the model's own ground plate (fraction of its height) goes under the city ground.
-  const base = b.base + height - size.y * s;
+  const base = b.base + height - size.y * roofFraction * s;
   const front = (b.face < 2 ? b.d : b.w) / 2 + (b.kind === 'oldBarongsai' ? 0.6 : 0);
   return new THREE.Matrix4().compose(new THREE.Vector3(b.x + rx * shift + fx * front - bc.x, base - bc.y, b.z + rz * shift + fz * front - bc.z), tmpQ, new THREE.Vector3(s, s, s));
 }
