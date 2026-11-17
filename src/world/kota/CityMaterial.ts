@@ -53,7 +53,7 @@ const NT = ATLAS_TILES.length;
 
 export function makeCityMaterial(): THREE.MeshStandardMaterial {
   loadAtlas();
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, envMapIntensity: 0.65 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uAtlas = uniforms.uAtlas;
     shader.uniforms.uRect = uniforms.uRect;
@@ -85,11 +85,12 @@ varying vec2 vAo;`,
   vec2 d1 = dFdx(vTuv) * cr.zw * ${ATLAS_PX.toFixed(1)};
   vec2 d2 = dFdy(vTuv) * cr.zw * ${ATLAS_PX.toFixed(1)};
   float lod = 0.5 * log2(max(max(dot(d1, d1), dot(d2, d2)), 1e-8));
+  // uAtlas uses an sRGB GPU format: sampling already decodes to the same linear space as vertex colours and uAvg.
   vec3 tx = textureLod(uAtlas, cr.xy + uvt * cr.zw, clamp(lod, 0.0, ${LOD_MAX.toFixed(1)})).rgb;
   tx = mix(tx, uAvg[ti], wr * smoothstep(2.0, 4.2, lod));
   diffuseColor.rgb *= tx;
   // Contact shadow: walls, trunks and poles darken softly in the last metre above the street (grounds everything).
-  diffuseColor.rgb *= mix(1.0, mix(0.7, 1.0, smoothstep(0.0, 1.3, vAo.x)), 1.0 - smoothstep(0.4, 0.7, vAo.y));
+  diffuseColor.rgb *= mix(1.0, mix(0.86, 1.0, smoothstep(0.0, 1.3, vAo.x)), 1.0 - smoothstep(0.4, 0.7, vAo.y));
 }`,
       );
   };

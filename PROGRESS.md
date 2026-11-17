@@ -1,5 +1,13 @@
 # PROGRESS Superglen
 
+## C2 city look (17 November 2026): siap direview
+
+- Branch `codex/c2-city-look`, PR #24. Gedung pemilik sudah dipasang tanpa peregangan non-uniform; sisi sekolah, rumah sakit, dan rumah Glen ditutup; wajah singa/pintu Barongsai utuh; semua elemen panjat terlihat tersambung.
+- Kota memakai langit biru dan daylight yang lebih cerah, warna distrik pastel, modul jalan Kenney, detail podium/kerb/crossing, bukit membulat, serta warga instanced yang lebih ramah. Touch dan desktop memakai tone yang sama.
+- Minimap touch dipindah dari joystick/laser. Pemeriksaan HUD mencakup joystick, dialog, minimap, dan kedua tombol zoom.
+- `build`, `check:reach` (0 error/warning), `check:quiz`, serta smoke `kota`, `kota-touch`, `kota-life`, `hud-layout`, `hud-layout-touch`, dan `bab1` semuanya lulus. View crowd tersibuk: 44 calls / 403.208 segitiga, di bawah batas 70 / 480.000.
+- Gambar sebelum/sesudah dan close-up: `docs/c2-city-look.md`. Yang tersisa hanya review visual/FPS pada iPhone fisik; angka headless bukan pengukuran perangkat asli.
+
 ## Paket malam A1 (11 November 2026): selesai
 
 ### Yang selesai

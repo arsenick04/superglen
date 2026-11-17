@@ -42,6 +42,8 @@ export interface BuildingHint {
   ySquash?: number;
   /** Ground plate thickness as a fraction of the model height: sunk under the city ground (default 0.03). */
   sink?: number;
+  /** Actual walkable roof height as a fraction of the model bounds; excludes signs / crosses above a flat roof. */
+  roof?: number;
   /** Metres of the model's yard kept in front of the facade (the rest is clipped; default 3). */
   yard?: number;
   /** Shift along the facade (m, after scaling): e.g. to put the model's door on the city's door. */
@@ -178,7 +180,9 @@ class CityModels {
                       mat.map.minFilter = THREE.LinearMipmapLinearFilter;
                     }
                     mat.metalness = 0;
-                    mat.envMapIntensity = 0.8;
+                    mat.envMapIntensity = 0.65;
+                    // A back-facing scan triangle should not turn a cheek or roof into a see-through opening.
+                    mat.side = THREE.DoubleSide;
                   });
                   this.buildings.set(name, { name, scene: gltf.scene, min: bb.min.clone(), max: bb.max.clone(), hint: e });
                 })

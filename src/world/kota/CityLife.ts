@@ -159,7 +159,7 @@ const W = 0xffffff;
 const DARK = 0x2b2a33;
 const SKIN = 0xf1c9a0;
 
-/** Pedestrian with swinging limbs: every vertex has (pivot xyz, part id): 0 body, 1/2 arms, 3/4 legs. About 130 triangles. */
+/** Round toy-like pedestrian. Every vertex has a pivot/part id; one instanced draw still animates the entire crowd. */
 function walkerGeo(): THREE.BufferGeometry {
   const tag = (parts: Part[], id: number, px: number, py: number): THREE.BufferGeometry => {
     const g = merge(parts);
@@ -175,20 +175,33 @@ function walkerGeo(): THREE.BufferGeometry {
     g.setAttribute('pivotPart', new THREE.BufferAttribute(a, 4));
     return g;
   };
-  // Soft rounded figure (capsule torso, round head with a hair cap, round limbs): about 130 triangles, reads like the
-  // characters instead of a stack of boxes.
+  // Large expressive head, soft hair cap, shirt sleeves, rounded hands and shoes share the heroes' friendly proportions.
   const body = tag(
     [
-      { g: new THREE.CapsuleGeometry(0.17, 0.2, 1, 6), c: W, p: [0, 0.7, 0], s: [1, 1, 0.68] },
-      { g: sph(0.14, 6, 4), c: SKIN, p: [0, 1.04, 0] },
-      { g: new THREE.SphereGeometry(0.152, 6, 2, 0, Math.PI * 2, 0, 1.25), c: DARK, p: [0, 1.055, -0.012] },
+      { g: new THREE.CapsuleGeometry(0.19, 0.21, 1, 8), c: W, p: [0, 0.73, 0], s: [1, 1, 0.76] },
+      { g: sph(0.2, 8, 5), c: SKIN, p: [0, 1.12, 0] },
+      { g: new THREE.SphereGeometry(0.21, 8, 3, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
+      ...[-1, 1].flatMap((s): Part[] => [
+        { g: sph(0.045, 6, 3), c: SKIN, p: [s * 0.196, 1.105, 0] },
+        { g: sph(0.036, 6, 3), c: 0xfffdf6, p: [s * 0.073, 1.14, 0.179], s: [1, 1.2, 0.45] },
+        { g: sph(0.021, 5, 3), c: DARK, p: [s * 0.073, 1.137, 0.196], s: [1, 1.15, 0.5] },
+        { g: sph(0.007, 5, 2), c: 0xfffdf6, p: [s * 0.073 - 0.006, 1.146, 0.206] },
+      ]),
+      { g: new THREE.TorusGeometry(0.046, 0.009, 3, 6, Math.PI), c: 0x9c5146, p: [0, 1.065, 0.19], r: [0, 0, Math.PI] },
     ],
     0,
     0,
     0,
   );
-  const arm = (x: number, id: number): THREE.BufferGeometry => tag([{ g: new THREE.CylinderGeometry(0.05, 0.042, 0.36, 5, 1, true), c: SKIN, p: [0, -0.16, 0] }], id, x, 0.86);
-  const leg = (x: number, id: number): THREE.BufferGeometry => tag([{ g: new THREE.CylinderGeometry(0.068, 0.056, 0.47, 5, 1, true), c: 0x3d4a7a, p: [0, -0.23, 0] }], id, x, 0.47);
+  const arm = (x: number, id: number): THREE.BufferGeometry => tag([
+    { g: new THREE.CapsuleGeometry(0.055, 0.21, 1, 6), c: SKIN, p: [0, -0.17, 0] },
+    { g: sph(0.084, 6, 3), c: W, p: [0, -0.015, 0], s: [1, 1.3, 1] },
+    { g: sph(0.063, 6, 3), c: SKIN, p: [0, -0.32, 0] },
+  ], id, x, 0.87);
+  const leg = (x: number, id: number): THREE.BufferGeometry => tag([
+    { g: new THREE.CapsuleGeometry(0.065, 0.28, 1, 6), c: 0x47619b, p: [0, -0.19, 0] },
+    { g: sph(0.085, 6, 3), c: 0xf6efdc, p: [0, -0.4, 0.035], s: [1, 0.65, 1.45] },
+  ], id, x, 0.47);
   const list = [body, arm(-0.23, 1), arm(0.23, 2), leg(-0.09, 3), leg(0.09, 4)];
   return finish(list);
 }
@@ -229,6 +242,10 @@ function mergeAll(list: THREE.BufferGeometry[]): THREE.BufferGeometry {
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
   out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  // Clothes alone inherit the instance palette. Skin, eyes, hair and shoes keep their authored colour.
+  const cloth = new Float32Array(verts);
+  for (let i = 0; i < verts; i++) cloth[i] = col[i * 3] > 0.99 && col[i * 3 + 1] > 0.99 && col[i * 3 + 2] > 0.99 ? 1 : 0;
+  out.setAttribute('aCloth', new THREE.BufferAttribute(cloth, 1));
   out.setAttribute('pivotPart', new THREE.BufferAttribute(pp, 4));
   out.setIndex(new THREE.BufferAttribute(ix, 1));
   return out;
@@ -305,7 +322,11 @@ function walkerMaterial(): THREE.MeshStandardMaterial {
   m.customProgramCacheKey = () => 'city-life-walker';
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + GLSL)
+      .replace('#include <common>', '#include <common>\nattribute float aCloth;\n' + GLSL)
+      .replace('#include <color_vertex>', `vColor = vec4(color, 1.0);
+#ifdef USE_INSTANCING_COLOR
+if (aCloth > 0.5) vColor.rgb *= instanceColor;
+#endif`)
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = lifeR(pivotPart.w) * objectNormal;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed = pivotPart.xyz + lifeR(pivotPart.w) * (position - pivotPart.xyz);');
   };

@@ -41,6 +41,7 @@ const MODELS = [
   ['com', 'detail-parasol-a', 0.6], ['com', 'detail-parasol-b', 0.6],
   ['road', 'light-curved', 0.6], ['road', 'light-square', 1], ['road', 'traffic-light', 0.6], ['road', 'road-sign-street', 0.6],
   ['road', 'dumpster', 0.5], ['road', 'construction-cone', 1], ['road', 'construction-barrier', 1],
+  ['road', 'road-straight', 1],
   ...['sedan', 'suv', 'taxi', 'van', 'police', 'hatchback-sports', 'sedan-sports', 'delivery', 'truck', 'ambulance', 'garbage-truck', 'firetruck', 'suv-luxury', 'truck-flat'].map((n) => ['car', n, 1]),
   ['car', 'box', 1], ['car', 'cone', 1],
   ...['tree_oak', 'tree_default', 'tree_detailed', 'tree_fat', 'tree_plateau', 'tree_blocks', 'tree_oak_fall', 'tree_default_fall', 'tree_detailed_dark',
@@ -158,7 +159,7 @@ function gradeAndMask(m, kitId, file) {
     const t = (m.P[k * 3 + 1] - minY) / h;
     if (kitId === 'nat') {
       const l = (r + g + b) / 3;
-      const s = 1.45, v = 0.86;
+      const s = 1.2, v = 0.95;
       m.C[k * 3] = Math.max(0, (l + (r - l) * s) * v);
       m.C[k * 3 + 1] = Math.max(0, (l + (g - l) * s) * v);
       m.C[k * 3 + 2] = Math.max(0, (l + (b - l) * s) * v);
@@ -167,9 +168,9 @@ function gradeAndMask(m, kitId, file) {
       if (G > R * 1.2 && G >= B * 0.85) {
         // Foliage (green to teal): one family of sap / forest greens; teal leaves (pines, "dark" trees) become deep forest green.
         const teal = B > G * 0.8;
-        m.C[k * 3] = G * (teal ? 0.1 : 0.24);
-        m.C[k * 3 + 1] = G * (teal ? 0.72 : 0.95);
-        m.C[k * 3 + 2] = G * (teal ? 0.2 : 0.08);
+        m.C[k * 3] = G * (teal ? 0.22 : 0.34);
+        m.C[k * 3 + 1] = G * (teal ? 0.78 : 0.96);
+        m.C[k * 3 + 2] = G * (teal ? 0.28 : 0.16);
       }
     } else if (kitId === 'sub' && file.startsWith('building')) {
       if (g > r * 1.25 && g > b * 1.05 && t > 0.35) m.M[k] = 1; // green roof
@@ -193,8 +194,8 @@ function bakeAmbient(m) {
     const t = (m.P[k * 3 + 1] - minY) / h;
     const ny = m.N[k * 3 + 1];
     // Ground contact: the lowest 15 % fades to 0.72; downward faces 0.8; up faces a hair brighter.
-    let ao = 0.72 + 0.28 * Math.min(1, t / 0.15);
-    if (ny < -0.5) ao *= 0.8;
+    let ao = 0.86 + 0.14 * Math.min(1, t / 0.15);
+    if (ny < -0.5) ao *= 0.9;
     else if (ny > 0.5) ao *= 1.04;
     for (let c = 0; c < 3; c++) m.C[k * 3 + c] = Math.min(1, m.C[k * 3 + c] * ao);
   }
@@ -203,10 +204,12 @@ function bakeAmbient(m) {
 /** Merge identical vertices (position, normal, colour). */
 function weldArrays(m) {
   const map = new Map();
+  const used = new Set(m.I);
   const P = [], N = [], C = [], I = [], M = [];
   const n = m.P.length / 3;
   const remap = new Uint32Array(n);
   for (let k = 0; k < n; k++) {
+    if (!used.has(k)) continue; // discarded road undersides must not affect the surface template's base / bounds
     const key = [m.P[k * 3], m.P[k * 3 + 1], m.P[k * 3 + 2]].map((v) => Math.round(v * 1e4)).join(',') + '|' + [m.N[k * 3], m.N[k * 3 + 1], m.N[k * 3 + 2]].map((v) => Math.round(v * 100)).join(',') + '|' + [m.C[k * 3], m.C[k * 3 + 1], m.C[k * 3 + 2]].map((v) => Math.round(v * 255)).join(',') + '|' + m.M[k];
     let v = map.get(key);
     if (v === undefined) {
@@ -281,8 +284,27 @@ export async function buildKenney(root, cacheDir) {
     const kit = KITS[kitId];
     if (!existsSync(path.join(kit.root, `${file}.glb`))) { console.warn(`  missing ${kitId}/${file}`); continue; }
     let m = await bakeModel(io, kit, file);
+    if (kitId === 'road' && file === 'road-straight') {
+      // Keep the original asphalt and lane paint, while the city's continuous sidewalk / kerb stays at collider ground height.
+      const surface = [];
+      for (let i = 0; i < m.I.length; i += 3) {
+        const tri = m.I.slice(i, i + 3);
+        if (tri.every((v) => m.P[v * 3 + 1] >= 0.009 && Math.abs(m.P[v * 3 + 2]) <= 0.301) && m.N[tri[0] * 3 + 1] > 0.5) surface.push(...tri);
+      }
+      m.I = surface;
+    }
     gradeAndMask(m, kitId, file);
     bakeAmbient(m);
+    if (kitId === 'road' && file === 'road-straight') {
+      const asphalt = [0x6f, 0x76, 0x83].map((v) => srgbToLinear(v / 255));
+      for (let v = 0; v < m.P.length / 3; v++) {
+        // Same sRGB-authored palette as CityBuilder's untextured asphalt; both quantize once to the same linear vertex bytes.
+        const paint = Math.abs(m.P[v * 3 + 2]) < 0.011 && m.C[v * 3 + 2] > 0.3;
+        m.C[v * 3] = paint ? 1 : asphalt[0];
+        m.C[v * 3 + 1] = paint ? 0.8963 : asphalt[1];
+        m.C[v * 3 + 2] = paint ? 0.4342 : asphalt[2];
+      }
+    }
     m = weldArrays(m);
     const l1 = await lod(m, ratio);
     const name = `${kitId}_${file}`;
@@ -320,10 +342,10 @@ export async function buildBuildings(root) {
     const h = hints[name] ?? {};
     const doc = await io.read(path.join(src, f));
     const before = countTris(doc);
-    const target = h.tris ?? 16000;
+    const target = h.tris ?? 12000;
     await doc.transform(
       dedup(), flatten(), join(), weld(),
-      simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, target / before), error: 0.004, lockBorder: false }),
+      simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, target / before), error: 0.005, lockBorder: false }),
       textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [h.texture ?? 1024, h.texture ?? 1024], quality: 88 }),
       prune(),
       reorder({ encoder: MeshoptEncoder }),
