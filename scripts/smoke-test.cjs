@@ -7919,15 +7919,17 @@ async function gamepadScenario(page, check, kind, touch) {
 
   // ---- Start by pad: tilting a stick only switches the glyphs, a button starts the game ----
   await padDo(page, (k) => window.__pad.on(k) || window.__pad.left(1, 0), kind);
-  // Drive the controller poll deterministically. A fixed wall-clock sleep is
-  // unreliable while the first city shaders/models are still warming up.
-  await padAdv(page, 2);
+  // Exercise the real rAF polling path. The first city shaders/models can
+  // make a fixed sleep expire before the next frame, so wait for state.
+  await page.waitForFunction(() => window.__superglen.pad.connected && window.__superglen.pad.active, null, { timeout: 15000 });
   s = await padSt(page);
   check(`gamepad ${tag}: a stick tilt connects the pad and does not start the game`, s.pad.c && s.pad.a && !s.started, JSON.stringify(s.pad));
   check(`gamepad ${tag}: the pad is detected with the right table (${kind === 'std' ? 'standard' : 'dualsense fallback'})`, s.pad.table === (kind === 'std' ? 'standard' : 'dualsense'), s.pad.table);
   check(`gamepad ${tag}: the start pill shows the pad text and hides the click/tap text`, (await padCss(page, '.start-text-pad', 'display')) !== 'none' && (await padCss(page, '.start-text-pc', 'display')) === 'none' && (await padCss(page, '.start-text-touch', 'display')) === 'none');
   await padDo(page, () => window.__pad.left(0, 0));
-  await padTap(page, 'cross');
+  await padDo(page, () => window.__pad.btn('cross', true));
+  await page.waitForFunction(() => window.__superglen.started, null, { timeout: 15000 });
+  await padDo(page, () => window.__pad.btn('cross', false));
   await page.waitForFunction(() => !document.querySelector('.start-overlay'), null, { timeout: 5000 });
   s = await padSt(page);
   check(`gamepad ${tag}: a pad button starts the game`, s.started, JSON.stringify({ started: s.started }));
