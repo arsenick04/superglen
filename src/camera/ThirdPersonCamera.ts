@@ -14,7 +14,9 @@ export const CameraConfig = {
   /** Radians of rotation per pixel of mouse movement (pointer locked). */
   mouseSensitivity: 0.0025,
   /** Default distance from the look target (m). */
-  distance: 6,
+  // Phone review: 17% closer than the old framing, while preserving clear
+  // sight lines in the Lab. The manual close step reaches 3 m.
+  distance: 5,
   /** Closest the camera may get when pulled in by walls (m). */
   minDistance: 1.2,
   /** Look target height above the capsule center (capsule center ~0.55 m, head top ~1.1 m). */
@@ -64,8 +66,8 @@ export const CameraConfig = {
   flySharpness: 2.5,
 
   // --- Manual zoom (wheel, +/-, pinch, buttons, R3/L3): a multiplier on the whole follow distance ---
-  zoomMin: 0.55,
-  zoomMax: 1.9,
+  zoomMin: 0.6,
+  zoomMax: 2,
   /** Sharpness of the zoom easing (1/s) and seconds without change before it is saved. */
   zoomSharpness: 7,
   zoomSaveDelay: 0.6,

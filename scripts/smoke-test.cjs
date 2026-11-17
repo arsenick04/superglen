@@ -10465,6 +10465,27 @@ async function hudLayoutScenario(page, check, touch) {
   check(`hud-layout ${tag}: exploration map, joystick, zoom and buttons overlap nothing and stay on screen`,
     v.bad.length === 0 && v.out.length === 0 && ['map', 'gear'].every((n) => v.names.includes(n)) &&
       (!touch || (v.names.includes('joy') && v.counts.zoom === 2 && v.names.includes('btn'))), JSON.stringify(v));
+  // Chapter 3 shows the food row during ordinary exploration, without a
+  // dialog. Open that real saved state so the test covers its actual DOM.
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [0] } }), touch);
+  await d3Adv(page, 30);
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false);
+    await g.advanceAsync(30, true);
+  });
+  await page.waitForFunction(() => document.querySelector('.ch3-count.show')?.getBoundingClientRect().width > 2);
+  v = await verify('food-exploration');
+  check(`hud-layout ${tag}: exploration food counter stays at the edge without overlapping controls`,
+    v.names.includes('food') && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
+  // Return to Chapter 5 for the dialog/fight layouts below.
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), touch);
+  await d3Adv(page, 30);
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false);
+    await g.advanceAsync(30, true);
+  });
   await page.evaluate(() => window.__ch5.mute(true));
   await ch5Draw(page, -62, -62); // walk to the fight spot like bab5-fight
   // Walk the intro (same wait as bab5-fight); at the first dialog line measure, pill and food counter forced on for the geometry.
@@ -11085,17 +11106,17 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     const near = await dist();
-    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.56 && near < base - 1.5, JSON.stringify([z, near]));
+    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.61 && near < base - 1.5, JSON.stringify([z, near]));
     await page.keyboard.press('Equal');
     await page.keyboard.press('Minus');
     await page.keyboard.press('Minus');
     await settle();
     z = await zv();
-    check(`zoom ${tag}: the - key zooms out and + in (net one step out, ${z.t.toFixed(2)})`, z.t > 0.58 && z.t < 0.75, JSON.stringify(z));
+    check(`zoom ${tag}: the - key zooms out and + in (net one step out, ${z.t.toFixed(2)})`, z.t > 0.63 && z.t < 0.72, JSON.stringify(z));
     for (let i = 0; i < 5; i++) await page.mouse.wheel(0, 20000);
     await settle();
     z = await zv();
-    check(`zoom ${tag}: far overview is clamped (${z.t.toFixed(2)} <= 1.9)`, z.t <= 1.9 + 1e-6 && z.t > 1.5, JSON.stringify(z));
+    check(`zoom ${tag}: far overview is clamped (${z.t.toFixed(2)} <= 2.0)`, z.t <= 2 + 1e-6 && z.t > 1.7, JSON.stringify(z));
     // Pad: R3 closer, L3 farther (stubbed through the pad hub is covered by the pad tests; here the input layer call).
   } else {
     const f = await makeFingers(page);
@@ -11122,11 +11143,11 @@ async function zoomScenario(page, check, touch) {
     for (let i = 0; i < 3; i++) { await page.touchscreen.tap(bb[0].x, bb[0].y); await d3Adv(page, 4); }
     await settle();
     z = await zv();
-    check(`zoom ${tag}: the + button zooms in (${z.t.toFixed(2)}) and does not turn the camera or jump`, z.t < 0.7, JSON.stringify(z));
+    check(`zoom ${tag}: the + button zooms in (${z.t.toFixed(2)}) and does not turn the camera or jump`, z.t <= 0.6 + 1e-6, JSON.stringify(z));
     for (let i = 0; i < 12; i++) { await page.touchscreen.tap(bb[1].x, bb[1].y); await d3Adv(page, 4); }
     await settle();
     z = await zv();
-    check(`zoom ${tag}: the - button zooms out up to the clamp (${z.t.toFixed(2)})`, z.t > 1.5 && z.t <= 1.9 + 1e-6, JSON.stringify(z));
+    check(`zoom ${tag}: the - button zooms out up to the clamp (${z.t.toFixed(2)})`, z.t > 1.7 && z.t <= 2 + 1e-6, JSON.stringify(z));
     // A full dialog bubble hides them.
     await page.evaluate(() => window.__superglen.say({ speaker: 'nino', text: 'Halo!' }, { lockControls: true }));
     await d3Adv(page, 20);
@@ -11162,13 +11183,13 @@ async function zoomScenario(page, check, touch) {
   await d3Adv(page, 60);
   const inView = async () => { const n = await page.evaluate(() => window.__superglen.battle.focusNdc); return n.z < 1 && Math.abs(n.x) < 0.95 && Math.abs(n.y) < 0.95; };
   const res = {};
-  for (const zz of [0.55, 1, 1.9]) {
+  for (const zz of [0.6, 1, 2]) {
     await page.evaluate((zz) => window.__superglen.zoom.set(zz, true), zz);
     await page.evaluate(() => window.__superglen.placePlayer(-72.5 + 7, -72.5));
     await d3Adv(page, 200);
     res[zz] = { d: await dist(), view: await inView() };
   }
-  check(`zoom ${tag}: in battle the camera distance grows with the zoom (${JSON.stringify(res)}) and the boss stays in view`, res[0.55].d < res[1].d && res[1].d < res[1.9].d && Object.values(res).every((r) => r.view), JSON.stringify(res));
+  check(`zoom ${tag}: in battle the camera distance grows with the zoom (${JSON.stringify(res)}) and the boss stays in view`, res[0.6].d < res[1].d && res[1].d < res[2].d && Object.values(res).every((r) => r.view), JSON.stringify(res));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -11222,7 +11243,7 @@ async function dlgFitScenario(page, check, touch) {
       const inside = r.left >= 0 && r.top >= 0 && r.right <= vw && r.bottom <= vh;
       const hits = btns.some((b) => r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom);
       const clamp = getComputedStyle(textEl).webkitLineClamp;
-      if (t.includes('…') || overflow || !inside || lines > 3 || clamp !== 'none' || hits) out.push({ t, lines, overflow, inside, hits, clamp });
+      if (t.includes('…') || overflow || !inside || lines > 3 || clamp !== 'none' || hits) out.push({ t, lines, overflow, inside, hits, clamp, sh: textEl.scrollHeight, ch: textEl.clientHeight, sw: textEl.scrollWidth, cw: textEl.clientWidth });
     }
     return { out: out.slice(0, 6), n: out.length, maxLines };
   }, texts);

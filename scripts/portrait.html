@@ -24,6 +24,11 @@ try {
   const sun = new THREE.DirectionalLight(0xffffff, 2.2);
   sun.position.set(1.5, 2.5, 3);
   scene.add(sun);
+  // Soft frontal fill: phone-sized portraits must keep both halves of the
+  // face readable instead of turning the side away from the key light black.
+  const fill = new THREE.DirectionalLight(0xddeeff, 1.5);
+  fill.position.set(-2.5, 1.5, 4);
+  scene.add(fill);
   scene.add(gltf.scene);
   const idle = gltf.animations.find((a) => a.name === 'idle') ?? gltf.animations[0];
   if (idle) {

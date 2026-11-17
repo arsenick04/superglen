@@ -222,7 +222,7 @@ function sanitize(raw: unknown): SaveData {
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.easyFight === 'boolean') out.settings.easyFight = st.easyFight;
     if (typeof st.reduceShake === 'boolean') out.settings.reduceShake = st.reduceShake;
-    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) out.settings.zoom = Math.max(0.55, Math.min(1.9, st.zoom));
+    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) out.settings.zoom = Math.max(0.6, Math.min(2, st.zoom));
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
     if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
