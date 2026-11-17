@@ -30,6 +30,59 @@ const SCREENS: readonly Screen[] = [
 ];
 const BARS_PER_SCREEN = 5;
 
+/** Empty Barongsai suit on display: a mask and hanging robe, never a child mannequin. */
+function makeCostumeDisplay(ctx: LevelContext): THREE.Group {
+  const group = new THREE.Group();
+  const red = new THREE.MeshStandardMaterial({ color: 0xd9342b, roughness: 0.42 });
+  const deepRed = new THREE.MeshStandardMaterial({ color: 0x8f201d, roughness: 0.55 });
+  const gold = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.3, metalness: 0.18 });
+  const cream = new THREE.MeshStandardMaterial({ color: C.CREAM, roughness: 0.72 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x17151b, roughness: 0.9 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x101820, roughness: 0.35 });
+  const materials = [red, deepRed, gold, cream, dark, white, black];
+  const add = (geometry: THREE.BufferGeometry, material: THREE.Material, position: [number, number, number], scale: [number, number, number] = [1, 1, 1]): THREE.Mesh => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...position);
+    mesh.scale.set(...scale);
+    mesh.castShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  // The open-backed robe makes it read as clothing hanging in the air rather than Glen wearing it.
+  add(new THREE.CylinderGeometry(0.35, 0.58, 0.9, 12, 1, true), red, [0, 0.08, 0]);
+  add(new THREE.TorusGeometry(0.45, 0.045, 8, 24), gold, [0, 0.48, 0]).rotation.x = Math.PI / 2;
+  for (const side of [-1, 1]) {
+    const sleeve = add(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), red, [side * 0.5, 0.18, 0]);
+    sleeve.rotation.z = side * 0.34;
+    add(new THREE.SphereGeometry(0.14, 10, 8), cream, [side * 0.61, -0.1, 0]);
+  }
+
+  // Lion mask shell, costume eyes and fur. The recessed black opening is deliberately empty.
+  add(new THREE.SphereGeometry(0.5, 16, 12), red, [0, 1.05, 0], [1.18, 0.9, 0.82]);
+  add(new THREE.SphereGeometry(0.54, 16, 10), deepRed, [0, 1.08, -0.16], [1.25, 1.0, 0.65]);
+  add(new THREE.SphereGeometry(0.32, 14, 10), dark, [0, 0.86, 0.39], [1.2, 0.78, 0.22]);
+  for (const side of [-1, 1]) {
+    add(new THREE.SphereGeometry(0.23, 12, 9), gold, [side * 0.32, 1.18, 0.3], [1.1, 0.86, 0.35]);
+    add(new THREE.SphereGeometry(0.15, 12, 9), white, [side * 0.32, 1.19, 0.38], [1, 0.95, 0.3]);
+    add(new THREE.SphereGeometry(0.07, 10, 8), black, [side * 0.3, 1.18, 0.44], [1, 1.12, 0.35]);
+    add(new THREE.ConeGeometry(0.17, 0.34, 10), cream, [side * 0.49, 1.38, -0.02]).rotation.z = side * 0.52;
+    add(new THREE.SphereGeometry(0.15, 10, 8), cream, [side * 0.43, 0.77, 0.28]);
+  }
+  add(new THREE.ConeGeometry(0.1, 0.3, 10), gold, [0, 1.58, -0.02]);
+  add(new THREE.SphereGeometry(0.1, 10, 8), gold, [0, 1.31, 0.43], [1.15, 0.9, 0.4]);
+  for (let i = -3; i <= 3; i++) add(new THREE.SphereGeometry(0.12, 8, 6), cream, [i * 0.14, 0.67 - Math.abs(i) * 0.018, 0.24]);
+
+  group.position.y = -0.18;
+  group.scale.setScalar(1.12);
+  ctx.onDispose(() => {
+    group.traverse((obj) => { if (obj instanceof THREE.Mesh) obj.geometry.dispose(); });
+    for (const material of materials) material.dispose();
+  });
+  return group;
+}
+
 /**
  * The laboratory: bright clean blue-gold tech room, the Barongsai-head computer with its big button, Nino's
  * platform, the costume compartment and the practice poles. Everything animated is driven by small setters
@@ -65,8 +118,6 @@ export class Lab {
   private readonly dialog: LevelContext['dialog'];
   private readonly costumeBody: THREE.Group;
   private readonly belt: THREE.Mesh;
-  private readonly costumeFig: Avatar;
-  private readonly costumeSt: AvatarState = { speed: 0, airborne: false, vy: 0, flying: false, riding: false, talking: false };
   private readonly beltMat: THREE.MeshStandardMaterial;
   private readonly coinMesh: THREE.Mesh[] = [];
   private readonly coinOn: boolean[] = [];
@@ -119,6 +170,18 @@ export class Lab {
     for (const s of [-1, 1]) for (const z of [-64, -68, -72]) {
       kit.lit.box([0.35, 4.8, 0.5], [s * 6.9, F + 2.4, z], 0xcfdcf0);
       kit.lit.box([0.4, 0.2, 0.55], [s * 6.9, F + 4.85, z], C.GOLD);
+    }
+    // Warm timber ribs and plaster panels tie the technology back to the old Barongsai building.
+    for (const s of [-1, 1]) {
+      kit.lit.box([0.22, 5.7, len - 0.5], [s * 7.0, F + 2.85, midZ - 0.3], 0x8b5131);
+      for (const z of [-62.3, -66.2, -70.1, -74.0]) {
+        kit.deco.box([0.28, 5.6, 0.3], [s * 6.82, F + 2.8, z], 0x6f3c27);
+        kit.deco.box([0.32, 0.28, 3.55], [s * 6.8, F + 5.5, z + 1.72], C.GOLD);
+      }
+    }
+    for (const x of [-5.2, 0, 5.2]) {
+      kit.lit.box([0.34, 0.34, len - 0.7], [x, F + 6.18, midZ - 0.3], 0x7a442c);
+      kit.deco.box([0.24, 0.12, len - 1.1], [x, F + 5.98, midZ - 0.3], C.GOLD);
     }
 
     // --- Glowing floor lines (their own material: brightness follows the boot-up) ---
@@ -287,20 +350,15 @@ export class Lab {
     this.nino.visible = false;
     root.add(this.nino);
 
-    // --- Costume (red suit with a golden belt, floating over its stand) ---
+    // --- Empty costume (mask and robe, no Glen face or human mannequin) ---
     this.costumeBody = new THREE.Group();
-    // The costume is the real Superglen model (Barongsai lion head, red-gold suit) floating like on a mannequin; the low-poly
-    // figure only shows for the moment the GLB is still loading (never a capsule).
-    this.costumeFig = new Avatar('superglen', figureMaterial(0xe02b20, 0.08), false);
-    this.costumeFig.root.position.y = -0.75;
-    this.costumeFig.root.scale.setScalar(1.3);
-    ctx.onDispose(() => this.costumeFig.dispose());
+    const emptySuit = makeCostumeDisplay(ctx);
     this.beltMat = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.35, metalness: 0.2, emissive: 0x6b4a00, emissiveIntensity: 0.6 });
     // A thin golden halo ring under the suit (the funny ending blinks it).
     this.belt = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), this.beltMat);
     this.belt.rotation.x = Math.PI / 2;
     this.belt.position.y = -0.77;
-    this.costumeBody.add(this.costumeFig.root, this.belt);
+    this.costumeBody.add(emptySuit, this.belt);
     this.costume.add(this.costumeBody);
     this.costume.position.copy(this.costumePos);
     this.costume.visible = false;
@@ -462,7 +520,6 @@ export class Lab {
       this.ninoGlow.scale.setScalar(1 + 0.08 * Math.sin(t * 3) + 0.25 * this.chaos * Math.sin(t * 25));
     }
     if (this.costume.visible) {
-      this.costumeFig.pose(this.lastDt, this.costumeSt);
       this.costume.position.y = this.costumePos.y + 0.2 + 1.0 * this.costumeRise + 0.07 * Math.sin(t * 2);
       this.costume.rotation.y = t * 0.9;
     }
