@@ -4,6 +4,7 @@ import { DemoLevel } from './DemoLevel';
 import { Bab1Level } from './bab1/Bab1Level';
 import { Bab2Level } from './bab2/Bab2Level';
 import { KotaLevel } from './kota/KotaLevel';
+import { CurutArena } from './kota/CurutArena';
 
 /**
  * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet (Chapter 1 starts in the city).
@@ -17,6 +18,7 @@ export const LEVELS: Readonly<Record<string, LevelFactory>> = {
   demo: () => new DemoLevel(),
   /** Kota Botanica, the open city: Chapter 1 begins here, free roam after it. */
   kota: () => new KotaLevel(),
+  'battle-curut': () => new CurutArena(),
   /** Inside the old Barongsai building: the rest of Chapter 1, Nino's lab. */
   lab: () => new Bab1Level('lab'),
   bab2: () => new Bab2Level(),

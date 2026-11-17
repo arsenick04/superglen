@@ -8643,6 +8643,10 @@ async function ch3Open(page, data, touch = false) {
   await sleep(500);
   await page.evaluate(() => window.__superglen.pause(true));
   await d3Adv(page, 20);
+  // Most Chapter 3 suites deterministically exercise the individual combat
+  // mechanics in the city. `curut-arena` separately verifies the production
+  // level transition, fixed camera and return path.
+  await page.evaluate(() => window.__ch3?.setArenaEnabled(false));
 }
 const ch3Info = (page) => page.evaluate(() => ({ li: { ...window.__superglen.levelInfo, roofSamples: undefined }, ch3: window.__ch3 ? { step: window.__ch3.step(), arrived: window.__ch3.arrived() } : null, obj: window.__superglen.objective.active, save: JSON.parse(localStorage.getItem('superglen.save.v1') || '{}'), line: window.__superglen.dialog.open ? window.__superglen.dialog.text : '', open: window.__superglen.dialog.open }));
 
@@ -8687,6 +8691,14 @@ async function bab3FlowScenario(page, check) {
   await d3Adv(page, 20);
   s = await ch3Info(page);
   check('bab3-flow: arriving at the market crossing clears the beam and Nino speaks', s.ch3.arrived === true && s.obj === false && /Tembak/.test(s.line), JSON.stringify([s.ch3, s.obj, s.line]));
+  // Reload in the saved-last-tame / delayed-victory window: no remaining rat
+  // can fire onTamed again, so the chapter must recover directly into counting.
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [0, 1, 2, 3, 4, 5, 6] } }));
+  s = await ch3Info(page);
+  const recovered = await page.evaluate(() => window.__ch3.counts());
+  check('bab3-flow: reloading after the last tame resumes counting and preserves all seven tames',
+    s.ch3?.step === 'count' && s.save.bab3.step === 'count' && recovered.tamed === 7 && recovered.dropped === 5,
+    JSON.stringify({ chapter: s.ch3, save: s.save.bab3, counts: recovered }));
   // A save with Chapter 3 done: no chapter, residents offer again.
   await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6'] }));
   s = await ch3Info(page);
@@ -9483,6 +9495,65 @@ async function combatEasyScenario(page, check) {
   await page.evaluate(() => { window.__ch3.hit(0); window.__ch3.hit(0); window.__ch3.hit(0); });
   const c = await ch3Counts(page);
   check('combat easy: three hits tame a rat', c.tamed === 1, JSON.stringify(c));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+async function curutArenaScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [] } }), touch);
+  const target = await page.evaluate(() => window.__ch3.rats()[0]);
+  await page.evaluate(([x, z]) => {
+    window.__ch3.setArenaEnabled(true);
+    window.__superglen.placePlayer(x, z);
+    window.__superglen.advance(4, false);
+  }, [target.x, target.z]);
+  await page.waitForFunction(() => window.__superglen.level === 'battle-curut' && !window.__superglen.loading && !!window.__arena, null, { timeout: 30000 });
+  await page.evaluate(() => window.__superglen.advance(8, true));
+  const entered = await page.evaluate(() => ({
+    level: window.__superglen.level,
+    arena: window.__superglen.levelInfo.arena,
+    controls: window.__superglen.controlsEnabled,
+    rats: window.__arena.rats().length,
+    camera: { ...window.__superglen.camera },
+    cls: document.documentElement.classList.contains('curut-arena'),
+    zoom: getComputedStyle(document.querySelector('.zoom-col')).visibility,
+    exit: document.querySelector('.arena-return')?.getBoundingClientRect().toJSON(),
+  }));
+  check(`curut-arena ${tag}: approaching a Curut enters a separate seven-rat encounter`, entered.level === 'battle-curut' && entered.arena === 'curut' && entered.controls && entered.rats === 7 && entered.cls, JSON.stringify(entered));
+  check(`curut-arena ${tag}: free-camera zoom is hidden and the return button remains on screen`, entered.zoom === 'hidden' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
+  await page.evaluate(() => {
+    window.__superglen.setCameraYaw(Math.PI * 0.75);
+    window.__superglen.placePlayer(130, 30);
+    window.__superglen.advance(12, true);
+  });
+  const stable = await page.evaluate(() => ({ camera: { ...window.__superglen.camera }, player: { ...window.__superglen.player }, cameraYaw: window.__superglen.cameraYaw, steeringYaw: window.__superglen.steeringYaw }));
+  const cameraShift = Math.hypot(stable.camera.x - entered.camera.x, stable.camera.y - entered.camera.y, stable.camera.z - entered.camera.z);
+  const playerRadius = Math.hypot(stable.player.x - 93, stable.player.z);
+  check(`curut-arena ${tag}: battle camera and movement heading stay fixed after look input, and Glen stays inside`, cameraShift < 0.02 && Math.abs(stable.cameraYaw) < 0.001 && Math.abs(stable.steeringYaw) < 0.001 && playerRadius < 5.2, JSON.stringify({ cameraShift, playerRadius, entered: entered.camera, stable }));
+  const envelope = await page.evaluate(() => {
+    const a = window.__arena;
+    return [[-5, 0], [5, 0], [0, -5], [0, 5]].flatMap(([x, z]) => [0, 9].map((y) => a.project(93 + x, y, z)));
+  });
+  check(`curut-arena ${tag}: the full ground-to-max-jump envelope stays inside the fixed camera`, envelope.every((p) => p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98), JSON.stringify(envelope));
+  await shot(page, `curut-arena-${touch ? 'touch' : 'desktop'}`);
+  await page.evaluate(() => {
+    const g = window.__superglen;
+    g.save.setSlot({ level: 'battle-curut', x: g.player.x, y: g.player.y, z: g.player.z, yaw: 0, mode: 'superglen', t: Date.now() });
+    for (let i = 0; i < 7; i++) window.__arena.tame(i);
+    g.advance(120, false);
+  });
+  await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+  const won = await page.evaluate(() => ({ level: window.__superglen.level, step: window.__superglen.save.data.bab3.step, tamed: window.__superglen.save.data.bab3.tamed.length, slot: window.__superglen.save.data.slot }));
+  check(`curut-arena ${tag}: victory returns to the city at counting, preserves all tames and clears the transient slot`, won.level === 'kota' && won.step === 'count' && won.tamed === 7 && won.slot === null, JSON.stringify(won));
+  await page.evaluate(() => {
+    const s = window.__superglen.save;
+    s.setBab3('rakus', [0, 1, 2, 3, 4, 5, 6]);
+    s.setSlot({ level: 'battle-curut', x: 93, y: 0, z: 0, yaw: 0, mode: 'superglen', t: Date.now() });
+  });
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+  const stale = await page.evaluate(() => ({ level: window.__superglen.level, step: window.__superglen.save.data.bab3.step }));
+  check(`curut-arena ${tag}: a stale arena slot cannot reopen or rewind a later Chapter 3 step`, stale.level === 'kota' && stale.step === 'rakus', JSON.stringify(stale));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -10958,7 +11029,7 @@ async function battleScenario(page, check, touch) {
     await d3Adv(page, 60);
     let h = await hudState();
     check(`${L}: before the fight the city HUD shows (minimap, gear) and there is no battle class`, !h.battle && h.minimap && h.gear && h.gearW >= 50 && h.scene !== 'pertarungan', JSON.stringify(h));
-    const life0 = await page.evaluate((a) => ({ agents: window.__life.agents().filter((x) => x.kind >= 3), }), A);
+    const life0 = A ? await page.evaluate(() => ({ agents: window.__life.agents().filter((x) => x.kind >= 3), })) : { agents: [] };
     const near0 = A ? life0.agents.filter((x) => Math.hypot(x.x - A.x, x.z - A.z) < A.r + 14).length : -1;
     // ---- enter ----
     if (boss === 'ch5') await ch5Stand(page, A.x + 30, A.z);
@@ -10967,8 +11038,10 @@ async function battleScenario(page, check, touch) {
       await d3Go(page, 93, 12, 30);
       await d3Adv(page, 400);
       const r0 = (await ch3Rats(page))[0];
-      await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [r0.x, r0.z + 9]);
-      await d3Adv(page, 20);
+      await page.evaluate(([x, z]) => { window.__ch3.setArenaEnabled(true); window.__superglen.placePlayer(x, z); }, [r0.x, r0.z]);
+      await d3Adv(page, 4);
+      await page.waitForFunction(() => window.__superglen.level === 'battle-curut' && !window.__superglen.loading && !!window.__arena, null, { timeout: 30000 });
+      await page.evaluate(() => { window.__arena.mute(true); window.__superglen.advance(20, true); });
     }
     await page.evaluate(() => window.__superglen.health.fill());
     await d3Adv(page, 20);
@@ -11040,7 +11113,7 @@ async function battleScenario(page, check, touch) {
     } else if (boss === 'ch6') {
       await page.evaluate(() => window.__ch6.takeStar && window.__ch6.takeStar());
     } else {
-      await page.evaluate(() => window.__ch3.tame(0));
+      await page.evaluate(() => window.__arena.tame(0));
     }
     await d3Adv(page, 3);
     bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
@@ -11065,8 +11138,9 @@ async function battleScenario(page, check, touch) {
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), far);
       await d3Adv(page, 40);
     } else {
-      await page.evaluate(() => window.__superglen.placePlayer(93, 200));
-      await d3Adv(page, 200);
+      await page.evaluate(() => window.__arena.leave());
+      await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+      await page.evaluate(() => window.__superglen.advance(20, true));
     }
     await sleep(700);
     h = await hudState();
@@ -11542,6 +11616,8 @@ async function main() {
     results.push(await runScenario(browser, 'combat', { viewport: { width: 1280, height: 720 } }, (p, c) => combatScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'combat-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => combatScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'combat-easy', { viewport: { width: 1280, height: 720 } }, combatEasyScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'curut-arena', { viewport: { width: 1280, height: 720 } }, (p, c) => curutArenaScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'curut-arena-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => curutArenaScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care', { viewport: { width: 1280, height: 720 } }, (p, c) => careScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => careScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));

@@ -1273,6 +1273,9 @@ export class Game {
     this.battle.exit(); // he is resting: the fight is over for now (the chapter resets it)
     try {
       await this.fadeUi.out();
+      // A dedicated encounter ends when Glen needs a rest; return to the
+      // city's hospital rather than respawning inside an inactive battle HUD.
+      if (this.levels.currentId === 'battle-curut') await this.levels.load('kota');
       const spot = this.health.hospital;
       if (spot && this.levels.currentId === 'kota') {
         this.player.velocity.set(0, 0, 0);

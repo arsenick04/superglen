@@ -1942,6 +1942,27 @@ html.touch-ui:has(.dlg:not([hidden])) .city-toast {
   opacity: 0;
   visibility: hidden;
 }
+
+/* Dedicated Curut encounter: camera is fixed, so zoom is intentionally hidden. */
+html.curut-arena .zoom-col {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.arena-return {
+  position: absolute;
+  left: calc(env(safe-area-inset-left) + 8px);
+  top: calc(env(safe-area-inset-top) + 68px);
+  min-height: 44px;
+  padding: 7px 14px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: rgba(50, 107, 125, 0.9);
+  color: #fff;
+  font: 800 15px/1 system-ui, sans-serif;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
+}
 /* The coin counter sits under the star button (top right), not on it. */
 html.touch-ui .coin-hud {
   top: calc(env(safe-area-inset-top) + 100px);

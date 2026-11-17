@@ -125,6 +125,12 @@ export class Chapter3 {
         setRng: (v: number | null) => {
           CombatRng.next = v === null ? Math.random : () => v;
         },
+        // The deterministic city combat suites exercise each mechanic in
+        // place. A separate smoke suite leaves this enabled and verifies the
+        // real city -> encounter transition.
+        setArenaEnabled: (on: boolean) => {
+          this.arenaEnabled = on;
+        },
         collect: () => this.rats.collectAll(),
         counts: () => ({ quizRuns: this.quizRuns, countsDone: this.countsDone, ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
       };
@@ -144,6 +150,13 @@ export class Chapter3 {
     const { ctx } = this;
     this.hooks.dropMission();
     this.hooks.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
+    // The last tame is saved before its delayed victory sequence runs. A
+    // reload in that window must resume counting, without waiting for a tame
+    // callback from rats that have already gone.
+    if (this.step === 'chase' && this.rats.allTamed) {
+      this.step = 'count';
+      ctx.save.setBab3('count', ctx.save.data.bab3.tamed);
+    }
     if (this.step === '' || this.step === 'chase') this.pointToMarket();
     if (this.step === 'count') this.runCount();
     if (this.step === 'rakus' || this.step === 'closing') {
@@ -346,45 +359,25 @@ export class Chapter3 {
   }
 
   // ---- battle mode: the rats fight back once the child is close to one ----
-  private fighting = false;
-  private calmFor = 0;
+  private arenaLoading = false;
+  private arenaEnabled = true;
   private readonly ratAt = { x: 0, y: 0.9, z: 0 };
 
-  private battleCheck(dt: number): void {
+  private battleCheck(): void {
     const { ctx } = this;
     const p = ctx.player.position;
     const near = this.step === 'chase' && this.arrived && !ctx.health.resting && this.rats.nearestPos(p.x, p.z, this.ratAt);
     const d = near ? Math.hypot(this.ratAt.x - p.x, this.ratAt.z - p.z) : Infinity;
-    if (!this.fighting) {
-      if (d < Combat.rat.aggroRadius && startGate.started && ctx.game.controlsEnabled) {
-        this.fighting = true;
-        this.calmFor = 0;
-        const total = this.rats.n;
-        ctx.battle.enter({
-          id: 'curut_cemberut',
-          name: 'Curut Cemberut',
-          focus: () => (this.rats.nearestPos(ctx.player.position.x, ctx.player.position.z, this.ratAt) ? this.ratAt : null),
-          city: { x: p.x, z: p.z, r: 6 },
-          stars: () => ({ left: this.rats.remaining, max: total }),
-          ownBar: true,
-          intro: false,
-          punchy: false,
-          aura: 0xff7a59,
-        });
-      }
-    } else {
-      this.calmFor = d > Combat.rat.aggroRadius + 10 ? this.calmFor + dt : 0;
-      if (this.calmFor > 1.5 || this.step !== 'chase' || ctx.health.resting) {
-        this.fighting = false;
-        ctx.battle.exit(this.rats.allTamed);
-      }
+    if (this.arenaEnabled && !this.arenaLoading && d < Combat.rat.aggroRadius && startGate.started && ctx.game.controlsEnabled) {
+      this.arenaLoading = true;
+      void ctx.game.loadLevel('battle-curut');
     }
   }
 
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
     this.rats.fixedUpdate(dt);
-    this.battleCheck(dt);
+    this.battleCheck();
     this.foodBeam();
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {
@@ -430,10 +423,6 @@ export class Chapter3 {
   complete(): void {
     if (this.over) return;
     this.over = true;
-    if (this.fighting) {
-      this.fighting = false;
-      this.ctx.battle.exit();
-    }
     this.ctx.game.pulseButton('transform', false);
     this.hud.classList.remove('show');
     this.ctx.save.markChapterDone('bab3');

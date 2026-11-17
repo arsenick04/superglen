@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import type { Target } from '../../gameplay/Targets';
-import { clampToStreets, MARKET, RATS, type FoodKind } from './Bab3Data';
+import { clampToStreets, MARKET, RATS, type FoodKind, type RatSpec } from './Bab3Data';
 import { box, cone, cyl, merge, sph } from './ColorMesh';
 import { Combat, CombatRng } from '../../config/combat';
 import type { HitInfo } from '../../gameplay/Targets';
@@ -229,7 +229,7 @@ export class MarketRats {
   /** Foods that lie on the ground now (bakpao and kue only). */
   get dropped(): number {
     let c = 0;
-    for (let i = 0; i < this.n; i++) if (this.fs[i] === F_GROUND && RATS[i].food !== 'sayur') c++;
+    for (let i = 0; i < this.n; i++) if (this.fs[i] === F_GROUND && this.specs[i].food !== 'sayur') c++;
     return c;
   }
 
@@ -237,6 +237,8 @@ export class MarketRats {
     private readonly ctx: LevelContext,
     private readonly hooks: RatHooks,
     tamed: readonly number[],
+    private readonly specs: readonly RatSpec[] = RATS,
+    private readonly scenery = true,
   ) {
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
@@ -278,13 +280,13 @@ export class MarketRats {
     this.props.castShadow = false;
     this.props.receiveShadow = false;
     // A first (hidden) colour per food so instanceColor exists when the shader program is built.
-    for (let i = 0; i < this.n; i++) this.foodMesh.setColorAt(i, this.col.setHex(FOOD_COLOR[RATS[i].food]));
+    for (let i = 0; i < this.n; i++) this.foodMesh.setColorAt(i, this.col.setHex(FOOD_COLOR[this.specs[i].food]));
     for (let k = 0; k < this.n * this.hpMax; k++) this.pipMesh.setColorAt(k, this.col.setHex(0xff4d6d));
     ctx.root.add(this.ratMesh, this.foodMesh, this.props, this.arrowMesh, this.pipMesh);
 
     const done = new Set(tamed);
     for (let i = 0; i < this.n; i++) {
-      const r = RATS[i];
+      const r = this.specs[i];
       this.ang[i] = (i * 2.1) % (Math.PI * 2);
       this.aim.push(new THREE.Vector3());
       this.setLoopPos(i);
@@ -339,7 +341,7 @@ export class MarketRats {
 
   /** Test helper: `{ i, state, x, z, food, fstate }`. */
   list(): { i: number; state: number; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number; hp: number; kind: number }[] {
-    return RATS.map((r, i) => ({ i, state: this.st[i], x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
+    return this.specs.map((r, i) => ({ i, state: this.st[i], x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
   }
 
   /** Rats not yet tamed. */
@@ -386,7 +388,7 @@ export class MarketRats {
     let best = Infinity;
     let out: { x: number; z: number } | null = null;
     for (let i = 0; i < this.n; i++) {
-      if (this.fs[i] !== F_GROUND || RATS[i].food === 'sayur') continue;
+      if (this.fs[i] !== F_GROUND || this.specs[i].food === 'sayur') continue;
       const d = Math.hypot(this.fx[i] - x, this.fz[i] - z);
       if (d < best) {
         best = d;
@@ -399,7 +401,9 @@ export class MarketRats {
   /** Hide / show the whole market set (the rats leave when Si Tikus Rakus appears). */
   setVisible(on: boolean): void {
     this.shown = on;
-    this.ratMesh.visible = this.foodMesh.visible = this.props.visible = this.arrowMesh.visible = this.pipMesh.visible = on;
+    this.ratMesh.visible = this.arrowMesh.visible = this.pipMesh.visible = on;
+    this.foodMesh.visible = on && this.scenery;
+    this.props.visible = on && this.scenery;
   }
 
   /** The big rat of the scene (Si Tikus Rakus): one extra mesh, only drawn while he is around. */
@@ -426,10 +430,10 @@ export class MarketRats {
   /** Test helper: pick up every bakpao and kue that lies on the street (as if walked over). */
   collectAll(): void {
     for (let i = 0; i < this.n; i++) {
-      if (this.fs[i] !== F_GROUND || RATS[i].food === 'sayur') continue;
+      if (this.fs[i] !== F_GROUND || this.specs[i].food === 'sayur') continue;
       this.fs[i] = F_GONE;
-      this.collected[RATS[i].food]++;
-      this.hooks.onCollect(RATS[i].food);
+      this.collected[this.specs[i].food]++;
+      this.hooks.onCollect(this.specs[i].food);
     }
   }
 
@@ -446,7 +450,7 @@ export class MarketRats {
   }
 
   private setLoopPos(i: number): void {
-    const r = RATS[i];
+    const r = this.specs[i];
     this.rx[i] = r.cx + Math.cos(this.ang[i]) * r.r;
     this.rz[i] = r.cz + Math.sin(this.ang[i]) * r.r;
     this.yaw[i] = Math.atan2(-Math.sin(this.ang[i]), Math.cos(this.ang[i]));
@@ -467,7 +471,7 @@ export class MarketRats {
     ctx.fx.sparkles.burst(this.rx[i], 0.5, this.rz[i], 14, 2.6, 0xffe14d, { gravity: 2, life: 0.7, up: 0.8 });
     ctx.fx.flashes.spawn(this.rx[i], 0.6, this.rz[i], 1.2, 0.5, 0xffd23f);
     // The food falls out of its arms onto the street nearby.
-    const food = RATS[i].food;
+    const food = this.specs[i].food;
     this.f0x[i] = this.rx[i];
     this.f0z[i] = this.rz[i];
     const a = this.ang[i] * 1.7 + i;
@@ -654,7 +658,7 @@ export class MarketRats {
     for (let i = 0; i < this.n; i++) {
       const s = this.st[i];
       if (s === ST_GONE) continue;
-      const r = RATS[i];
+      const r = this.specs[i];
       const dx = this.rx[i] - pl.x;
       const dz = this.rz[i] - pl.z;
       const dp = Math.hypot(dx, dz);
@@ -803,7 +807,7 @@ export class MarketRats {
           ctx.sfx.blip();
         }
       } else if (s === F_GROUND) {
-        const kind = RATS[i].food;
+        const kind = this.specs[i].food;
         if (kind === 'sayur') {
           // The vegetables go back to the stall by themselves after a moment.
           this.ft[i] += dt;
@@ -839,7 +843,11 @@ export class MarketRats {
   update(_dt: number): void {
     const pv = this.ctx.player.visualPosition;
     const near = Math.hypot(pv.x - MARKET.hub.x, pv.z - MARKET.hub.z) < RatConfig.showRadius;
-    if (this.shown) this.ratMesh.visible = this.foodMesh.visible = this.props.visible = near;
+    if (this.shown) {
+      this.ratMesh.visible = near;
+      this.foodMesh.visible = near && this.scenery;
+      this.props.visible = near && this.scenery;
+    }
     if (!near) this.arrowMesh.visible = this.pipMesh.visible = false;
     if (!near || !this.shown) return;
     this.writeMatrices();
@@ -944,7 +952,7 @@ export class MarketRats {
         this.pipMesh.setColorAt(idx, this.col.setHex(k < this.hp[i] ? 0xff4d6d : 0x9aa0b4));
       }
       // ---- food ----
-      const kind = RATS[i].food;
+      const kind = this.specs[i].food;
       const sh = FOOD_SHAPE[kind];
       const fs = this.fs[i];
       let px = 0;

@@ -133,7 +133,9 @@ export class KotaLevel implements Level {
       game.setSkills({ laser: false, shield: false, fly: false });
       game.setPlayerMode('glen', false);
     }
-    if (arrival === 'hillDoor') {
+    if (arrival === 'marketBattle') {
+      this.spawn = { x: MARKET.hub.x, y: 0, z: ctx.save.data.bab3.step === 'chase' ? 48 : 12, yaw: Math.PI };
+    } else if (arrival === 'hillDoor') {
       // Out of the old building: it is known now (the map shows it).
       this.spawn = { ...HILL_DOOR_SPOT };
       ctx.save.discoverLab();
