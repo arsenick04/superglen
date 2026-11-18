@@ -31,6 +31,11 @@ export class CinematicPlayer {
       event.stopPropagation();
       this.finish();
     });
+    this.skip.addEventListener('touchend', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.finish();
+    }, { passive: false });
   }
 
   play(id: CinematicId): Promise<void> {
@@ -60,6 +65,7 @@ export class CinematicPlayer {
   }
 
   private finish(): void {
+    if (!this.running) return;
     this.video.pause();
     this.video.dispatchEvent(new Event('ended'));
   }

@@ -5,7 +5,7 @@
 .cinematic-bar { position: absolute; left: 0; right: 0; height: 8vh; background: #000; pointer-events: none; }
 .cinematic-bar-top { top: 0; }
 .cinematic-bar-bottom { bottom: 0; }
-.cinematic-skip { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); min-width: 88px; min-height: 44px; border: 2px solid rgba(255,255,255,.8); border-radius: 999px; color: #fff; background: rgba(0,0,0,.62); font: 800 16px system-ui, sans-serif; cursor: pointer; }
+.cinematic-skip { position: absolute; z-index: 2; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); min-width: 88px; min-height: 44px; border: 2px solid rgba(255,255,255,.8); border-radius: 999px; color: #fff; background: rgba(0,0,0,.62); font: 800 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 /* ---- BATTLE MODE (src/gameplay/BattleMode.ts): `html.battle` is on while a fight runs. The doubled class beats the older
    `html.touch-ui ...` rules of styles.css without caring about the order of the style sheets. ---- */
