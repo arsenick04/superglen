@@ -8,6 +8,7 @@ import type { HitInfo } from '../../gameplay/Targets';
 import { personGeo } from './CityPeople';
 import { enemyModels } from './EnemyModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { headContactTime, type FeetPoint } from '../../player/HeadStomp';
 
 /** Numbers of the little rats in one place (all gentle: slow, and they never come at the child). */
 export const RatConfig = {
@@ -183,6 +184,8 @@ export class MarketRats {
   private readonly pipMesh: THREE.InstancedMesh;
   /** True when the rats are the Curut Cemberut model (code animation: lean, waddle, shake), false for the procedural bun rat. */
   private readonly ratModel: boolean;
+  private readonly headY: number;
+  private headCandidate = -1;
   private readonly arrowMesh: THREE.InstancedMesh;
   // Foods (index = the rat that carried it).
   private readonly fs = new Uint8Array(this.n);
@@ -217,6 +220,7 @@ export class MarketRats {
   /** Counters for tests. */
   tamedCount = 0;
   stomps = 0;
+  headStomps = 0;
   lasers = 0;
   /** Fight counters for tests. */
   hitsTaken = 0; // rat hits that did not tame
@@ -246,6 +250,7 @@ export class MarketRats {
     const procRat = ratGeo();
     procRat.computeBoundingBox();
     const ratH = (procRat.boundingBox as THREE.Box3).max.y;
+    this.headY = GROUND + ratH * Combat.rat.scale * Combat.rat.headStomp.heightShare;
     const modelRat = enemyModels.geometry('curut_cemberut_lo', ratH);
     const rg = modelRat ?? procRat;
     if (modelRat) procRat.dispose();
@@ -327,8 +332,17 @@ export class MarketRats {
         }
       }
     });
+    const removeHeadStomp = ctx.player.registerHeadStomp({
+      contactTime: (from, to) => this.headContact(from, to),
+      stomp: () => {
+        this.headStomps++;
+        this.stomps++;
+        this.hit(this.headCandidate);
+      },
+    });
     ctx.onDispose(() => {
       this.disposed = true;
+      removeHeadStomp();
       for (const g of this.geos) g.dispose();
       for (const m of this.mats) m.dispose();
       this.ratMesh.dispose();
@@ -337,6 +351,22 @@ export class MarketRats {
       this.pipMesh.dispose();
     });
     this.writeMatrices();
+  }
+
+  private headContact(from: FeetPoint, to: FeetPoint): number {
+    this.headCandidate = -1;
+    const { ctx } = this;
+    if (this.disposed || !this.shown || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting) return Infinity;
+    let first = Infinity;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] >= ST_DIZZY || this.hp[i] === 0) continue;
+      const t = headContactTime(from, to, this.rx[i], this.headY, this.rz[i], Combat.rat.headStomp.radius);
+      if (t < first) {
+        first = t;
+        this.headCandidate = i;
+      }
+    }
+    return first;
   }
 
   /** Test helper: `{ i, state, x, z, food, fstate }`. */
@@ -508,7 +538,7 @@ export class MarketRats {
 
   /** Test helper: fight counters. */
   combatCounts(): Record<string, number> {
-    return { hitsTaken: this.hitsTaken, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, dodges: this.dodges, blocked: this.blocked, hurtGlen: this.hurtGlen };
+    return { hitsTaken: this.hitsTaken, headStomps: this.headStomps, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, dodges: this.dodges, blocked: this.blocked, hurtGlen: this.hurtGlen };
   }
 
   /** A laser shot reached rat i. Far away it may hop aside (the shot misses); otherwise it is one hit. */

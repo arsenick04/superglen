@@ -11,6 +11,7 @@ import { SkillHub } from './skills/Skills';
 import { Rhythm, type RhythmQuality } from './Rhythm';
 import { Mantle } from './Mantle';
 import { WallKick } from './WallKick';
+import type { HeadStompSurface } from './HeadStomp';
 
 /*
  * JUMP RULES (numbers: src/config/parkour.ts)
@@ -145,6 +146,7 @@ export class Player {
   private aimTime = 0;
   /** Pending cosmetic hop speed (a projectile touched the player). */
   private hopPending = 0;
+  private headBouncePending = false;
   private spinAngle = 0;
 
   // ---- Mode and jump state (see PlayerConfig for the numbers) -------------
@@ -216,6 +218,9 @@ export class Player {
   private spinning = false;
   private spinT = 0;
   private readonly stompListeners: StompListener[] = [];
+  private readonly headSurfaces: HeadStompSurface[] = [];
+  private readonly headFrom = { x: 0, y: 0, z: 0 };
+  private readonly headTo = { x: 0, y: 0, z: 0 };
   private readonly stompEvent: StompEvent = { x: 0, y: 0, z: 0, radius: Parkour.stompRadius, impact: 0 };
 
   // Reused temporaries (no per-step allocations).
@@ -330,6 +335,15 @@ export class Player {
     this.stompListeners.push(cb);
   }
 
+  /** Register an ordinary enemy group; remove its hook when the level is disposed. */
+  registerHeadStomp(surface: HeadStompSurface): () => void {
+    this.headSurfaces.push(surface);
+    return () => {
+      const i = this.headSurfaces.indexOf(surface);
+      if (i >= 0) this.headSurfaces.splice(i, 1);
+    };
+  }
+
   /** Switch Glen <-> Superglen: colours, belt, tuning, and a small scale pop. Safe mid-air. */
   setMode(mode: PlayerMode): void {
     const changed = mode !== this._mode;
@@ -338,6 +352,7 @@ export class Player {
     if (mode === 'glen') this.flight.reset();
     if (changed) {
       this.rhythm.reset();
+      this.headBouncePending = false;
       this.landTime = -1e9;
       this.chainHold = false;
       this.autoJumps = 0;
@@ -554,6 +569,9 @@ export class Player {
     if (!jumped) {
       if (flying) {
         this.verticalVelocity = F.vy;
+      } else if (this.headBouncePending) {
+        // The contact step stopped at the head; this first rising step uses the full launch speed.
+        jumped = true;
       } else if (this.hopPending > 0 && wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = this.hopPending; // cosmetic hop: no jump counters, same step skips gravity
         jumped = true;
@@ -568,6 +586,7 @@ export class Player {
         this.verticalVelocity = Math.max(this.verticalVelocity - g * dt, floor);
       }
     }
+    this.headBouncePending = false;
 
     // ---- Move through the character controller -------------------------------
     const vyAtMove = this.verticalVelocity;
@@ -620,14 +639,16 @@ export class Player {
     this.next.x = p.x + moved.x;
     this.next.y = p.y + moved.y;
     this.next.z = p.z + moved.z;
+    // Before a possible ground landing: even a fast fall can cross a rat's head and the floor in one step.
+    const headBounced = sg && !wasGrounded && !flying && !this.ride && this.inputEnabled && vyAtMove < 0 && this.tryHeadStomp();
     this.body.setNextKinematicTranslation(this.next);
 
     // ---- Landing / peak tracking -----------------------------------------------
-    if (!wasGrounded && this.grounded) this.onLand(Math.max(0, -vyAtMove));
+    if (!headBounced && !wasGrounded && this.grounded) this.onLand(Math.max(0, -vyAtMove));
     if (!this.grounded) this.peakFeetY = Math.max(this.peakFeetY, this.next.y - CENTER_TO_FEET);
 
     // ---- Auto mantle: airborne, heading into a ledge just above the head -----------
-    if (!this.grounded && !flying && this.inputEnabled && Parkour.mantle.enabled && this.verticalVelocity > -Parkour.mantle.maxFallSpeed) {
+    if (!headBounced && !this.grounded && !flying && this.inputEnabled && Parkour.mantle.enabled && this.verticalVelocity > -Parkour.mantle.maxFallSpeed) {
       let hx = 0;
       let hz = 0;
       if (hasInput) {
@@ -663,6 +684,42 @@ export class Player {
       this.groundedTime = 0;
     }
     if (this.next.y < C.respawnY) this.respawn();
+  }
+
+  /** Stop the already resolved move at the first head, then launch through the normal controller next step. */
+  private tryHeadStomp(): boolean {
+    const from = this.headFrom;
+    const to = this.headTo;
+    from.x = this.currPos.x;
+    from.y = this.currPos.y - CENTER_TO_FEET;
+    from.z = this.currPos.z;
+    to.x = this.next.x;
+    to.y = this.next.y - CENTER_TO_FEET;
+    to.z = this.next.z;
+    let first = Infinity;
+    let surface: HeadStompSurface | undefined;
+    for (const candidate of this.headSurfaces) {
+      const t = candidate.contactTime(from, to);
+      if (t >= 0 && t <= 1 && t < first) {
+        first = t;
+        surface = candidate;
+      }
+    }
+    if (!surface) return false;
+    this.next.x = from.x + (to.x - from.x) * first;
+    this.next.y = from.y + (to.y - from.y) * first + CENTER_TO_FEET;
+    this.next.z = from.z + (to.z - from.z) * first;
+    this.verticalVelocity = LaunchSpeeds.headBounce;
+    this.headBouncePending = true;
+    this.grounded = false;
+    this.timeSinceGrounded = 1e9;
+    this.jumpBufferTimer = 0;
+    this.flight.clearAfterFlight();
+    this.spinning = false;
+    this.spinAngle = 0;
+    this.squashBounce(Parkour.fx.takeoffStretch);
+    surface.stomp(); // exactly one ordinary hit; no ground-land or area-stomp event
+    return true;
   }
 
   /**
@@ -1125,6 +1182,7 @@ export class Player {
     this.aimTime = 0;
     this.hopPending = 0;
     this.squash = 0;
+    this.headBouncePending = false;
     this.squashVel = 0;
     this.crouch = 0;
     this.peakFeetY = y - CENTER_TO_FEET;
