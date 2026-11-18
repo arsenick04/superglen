@@ -645,6 +645,9 @@ export class BattleMode {
         };
         return { head: pr(0.55), feet: pr(-0.55), mid: pr(0) };
       },
+      get camDist() {
+        return self.deps.cameraRig.shownDistance;
+      },
       get focus() {
         return { x: self.focusPos.x, y: self.focusPos.y, z: self.focusPos.z };
       },
