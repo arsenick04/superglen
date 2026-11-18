@@ -47,9 +47,13 @@ export class JumpTrainingLevel implements Level {
   readonly spawn = { x: -10, y: 0, z: -3, yaw: Math.PI };
   private ctx: LevelContext | null = null;
   private hangar: Hangar | null = null;
+  private lavaMat: THREE.MeshBasicMaterial | null = null;
   private readonly feet = new THREE.Vector3();
   private stage = 0;
   private advancing = false;
+  private courseStarted = false;
+  private resetCooldown = 0.8;
+  private time = 0;
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -62,7 +66,14 @@ export class JumpTrainingLevel implements Level {
 
     const kit = new Kit(ctx.physics, makeMaterials(), false);
     this.hangar = new Hangar(ctx, kit);
+    // The ordinary hangar floor becomes a clearly readable lava hazard during this lesson.
+    this.lavaMat = new THREE.MeshBasicMaterial({ color: 0xff3b16, transparent: true, opacity: 0.76, toneMapped: false });
+    const lava = new THREE.Mesh(new THREE.PlaneGeometry(HALL.maxX - HALL.minX - 1, HALL.maxZ - HALL.minZ - 1), this.lavaMat);
+    lava.geometry.rotateX(-Math.PI / 2);
+    lava.position.set(0, 0.018, (HALL.minZ + HALL.maxZ) / 2);
+    ctx.root.add(lava);
     for (const course of COURSES) {
+      kit.glow.cyl(2.15, 0.035, [course.start.x, 0.04, course.start.z], 0x73ff9a);
       for (const step of course.steps) {
         kit.solidCyl(course.radius, step.top, [step.x, step.top / 2, step.z], course.color);
         kit.glow.cyl(course.radius + 0.05, 0.06, [step.x, step.top + 0.03, step.z], 0xffd23f);
@@ -84,12 +95,24 @@ export class JumpTrainingLevel implements Level {
     ctx.game.debugInfo.jumpTrainingCourse = COURSES[0].name;
   }
 
-  fixedUpdate(): void {
+  fixedUpdate(dt: number): void {
     const ctx = this.ctx;
     const course = COURSES[this.stage];
     const goal = course?.steps[course.steps.length - 1];
     if (!ctx || !course || !goal || this.advancing || !ctx.game.controlsEnabled) return;
+    this.resetCooldown = Math.max(0, this.resetCooldown - dt);
     ctx.player.getFeetPosition(this.feet);
+    if (this.feet.y > 0.28) this.courseStarted = true;
+    if (this.courseStarted && this.resetCooldown <= 0 && this.feet.y < 0.12) {
+      ctx.fx.sparkles.burst(this.feet.x, 0.15, this.feet.z, 18, 2.6, 0xff6a24, { gravity: -0.5, life: 0.7, up: 1.5 });
+      ctx.player.rhythm.reset();
+      ctx.player.placeAt(course.start.x, 0, course.start.z, Math.PI);
+      ctx.cameraRig.snapBehind(Math.PI);
+      this.courseStarted = false;
+      this.resetCooldown = 0.8;
+      ctx.game.debugInfo.jumpTrainingFalls = Number(ctx.game.debugInfo.jumpTrainingFalls ?? 0) + 1;
+      return;
+    }
     if (Math.hypot(this.feet.x - goal.x, this.feet.z - goal.z) > course.radius + 0.35 || Math.abs(this.feet.y - goal.top) > 0.7) return;
     this.advancing = true;
     ctx.seq.run(async () => {
@@ -100,6 +123,8 @@ export class JumpTrainingLevel implements Level {
         await ctx.dialog.say({ speaker: 'nino', text: `Lintasan ${course.name} selesai! Berikutnya ${next.name}.` }, { lockControls: true });
         ctx.player.placeAt(next.start.x, 0, next.start.z, Math.PI);
         ctx.cameraRig.snapBehind(Math.PI);
+        this.courseStarted = false;
+        this.resetCooldown = 0.8;
         ctx.game.debugInfo.jumpTrainingStage = this.stage + 1;
         ctx.game.debugInfo.jumpTrainingCourse = next.name;
         this.setGoal();
@@ -114,12 +139,19 @@ export class JumpTrainingLevel implements Level {
   }
 
   update(dt: number): void {
+    this.time += dt;
+    if (this.lavaMat) {
+      const pulse = 0.5 + 0.5 * Math.sin(this.time * 2.2);
+      this.lavaMat.color.setRGB(1, 0.12 + pulse * 0.12, 0.025);
+      this.lavaMat.opacity = 0.7 + pulse * 0.12;
+    }
     this.hangar?.update(dt);
   }
 
   dispose(): void {
     this.ctx = null;
     this.hangar = null;
+    this.lavaMat = null;
   }
 
   private setGoal(): void {
