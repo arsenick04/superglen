@@ -184,6 +184,30 @@ export class Lab {
       kit.deco.box([0.24, 0.12, len - 1.1], [x, F + 5.98, midZ - 0.3], C.GOLD);
     }
 
+    // A few rounded, warm details break up the rectangular shell without adding textures
+    // or separate model files. They stay in the existing batches, so the render cost is tiny.
+    for (const s of [-1, 1]) for (const z of [-66.1, -72.1]) {
+      kit.deco.sph(0.42, [s * 6.62, F + 3.55, z], C.RED, [0.72, 1.05, 0.72]);
+      kit.deco.cyl(0.22, 0.14, [s * 6.62, F + 4.02, z], C.GOLD);
+      kit.deco.cyl(0.24, 0.12, [s * 6.62, F + 3.08, z], C.GOLD);
+      kit.glow.sph(0.18, [s * 6.55, F + 3.55, z], 0xff5a32, [0.8, 1.2, 0.8]);
+    }
+    // Gold fan arch above the main Barongsai console: a strong curved silhouette made
+    // from only seven small batched pieces.
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * (0.18 + 0.64 * (i / 6));
+      kit.deco.box(
+        [0.16, 0.6, 0.12],
+        [Math.cos(a) * 3.15, F + 3.7 + Math.sin(a) * 1.35, Z.labBack + 0.07],
+        C.GOLD,
+        [0, 0, a - Math.PI / 2],
+      );
+    }
+    // A restrained red runner visually leads from the entrance toward the console.
+    kit.deco.box([1.8, 0.018, 7.5], [0, F + 0.012, midZ + 1.45], 0xb52d28);
+    kit.deco.box([0.1, 0.022, 7.6], [-0.96, F + 0.014, midZ + 1.45], C.GOLD);
+    kit.deco.box([0.1, 0.022, 7.6], [0.96, F + 0.014, midZ + 1.45], C.GOLD);
+
     // --- Glowing floor lines (their own material: brightness follows the boot-up) ---
     this.floorGlow = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const fl = new ColorBatch(this.floorGlow, false, false);
