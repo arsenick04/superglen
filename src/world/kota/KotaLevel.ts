@@ -13,7 +13,7 @@ import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
-import { sandboxActive, HILL_DOOR_SPOT, marketBattleSpawn, takeArrival, travel } from '../progress';
+import { sandboxActive, HILL_DOOR_SPOT, marketBattleSpawn, setArrival, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { CityLife } from './CityLife';
 import { Chapter3 } from './Chapter3';
@@ -135,6 +135,8 @@ export class KotaLevel implements Level {
     }
     if (arrival === 'marketBattle') {
       this.spawn = marketBattleSpawn(ctx.save.data.bab3.step);
+    } else if (arrival === 'homeMorning') {
+      this.spawn = this.glenHomeSpot();
     } else if (arrival === 'hillDoor') {
       // Out of the old building: it is known now (the map shows it).
       this.spawn = { ...HILL_DOOR_SPOT };
@@ -238,7 +240,7 @@ export class KotaLevel implements Level {
     });
 
     // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
-    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
+    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => ctx.save.data.interlude === '' && !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
 
     this.life = new CityLife(ctx);
     ctx.battle.setCity(this.life);
@@ -247,6 +249,7 @@ export class KotaLevel implements Level {
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
+    this.setupCostumeInterlude(arrival);
 
     if (!sandbox && !bab1) {
       // Chapter 1: guided walk from the school to the hill; the light in the old building shows from far away.
@@ -257,7 +260,7 @@ export class KotaLevel implements Level {
       const d = CITY_LAYOUT.lab.door;
       this.goalOverride = { x: d.x, z: d.z };
       ctx.onDispose(() => this.story?.dispose());
-    } else if (!sandbox && arrival === 'hillDoor' && !ctx.save.isChapterDone('bab2')) {
+    } else if (!sandbox && arrival === 'hillDoor' && !ctx.save.isChapterDone('bab2') && ctx.save.data.interlude === '') {
       // Out of the lab between the chapters: the beam shows the way back in (Nino waits with Chapter 2), once the player
       // has walked a bit away (right at the door the camera would stand inside the beam).
       this.doorBeam = true;
@@ -318,6 +321,44 @@ export class KotaLevel implements Level {
           .map((b) => ({ id: b.id, x: b.x, z: b.z, top: b.base + b.wall }));
       info.roofSamples = JSON.stringify([...pick('house'), ...pick('ruko'), ...pick('landmark')]);
     }
+  }
+
+  /** Outside Glen's front door, clear of the house collider. */
+  private glenHomeSpot(): { x: number; y: number; z: number; yaw: number } {
+    const b = CITY_LAYOUT.buildings.find((x) => x.glen);
+    if (!b) return { ...CITY_LAYOUT.spawn };
+    const [fx, fz] = FACE_VEC[b.face];
+    const half = b.face < 2 ? b.d / 2 : b.w / 2;
+    return { x: b.x + fx * (half + 2.8), y: b.base, z: b.z + fz * (half + 2.8), yaw: Math.atan2(-fx, -fz) };
+  }
+
+  /** Chapter 1 ends at home; only the following morning may training begin. */
+  private setupCostumeInterlude(arrival: ReturnType<typeof takeArrival>): void {
+    const { ctx } = this;
+    const state = ctx.save.data.interlude;
+    if (state !== 'costume_home' && state !== 'costume_return') return;
+    if (arrival === 'homeMorning') this.hud.show('Keesokan pagi', 0xf2b632, true);
+    if (state === 'costume_return') {
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      return;
+    }
+    const home = this.glenHomeSpot();
+    this.setGoal({ x: home.x, z: home.z });
+    ctx.objectives.set(new THREE.Vector3(home.x, home.y, home.z));
+    ctx.interactions.add({
+      position: new THREE.Vector3(home.x, home.y + 0.8, home.z),
+      radius: 3,
+      icon: 'hand',
+      promptHeight: 1.7,
+      enabled: () => ctx.save.data.interlude === 'costume_home',
+      onInteract: () => {
+        ctx.save.setInterlude('costume_return');
+        setArrival('kota', 'homeMorning');
+        void ctx.game.loadLevel('kota');
+      },
+    });
   }
 
   /** D5: Chapter 4 follows Chapter 3 (also when it was finished in an earlier session). */

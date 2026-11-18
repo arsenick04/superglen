@@ -89,10 +89,11 @@ export class Story {
     lab.showCoins();
     ctx.game.setPlayerMode(ctx.save.data.lastMode); // the mode the child left in
     this.addNinoTalk();
-    this.p.door.enable();
+    if (ctx.save.data.interlude === '') this.p.door.enable();
     ctx.game.debugInfo.chapterDone = true;
-    // Next chapter not played yet: the beam leads to Nino.
-    if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
+    // The newly received costume does not skip straight into tomorrow's training.
+    if (ctx.save.data.interlude === 'costume_home' && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
+    else if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
     else if (fromHangar && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
   }
 
@@ -105,9 +106,12 @@ export class Story {
       promptHeight: 1.5,
       onInteract: () => {
         const talk = labNinoTalk(ctx.save);
-        void ctx.dialog.say(talk.line).then(() => {
+        const proceed = (): void => {
+          if (talk.clearInterlude) ctx.save.setInterlude('');
           if (talk.next) void ctx.game.loadLevel(talk.next);
-        });
+        };
+        if (talk.line) void ctx.dialog.say(talk.line).then(proceed);
+        else proceed();
       },
     });
   }
@@ -363,7 +367,7 @@ export class Story {
       await Promise.race([seq.wait(14), seq.waitUntil(() => pl.doubleJumps > 0)]);
       game.pulseButton('jump', false);
     });
-    await dialog.sequence(['bab1_nino_lompat_barongsai', 'bab1_nino_besok'], { lockControls: true });
+    await dialog.sequence(['bab1_nino_lompat_barongsai', 'bab1_nino_besok', 'bab1_nino_pulang_dulu'], { lockControls: true });
   }
 
   private async finish(): Promise<void> {
@@ -371,19 +375,19 @@ export class Story {
     const { seq, game, save } = ctx;
     const pl = this.player;
     this.step = 'done';
+    save.setInterlude('costume_home');
     save.markChapterDone('bab1');
     game.debugInfo.chapterDone = true;
     game.setControlsEnabled(true);
     this.safe(pl.visualPosition.x, LAB_FLOOR, pl.visualPosition.z);
     await this.party.play();
     this.addNinoTalk();
-    this.p.door.enable();
     lab.showCoins();
     this.setTarget(LAB.poles[0].x, LAB.poles[0].z);
     await seq.waitUntil(() => this.coinsTaken > 0 || this.near(LAB.poles[0].x, LAB.poles[0].z, 2)());
     this.setTarget(null);
-    // Then the beam leads to Nino, who takes the player on to Chapter 2.
-    if (!ctx.save.isChapterDone('bab2')) this.setTarget(lab.ninoPos.x, lab.ninoPos.z);
+    // Nino said training is tomorrow: first walk out and go home.
+    if (this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
   }
 
   onCoins(n: number): void {

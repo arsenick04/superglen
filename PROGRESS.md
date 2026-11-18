@@ -845,3 +845,12 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Chapter 5 dan 6 langsung menampilkan mode battle saat Glen memasuki area Ular/Rakus. Bos dan pendamping tetap nonaktif selama dialog, intro masuk, serta intro ulang setelah kembali ke arena.
 - Probe non-browser memeriksa batas distrik jauh dari posisi Curut, staging tanpa damage, urutan transisi sebelum tick combat, titik kembali, aktivasi intro/reentry, dan pembersihan proyektil milik musuh. Typecheck, build, check:reach dan check:quiz lulus; dua review independen tidak menemukan penghalang.
 - Pengujian browser tidak dijalankan sesuai keputusan pemilik. Coba manual Chapter 3 melalui `?chapter=3`: saat menginjak distrik Pasar harus langsung berpindah ke battle sebelum sempat menembak Curut.
+
+
+## Kostum → pulang → latihan besok — 18 November 2026
+
+- Sesudah Chapter 1 dan kostum diterima, pintu hanggar latihan tetap terkunci. Nino tetap mengingatkan bahwa latihan berlangsung besok; penanda mengarahkan Glen keluar dari Lab lalu ke depan Rumah Glen.
+- Interaksi di Rumah Glen menyimpan checkpoint dan memuat ulang kota dengan label “Keesokan pagi”. Dari rumah, penanda mengarahkan Glen kembali ke gedung tua; berbicara dengan Nino baru membuka Chapter 2.
+- Misi warga dinonaktifkan sementara agar tidak mengganti tujuan wajib. Save lama tanpa checkpoint baru tidak dipaksa mundur, reload pada tiap sisi pergantian hari tetap aman, dan `?chapter=2` tetap langsung masuk latihan untuk pengujian.
+- Build dan probe non-browser `scripts/costume-day-probe.ts` lulus. Browser tidak dijalankan sesuai keputusan pemilik.
+- Berikutnya, PR terpisah akan menambahkan jeda setelah Ular dan latihan lompat Barongsai tiga tingkat sebelum Tikus Rakus.

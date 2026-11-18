@@ -8,6 +8,8 @@ Claude tidak aktif lagi untuk sementara (jatah habis). Kamu (Codex) bekerja send
 - Serangan injak-pantul hanya untuk Curut dan musuh non-bos (termasuk Curut pendamping Rakus). Bos tetap menggunakan mekanik pertarungan yang ada.
 - Masukan pemilik saat bermain: Curut di arena harus muncul dan menyerang satu per satu. Curut berikutnya muncul setelah giliran sebelumnya jinak dan jeda singkat; Curut pendamping Rakus juga maksimal satu pada satu waktu.
 - Area pertarungan wajib memulai transisi ke mode battle segera ketika Glen memasuki distrik/area chapter, sebelum musuh kota dapat ditarget atau menyerang. Musuh baru aktif setelah dialog dan intro battle selesai; titik kembali harus berada di luar batas pemicu agar tidak langsung masuk lagi.
+- Jeda antarhari wajib: setelah menerima kostum, Glen pulang ke Rumah Glen dan baru kembali ke Lab untuk latihan pada pagi berikutnya. Setelah Ular, Nino memanggil Glen kembali ke Lab untuk merayakan bersama Aara, lalu Glen pulang; latihan hari berikutnya adalah rangkaian lompat Barongsai tiga tingkat sebelum Tikus Rakus terbuka.
+- Arena Curut/Ular/Rakus harus terasa sebagai arena pertarungan khusus yang lapang. Tirai cincin battle tidak boleh menghalangi pandangan; Curut pendamping tidak dipakai pada pertarungan Tikus Rakus. Injak Curut harus menahan kontak di kepala, memantulkan Glen, serta memberi umpan balik visual/suara yang jelas.
 - Untuk menghemat limit, gunakan paling banyak dua agen pekerja dengan tugas terpisah dan review silang, lalu pemeriksaan akhir oleh agen utama.
 
 ## Aturan kerja

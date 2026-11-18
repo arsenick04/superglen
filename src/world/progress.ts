@@ -24,6 +24,8 @@ import { MARKET } from './kota/Bab3Data';
 /** Where a level should put the player when it was entered through a door (consumed by the level's build). */
 export type Arrival =
   | 'marketBattle'
+  /** City: outside Glen's house on the next morning. */
+  | 'homeMorning'
   /** City: in front of the old building's door on the hill, facing away from it. */
   | 'hillDoor'
   /** Lab: just inside the old building's front door. */
@@ -91,6 +93,8 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewChapter === 2) return { level: 'bab2' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
   const slot = save.data.slot;
   // An encounter slot is valid only while that encounter's story step is
@@ -135,7 +139,9 @@ export function migrateSave(save: SaveStore): boolean {
 }
 
 /** What talking to Nino in the lab does: the line to say and the level to fade to afterwards (null = stay). */
-export function labNinoTalk(save: SaveStore): { line: string; next: string | null } {
+export function labNinoTalk(save: SaveStore): { line: string | null; next: string | null; clearInterlude?: boolean } {
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { line: 'bab1_nino_pulang_dulu', next: null };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return { line: null, next: 'bab2', clearInterlude: true };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
   return { line: 'bab2_nino_hebat', next: null };
 }

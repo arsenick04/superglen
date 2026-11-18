@@ -51,3 +51,8 @@ Build, `check:reach`, `check:quiz` lulus. Smoke `kota` lulus. Semua pekerjaan be
 
 - Koreksi kesulitan Curut dari uji pemilik: arena memakai satu giliran aktif, enam menunggu tersembunyi; jeda 1,2 detik setelah jinak. Curut pendamping Rakus juga maksimal satu. Build/check/probe antrean/review lulus; pengujian browser tetap ditunda. Lihat PROGRESS.md bagian "Curut muncul satu per satu".
 - Transisi battle berbasis area selesai di cabang `codex/battle-area-entry`: Pasar memindahkan Glen sebelum Curut kota sempat menyerang; Ular/Rakus masuk mode battle saat area terpicu dan musuh menunggu dialog + intro. Titik kembali Pasar berada di luar batas distrik. Probe non-browser/build/reach/quiz lulus; browser tidak dijalankan atas keputusan pemilik.
+- Alur baru dikerjakan per PR kecil: (1) kostum → wajib pulang → pagi berikutnya kembali ke Nino; (2) setelah Ular, perayaan Nino/Glen/Aara → pulang → latihan lompat Barongsai tiga tingkat; (3) Tikus Rakus baru sesudah latihan. Arena khusus/ring, penghapusan Curut pendamping Rakus, dan umpan balik injak Curut adalah PR terpisah.
+
+### Kalimat baru untuk disuarakan
+
+- `bab1_nino_pulang_dulu` (Nino): “Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!” — klip belum dibuat; teks tampil sebagai fallback.
