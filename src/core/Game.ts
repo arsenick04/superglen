@@ -592,7 +592,13 @@ export class Game {
     });
     if (this.hud) {
       this.hud.onParents = () => this.parents.show();
-      this.hud.onBeforeStart = () => this.cinematics.play('open');
+      this.hud.onBeforeStart = () => {
+        // Unlock audio while still inside the user's gesture. The cinematic itself is
+        // asynchronous, so waiting until it ends would be rejected by mobile Safari.
+        this.synth.unlock();
+        this.audio.unlock();
+        return this.cinematics.play('open');
+      };
     }
     this.debug.quiz = this.quiz.debugHandle();
     const parentsPage = this.parents;
