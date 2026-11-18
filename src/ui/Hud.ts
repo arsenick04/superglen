@@ -203,7 +203,9 @@ export class Hud {
     this.root.appendChild(o);
     startGate.onStart(() => {
       o.classList.add('leaving');
-      window.setTimeout(() => o.remove(), 300);
+      // Remove immediately: the opening cinematic is already covering the page, and
+      // leaving the start screen mounted can flash it again on the final video frame.
+      o.remove();
       this.syncCard();
     });
   }
