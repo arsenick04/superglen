@@ -13,7 +13,7 @@ import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
-import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
+import { sandboxActive, HILL_DOOR_SPOT, marketBattleSpawn, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { CityLife } from './CityLife';
 import { Chapter3 } from './Chapter3';
@@ -134,7 +134,7 @@ export class KotaLevel implements Level {
       game.setPlayerMode('glen', false);
     }
     if (arrival === 'marketBattle') {
-      this.spawn = { x: MARKET.hub.x, y: 0, z: ctx.save.data.bab3.step === 'chase' ? 48 : 12, yaw: Math.PI };
+      this.spawn = marketBattleSpawn(ctx.save.data.bab3.step);
     } else if (arrival === 'hillDoor') {
       // Out of the old building: it is known now (the map shows it).
       this.spawn = { ...HILL_DOOR_SPOT };

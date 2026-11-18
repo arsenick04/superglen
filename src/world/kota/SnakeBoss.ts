@@ -431,6 +431,7 @@ export class SnakeBoss {
   }
 
   private laserHit(h: HitInfo): void {
+    if (!this.enabled) return;
     if (!this.vulnerable || this.stars <= 0) {
       this.laserEarly++;
       const { ctx } = this;
@@ -544,6 +545,7 @@ export class SnakeBoss {
       const want = Math.atan2(pl.x - this.x, pl.z - this.z);
       this.lookYaw = turnTo(this.lookYaw, want, dt * 2);
     }
+    if (!this.enabled) return; // pause an unfinished lunge/dizzy window while outside battle or in its entrance
     switch (this.phase) {
       case 'idle': {
         this.cool = Math.max(0, this.cool - dt);

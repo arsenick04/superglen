@@ -7,6 +7,7 @@ Claude tidak aktif lagi untuk sementara (jatah habis). Kamu (Codex) bekerja send
 - Pengujian browser otomatis/Playwright ditunda sampai seluruh game selesai; pengujian bermain saat pengembangan dilakukan pemilik sendiri. Jangan menjalankan browser suite sekarang. Tetap jalankan build/typecheck, check:reach, check:quiz dan probe logika kecil yang relevan. Catat bahwa hasil browser, FPS, dan angka performa aktual belum diverifikasi; jangan menyatakan suite hijau tanpa menjalankannya.
 - Serangan injak-pantul hanya untuk Curut dan musuh non-bos (termasuk Curut pendamping Rakus). Bos tetap menggunakan mekanik pertarungan yang ada.
 - Masukan pemilik saat bermain: Curut di arena harus muncul dan menyerang satu per satu. Curut berikutnya muncul setelah giliran sebelumnya jinak dan jeda singkat; Curut pendamping Rakus juga maksimal satu pada satu waktu.
+- Area pertarungan wajib memulai transisi ke mode battle segera ketika Glen memasuki distrik/area chapter, sebelum musuh kota dapat ditarget atau menyerang. Musuh baru aktif setelah dialog dan intro battle selesai; titik kembali harus berada di luar batas pemicu agar tidak langsung masuk lagi.
 - Untuk menghemat limit, gunakan paling banyak dua agen pekerja dengan tugas terpisah dan review silang, lalu pemeriksaan akhir oleh agen utama.
 
 ## Aturan kerja

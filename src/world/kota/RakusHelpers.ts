@@ -221,6 +221,7 @@ export class RakusHelpers {
   /** All helpers vanish (the fight is over or starts again). */
   clear(): void {
     for (let i = 0; i < this.n; i++) {
+      this.ctx.projectiles.clearFrom(this.aim[i]);
       this.st[i] = S_OFF;
       this.targets[i].enabled = false;
     }
