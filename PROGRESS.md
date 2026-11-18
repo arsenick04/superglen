@@ -872,3 +872,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Saat scene perayaan Ular dimuat, Glen langsung spawn di area Lab bersama Nino, bukan di pintu depan; Aara diposisikan pada ketinggian lantai Lab (`LAB_FLOOR`) agar tidak mengambang.
 - Logo Superglen sudah tersedia di layar awal (`public/img/logo.webp`) dengan fallback teks; tidak perlu perubahan kode tambahan.
 - Dua video cinematic belum ada sebagai file di workspace, sehingga integrasi video + letterbox menunggu attachment yang dapat diakses. Browser tidak dijalankan.
+
+
+## Cinematic pembuka dan bukit — 18 November 2026
+
+- Dua video Drive dikonversi ke MP4 H.264 browser-friendly 1920×1080: `public/cinematics/cin_open.mp4` (12,43 dtk) dan `public/cinematics/cin_hill.mp4` (12,54 dtk).
+- `cin_open` berjalan setelah ketukan/klik Start pertama; `cin_hill` berjalan ketika Glen mencapai area Gedung Barongsai sebelum pintu dibuka. Keduanya memakai overlay hitam 16:9, tombol Lewati, dan fallback aman bila video gagal diputar.
+- Kontrol pemain dikunci selama video dan dipulihkan setelah selesai. Browser tidak dijalankan; verifikasi yang dilakukan: ffprobe metadata, build, dan diff check.

@@ -226,6 +226,7 @@ export class KotaLevel implements Level {
         }
         this.hud.show('Gedung Barongsai Tua', 0xc9a46f, true);
         ctx.game.debugInfo.labFound = true;
+        if (!sandbox && !bab1) void ctx.game.playCinematic('hill');
         this.onLabEntrance?.();
       },
     });

@@ -54,6 +54,7 @@ Build, `check:reach`, `check:quiz` lulus. Smoke `kota` lulus. Semua pekerjaan be
 - Alur baru dikerjakan per PR kecil: (1) kostum → wajib pulang → pagi berikutnya kembali ke Nino; (2) setelah Ular, perayaan Nino/Glen/Aara → pulang → latihan lompat Barongsai tiga tingkat; (3) Tikus Rakus baru sesudah latihan. Arena khusus/ring, penghapusan Curut pendamping Rakus, dan umpan balik injak Curut adalah PR terpisah.
 - PR alur Ular aktif di cabang `codex/snake-lab-celebration`: `snake_lab` → perayaan bertiga di Lab → `snake_home` → `snake_return`. Chapter 6 ditahan sampai PR latihan Barongsai berikutnya; build/probe/review lulus, browser ditunda.
 - PR transisi battle berikutnya membuat Chapter 3/5/6 langsung berpindah ke arena tanpa berjalan mendekati musuh, menurunkan tirai ring menjadi batas lantai, dan memperbaiki spawn Lab/Aara. Ular/Rakus masih memakai geometri kota; arena scene terpisah penuh tetap menjadi pekerjaan lanjutan.
+- Cinematic Drive sudah tersedia di cabang kerja: `cin_open.mp4` untuk Start dan `cin_hill.mp4` sebelum pintu bukit, dengan overlay letterbox 16:9 + Lewati. Browser belum diuji sesuai keputusan pemilik.
 
 ### Kalimat baru untuk disuarakan
 

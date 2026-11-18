@@ -61,6 +61,8 @@ export interface LevelGame {
   /** Stick and jump ignored while false (camera look still works). Reset to true on every level load. */
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
+  /** Play a one-shot cinematic overlay, if its asset is available. */
+  playCinematic(id: 'open' | 'hill'): Promise<void>;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
   setPlayerMode(mode: PlayerMode, persist?: boolean): void;
   /**

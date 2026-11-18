@@ -55,6 +55,7 @@ import { SettingsMenu } from '../ui/SettingsMenu';
 import { MapView } from '../ui/MapView';
 import { BattleMode } from '../gameplay/BattleMode';
 import { ZoomButtons } from '../ui/ZoomButtons';
+import { CinematicPlayer } from '../ui/CinematicPlayer';
 import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -298,6 +299,7 @@ export class Game {
   readonly levels: LevelManager;
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
+  private readonly cinematics: CinematicPlayer;
   private readonly walker: WalkSource;
   private readonly padSource: GamepadSource;
   private readonly padUi: PadUi;
@@ -543,6 +545,11 @@ export class Game {
     this.debug.skills = this.makeSkillsDebug();
 
     const uiRoot = ui ?? document.body;
+    this.cinematics = new CinematicPlayer(uiRoot, (locked) => {
+      this.levelControls = !locked;
+      this.updateControls();
+    });
+    startGate.onStart(() => void this.cinematics.play('open'));
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
     this.quiz = new QuizEngine({
       save: this.save,
@@ -721,6 +728,7 @@ export class Game {
         this.levelControls = on;
         this.updateControls();
       },
+      playCinematic: (id) => this.cinematics.play(id),
       get controlsEnabled() {
         return self.controlsEnabled;
       },
