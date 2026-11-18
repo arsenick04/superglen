@@ -549,7 +549,6 @@ export class Game {
       this.levelControls = !locked;
       this.updateControls();
     });
-    startGate.onStart(() => void this.cinematics.play('open'));
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
     this.quiz = new QuizEngine({
       save: this.save,
@@ -591,7 +590,10 @@ export class Game {
         }
       },
     });
-    if (this.hud) this.hud.onParents = () => this.parents.show();
+    if (this.hud) {
+      this.hud.onParents = () => this.parents.show();
+      this.hud.onBeforeStart = () => this.cinematics.play('open');
+    }
     this.debug.quiz = this.quiz.debugHandle();
     const parentsPage = this.parents;
     this.debug.parents = {

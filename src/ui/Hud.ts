@@ -28,6 +28,9 @@ export class Hud {
   private dismissed = false;
   /** The parents' page (set by the game). Opened by the logo long-press and the small gear on the PC help card. */
   onParents: (() => void) | null = null;
+  /** Runs the opening cinematic before the start gate unlocks story/audio. */
+  onBeforeStart: (() => Promise<void>) | null = null;
+  private starting = false;
   private holdTimer = 0;
   private holdStart = 0;
   private suppressTap = false;
@@ -72,7 +75,7 @@ export class Hud {
       const dismiss = (): void => {
         this.dismissed = true;
         this.syncCard();
-        if (!touchMode.active) startGate.start();
+        if (!touchMode.active) this.beginStart();
       };
       window.addEventListener('mousedown', dismiss, { once: true });
       window.addEventListener('keydown', dismiss, { once: true });
@@ -212,12 +215,24 @@ export class Hud {
     } catch {
       // iPhone Safari has no fullscreen API; ignore.
     }
-    startGate.start();
+    this.beginStart();
   };
 
   private readonly onLockChange = (): void => {
-    if (document.pointerLockElement === this.canvas && !touchMode.active) startGate.start();
+    if (document.pointerLockElement === this.canvas && !touchMode.active) this.beginStart();
     this.syncCard();
+  };
+
+  private readonly beginStart = (): void => {
+    if (this.starting || startGate.started) return;
+    this.starting = true;
+    void (async () => {
+      try {
+        await this.onBeforeStart?.();
+      } finally {
+        startGate.start();
+      }
+    })();
   };
 
   private syncCard(): void {
