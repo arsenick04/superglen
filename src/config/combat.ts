@@ -60,6 +60,9 @@ export const Combat = {
     stun: 0.7,
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
     globalGap: 0.5,
+    /** Sequential Curut encounter: celebrate the tame, then reveal the next rat with a short attack rest (s). */
+    nextDelay: 1.2,
+    entryCooldown: 1,
     /** Dedicated real-time Curut arena; the camera follows Glen. */
     arena: {
       radius: 5.2,
@@ -203,8 +206,8 @@ export const Combat = {
     hintGap: 25,
     /** Curut Cemberut helpers (the small rats of Chapter 3, 3 hits each) join after round 1, 3, 5 ... */
     helpers: {
-      max: 4,
-      perWave: 2,
+      max: 1,
+      perWave: 1,
       /** Walking speed while chasing (m/s). */
       speed: 2.6,
       /** Seconds between any two helper attacks starting. */

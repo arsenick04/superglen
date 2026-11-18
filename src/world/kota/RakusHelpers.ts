@@ -274,6 +274,7 @@ export class RakusHelpers {
     this.timer[i] = 0;
     this.targets[i].enabled = false;
     this.tamedCount++;
+    ctx.projectiles.clearFrom(this.aim[i]);
     ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, RatConfig.dizzyTime + 0.3, 0.3);
     ctx.fx.sparkles.burst(this.hx[i], 0.5, this.hz[i], 14, 2.6, 0xffe14d, { gravity: 2, life: 0.7, up: 0.8 });
     const a = Math.atan2(this.hz[i] - this.cz, this.hx[i] - this.cx);

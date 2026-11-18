@@ -817,3 +817,15 @@ Untuk dicoba sendiri:
 - Save uji hanya di memori: seluruh jalur read/write/reset/reload/resetProgress tidak mengakses localStorage utama. Muat ulang memulai ulang Chapter uji; alamat biasa kembali ke save utama. Parameter chapter valid didahulukan dari level/free/reset. Nilai invalid/duplikat tetap memakai perilaku biasa.
 - Probe non-browser memeriksa enam seed, isolasi storage termasuk reset/reload, prasyarat/skills, rute hangar/arena, dan nilai invalid. Review silang + agen utama; boundary newline pada parser diperketat dan ditambahkan ke probe. Typecheck, build dan probe lulus; tidak menjalankan browser sesuai instruksi pemilik.
 - Daftar link: docs/chapter-test-links.md. Chapter 7–8 belum tersedia. Tidak ada perubahan audio/dialog/dependensi.
+
+
+## Curut muncul satu per satu — 18 November 2026
+
+- Masukan pemilik: tujuh Curut sekaligus terlalu sulit. Arena kini menampilkan tepat satu Curut aktif; sisanya antre tersembunyi, target dinonaktifkan, tidak bisa menyerang atau terkena laser, injak kepala maupun hentakan tanah.
+- Setelah Curut aktif jinak, lemparannya dibersihkan berdasarkan identitas pemilik (lemparan pihak lain tidak disentuh). Jeda 1,2 detik di Combat.rat.nextDelay, lalu Curut lama hilang dan satu Curut berikutnya muncul dengan cooldown awal 1 detik. Mode serangan bantuan antar-Curut dimatikan untuk arena antrean.
+- Tujuh identitas, makanan, hit biasa/injak-pantul, hitungan kemenangan dan save tamed dipertahankan. Saat melanjutkan save sebagian, yang muncul adalah identitas pertama yang belum jinak. Staging Curut di kota tidak diubah; pertarungan satu per satu berlaku di arena terpisah.
+- Curut pendamping Rakus: kapasitas/gelombang masing-masing satu. Slot yang masih dipakai animasi keluar tidak bisa diisi Curut baru. Serangan tubuh bos tetap sama.
+- Pemeriksaan: typecheck/build, check:reach, check:quiz, syntax smoke dan diff check lulus. Probe non-browser `node_modules/.bin/tsx scripts/curut-queue-probe.ts` lulus, memakai MarketRats/Targets asli dengan efek audiovisual stub: save tak berurutan, satu target aktif, tubuh/makanan antrean tersembunyi, damage exclusion, pergantian giliran, semua jinak, pembatalan lemparan milik Curut itu saja.
+- Review silang oleh agen stabilisasi dan review agen utama: tidak ada temuan penghalang. Sumber smoke menambah asersi 1 aktif/6 antre, jeda tanpa musuh aktif, pergantian tujuh giliran dan ekspektasi pendamping satu; seluruh asersi progres/kemenangan lama dipertahankan. Browser tidak dijalankan sesuai instruksi pemilik.
+
+Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak, tunggu pergantian, lalu ulangi. Jangan ada Curut kedua yang menyerang selama giliran pertama atau lemparan tertinggal setelah ia jinak.

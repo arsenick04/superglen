@@ -244,6 +244,11 @@ export class Projectiles {
     for (const p of this.pool) this.retire(p, false);
   }
 
+  /** Cancel only this thrower's shots, including reflected ones, without firing hit/expire callbacks. */
+  clearFrom(owner: THREE.Vector3): void {
+    for (const p of this.pool) if (p.active && p.liveHome === owner) this.retire(p, false);
+  }
+
   warm(on: boolean): void {
     this.warming = on;
     for (const p of this.pool) {
