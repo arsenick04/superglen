@@ -276,19 +276,28 @@ export class Lab {
       kit.lit.add('cyl', [p.x, F + 0.275, p.z], [0.8, 0.03, 0.8], 0xdfe9f6);
     }
 
-    // --- Costume compartment in the left wall ---
+    // --- Glass costume cabinet in the left wall ---
     const cz = LAB.costume.z;
-    this.lightMat = basic(0xfff0b0);
+    // Red interior light gives the display a clear focal point even before the suit rises.
+    this.lightMat = basic(0xff241c);
+    this.lightMat.transparent = true;
+    this.lightMat.opacity = 0.92;
     this.light = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3.0), this.lightMat);
     this.light.rotation.y = Math.PI / 2;
     this.light.position.set(-6.94, F + 1.7, cz);
     root.add(this.light);
     this.compartment = new THREE.Mesh(
       new THREE.BoxGeometry(0.14, 3.0, 2.5),
-      new THREE.MeshStandardMaterial({ color: 0x2ec4b6, roughness: 0.5, metalness: 0.2 }),
+      new THREE.MeshPhysicalMaterial({ color: 0xbfeaff, roughness: 0.08, metalness: 0, transmission: 0.35, transparent: true, opacity: 0.3, depthWrite: false }),
     );
     this.compartment.position.set(-6.88, F + 1.7, cz);
     root.add(this.compartment);
+    const cabinetTop = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.75, 2.25), new THREE.MeshBasicMaterial({ color: 0xff351e, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+    cabinetTop.position.set(-6.81, F + 1.7, cz);
+    root.add(cabinetTop);
+    const cabinetLight = new THREE.PointLight(0xff3b24, 2.2, 5.5, 2);
+    cabinetLight.position.set(-6.15, F + 1.7, cz);
+    root.add(cabinetLight);
     const trim = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 2.3), new THREE.MeshStandardMaterial({ color: C.GOLD }));
     trim.position.set(-0.01, 0.9, 0);
     this.compartment.add(trim);
