@@ -15,6 +15,8 @@ export interface Chapter5Hooks {
   setGoal(goal: { x: number; z: number } | null): void;
   /** A resident's mission may not run during the chapter: drop the running one. */
   dropMission(): void;
+  /** Place Glen in the isolated battle staging point before the intro starts. */
+  placePlayer(x: number, z: number, yaw: number): void;
   /** Chapter 5 is over (the city is free again, the residents offer missions). */
   onDone(): void;
 }
@@ -136,9 +138,12 @@ export class Chapter5 {
         await ctx.dialog.say(L.glenAjak);
         await ctx.dialog.say(L.aaraIkut);
       } else if (this.step === 'city') {
-        // Just out of the old building: Aara waits by the door and wishes him luck.
-        const p = ctx.player.position;
-        if (Math.hypot(p.x - BAB5_DOOR.wait.x, p.z - BAB5_DOOR.wait.z) < 15) await ctx.dialog.say(L.aaraTunggu);
+        this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + 7, Math.PI);
+        this.aara?.place(SNAKE_FIELD.x - 3.2, SNAKE_FIELD.z + 4.2, Math.PI * 0.8);
+        this.runIntro();
+      } else if (this.step === 'fight') {
+        this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + 7, Math.PI);
+        this.runIntro();
       }
     });
   }

@@ -382,6 +382,7 @@ export class KotaLevel implements Level {
     this.ch5 = new Chapter5(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
+      placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
       onDone: () => {
         this.setGoal(null);
         this.d3?.people.onChange?.();
@@ -397,6 +398,7 @@ export class KotaLevel implements Level {
     this.ch6 = new Chapter6(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
+      placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
       clearZone: (z) => {
         if (this.life) this.life.clearZone = z;
       },

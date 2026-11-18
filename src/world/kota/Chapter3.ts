@@ -176,6 +176,11 @@ export class Chapter3 {
         this.setStep('chase');
         ctx.game.setPlayerMode('superglen', false);
         await ctx.dialog.say(L.ninoCepat);
+        ctx.game.setControlsEnabled(false);
+        void ctx.game.loadLevel('battle-curut');
+      } else if (this.step === 'chase') {
+        ctx.game.setControlsEnabled(false);
+        void ctx.game.loadLevel('battle-curut');
       }
     });
   }
