@@ -56,7 +56,7 @@ export class CurutArena implements Level {
         if (!t.includes(i)) ctx.save.setBab3('chase', [...t, i]);
       },
       onCollect: () => {},
-    }, ctx.save.data.bab3.tamed, specs, false);
+    }, ctx.save.data.bab3.tamed, specs, false, true);
     ctx.battle.enter({ id: 'curut_cemberut', name: 'Curut Cemberut', focus: () => this.battleFocus, arena: { x: MARKET.hub.x, z: 0, r: arena.radius }, stars: () => ({ left: this.rats.remaining, max: this.rats.n }), ownBar: true, intro: false, punchy: false });
     const exit = document.createElement('button');
     exit.className = 'arena-return';
@@ -68,6 +68,7 @@ export class CurutArena implements Level {
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST) {
       const w = window as unknown as { __arena?: unknown };
       w.__arena = {
+        handoffDelay: Combat.rat.nextDelay,
         rats: () => this.rats.list(),
         tame: (i: number) => this.rats.tame(i),
         attack: (i: number, kind: 0 | 1) => this.rats.forceAttack(i, kind),

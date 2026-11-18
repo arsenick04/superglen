@@ -9514,12 +9514,15 @@ async function curutArenaScenario(page, check, touch) {
     arena: window.__superglen.levelInfo.arena,
     controls: window.__superglen.controlsEnabled,
     rats: window.__arena.rats().length,
+    active: window.__arena.rats().filter((r) => r.active).length,
+    queued: window.__arena.rats().filter((r) => r.queued).length,
     camera: { ...window.__superglen.camera },
     cls: document.documentElement.classList.contains('curut-arena'),
     zoom: getComputedStyle(document.querySelector('.zoom-col')).visibility,
     exit: document.querySelector('.arena-return')?.getBoundingClientRect().toJSON(),
   }));
   check(`curut-arena ${tag}: approaching a Curut enters a separate seven-rat encounter`, entered.level === 'battle-curut' && entered.arena === 'curut' && entered.controls && entered.rats === 7 && entered.cls, JSON.stringify(entered));
+  check(`curut-arena ${tag}: only the first Curut is active; six wait hidden for their turns`, entered.active === 1 && entered.queued === 6, JSON.stringify(entered));
   check(`curut-arena ${tag}: follow-camera zoom is available and the return button remains on screen`, entered.zoom === 'visible' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
   await page.evaluate(() => {
     window.__superglen.setCameraYaw(Math.PI * 0.75);
@@ -9543,7 +9546,13 @@ async function curutArenaScenario(page, check, touch) {
   await page.evaluate(() => {
     const g = window.__superglen;
     g.save.setSlot({ level: 'battle-curut', x: g.player.x, y: g.player.y, z: g.player.z, yaw: 0, mode: 'superglen', t: Date.now() });
-    for (let i = 0; i < 7; i++) window.__arena.tame(i);
+    for (let i = 0; i < 7; i++) {
+      const active = window.__arena.rats().filter((r) => r.active);
+      if (active.length !== 1 || active[0].i !== i) throw new Error('Curut turn must reveal exactly the next untamed identity');
+      window.__arena.tame(i);
+      if (window.__arena.rats().some((r) => r.active)) throw new Error('Curut handoff must allow a respite');
+      g.advance(Math.ceil(window.__arena.handoffDelay * 60) + 2, false);
+    }
     g.advance(120, false);
   });
   await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
@@ -10259,17 +10268,17 @@ async function bab6FightScenario(page, check, touch) {
   // ---- Helpers ----
   await ch6Stand(page, ...FAR6);
   await page.evaluate(() => window.__ch6.muteHelpers(true));
-  await page.evaluate(() => window.__ch6.endRound()); // round 1: two Curut Cemberut join
+  await page.evaluate(() => window.__ch6.endRound()); // round 1: one Curut Cemberut joins
   await d3Adv(page, 10);
   let hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: after round 1 two Curut Cemberut join the fight (5 hit points each), Nino says so`, hs.counts.alive === 2 && hs.counts.spawned === 2 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 5), JSON.stringify(hs));
+  check(`bab6-fight ${tag}: after round 1 one Curut Cemberut joins the fight (5 hit points), Nino says so`, hs.counts.alive === 1 && hs.counts.spawned === 1 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 5), JSON.stringify(hs));
   let sawCurut = false;
   for (let i = 0; i < 80 && !sawCurut; i++) { sawCurut = /Curut Cemberut datang/.test((await ch6Info(page)).line); await d3Adv(page, 10); }
   check(`bab6-fight ${tag}: Nino: "Curut Cemberut datang membantu!"`, sawCurut, '');
   await page.evaluate(() => window.__ch6.endRound()); // round 2: no new wave
-  await page.evaluate(() => window.__ch6.endRound()); // round 3: tops up to 4 at most
+  await page.evaluate(() => window.__ch6.endRound()); // round 3: the existing Curut keeps its turn
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: there are never more than 4 helpers at once`, hs.counts.alive === 4 && hs.counts.spawned === 4, JSON.stringify(hs.counts));
+  check(`bab6-fight ${tag}: later rounds cannot add a second Curut while the first is active`, hs.counts.alive === 1 && hs.counts.spawned === 1, JSON.stringify(hs.counts));
   await ch6Shot(page, sn('helpers'));
   // A charge hits Glen standing in its line.
   await page.evaluate(() => window.__superglen.health.fill());
@@ -10292,7 +10301,7 @@ async function bab6FightScenario(page, check, touch) {
   await page.evaluate((i) => window.__ch6.helperHit(i), h0.i);
   await d3Adv(page, 160);
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: the fifth hit tames it: it runs away and is gone (3 left), nobody hurt`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 3, JSON.stringify([hs.counts, hs.list[h0.i]]));
+  check(`bab6-fight ${tag}: the fifth hit tames the only Curut: it runs away and none remain`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 0, JSON.stringify([hs.counts, hs.list[h0.i]]));
   await page.evaluate(() => window.__ch6.helpers && 0);
   // ---- Perf: ring up, helpers around ----
   await page.evaluate(() => { window.__ch6.spawnHelpers(1); window.__ch6.setLevel(3); window.__ch6.slam(); });
@@ -11148,7 +11157,11 @@ async function battleScenario(page, check, touch) {
     } else if (boss === 'ch6') {
       await page.evaluate(() => window.__ch6.takeStar && window.__ch6.takeStar());
     } else {
-      await page.evaluate(() => window.__arena.tame(0));
+      await page.evaluate(() => {
+        const active = window.__arena.rats().filter((r) => r.active);
+        if (active.length !== 1) throw new Error('Exactly one Curut must own the current turn');
+        window.__arena.tame(active[0].i);
+      });
     }
     await d3Adv(page, 3);
     bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
