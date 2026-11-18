@@ -1943,12 +1943,6 @@ html.touch-ui:has(.dlg:not([hidden])) .city-toast {
   visibility: hidden;
 }
 
-/* Dedicated Curut encounter: camera is fixed, so zoom is intentionally hidden. */
-html.curut-arena .zoom-col {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
 .arena-return {
   position: absolute;
   left: calc(env(safe-area-inset-left) + 8px);

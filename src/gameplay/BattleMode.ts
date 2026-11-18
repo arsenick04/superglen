@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import '../battle.css';
 import type { AudioManager } from '../audio/AudioManager';
 import type { Sfx } from '../audio/Sfx';
-import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+import { CameraConfig, type ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import type { SaveStore } from '../core/Save';
 import type { GroundRings } from '../fx/GroundRings';
 import type { Player } from '../player/Player';
@@ -12,7 +12,7 @@ import type { Health } from './Health';
 
 /** Every number of the battle mode in one place. */
 export const BattleConfig = {
-  /** Entrance shot: seconds the camera sweeps onto the enemy and shows its name (skippable by any tap or key). */
+  /** Entrance shot: seconds the camera orbits Glen and shows the enemy name (skippable). */
   introTime: 2,
   /** The player cannot be hurt during the entrance shot plus this much (s). */
   introGrace: 0.4,
@@ -333,7 +333,7 @@ export class BattleMode {
     const { deps } = this;
     this.updateFocus();
 
-    // Entrance shot: a sweep over the enemy, then back to the lock-on.
+    // Entrance shot: a sweep around Glen, then back to the lock-on.
     if (this.introLeft > 0) {
       this.introLeft -= dt;
       const k = 1 - this.introLeft / BattleConfig.introTime;
@@ -405,7 +405,9 @@ export class BattleMode {
     // The yaw of "behind Glen on the line to the enemy", then swung to one side and back.
     const base = Math.atan2(p.x - f.x, p.z - f.z);
     const yaw = base + (stage === 0 ? 0.95 : -0.35);
-    cameraRig.setFraming(this.tmp.set(f.x, f.y + 0.6, f.z), { weight: stage === 0 ? 0.9 : 0.75, yaw, distance: stage === 0 ? 2.5 : 3.5, pitch: 0.2 });
+    // Keep Glen at the center even during the entrance sweep. The enemy
+    // supplies only the orbit direction; framing adds distance and pitch.
+    cameraRig.setFraming(this.tmp.copy(p), { weight: 0, yaw, distance: stage === 0 ? 2.5 : 3.5, pitch: 0.2 });
   }
 
   private endIntro(): void {
@@ -627,6 +629,13 @@ export class BattleMode {
       },
       get shouts() {
         return self.shoutEls.filter((e) => e.t > 0).length;
+      },
+      /** Glen's look target must stay at the center throughout battle. */
+      get glenNdc() {
+        const v = self.deps.player.visualPosition.clone();
+        v.y += CameraConfig.targetHeight;
+        v.project(self.deps.cameraRig.camera);
+        return { x: v.x, y: v.y, z: v.z };
       },
       /** The enemy's projected position: NDC x, y and whether it is in front of the camera. */
       get focusNdc() {

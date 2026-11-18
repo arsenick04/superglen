@@ -37,22 +37,18 @@ export class CurutArena implements Level {
     ctx.physics.addFixedCuboid({ x: 40, y: 0.5, z: 40 }, { x: MARKET.hub.x, y: -0.5, z: 0 });
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
-    // Double jump remains part of Superglen's movement. Free flight is
-    // disabled here because a fixed battle composition cannot follow him to
-    // the city's normal flight ceiling.
+    // Double jump remains available; this ground encounter keeps free flight disabled.
     ctx.game.setSkills({ laser: true, shield: true, fly: false });
     ctx.health.setShown(true);
     const arena = Combat.rat.arena;
-    ctx.cameraRig.setArenaPose([MARKET.hub.x, arena.cameraHeight, arena.cameraBack, MARKET.hub.x, arena.cameraLookY, arena.cameraLookZ], arena.cameraFov);
     document.documentElement.classList.add('curut-arena');
     ctx.onDispose(() => {
-      ctx.cameraRig.setArenaPose(null);
       ctx.health.setShown(false);
       document.documentElement.classList.remove('curut-arena');
       if (ctx.save.data.slot?.level === 'battle-curut') ctx.save.setSlot(null);
     });
     // Keep seven persistent rat identities, but stage their loops close enough
-    // for a single stable arena composition rather than a city-wide chase.
+    // for a compact encounter rather than a city-wide chase.
     const specs = RATS.map((r, i) => ({ ...r, cx: MARKET.hub.x + Math.sin(i * Math.PI * 2 / RATS.length) * arena.ratRingX, cz: Math.cos(i * Math.PI * 2 / RATS.length) * arena.ratRingZ, r: arena.ratLoopRadius }));
     this.rats = new MarketRats(ctx, {
       onTamed: (i) => {

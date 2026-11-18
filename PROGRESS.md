@@ -770,3 +770,16 @@ Setelah PR di-merge dan deploy selesai. Buka alamat biasa https://arsenick04.git
 1. **Chapter 3**: dengan save yang sudah menamatkan latihan, keluar dari Lab. Nino harus berseru "Cepat, ke pasar!" dan tikus ada di pasar.
 2. **Chapter 4**: temui Aara di sekolah, jawab 3 soal bahasa Inggris, baca papan di taman.
 3. **Akhir Chapter 4**: Sosok Misterius dan penutup di Lab.
+
+## Perbaikan kamera — 18 November 2026
+
+- `src/camera/ThirdPersonCamera.ts`: jarak default 5 → 2,5 m; `battleLook: 0` menjaga pusat pandang pada Glen, musuh menentukan arah orbit dan jarak mundur.
+- `src/gameplay/BattleMode.ts`: intro tetap mengorbit Glen, tidak mengalihkan pusat pandang ke musuh; tambah proyeksi Glen untuk tes.
+- `src/world/kota/CurutArena.ts`, `src/styles.css`: hapus pemasangan kamera tetap Curut, aktifkan kembali kontrol zoom touch.
+- `scripts/smoke-test.cjs`: uji jarak default 2,5 m, pusat Glen pada intro/delapan arah, kamera arena mengikuti perpindahan Glen dan zoom. Batas selisih meter zoom lama diganti rasio jarak karena default diperkecil 50%; clamp multiplier tetap 0,6–2. Tes komposisi tetap diganti tes follow sesuai instruksi pemilik proyek.
+- Build, check:reach, check:quiz lulus. Zoom desktop 10/10, zoom touch 12/12; Curut desktop 6/6, Curut touch 6/6 lulus. Semua pemeriksaan pusat Glen pada intro dan delapan arah lulus (tiga battle di touch; Ular/Rakus desktop dan Curut desktop diuji terpisah).
+- Suite battle lengkap belum hijau: desktop 44/46 (Tikus Rakus 61 draw call >60; timeout transisi Curut 30 s pada run gabungan, sementara grup Curut terpisah lulus). Touch 64/65 (HUD bintang bertumpuk dengan bubble Ular Melar). Batas performa/HUD tidak dilonggarkan. Pembanding terisolasi commit main `34ea93d` pada posisi Rakus yang sama mencatat 54 draw call/486.719 segitiga; kamera baru 61/667.732. Framing baru melihat lebih banyak geometri, masih di bawah batas segitiga 1.200.000. Pada touch Rakus 59 draw call. Dua catatan ini belum diperbaiki dalam tugas kamera.
+- Bukti visual: `test-results/battle-snake-2-fight.png`, `test-results/battle-rakus-2-fight.png`, `test-results/battle-touch.png`. Screenshot arena pada titik tertentu timeout di software renderer; assertion follow/zoom dan keluar arena tetap lulus. FPS perangkat nyata belum diukur (skenario headless menggunakan fps=0).
+- Chromium sistem digunakan melalui `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`; tanpa dependensi npm baru.
+
+Untuk dicoba: buka game di PC dan HP, reset zoom di pengaturan, lalu coba masuk arena Curut, berjalan, mengatur zoom, dan kembali ke kota.

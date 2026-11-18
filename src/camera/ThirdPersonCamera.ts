@@ -14,9 +14,8 @@ export const CameraConfig = {
   /** Radians of rotation per pixel of mouse movement (pointer locked). */
   mouseSensitivity: 0.0025,
   /** Default distance from the look target (m). */
-  // Phone review: 17% closer than the old framing, while preserving clear
-  // sight lines in the Lab. The manual close step reaches 3 m.
-  distance: 5,
+  // Close default framing; the saved manual zoom remains a multiplier.
+  distance: 2.5,
   /** Closest the camera may get when pulled in by walls (m). */
   minDistance: 1.2,
   /** Look target height above the capsule center (capsule center ~0.55 m, head top ~1.1 m). */
@@ -74,7 +73,7 @@ export const CameraConfig = {
 
   // --- Battle camera (BattleMode): lock-on that keeps the enemy in view ---
   /** How far the look target moves from Glen toward the enemy (0..1). */
-  battleLook: 0.42,
+  battleLook: 0,
   /** Extra pull-back (m): a base plus a share of the Glen-enemy distance, capped. */
   battleBack: 1.8,
   battleBackPerM: 0.5,
@@ -277,8 +276,8 @@ export class ThirdPersonCamera {
   }
 
   /**
-   * Lock-on: frame the enemy at `focus` (a live vector the caller keeps updating) together with the player: the camera orbits to stay
-   * behind Glen on the line to the enemy, a little further back and lower. `null` returns to the normal follow camera.
+   * Lock-on: keep Glen centered while the enemy at `focus` (a live vector)
+   * determines the orbit direction and pull-back. `null` restores normal follow.
    */
   setBattle(focus: THREE.Vector3 | null): void {
     this.battleFocus = focus;
@@ -379,7 +378,8 @@ export class ThirdPersonCamera {
         this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
       }
     }
-    // Battle lock-on: look partway toward the enemy, back off with the distance, orbit behind Glen on the line to it, lower pitch.
+    // Battle lock-on: keep the look target on Glen, back off with enemy distance,
+    // orbit behind Glen on the line to the enemy, and lower the pitch.
     const bf = this.battleFocus;
     this.battleBlend += ((bf ? 1 : 0) - this.battleBlend) * (1 - Math.exp(-c.battleBlendSharpness * dt));
     if (this.battleHold > 0) this.battleHold -= dt;

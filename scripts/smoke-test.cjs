@@ -9520,21 +9520,25 @@ async function curutArenaScenario(page, check, touch) {
     exit: document.querySelector('.arena-return')?.getBoundingClientRect().toJSON(),
   }));
   check(`curut-arena ${tag}: approaching a Curut enters a separate seven-rat encounter`, entered.level === 'battle-curut' && entered.arena === 'curut' && entered.controls && entered.rats === 7 && entered.cls, JSON.stringify(entered));
-  check(`curut-arena ${tag}: free-camera zoom is hidden and the return button remains on screen`, entered.zoom === 'hidden' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
+  check(`curut-arena ${tag}: follow-camera zoom is available and the return button remains on screen`, entered.zoom === 'visible' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
   await page.evaluate(() => {
     window.__superglen.setCameraYaw(Math.PI * 0.75);
     window.__superglen.placePlayer(130, 30);
-    window.__superglen.advance(12, true);
+    window.__arena.mute(true);
+    window.__superglen.advance(180, true);
   });
   const stable = await page.evaluate(() => ({ camera: { ...window.__superglen.camera }, player: { ...window.__superglen.player }, cameraYaw: window.__superglen.cameraYaw, steeringYaw: window.__superglen.steeringYaw }));
   const cameraShift = Math.hypot(stable.camera.x - entered.camera.x, stable.camera.y - entered.camera.y, stable.camera.z - entered.camera.z);
   const playerRadius = Math.hypot(stable.player.x - 93, stable.player.z);
-  check(`curut-arena ${tag}: battle camera and movement heading stay fixed after look input, and Glen stays inside`, cameraShift < 0.02 && Math.abs(stable.cameraYaw) < 0.001 && Math.abs(stable.steeringYaw) < 0.001 && playerRadius < 5.2, JSON.stringify({ cameraShift, playerRadius, entered: entered.camera, stable }));
-  const envelope = await page.evaluate(() => {
-    const a = window.__arena;
-    return [[-5, 0], [5, 0], [0, -5], [0, 5]].flatMap(([x, z]) => [0, 9].map((y) => a.project(93 + x, y, z)));
-  });
-  check(`curut-arena ${tag}: the full ground-to-max-jump envelope stays inside the fixed camera`, envelope.every((p) => p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98), JSON.stringify(envelope));
+  const centered = await page.evaluate(() => window.__superglen.battle.glenNdc);
+  check(`curut-arena ${tag}: camera follows Glen after relocation and keeps him centered inside the arena`, cameraShift > 1 && playerRadius < 5.2 && centered.z < 1 && Math.abs(centered.x) < 0.02 && Math.abs(centered.y) < 0.02, JSON.stringify({ cameraShift, playerRadius, centered }));
+  const arenaDistances = [];
+  for (const zoom of [0.6, 1, 2]) {
+    await page.evaluate((z) => { window.__superglen.zoom.set(z, true); window.__superglen.advance(180, true); }, zoom);
+    arenaDistances.push(await page.evaluate(() => { const g = window.__superglen; return Math.hypot(g.camera.x - g.player.x, g.camera.y - g.player.y, g.camera.z - g.player.z); }));
+  }
+  check(`curut-arena ${tag}: zoom changes the following battle camera distance`, arenaDistances[0] < arenaDistances[1] && arenaDistances[1] < arenaDistances[2], JSON.stringify(arenaDistances));
+  await page.evaluate(() => { window.__superglen.zoom.reset(); window.__superglen.advance(120, true); });
   await shot(page, `curut-arena-${touch ? 'touch' : 'desktop'}`);
   await page.evaluate(() => {
     const g = window.__superglen;
@@ -11059,6 +11063,8 @@ async function battleScenario(page, check, touch) {
     // Skip the intro by a tap / key.
     if (boss !== 'ch3') {
       await d3Adv(page, 20);
+      const introCenter = await page.evaluate(() => window.__superglen.battle.glenNdc);
+      check(`${L}: entrance sweep keeps Glen centered`, introCenter.z < 1 && Math.abs(introCenter.x) < 0.03 && Math.abs(introCenter.y) < 0.03, JSON.stringify(introCenter));
       await page.evaluate(() => window.__superglen.battle.skip());
       await d3Adv(page, 5);
       bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
@@ -11086,6 +11092,7 @@ async function battleScenario(page, check, touch) {
     }
     // ---- camera keeps the enemy in frame while Glen moves around ----
     const frames = [];
+    const glenFrames = [];
     for (let i = 0; i < 8; i++) {
       const ang = (i / 8) * Math.PI * 2;
       const fx = await page.evaluate(() => window.__superglen.battle.focus);
@@ -11094,8 +11101,10 @@ async function battleScenario(page, check, touch) {
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [px, pz]);
       await d3Adv(page, 150);
       frames.push(await ndc());
+      glenFrames.push(await page.evaluate(() => window.__superglen.battle.glenNdc));
     }
     check(`${L}: the camera keeps the enemy on screen from every side (|x|,|y| < 0.9)`, frames.every(inFrame), JSON.stringify(frames.map((f) => [+f.x.toFixed(2), +f.y.toFixed(2)])));
+    check(`${L}: Glen stays centered from every side`, glenFrames.every((p) => p.z < 1 && Math.abs(p.x) < 0.03 && Math.abs(p.y) < 0.03), JSON.stringify(glenFrames));
     await bshot(`${nm}-2-fight`);
     const pc = await calls();
     console.log(`   [${L}] battle view: ${pc.calls} draw calls, ${pc.tris} triangles`);
@@ -11164,6 +11173,8 @@ async function zoomScenario(page, check, touch) {
   await page.evaluate(() => window.__superglen.zoom.reset());
   await settle();
   const base = await dist();
+  const defaultDistance = await page.evaluate(() => { const g = window.__superglen; return Math.hypot(g.camera.x - g.player.x, g.camera.y - g.player.y - 0.85, g.camera.z - g.player.z); });
+  check(`zoom ${tag}: default distance from Glen's look target is 2.5 m`, Math.abs(defaultDistance - 2.5) < 0.05, String(defaultDistance));
   let z = await zv();
   check(`zoom ${tag}: default multiplier is 1`, Math.abs(z.v - 1) < 0.02, JSON.stringify(z));
   if (!touch) {
@@ -11172,7 +11183,7 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     const far = await dist();
-    check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base + 1, JSON.stringify(z));
+    check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base * 1.25, JSON.stringify(z));
     // Wheel input intentionally caps one event to three notches. Send several
     // real events to exercise the clamp instead of assuming one huge delta is
     // applied without the production safety cap.
@@ -11180,7 +11191,7 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     const near = await dist();
-    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.61 && near < base - 1.5, JSON.stringify([z, near]));
+    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.61 && near < base * 0.8, JSON.stringify([z, near]));
     await page.keyboard.press('Equal');
     await page.keyboard.press('Minus');
     await page.keyboard.press('Minus');
@@ -11500,6 +11511,7 @@ async function main() {
   try {
     await waitForServer(30000);
     browser = await chromium.launch({
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
       args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'],
     });
 
