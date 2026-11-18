@@ -123,12 +123,35 @@ export class Hangar {
         kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), ceil - 0.65, z], C.GOLD);
       }
     }
+    // A rounded red-gold portal makes the entrance read as part of the Barongsai
+    // building rather than another rectangular hangar opening (two tiny draw calls).
+    const portalRedMat = new THREE.MeshStandardMaterial({ color: C.DEEP_RED, roughness: 0.42 });
+    const portalGoldMat = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.3, metalness: 0.25 });
+    const portalRed = new THREE.Mesh(new THREE.TorusGeometry(2.72, 0.3, 8, 28, Math.PI), portalRedMat);
+    const portalGold = new THREE.Mesh(new THREE.TorusGeometry(2.72, 0.08, 6, 28, Math.PI), portalGoldMat);
+    portalRed.position.set(0, 3.65, maxZ - 0.04);
+    portalGold.position.set(0, 3.65, maxZ - 0.35);
+    portalRed.castShadow = true;
+    root.add(portalRed, portalGold);
+    ctx.onDispose(() => {
+      portalRed.geometry.dispose();
+      portalGold.geometry.dispose();
+      portalRedMat.dispose();
+      portalGoldMat.dispose();
+    });
     // Red training pennants and round lanterns soften the industrial shell.
     for (const s of [-1, 1]) for (let z = minZ + 7; z < maxZ - 2; z += 12) {
       kit.deco.box([0.08, 2.2, 1.65], [s * (maxX - 0.16), 6.1, z], C.RED);
       kit.deco.box([0.1, 0.12, 1.9], [s * (maxX - 0.12), 7.23, z], C.GOLD);
       kit.deco.sph(0.42, [s * (maxX - 0.55), 7.8, z], 0xff684f, [0.8, 1.15, 0.8]);
       kit.glow.sph(0.18, [s * (maxX - 0.48), 7.8, z], 0xffd46a);
+    }
+    // Five lightweight ceiling lanterns provide depth landmarks across the long room.
+    for (const z of [-4, -13, -22, -31, -40]) {
+      kit.deco.sph(0.48, [0, ceil - 1.85, z], C.RED, [0.82, 1.18, 0.82]);
+      kit.deco.cyl(0.2, 0.14, [0, ceil - 1.28, z], C.GOLD);
+      kit.deco.cyl(0.22, 0.12, [0, ceil - 2.43, z], C.GOLD);
+      kit.glow.sph(0.2, [0, ceil - 1.85, z], 0xffb347);
     }
 
     // ---- High windows (sky-blue glass) ----
