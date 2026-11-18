@@ -863,3 +863,12 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Tikus Rakus ditahan selama seluruh interlude. Save/reload mengutamakan Lab atau rumah sesuai checkpoint; slot lama tidak dapat melompati jeda. Tautan preview chapter tetap langsung.
 - Build, check:quiz, probe state/reload, dan diff check lulus. Browser tidak dijalankan.
 - Setelah ini: PR terpisah membuka latihan Lompat Barongsai tiga tingkat; baru sesudah latihan itu gerbang Tikus Rakus dibuka.
+
+
+## Transisi battle langsung dan arena lebih jelas — 18 November 2026
+
+- Chapter 3 langsung memuat arena Curut ketika fase chase dimulai/resume; Glen tidak perlu berjalan menyeberangi Pasar.
+- Chapter 5 dan Chapter 6 menempatkan Glen langsung di titik arena lalu memulai intro battle. Lingkaran visual diturunkan menjadi garis batas tipis di tanah; batas logis tetap aktif dan vignette battle diperkuat agar kota tidak mendominasi pandangan.
+- Saat scene perayaan Ular dimuat, Glen langsung spawn di area Lab bersama Nino, bukan di pintu depan; Aara diposisikan pada ketinggian lantai Lab (`LAB_FLOOR`) agar tidak mengambang.
+- Logo Superglen sudah tersedia di layar awal (`public/img/logo.webp`) dengan fallback teks; tidak perlu perubahan kode tambahan.
+- Dua video cinematic belum ada sebagai file di workspace, sehingga integrasi video + letterbox menunggu attachment yang dapat diakses. Browser tidak dijalankan.

@@ -27,8 +27,8 @@ export const BattleConfig = {
   shakeSlam: { amp: 0.22, time: 0.4 },
   shakeLunge: { amp: 0.1, time: 0.25 },
   shakeStar: { amp: 0.2, time: 0.45 },
-  /** The glowing arena ring: height of its curtain (m), the soft edge (m) and how hard the edge pushes back (m/s). */
-  ringHeight: 3.2,
+  /** A low glowing boundary on the ground; the player boundary is logical, not a tall visual curtain. */
+  ringHeight: 0.12,
   edgeMargin: 3.2,
   edgePush: 7,
   /** City people: run away from this far (m) from the fight's centre, stand `watch` m away, cars stop `stop` m away. */

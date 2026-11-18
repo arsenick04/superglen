@@ -13,6 +13,8 @@ export interface Chapter6Hooks {
   setGoal(goal: { x: number; z: number } | null): void;
   /** A resident's mission may not run during the chapter: drop the running one. */
   dropMission(): void;
+  /** Place Glen in the isolated battle staging point before the intro starts. */
+  placePlayer(x: number, z: number, yaw: number): void;
   /** City life (cars, people) is not drawn inside this circle while the fight is on (null: everywhere again). */
   clearZone(zone: { x: number; z: number; r: number } | null): void;
   /** Chapter 6 is over (the city is free again, the residents offer missions). */
@@ -133,9 +135,17 @@ export class Chapter6 {
         await ctx.dialog.say(L.glenSiap);
         this.buildBoss();
         this.setStep('city');
-        this.arenaGoal();
+        this.beginBattleAtArena();
+      } else if (this.step === 'city' || this.step === 'fight') {
+        this.beginBattleAtArena();
       }
     });
+  }
+
+  private beginBattleAtArena(): void {
+    this.hooks.placePlayer(RAKUS_ARENA.x, RAKUS_ARENA.z + 9, Math.PI);
+    if (this.step === 'city') this.runIntro();
+    else this.engage();
   }
 
   private arenaGoal(): void {

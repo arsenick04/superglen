@@ -156,7 +156,12 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (arrival === 'labEntrance') {
+      if (ctx.save.data.interlude === 'snake_lab') {
+        // The celebration is an interior scene: arrive beside Nino, not in the front-door corridor.
+        this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
+        this.atmosphere.snap(2);
+        ctx.game.setPlayerMode('superglen', false);
+      } else if (arrival === 'labEntrance') {
         this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
         this.atmosphere.snap(1);
       } else {

@@ -10,8 +10,8 @@
   opacity: 0;
   transition: opacity 0.6s ease;
   background:
-    radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 42%, rgba(120, 12, 20, 0.3) 70%, rgba(60, 2, 12, 0.62) 100%),
-    linear-gradient(rgba(255, 120, 50, 0.07), rgba(255, 120, 50, 0.07));
+    radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 34%, rgba(80, 8, 20, 0.48) 68%, rgba(25, 2, 12, 0.82) 100%),
+    linear-gradient(rgba(255, 120, 50, 0.09), rgba(255, 120, 50, 0.09));
 }
 html.battle .battle-fx {
   opacity: 1;

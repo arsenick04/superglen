@@ -72,6 +72,7 @@ export class LabVisit {
     const { seq, dialog, cameraRig, fx } = ctx;
     this.scene = true;
     this.aara.place(lab.ninoPos.x - 2.2, lab.ninoPos.z + 2.4, Math.PI);
+    this.aara.group.position.y = LAB_FLOOR;
     ctx.audio.preload(ctx.dialog.idsWithPrefix('bab5_'));
     ctx.seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
