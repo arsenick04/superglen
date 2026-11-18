@@ -1,4 +1,5 @@
 import { districtAt, type Poi } from './CityData';
+import { startGate } from '../../core/StartGate';
 
 /**
  * A small name pill at the top of the screen: the district you walk into ("Pasar", with its colour dot), or a place you come
@@ -61,10 +62,11 @@ export class CityHud {
   }
 
   get text(): string {
-    return this.shown ? this.current : '';
+    return startGate.started && this.shown ? this.current : '';
   }
 
   update(dt: number, x: number, z: number): void {
+    if (!startGate.started) return; // Keep the opening city title's timer for the first actual play seconds.
     const d = districtAt(x, z);
     let poi = '';
     for (const p of this.pois) {
