@@ -26,6 +26,11 @@ export class CinematicPlayer {
     this.layer.append(this.video, top, bottom, this.skip);
     root.appendChild(this.layer);
     this.skip.addEventListener('click', () => this.finish());
+    this.skip.addEventListener('pointerup', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.finish();
+    });
   }
 
   play(id: CinematicId): Promise<void> {
