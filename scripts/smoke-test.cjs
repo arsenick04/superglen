@@ -11039,11 +11039,30 @@ async function battleScenario(page, check, touch) {
     if (boss === 'ch5') await ch5Stand(page, A.x + 30, A.z);
     else if (boss === 'ch6') await ch6Stand(page, A.x, A.z + 30);
     else {
-      await d3Go(page, 93, 12, 30);
-      await d3Adv(page, 400);
-      const r0 = (await ch3Rats(page))[0];
-      await page.evaluate(([x, z]) => { window.__ch3.setArenaEnabled(true); window.__superglen.placePlayer(x, z); }, [r0.x, r0.z]);
-      await d3Adv(page, 4);
+      // Finish incidental arrival lines before testing the transition, with city attacks muted.
+      // A fixed 400-frame combat prelude can leave Glen resting; it is not a transition prerequisite.
+      await page.evaluate(() => window.__ch3.mute(true));
+      await d3Go(page, 93, 12, 2);
+      for (let i = 0; i < 4 && await page.evaluate(() => window.__superglen.dialog.open); i++) {
+        await d3Adv(page, 22); // the dialog's 0.35 s tap guard
+        await d3Press(page, 'e');
+        await d3Adv(page, 12); // let the bubble's idle hide finish
+      }
+      const ready = await page.evaluate(() => {
+        const g = window.__superglen;
+        const ch3 = window.__ch3;
+        const state = { step: ch3.step(), arrived: ch3.arrived(), controls: g.controlsEnabled, resting: g.health.resting, loading: g.loading, dialog: g.dialog.open };
+        if (state.step !== 'chase' || !state.arrived || !state.controls || state.resting || state.loading || state.dialog) return { ...state, requested: false };
+        const rat = ch3.rats().find((r) => r.hp > 0 && Math.hypot(r.x - 93, r.z) < 22);
+        if (!rat) throw new Error('battle rats: no active rat near the market crossing');
+        ch3.setArenaEnabled(true);
+        g.placePlayer(rat.x, rat.z);
+        g.advance(4, false);
+        return { ...state, requested: g.loading || g.level === 'battle-curut', target: rat, player: { ...g.player } };
+      });
+      if (!ready.requested) {
+        throw new Error('battle rats: transition not requested after four fixed steps: ' + JSON.stringify(ready));
+      }
       await page.waitForFunction(() => window.__superglen.level === 'battle-curut' && !window.__superglen.loading && !!window.__arena, null, { timeout: 30000 });
       await page.evaluate(() => { window.__arena.mute(true); window.__superglen.advance(20, true); });
     }
@@ -11075,6 +11094,13 @@ async function battleScenario(page, check, touch) {
     h = await hudState();
     const ov = await overlaps();
     check(`${L}: the battle HUD overlaps nothing and stays on screen (${ov.n} boxes)`, ov.bad.length === 0 && ov.out.length === 0 && h.bar, JSON.stringify([ov, h.bar]));
+    if (boss !== 'ch3') {
+      const stars = await page.evaluate(() => {
+        const r = document.querySelector('.ch5-stars.show').getBoundingClientRect();
+        return { center: r.left + r.width / 2, screen: innerWidth / 2 };
+      });
+      check(`${L}: boss stars stay centered under the banner, clear of the call-out column`, Math.abs(stars.center - stars.screen) < 1, JSON.stringify(stars));
+    }
     if (boss !== 'ch3') {
       // The ring: exists, and the wall arms once Glen is inside.
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [A.x + 6, A.z]);

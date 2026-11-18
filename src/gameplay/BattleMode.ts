@@ -497,6 +497,9 @@ export class BattleMode {
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      // Both faces still render. Additive blending is order-independent and the ring writes no depth,
+      // so a single two-sided draw preserves its glow without Three's separate back/front passes.
+      forceSinglePass: true,
       blending: THREE.AdditiveBlending,
       fog: false,
       toneMapped: false,
