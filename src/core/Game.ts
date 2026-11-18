@@ -300,6 +300,7 @@ export class Game {
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
   private readonly cinematics: CinematicPlayer;
+  private openingPending = false;
   private readonly walker: WalkSource;
   private readonly padSource: GamepadSource;
   private readonly padUi: PadUi;
@@ -487,6 +488,15 @@ export class Game {
     this.input.addSource(this.walker);
     this.save = new SaveStore();
     if (migrateSave(this.save)) this.save.persist();
+    // The opening is a one-time introduction, not a loading animation for every refresh.
+    // A reset query deliberately clears the marker so the introduction can be replayed.
+    try {
+      const key = 'superglen.opening-seen.v1';
+      if (new URLSearchParams(window.location.search).get('reset') === '1') localStorage.removeItem(key);
+      this.openingPending = !this.save.previewChapter && localStorage.getItem(key) !== '1';
+    } catch {
+      this.openingPending = !this.save.previewChapter;
+    }
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
@@ -597,6 +607,9 @@ export class Game {
         // asynchronous, so waiting until it ends would be rejected by mobile Safari.
         this.synth.unlock();
         this.audio.unlock();
+        if (!this.openingPending) return Promise.resolve();
+        this.openingPending = false;
+        try { localStorage.setItem('superglen.opening-seen.v1', '1'); } catch { /* storage may be blocked */ }
         return this.cinematics.play('open');
       };
     }
