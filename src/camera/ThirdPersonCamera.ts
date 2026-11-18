@@ -14,9 +14,9 @@ export const CameraConfig = {
   /** Radians of rotation per pixel of mouse movement (pointer locked). */
   mouseSensitivity: 0.0025,
   /** Default distance from the look target (m). */
-  // Phone review: 17% closer than the old framing, while preserving clear
-  // sight lines in the Lab. The manual close step reaches 3 m.
-  distance: 5,
+  // Owner review: Glen was too small on the phone. 4.2 m (was 5 m) makes him ~19% larger on screen
+  // at zoom 1. Save.ts migrates zoom values chosen against the old 5 m.
+  distance: 4.2,
   /** Closest the camera may get when pulled in by walls (m). */
   minDistance: 1.2,
   /** Look target height above the capsule center (capsule center ~0.55 m, head top ~1.1 m). */

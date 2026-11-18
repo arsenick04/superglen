@@ -705,6 +705,7 @@ export class Game {
       get value() { return self0.cameraRig.zoomNow; },
       get target() { return self0.cameraRig.zoomTarget; },
       get saved() { return self0.save.data.settings.zoom; },
+      get baseDistance() { return CameraConfig.distance; },
       set: (z: number, instant = true) => self0.cameraRig.setZoom(z, instant),
       reset: () => self0.resetZoom(),
     };

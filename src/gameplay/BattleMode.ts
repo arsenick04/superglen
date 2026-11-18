@@ -630,8 +630,20 @@ export class BattleMode {
       },
       /** The enemy's projected position: NDC x, y and whether it is in front of the camera. */
       get focusNdc() {
+        self.deps.cameraRig.camera.updateMatrixWorld();
         const v = new THREE.Vector3(self.focusPos.x, self.focusPos.y, self.focusPos.z).project(self.deps.cameraRig.camera);
         return { x: v.x, y: v.y, z: v.z };
+      },
+      /** Glen's head, feet and center projected (NDC) with the camera as it is right now. */
+      get playerNdc() {
+        const cam = self.deps.cameraRig.camera;
+        cam.updateMatrixWorld();
+        const p = self.deps.player.visualPosition;
+        const pr = (dy: number) => {
+          const v = new THREE.Vector3(p.x, p.y + dy, p.z).project(cam);
+          return { x: v.x, y: v.y, z: v.z };
+        };
+        return { head: pr(0.55), feet: pr(-0.55), mid: pr(0) };
       },
       get focus() {
         return { x: self.focusPos.x, y: self.focusPos.y, z: self.focusPos.z };

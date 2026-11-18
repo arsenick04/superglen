@@ -11239,6 +11239,17 @@ async function zoomScenario(page, check, touch) {
   await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
   z = await zv();
   check(`zoom ${tag}: after a reload the zoom is back (${z.v.toFixed(2)})`, Math.abs(z.v - 0.8) < 0.02, JSON.stringify(z));
+  // Default distance and migration of zoom values chosen against the old 5 m default.
+  check(`zoom ${tag}: the default camera distance is 4.2 m (was 5)`, Math.abs((await page.evaluate(() => window.__superglen.zoom.baseDistance)) - 4.2) < 1e-6, '');
+  for (const [old, want] of [[1.5, 1.5 * 5 / 4.2], [1, 1]]) {
+    await page.evaluate((o) => { const d = JSON.parse(localStorage.getItem('superglen.save.v1')); d.settings.zoom = o; delete d.settings.zoomBase; localStorage.setItem('superglen.save.v1', JSON.stringify(d)); }, old);
+    await page.goto(URL + '?level=kota&fps=0');
+    await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
+    z = await zv();
+    check(`zoom ${tag}: an old saved zoom ${old} is migrated to ${want.toFixed(3)}`, Math.abs(z.t - want) < 0.01, JSON.stringify(z));
+  }
+  await page.evaluate(() => window.__superglen.zoom.set(0.8, true));
+  await d3Adv(page, 90);
   // Reset in the settings panel.
   await sleep(600);
   if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
@@ -11264,6 +11275,70 @@ async function zoomScenario(page, check, touch) {
     res[zz] = { d: await dist(), view: await inView() };
   }
   check(`zoom ${tag}: in battle the camera distance grows with the zoom (${JSON.stringify(res)}) and the boss stays in view`, res[0.6].d < res[1].d && res[1].d < res[2].d && Object.values(res).every((r) => r.view), JSON.stringify(res));
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await battleCamProbe(page, check, touch, 'zoom');
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
+// ---- Battle camera lock: a scripted ~10 s fight (walk, two jumps, knock-back) must not snap the camera and must keep Glen and the enemy framed ----
+async function battleCamProbe(page, check, touch, group) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vh = touch ? 390 : 720;
+  await ch3Open(page, ch5Save({ bab5: { step: 'fight' } }), touch);
+  await ch5Stand(page, -72.5 + 30, -72.5);
+  await d3Adv(page, 60);
+  await page.evaluate(() => window.__superglen.placePlayer(-72.5 + 7, -72.5));
+  await d3Adv(page, 30);
+  await page.evaluate(() => window.__superglen.battle.active && window.__superglen.battle.skip());
+  await d3Adv(page, 120);
+  await page.evaluate(() => window.__superglen.health.fill());
+  const samples = [];
+  const take = async (key) => {
+    const r = await page.evaluate(() => {
+      const g = window.__superglen;
+      const n = g.battle.playerNdc;
+      return { c: [g.camera.x, g.camera.y, g.camera.z], p: n, e: g.battle.focusNdc, w: g.battle.camWeight, act: g.battle.active, air: g.airHeight };
+    });
+    samples.push({ ...r, key });
+  };
+  const hold = async (k, f) => { await page.keyboard.down(k); for (let i = 0; i < f; i++) { await d3Adv(page, 1); await take(); } await page.keyboard.up(k); };
+  const wait = async (f, mid) => { for (let i = 0; i < f; i++) { await d3Adv(page, 1); await take(); if (mid && i % 60 === 0) await page.evaluate(() => window.__superglen.health.fill()); } };
+  await take();
+  await wait(40);
+  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space');
+  await wait(70);
+  await hold('KeyD', 60);
+  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space');
+  await wait(14);
+  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space'); // double jump
+  await wait(60);
+  await hold('KeyA', 60);
+  await hold('KeyW', 50);
+  await hold('KeyS', 50);
+  await wait(120, true);
+  let maxStep = 0, maxAt = 0, maxAir = 0, worstGlen = 0, enemyOut = 0, headOut = 0, minH = 1e9, maxH = 0;
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1].c, b = samples[i].c;
+    const d = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    if (d > maxStep) { maxStep = d; maxAt = i; }
+  }
+  for (const s of samples) {
+    if (s.air > maxAir) maxAir = s.air;
+    const m = Math.max(Math.abs(s.p.mid.x), Math.abs(s.p.mid.y));
+    worstGlen = Math.max(worstGlen, m);
+    if (Math.abs(s.p.head.y) > 0.98 || Math.abs(s.p.feet.y) > 0.98 || Math.abs(s.p.head.x) > 0.98 || s.p.head.z > 1) headOut++;
+    if (!(s.e.z < 1 && Math.abs(s.e.x) < 0.98 && Math.abs(s.e.y) < 0.98)) enemyOut++;
+    const hpx = (s.p.head.y - s.p.feet.y) * vh / 2;
+    minH = Math.min(minH, hpx); maxH = Math.max(maxH, hpx);
+  }
+  if (process.env.CAMDUMP) for (let i = Math.max(1, maxAt - 6); i < maxAt + 6; i++) console.log('   dump', i, samples[i].c.map((v) => v.toFixed(2)).join(','), 'air', samples[i].air.toFixed(2), 'p', samples[i].p.mid.x.toFixed(2), samples[i].p.mid.y.toFixed(2));
+  const first = samples[10];
+  const gh = (first.p.head.y - first.p.feet.y) * vh / 2;
+  console.log(`   [${group} ${tag}] camera step max ${maxStep.toFixed(4)} m at sample ${maxAt}/${samples.length}, Glen height ${gh.toFixed(1)} css px (min ${minH.toFixed(1)}, max ${maxH.toFixed(1)}), worst |mid ndc| ${worstGlen.toFixed(3)}, peak air ${maxAir.toFixed(2)}, enemy off-screen ${enemyOut}, glen clipped ${headOut}`);
+  check(`${group} ${tag}: scripted fight (${samples.length} frames, jumps + knock-back): the lock-on stays engaged`, samples.every((s) => s.act) && samples.slice(5).every((s) => s.w > 0.9), JSON.stringify(samples.filter((s) => !s.act || s.w <= 0.9).slice(0, 2)));
+  check(`${group} ${tag}: battle camera never snaps (largest step ${maxStep.toFixed(4)} m per fixed step <= 0.12)`, maxStep <= 0.12, `${maxStep} at ${maxAt}`);
+  check(`${group} ${tag}: Glen stays in the central 80% of the view (worst ${worstGlen.toFixed(2)} <= 0.8), head and feet on screen during ${maxAir.toFixed(1)} m of jumps`, worstGlen <= 0.8 && headOut === 0 && maxAir > 0.6, `${worstGlen} ${headOut} air ${maxAir}`);
+  check(`${group} ${tag}: the enemy stays on screen through the whole scripted fight`, enemyOut === 0, String(enemyOut));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 

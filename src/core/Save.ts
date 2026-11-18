@@ -1,4 +1,5 @@
 import type { PlayerMode } from '../player/PlayerConfig';
+import { CameraConfig } from '../camera/ThirdPersonCamera';
 import { Parkour } from '../config/parkour';
 import { Combat } from '../config/combat';
 import { CATEGORIES, isCategory, type Category } from '../quiz/types';
@@ -15,6 +16,8 @@ import { CATEGORIES, isCategory, type Category } from '../quiz/types';
  */
 export const SAVE_KEY = 'superglen.save.v1';
 export const SAVE_VERSION = 1;
+/** Camera distance (m) the default zoom had before the owner asked for a closer view. */
+const LEGACY_CAMERA_DISTANCE = 5;
 
 export interface SaveData {
   version: number;
@@ -32,6 +35,8 @@ export interface SaveData {
     reduceShake: boolean;
     /** Camera zoom multiplier chosen by the child (1 = default distance). */
     zoom: number;
+    /** Default camera distance the zoom was chosen against (absent in old saves = 5 m). */
+    zoomBase: number;
     /** Sound on/off (voice, effects and the synthesized drum; off also silences the music). */
     sound: boolean;
     /** Background music on/off (default on). */
@@ -135,7 +140,7 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, reduceShake: false, zoom: 1, sound: true, music: true, musicVol: 1, sfxVol: 1 },
+    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, reduceShake: false, zoom: 1, zoomBase: CameraConfig.distance, sound: true, music: true, musicVol: 1, sfxVol: 1 },
     slot: null,
     discovered: { lab: false },
     where: '',
@@ -222,7 +227,14 @@ function sanitize(raw: unknown): SaveData {
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.easyFight === 'boolean') out.settings.easyFight = st.easyFight;
     if (typeof st.reduceShake === 'boolean') out.settings.reduceShake = st.reduceShake;
-    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) out.settings.zoom = Math.max(0.6, Math.min(2, st.zoom));
+    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) {
+      let z = st.zoom;
+      // Saves from before the closer default (zoomBase missing) chose their zoom against LEGACY_CAMERA_DISTANCE:
+      // untouched (1) follows the new default, a chosen value keeps the same absolute distance.
+      const base = typeof st.zoomBase === 'number' && Number.isFinite(st.zoomBase) ? st.zoomBase : LEGACY_CAMERA_DISTANCE;
+      if (Math.abs(z - 1) > 0.005 && Math.abs(base - CameraConfig.distance) > 1e-6) z = (z * base) / CameraConfig.distance;
+      out.settings.zoom = Math.max(0.6, Math.min(2, z));
+    }
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
     if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
@@ -344,6 +356,7 @@ export class SaveStore {
   setZoom(z: number): void {
     if (this.data.settings.zoom === z) return;
     this.data.settings.zoom = z;
+    this.data.settings.zoomBase = CameraConfig.distance;
     this.persist();
   }
 
