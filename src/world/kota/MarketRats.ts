@@ -175,6 +175,7 @@ export class MarketRats {
   private nextIn = -1;
   /** Test: no rat starts an attack by itself. */
   muted = false;
+  private combatEnabled = true;
   private readonly hpMax: number;
   private readonly easy: boolean;
   /** A second rat that joins the attack of the first one (index, seconds until it starts); -1 none. */
@@ -331,7 +332,7 @@ export class MarketRats {
     if (sequential) this.revealNext();
     // Landing stomps tame a rat inside the stomp radius (Superglen).
     ctx.player.onStomp((e) => {
-      if (this.disposed) return;
+      if (this.disposed || !this.combatEnabled) return;
       for (let i = 0; i < this.n; i++) {
         if (this.st[i] >= ST_DIZZY) continue;
         if (Math.hypot(this.rx[i] - e.x, this.rz[i] - e.z) < e.radius + 0.4 && Math.abs(e.y - GROUND) < 3) {
@@ -364,7 +365,7 @@ export class MarketRats {
   private headContact(from: FeetPoint, to: FeetPoint): number {
     this.headCandidate = -1;
     const { ctx } = this;
-    if (this.disposed || !this.shown || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting) return Infinity;
+    if (this.disposed || !this.combatEnabled || !this.shown || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting) return Infinity;
     let first = Infinity;
     for (let i = 0; i < this.n; i++) {
       if (this.st[i] >= ST_DIZZY || this.hp[i] === 0) continue;
@@ -390,6 +391,19 @@ export class MarketRats {
   /** All seven are tamed (the chase is won). */
   get allTamed(): boolean {
     return this.tamedCount >= this.n;
+  }
+
+  /** City staging stays harmless; the test-only city-mechanics path can explicitly enable it. */
+  setCombatEnabled(on: boolean): void {
+    this.combatEnabled = on;
+    if (!on) this.assistIdx = -1;
+    for (let i = 0; i < this.n; i++) {
+      this.targets[i].enabled = on && this.st[i] < ST_DIZZY;
+      if (!on) {
+        this.ctx.projectiles.clearFrom(this.aim[i]);
+        if (this.st[i] === ST_WIND || this.st[i] === ST_CHARGE || this.st[i] === ST_RECOVER || this.st[i] === ST_STUN) this.st[i] = ST_BACK;
+      }
+    }
   }
 
   /** Horizontal distance from (x, z) to the nearest rat that is still around (Infinity: none). */
@@ -496,7 +510,7 @@ export class MarketRats {
 
   /** Tame rat i (laser or stomp): dizzy stars, boing, the food falls, then it runs down the drain. */
   tame(i: number): void {
-    if (this.st[i] >= ST_DIZZY) return;
+    if (!this.combatEnabled || this.st[i] >= ST_DIZZY) return;
     const { ctx } = this;
     this.st[i] = ST_DIZZY;
     this.timer[i] = 0;
@@ -555,6 +569,7 @@ export class MarketRats {
 
   /** A laser shot reached rat i. Far away it may hop aside (the shot misses); otherwise it is one hit. */
   private laserHit(i: number, h: HitInfo): void {
+    if (!this.combatEnabled) return;
     this.lasers++;
     const s = this.st[i];
     if (s >= ST_DIZZY) return;
@@ -578,7 +593,7 @@ export class MarketRats {
 
   /** One hit (laser, stomp or a crumb sent back): the last one tames it, the others only make it dizzy for a moment. */
   hit(i: number): void {
-    if (this.st[i] >= ST_DIZZY) return;
+    if (!this.combatEnabled || this.st[i] >= ST_DIZZY) return;
     if (this.hp[i] > 1) {
       this.hp[i]--;
       this.hitsTaken++;
@@ -601,6 +616,7 @@ export class MarketRats {
 
   /** Start an attack: a charge when the child is near, crumbs from farther away. Every attack has a visible wind-up first. */
   private beginAttack(i: number, dp: number): void {
+    if (!this.combatEnabled) return;
     const pl = this.ctx.player.position;
     this.attacks++;
     this.gap = Combat.rat.globalGap;
@@ -661,6 +677,7 @@ export class MarketRats {
 
   /** The child is touched (charge) or hit (crumb): `Health` decides between a hit, a shield block and the safe seconds. */
   private hurtGlenAt(x: number, z: number, i: number): 'hit' | 'blocked' | 'ignored' {
+    if (!this.combatEnabled) return 'ignored';
     const r = this.ctx.health.hurt(x, z);
     if (r === 'hit') this.hurtGlen++;
     else if (r === 'blocked') {
@@ -683,7 +700,7 @@ export class MarketRats {
     const pl = ctx.player.position;
     const C = Combat.rat;
     this.gap = Math.max(0, this.gap - dt);
-    const calm = this.muted || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
+    const calm = !this.combatEnabled || this.muted || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     const feet = pl.y - 0.55;
     if (this.nextIn >= 0) {
       this.nextIn -= dt;
@@ -844,7 +861,7 @@ export class MarketRats {
     if (next < 0) return;
     this.st[next] = ST_LOOP;
     this.cool[next] = Combat.rat.entryCooldown;
-    this.targets[next].enabled = true;
+    this.targets[next].enabled = this.combatEnabled;
   }
 
   private turn(from: number, to: number, dt: number): number {

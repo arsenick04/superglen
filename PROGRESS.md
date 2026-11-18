@@ -836,3 +836,12 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - .city-toast disembunyikan sebelum .game-started. CityHud tidak menghitung mundur durasi label sebelum StartGate dimulai dan getter teks kosong sebelum mulai; judul kota tetap mendapat durasi normal setelah ketukan pertama.
 - Typecheck, build dan diff check lulus. Review independen agen stabilisasi dan pemeriksaan agen utama menyetujui patch tanpa temuan penghalang. Pengujian browser/screenshot ditunda sesuai keputusan pemilik; tampilan akhir dicoba pemilik sendiri.
 - Audisi suara Glen dikerjakan terpisah melalui ElevenLabs Creative Studio: Chinyaku ditolak pemilik karena pengucapan Indonesia kurang alami; satu sampel honeypie (wanita Indonesia, youthful) sedang menunggu pilihan pemilik. Tidak mengganti suara produksi atau membuat ulang seluruh klip sebelum kandidat dipilih. Biaya dua audisi tercatat 95 + 126 = 221 kredit.
+
+
+## Transisi battle langsung saat memasuki area — 18 November 2026
+
+- Chapter 3 memicu perpindahan ke arena begitu Glen memasuki distrik Pasar, sebelum Curut staging, laser, atau fase pemain sempat berjalan. Curut kota tidak dapat ditarget, menyerang, atau menerima hit selama staging.
+- Setelah arena selesai, Glen kembali di jalan barat di luar batas Pasar; langkah cerita yang sudah menang kembali ke pusat tanpa memicu pertarungan lagi.
+- Chapter 5 dan 6 langsung menampilkan mode battle saat Glen memasuki area Ular/Rakus. Bos dan pendamping tetap nonaktif selama dialog, intro masuk, serta intro ulang setelah kembali ke arena.
+- Probe non-browser memeriksa batas distrik jauh dari posisi Curut, staging tanpa damage, urutan transisi sebelum tick combat, titik kembali, aktivasi intro/reentry, dan pembersihan proyektil milik musuh. Typecheck, build, check:reach dan check:quiz lulus; dua review independen tidak menemukan penghalang.
+- Pengujian browser tidak dijalankan sesuai keputusan pemilik. Coba manual Chapter 3 melalui `?chapter=3`: saat menginjak distrik Pasar harus langsung berpindah ke battle sebelum sempat menembak Curut.

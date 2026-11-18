@@ -181,6 +181,11 @@ export class BattleMode {
     return this.spec !== null;
   }
 
+  /** Combat waits until the entrance sweep has finished or the child skipped it. */
+  get entering(): boolean {
+    return this.introLeft > 0;
+  }
+
   get id(): string {
     return this.spec?.id ?? '';
   }

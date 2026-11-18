@@ -22,10 +22,6 @@ export interface Chapter6Hooks {
 /** Chapter 6 steps. '' = not started; over when 'bab6' is in `chaptersDone`. */
 export type Ch6Step = '' | 'city' | 'fight';
 
-/** The big rat is met when the child is this close to the arena (m); farther than `LOSE` the fight pauses. */
-const MEET = 32;
-const LOSE = 50;
-
 /**
  * CHAPTER 6 "Tikus Rakus" (enemy 3). Built by KotaLevel when Chapter 5 is done and Chapter 6 is not.
  *
@@ -233,9 +229,9 @@ export class Chapter6 {
     this.engaged = true;
     if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
-    this.boss.setEnabled(true);
+    this.boss.setEnabled(false);
     this.boss.showHud(true);
-    if (this.helpers) this.helpers.enabled = true;
+    if (this.helpers) this.helpers.enabled = false;
     ctx.objectives.clear();
     const b = this.boss;
     ctx.battle.enter({
@@ -252,6 +248,7 @@ export class Chapter6 {
     this.engaged = false;
     this.boss?.setEnabled(false);
     this.boss?.showHud(false);
+    if (this.helpers) this.helpers.enabled = false;
     this.helpers?.clear();
     this.ctx.battle.exit();
     this.ctx.game.setTransformAllowed(true);
@@ -264,23 +261,24 @@ export class Chapter6 {
     this.introScene = true;
     const { ctx } = this;
     const { seq, dialog, cameraRig } = ctx;
+    // The battle HUD/camera/music begin at the boundary, before the story dialogue.
+    ctx.game.setControlsEnabled(false);
+    this.engage();
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
-      const b = this.boss as RakusBoss;
       ctx.game.debugInfo.ch6Scene = 'intro';
       this.introSeen = true;
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
-      cameraRig.setFraming(this.tmp.set(b.x, 1.4, b.z), { weight: 0.5, distance: 9 });
       await dialog.say(L.rakusMakan, { lockControls: true });
       await dialog.say(L.glenKembali, { lockControls: true });
       await dialog.say(L.rakusRaja, { lockControls: true });
       await dialog.say(L.ninoPola, { lockControls: true });
       cameraRig.setFraming(null);
       this.setStep('fight');
+      this.introScene = false;
       ctx.game.setControlsEnabled(true);
-      this.engage();
       ctx.game.debugInfo.ch6Scene = 'fight';
     });
   }
@@ -361,12 +359,15 @@ export class Chapter6 {
       const b = this.boss;
       if (b && !this.tamedScene) {
         const d = Math.hypot(p.x - b.cx, p.z - b.cz);
-        if (!this.engaged && d < MEET && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
+        if (!this.engaged && d <= Combat.rakus.areaEntryRadius && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
           if (this.step === 'city') this.runIntro();
           else this.engage();
-        } else if (this.engaged && d > LOSE) {
+        } else if (this.engaged && d > Combat.rakus.areaExitRadius) {
           this.disengage();
         }
+        const ready = this.engaged && !this.introScene && !ctx.battle.entering;
+        b.setEnabled(ready);
+        if (this.helpers) this.helpers.enabled = ready;
         // The beam: far away it leads to the arena, near it would stand in the fight.
         if (++this.beamTick % 20 === 0 && !this.introScene) {
           if (d < 40 && ctx.objectives.active) ctx.objectives.clear();

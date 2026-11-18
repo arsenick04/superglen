@@ -3,8 +3,9 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
-import { Combat, CombatRng } from '../../config/combat';
+import { CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
+import { districtAt } from './CityData';
 import { Celebration } from '../Celebration';
 import { Easings } from '../../gameplay/Sequence';
 
@@ -107,6 +108,8 @@ export class Chapter3 {
       },
       ctx.save.data.bab3.tamed,
     );
+    // City rats stage the chase; the actual combat belongs to the separate encounter.
+    this.rats.setCombatEnabled(false);
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
       const w = window as unknown as { __ch3?: unknown };
       w.__ch3 = {
@@ -130,6 +133,7 @@ export class Chapter3 {
         // real city -> encounter transition.
         setArenaEnabled: (on: boolean) => {
           this.arenaEnabled = on;
+          this.rats.setCombatEnabled(!on);
         },
         collect: () => this.rats.collectAll(),
         counts: () => ({ quizRuns: this.quizRuns, countsDone: this.countsDone, ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
@@ -358,26 +362,27 @@ export class Chapter3 {
     this.ctx.objectives.set(this.tmp.set(MARKET.hub.x, 0, MARKET.hub.z));
   }
 
-  // ---- battle mode: the rats fight back once the child is close to one ----
+  // ---- enter at the market boundary, before city combat or this step's player attacks ----
   private arenaLoading = false;
   private arenaEnabled = true;
-  private readonly ratAt = { x: 0, y: 0.9, z: 0 };
-
-  private battleCheck(): void {
+  private battleCheck(): boolean {
     const { ctx } = this;
     const p = ctx.player.position;
-    const near = this.step === 'chase' && this.arrived && !ctx.health.resting && this.rats.nearestPos(p.x, p.z, this.ratAt);
-    const d = near ? Math.hypot(this.ratAt.x - p.x, this.ratAt.z - p.z) : Infinity;
-    if (this.arenaEnabled && !this.arenaLoading && d < Combat.rat.aggroRadius && startGate.started && ctx.game.controlsEnabled) {
+    if (this.arenaLoading) return true;
+    const inArea = districtAt(p.x, p.z).id === 'pasar';
+    if (this.arenaEnabled && this.step === 'chase' && inArea && !ctx.health.resting && startGate.started && ctx.game.controlsEnabled) {
       this.arenaLoading = true;
+      // loadLevel locks controls synchronously, before laser/player updates in Game.fixedStep.
       void ctx.game.loadLevel('battle-curut');
+      return true;
     }
+    return false;
   }
 
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
+    if (this.battleCheck()) return;
     this.rats.fixedUpdate(dt);
-    this.battleCheck();
     this.foodBeam();
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {

@@ -2,6 +2,8 @@ import type { SaveStore, SlotSave } from '../core/Save';
 import type { LevelGame } from './Level';
 import { CITY_LAYOUT } from './kota/CityData';
 import { Z } from './bab1/Layout';
+import { Combat } from '../config/combat';
+import { MARKET } from './kota/Bab3Data';
 
 /**
  * The chapter flow in one place (single source of truth for "where does the game start", "where does a door lead" and
@@ -71,6 +73,11 @@ export function travel(game: LevelGame, level: string, arrival: Arrival): Promis
 
 /** Feet spot in the city in front of the old building's door (outside the door's walk-in zone), facing south (+z). */
 export const HILL_DOOR_SPOT = { x: CITY_LAYOUT.lab.door.x, y: CITY_LAYOUT.lab.door.y, z: CITY_LAYOUT.lab.door.z + 4.6, yaw: 0 } as const;
+
+/** Retreat outside Pasar while combat is pending; after victory return inside for the counting story. */
+export function marketBattleSpawn(step: string): { x: number; y: number; z: number; yaw: number } {
+  return step === 'chase' ? { ...Combat.rat.arena.returnSpot } : { x: MARKET.hub.x, y: 0, z: 12, yaw: Math.PI };
+}
 
 /** What the game loads on start. `slot`: teleport there after loading `level`. */
 export interface StartPlan {

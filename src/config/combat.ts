@@ -65,6 +65,8 @@ export const Combat = {
     entryCooldown: 1,
     /** Dedicated real-time Curut arena; the camera follows Glen. */
     arena: {
+      /** Retreat onto the west road outside the visible Pasar district, so returning cannot immediately reenter. */
+      returnSpot: { x: 48, y: 0, z: 0, yaw: Math.PI / 2 },
       radius: 5.2,
       returnInset: 0.2,
       victoryDelay: 1.5,
@@ -80,6 +82,9 @@ export const Combat = {
   },
   /** Ular Melar (Chapter 5 mini-boss): 5 stars of 2 laser hits each; the head glows when dizzy and only then does the laser count. */
   snake: {
+    /** Start the battle entrance at the field boundary; leaving farther away pauses the encounter. */
+    areaEntryRadius: 34,
+    areaExitRadius: 52,
     /** Stars (health). `hitsPerStar` successful laser hits in ONE dizzy window take one (a half-hit is forgotten when the window closes). */
     stars: 5,
     starsEasy: 3,
@@ -138,6 +143,9 @@ export const Combat = {
    * Curut Cemberut helpers join between rounds. Everything is silly, nobody is hurt.
    */
   rakus: {
+    /** Start the battle entrance at the warehouse boundary; leaving farther away pauses the encounter. */
+    areaEntryRadius: 32,
+    areaExitRadius: 50,
     /** Stars (health); `hitsPerStar` laser hits in ONE out-of-breath window take one. */
     stars: 5,
     starsEasy: 3,

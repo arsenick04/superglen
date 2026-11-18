@@ -21,10 +21,6 @@ export interface Chapter5Hooks {
 /** Chapter 5 steps. '' = not started; over when 'bab5' is in `chaptersDone`. */
 export type Ch5Step = '' | 'walk' | 'lab' | 'city' | 'fight';
 
-/** The snake is met when the child is this close to its coil (m); farther than `LOSE` the fight pauses. */
-const MEET = 34;
-const LOSE = 52;
-
 /**
  * CHAPTER 5 "Ular Melar" (the city side; the lab visit is in bab1/LabVisit.ts). Built by KotaLevel when Chapter 4 is done and
  * Chapter 5 is not.
@@ -225,7 +221,7 @@ export class Chapter5 {
     this.engaged = true;
     if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
-    this.boss.setEnabled(true);
+    this.boss.setEnabled(false);
     this.boss.showHud(true);
     ctx.objectives.clear();
     const b = this.boss;
@@ -255,20 +251,21 @@ export class Chapter5 {
     this.introScene = true;
     const { ctx } = this;
     const { seq, dialog, cameraRig } = ctx;
+    // The battle HUD/camera/music begin at the boundary, before Nino's explanation.
+    ctx.game.setControlsEnabled(false);
+    this.engage();
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
-      const b = this.boss as SnakeBoss;
       ctx.game.debugInfo.ch5Scene = 'intro';
       this.introSeen = true;
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
-      cameraRig.setFraming(this.tmp.set(b.x, 1.6, b.z), { weight: 0.5, distance: 7 });
       await dialog.say(L.ninoPola, { lockControls: true });
       cameraRig.setFraming(null);
       this.setStep('fight');
+      this.introScene = false;
       ctx.game.setControlsEnabled(true);
-      this.engage();
       ctx.game.debugInfo.ch5Scene = 'fight';
     });
   }
@@ -348,7 +345,7 @@ export class Chapter5 {
       const b = this.boss;
       if (b && !this.tamedScene) {
         const d = Math.hypot(p.x - b.x, p.z - b.z);
-        if (!this.engaged && d < MEET && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
+        if (!this.engaged && d <= Combat.snake.areaEntryRadius && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
           if (this.step === 'city') this.runIntro();
           else {
             // Back in the area at "fight" (after a reload, a rest or a walk away): the snake wakes again.
@@ -358,9 +355,11 @@ export class Chapter5 {
               void ctx.dialog.say(L.ninoGaris);
             }
           }
-        } else if (this.engaged && d > LOSE) {
+        } else if (this.engaged && d > Combat.snake.areaExitRadius) {
           this.disengage();
         }
+        // A reentry has the same visual entrance gate as the first visit. Targets stay disabled until it finishes.
+        b.setEnabled(this.engaged && !this.introScene && !ctx.battle.entering);
         // The beam: far away it leads to the field, near it would stand in the arena.
         if (++this.beamTick % 20 === 0 && !this.introScene) {
           if (d < 45 && ctx.objectives.active) ctx.objectives.clear();
