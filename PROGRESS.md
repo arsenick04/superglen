@@ -809,3 +809,11 @@ Untuk dicoba sendiri:
 1. Di arena Curut, lompat lalu arahkan kaki ke kepala: satu hit dan pantul otomatis; lewat samping/naik tidak memantul. Ulangi untuk menjinakkan tanpa laser.
 2. Coba Curut kecil pendamping Rakus; tubuh Rakus dan Ular tidak menerima serangan injak baru. Hentakan di tanah dekat Curut tetap berfungsi.
 3. Setelah memantul, keluar/masuk arena atau pulihkan hati di rumah sakit: tidak ada pantulan tertinggal atau hit ganda.
+
+
+## Link uji langsung per Chapter — 18 November 2026
+
+- `?chapter=1` sampai `?chapter=6` memulai cerita Chapter yang dipilih dengan semua prasyarat chapter sebelumnya. Chapter 2 langsung di hangar; Chapter 3–6 tetap menjalankan alur cerita masing-masing, bukan jelajah bebas. `?chapter=3&battle=1` langsung ke arena Curut.
+- Save uji hanya di memori: seluruh jalur read/write/reset/reload/resetProgress tidak mengakses localStorage utama. Muat ulang memulai ulang Chapter uji; alamat biasa kembali ke save utama. Parameter chapter valid didahulukan dari level/free/reset. Nilai invalid/duplikat tetap memakai perilaku biasa.
+- Probe non-browser memeriksa enam seed, isolasi storage termasuk reset/reload, prasyarat/skills, rute hangar/arena, dan nilai invalid. Review silang + agen utama; boundary newline pada parser diperketat dan ditambahkan ke probe. Typecheck, build dan probe lulus; tidak menjalankan browser sesuai instruksi pemilik.
+- Daftar link: docs/chapter-test-links.md. Chapter 7–8 belum tersedia. Tidak ada perubahan audio/dialog/dependensi.

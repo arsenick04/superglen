@@ -80,6 +80,8 @@ export interface StartPlan {
 }
 
 export function startPlanFor(save: SaveStore): StartPlan {
+  if (save.previewBattle) return { level: 'battle-curut' };
+  if (save.previewChapter === 2) return { level: 'bab2' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
