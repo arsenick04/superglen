@@ -30,55 +30,24 @@ const SCREENS: readonly Screen[] = [
 ];
 const BARS_PER_SCREEN = 5;
 
-/** Empty Barongsai suit on display: a mask and hanging robe, never a child mannequin. */
+/** Abstract costume energy kept in the cabinet; the old mannequin-like suit was intentionally removed. */
 function makeCostumeDisplay(ctx: LevelContext): THREE.Group {
   const group = new THREE.Group();
-  const red = new THREE.MeshStandardMaterial({ color: 0xd9342b, roughness: 0.42 });
-  const deepRed = new THREE.MeshStandardMaterial({ color: 0x8f201d, roughness: 0.55 });
-  const gold = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.3, metalness: 0.18 });
-  const cream = new THREE.MeshStandardMaterial({ color: C.CREAM, roughness: 0.72 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x17151b, roughness: 0.9 });
-  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x101820, roughness: 0.35 });
-  const materials = [red, deepRed, gold, cream, dark, white, black];
-  const add = (geometry: THREE.BufferGeometry, material: THREE.Material, position: [number, number, number], scale: [number, number, number] = [1, 1, 1]): THREE.Mesh => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...position);
-    mesh.scale.set(...scale);
-    mesh.castShadow = true;
-    group.add(mesh);
-    return mesh;
-  };
-
-  // The open-backed robe makes it read as clothing hanging in the air rather than Glen wearing it.
-  add(new THREE.CylinderGeometry(0.35, 0.58, 0.9, 12, 1, true), red, [0, 0.08, 0]);
-  add(new THREE.TorusGeometry(0.45, 0.045, 8, 24), gold, [0, 0.48, 0]).rotation.x = Math.PI / 2;
-  for (const side of [-1, 1]) {
-    const sleeve = add(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), red, [side * 0.5, 0.18, 0]);
-    sleeve.rotation.z = side * 0.34;
-    add(new THREE.SphereGeometry(0.14, 10, 8), cream, [side * 0.61, -0.1, 0]);
-  }
-
-  // Lion mask shell, costume eyes and fur. The recessed black opening is deliberately empty.
-  add(new THREE.SphereGeometry(0.5, 16, 12), red, [0, 1.05, 0], [1.18, 0.9, 0.82]);
-  add(new THREE.SphereGeometry(0.54, 16, 10), deepRed, [0, 1.08, -0.16], [1.25, 1.0, 0.65]);
-  add(new THREE.SphereGeometry(0.32, 14, 10), dark, [0, 0.86, 0.39], [1.2, 0.78, 0.22]);
-  for (const side of [-1, 1]) {
-    add(new THREE.SphereGeometry(0.23, 12, 9), gold, [side * 0.32, 1.18, 0.3], [1.1, 0.86, 0.35]);
-    add(new THREE.SphereGeometry(0.15, 12, 9), white, [side * 0.32, 1.19, 0.38], [1, 0.95, 0.3]);
-    add(new THREE.SphereGeometry(0.07, 10, 8), black, [side * 0.3, 1.18, 0.44], [1, 1.12, 0.35]);
-    add(new THREE.ConeGeometry(0.17, 0.34, 10), cream, [side * 0.49, 1.38, -0.02]).rotation.z = side * 0.52;
-    add(new THREE.SphereGeometry(0.15, 10, 8), cream, [side * 0.43, 0.77, 0.28]);
-  }
-  add(new THREE.ConeGeometry(0.1, 0.3, 10), gold, [0, 1.58, -0.02]);
-  add(new THREE.SphereGeometry(0.1, 10, 8), gold, [0, 1.31, 0.43], [1.15, 0.9, 0.4]);
-  for (let i = -3; i <= 3; i++) add(new THREE.SphereGeometry(0.12, 8, 6), cream, [i * 0.14, 0.67 - Math.abs(i) * 0.018, 0.24]);
-
-  group.position.y = -0.18;
-  group.scale.setScalar(1.12);
+  const coreMat = new THREE.MeshStandardMaterial({ color: 0xff3328, emissive: 0xff160d, emissiveIntensity: 2.4, roughness: 0.18 });
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0xff5a32, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const goldMat = new THREE.MeshStandardMaterial({ color: C.GOLD, emissive: 0x7a3c00, emissiveIntensity: 0.7, roughness: 0.25, metalness: 0.45 });
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.38, 1), coreMat);
+  core.scale.set(0.82, 1.35, 0.82);
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.68, 16, 12), haloMat);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.045, 8, 32), goldMat);
+  ring.rotation.x = Math.PI / 2;
+  group.add(halo, core, ring);
+  group.position.y = 0.72;
   ctx.onDispose(() => {
     group.traverse((obj) => { if (obj instanceof THREE.Mesh) obj.geometry.dispose(); });
-    for (const material of materials) material.dispose();
+    coreMat.dispose();
+    haloMat.dispose();
+    goldMat.dispose();
   });
   return group;
 }
@@ -312,14 +281,14 @@ export class Lab {
     root.add(this.light);
     this.compartment = new THREE.Mesh(
       new THREE.BoxGeometry(0.14, 3.0, 2.5),
-      new THREE.MeshPhysicalMaterial({ color: 0xbfeaff, roughness: 0.08, metalness: 0, transmission: 0.35, transparent: true, opacity: 0.3, depthWrite: false }),
+      new THREE.MeshPhysicalMaterial({ color: 0x6f8795, roughness: 0.12, metalness: 0.05, transmission: 0.65, transparent: true, opacity: 0.16, depthWrite: false }),
     );
     this.compartment.position.set(-6.88, F + 1.7, cz);
     root.add(this.compartment);
-    const cabinetTop = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.75, 2.25), new THREE.MeshBasicMaterial({ color: 0xff351e, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const cabinetTop = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.75, 2.25), new THREE.MeshBasicMaterial({ color: 0x4d0808, transparent: true, opacity: 0.72 }));
     cabinetTop.position.set(-6.81, F + 1.7, cz);
     root.add(cabinetTop);
-    const cabinetLight = new THREE.PointLight(0xff3b24, 2.2, 5.5, 2);
+    const cabinetLight = new THREE.PointLight(0xff2418, 1.35, 4.2, 2);
     cabinetLight.position.set(-6.15, F + 1.7, cz);
     root.add(cabinetLight);
     const trim = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 2.3), new THREE.MeshStandardMaterial({ color: C.GOLD }));
@@ -339,9 +308,9 @@ export class Lab {
     for (let i = 0; i < pa.count; i++) {
       const f = Math.max(0, 1 - (pa.getX(i) + 2.6) / 5.2); // bright at the wall side (x = -2.6), black far away
       const e = Math.max(0, 1 - Math.abs(pa.getZ(i)) / 1.7);
-      sc[i * 3] = f * e * 0.9;
-      sc[i * 3 + 1] = f * e * 0.8;
-      sc[i * 3 + 2] = f * e * 0.4;
+      sc[i * 3] = f * e;
+      sc[i * 3 + 1] = f * e * 0.18;
+      sc[i * 3 + 2] = f * e * 0.08;
     }
     sg.setAttribute('color', new THREE.BufferAttribute(sc, 3));
     this.spillMat = new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false, fog: false });
@@ -383,7 +352,7 @@ export class Lab {
     this.nino.visible = false;
     root.add(this.nino);
 
-    // --- Empty costume (mask and robe, no Glen face or human mannequin) ---
+    // --- Abstract red costume energy; no mannequin or literal suit is displayed. ---
     this.costumeBody = new THREE.Group();
     const emptySuit = makeCostumeDisplay(ctx);
     this.beltMat = new THREE.MeshStandardMaterial({ color: C.GOLD, roughness: 0.35, metalness: 0.2, emissive: 0x6b4a00, emissiveIntensity: 0.6 });
