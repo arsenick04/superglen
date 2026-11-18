@@ -1,103 +1,130 @@
 import * as THREE from 'three';
-import { Quality } from '../../core/Quality';
-import { ShadowFollower } from '../../core/ShadowSnap';
 import { startGate } from '../../core/StartGate';
+import { makeMaterials } from '../bab1/Batch';
+import { C, Kit } from '../bab1/Kit';
+import { Hangar } from '../bab2/Hangar';
+import { HALL } from '../bab2/Layout';
 import type { Level, LevelContext } from '../Level';
 import { travel } from '../progress';
-import { ArenaLompat } from './ArenaLompat';
-import { ARENA_LAYOUT } from './ArenaData';
 
-const GROUND_W = 64;
-const GROUND_Z0 = -20;
-const GROUND_Z1 = -104;
+interface Course {
+  name: string;
+  start: { x: number; z: number };
+  radius: number;
+  color: number;
+  steps: readonly { x: number; z: number; top: number }[];
+}
 
-/** Post-Ular lesson: three increasingly high checkpoints in the existing platform arena. */
+const COURSES: readonly Course[] = [
+  {
+    name: 'mudah', start: { x: -10, z: -3 }, radius: 1.7, color: C.MINT,
+    steps: [
+      { x: -10, z: -8, top: 0.65 }, { x: -10, z: -13, top: 1.0 },
+      { x: -10, z: -18, top: 1.35 }, { x: -10, z: -23, top: 1.7 },
+    ],
+  },
+  {
+    name: 'menengah', start: { x: 0, z: -3 }, radius: 1.05, color: C.ORANGE,
+    steps: [
+      { x: -1.2, z: -8, top: 0.8 }, { x: 1.2, z: -13, top: 1.55 },
+      { x: -1.2, z: -18, top: 2.3 }, { x: 1.2, z: -23, top: 3.05 },
+      { x: 0, z: -28, top: 3.8 },
+    ],
+  },
+  {
+    name: 'sulit', start: { x: 10, z: -3 }, radius: 0.62, color: C.RED,
+    // The 4.1 m rises cannot be cleared by the normal jump alone; use the air jump.
+    steps: [
+      { x: 10, z: -9, top: 1.2 }, { x: 8.5, z: -15, top: 5.3 },
+      { x: 11, z: -21, top: 9.4 }, { x: 9, z: -27, top: 10.4 },
+    ],
+  },
+] as const;
+
+/** Post-Ular lesson inside Nino's hangar: large, medium, then small/double-jump platforms. */
 export class JumpTrainingLevel implements Level {
   readonly id = 'jump-training';
-  readonly spawn = { x: -10, y: 0, z: -27, yaw: Math.PI };
-  private arena: ArenaLompat | null = null;
-  private follower: ShadowFollower | null = null;
-  private readonly sunOffset = new THREE.Vector3(14, 24, 10);
-  private readonly feet = new THREE.Vector3();
+  readonly spawn = { x: -10, y: 0, z: -3, yaw: Math.PI };
   private ctx: LevelContext | null = null;
+  private hangar: Hangar | null = null;
+  private readonly feet = new THREE.Vector3();
   private stage = 0;
   private advancing = false;
-  private readonly goals = [ARENA_LAYOUT.poles[0], ARENA_LAYOUT.poles[2], ARENA_LAYOUT.poles[4]];
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
-    ctx.scene.background = new THREE.Color(0x8fd3ff);
-    ctx.scene.fog = new THREE.Fog(0x8fd3ff, Quality.cameraFar * 0.5, Quality.cameraFar * 0.95);
-    const hemi = new THREE.HemisphereLight(0xd9f2ff, 0x6fae4f, 1.45);
-    const sun = new THREE.DirectionalLight(0xfff1d0, 2.5);
-    sun.position.copy(this.sunOffset);
-    sun.castShadow = Quality.shadows;
-    sun.target.position.set(0, 0, -45);
-    ctx.root.add(hemi, sun, sun.target);
-    this.follower = new ShadowFollower(sun, this.sunOffset, Quality.shadowArea, Quality.shadowMapSize);
+    ctx.scene.background = new THREE.Color(0xcfe3ff);
+    ctx.scene.fog = new THREE.Fog(0xdfeaff, 70, 160);
+    ctx.root.add(new THREE.HemisphereLight(0xf4f9ff, 0xd9d2c4, 1.7));
+    const sun = new THREE.DirectionalLight(0xfff0d0, 1.5);
+    sun.position.set(18, 22, 8);
+    ctx.root.add(sun);
 
-    const depth = GROUND_Z0 - GROUND_Z1;
-    const cz = (GROUND_Z0 + GROUND_Z1) / 2;
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(GROUND_W, depth).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: 0x83bd72, roughness: 0.95 }),
-    );
-    ground.position.z = cz;
-    ground.receiveShadow = true;
-    ctx.root.add(ground);
-    ctx.physics.addFixedCuboid({ x: GROUND_W / 2, y: 0.5, z: depth / 2 }, { x: 0, y: -0.5, z: cz });
+    const kit = new Kit(ctx.physics, makeMaterials(), false);
+    this.hangar = new Hangar(ctx, kit);
+    for (const course of COURSES) {
+      for (const step of course.steps) {
+        kit.solidCyl(course.radius, step.top, [step.x, step.top / 2, step.z], course.color);
+        kit.glow.cyl(course.radius + 0.05, 0.06, [step.x, step.top + 0.03, step.z], 0xffd23f);
+      }
+    }
+    kit.build(ctx.root);
 
-    this.arena = new ArenaLompat(ctx);
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
     ctx.game.setSkills({ laser: false, shield: false, fly: false });
+    ctx.player.flight.bounds = { minX: HALL.minX + 0.5, maxX: HALL.maxX - 0.5, minZ: HALL.minZ + 0.5, maxZ: HALL.maxZ - 0.5 };
     ctx.audio.music.setScene('latihan');
     this.setGoal();
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
-      await ctx.dialog.say({ speaker: 'nino', text: 'Tiga tingkat Lompat Barongsai! Ikuti cahaya dari pijakan rendah sampai yang paling tinggi.' }, { lockControls: true });
+      await ctx.dialog.say({ speaker: 'nino', text: 'Mulai dari lintasan mudah: pijakannya besar. Setelah itu menengah dan sulit!' }, { lockControls: true });
     });
     ctx.game.debugInfo.jumpTrainingStage = 1;
+    ctx.game.debugInfo.jumpTrainingCourse = COURSES[0].name;
   }
 
-  fixedUpdate(dt: number): void {
-    this.arena?.tick(dt);
+  fixedUpdate(): void {
     const ctx = this.ctx;
-    const goal = this.goals[this.stage];
-    if (!ctx || !goal || this.advancing || !ctx.game.controlsEnabled) return;
+    const course = COURSES[this.stage];
+    const goal = course?.steps[course.steps.length - 1];
+    if (!ctx || !course || !goal || this.advancing || !ctx.game.controlsEnabled) return;
     ctx.player.getFeetPosition(this.feet);
-    if (Math.hypot(this.feet.x - goal.x, this.feet.z - goal.z) > 1.15 || this.feet.y < goal.top - 0.35) return;
+    if (Math.hypot(this.feet.x - goal.x, this.feet.z - goal.z) > course.radius + 0.35 || Math.abs(this.feet.y - goal.top) > 0.7) return;
     this.advancing = true;
     ctx.seq.run(async () => {
-      ctx.fx.sparkles.burst(goal.x, goal.top + 0.25, goal.z, 26, 3.4, 0xffd23f, { gravity: 2, life: 1, up: 0.8 });
+      ctx.fx.sparkles.burst(goal.x, goal.top + 0.25, goal.z, 28, 3.5, 0xffd23f, { gravity: 2, life: 1, up: 0.8 });
       this.stage++;
-      ctx.game.debugInfo.jumpTrainingStage = this.stage + 1;
-      if (this.stage < this.goals.length) {
-        await ctx.dialog.say({ speaker: 'nino', text: `Tingkat ${this.stage} selesai! Sekarang naik ke tingkat ${this.stage + 1}.` }, { lockControls: true });
+      if (this.stage < COURSES.length) {
+        const next = COURSES[this.stage];
+        await ctx.dialog.say({ speaker: 'nino', text: `Lintasan ${course.name} selesai! Berikutnya ${next.name}.` }, { lockControls: true });
+        ctx.player.placeAt(next.start.x, 0, next.start.z, Math.PI);
+        ctx.cameraRig.snapBehind(Math.PI);
+        ctx.game.debugInfo.jumpTrainingStage = this.stage + 1;
+        ctx.game.debugInfo.jumpTrainingCourse = next.name;
         this.setGoal();
         this.advancing = false;
         return;
       }
       ctx.objectives.clear();
-      await ctx.dialog.say({ speaker: 'nino', text: 'Hebat! Tiga tingkat selesai. Lompat Barongsaimu siap untuk pertarungan berikutnya!' }, { lockControls: true });
+      await ctx.dialog.say({ speaker: 'nino', text: 'Hebat! Pijakan kecil dan double jump pun berhasil. Latihan selesai!' }, { lockControls: true });
       ctx.save.setInterlude('');
       await travel(ctx.game, 'lab', 'labFromHangar');
     });
   }
 
   update(dt: number): void {
-    if (this.ctx) this.follower?.follow(this.ctx.player.visualPosition);
-    this.arena?.update(dt);
+    this.hangar?.update(dt);
   }
 
   dispose(): void {
     this.ctx = null;
-    this.arena = null;
-    this.follower = null;
+    this.hangar = null;
   }
 
   private setGoal(): void {
-    const g = this.goals[this.stage];
-    if (g && this.ctx) this.ctx.objectives.set(new THREE.Vector3(g.x, g.top, g.z));
+    const course = COURSES[this.stage];
+    const goal = course?.steps[course.steps.length - 1];
+    if (goal && this.ctx) this.ctx.objectives.set(new THREE.Vector3(goal.x, goal.top, goal.z));
   }
 }
