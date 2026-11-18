@@ -16,6 +16,14 @@ import { CATEGORIES, isCategory, type Category } from '../quiz/types';
 export const SAVE_KEY = 'superglen.save.v1';
 export const SAVE_VERSION = 1;
 
+export type PreviewChapter = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Only an unambiguous, exact chapter number enables a temporary play session. */
+export function previewChapterFor(query: URLSearchParams): PreviewChapter | null {
+  const values = query.getAll('chapter');
+  return values.length === 1 && values[0].length === 1 && /^[1-6]$/.test(values[0]) ? Number(values[0]) as PreviewChapter : null;
+}
+
 export interface SaveData {
   version: number;
   chaptersDone: string[];
@@ -245,14 +253,36 @@ function sanitize(raw: unknown): SaveData {
 
 export class SaveStore {
   data: SaveData = defaults();
+  readonly previewChapter: PreviewChapter | null;
+  readonly previewBattle: boolean;
 
   constructor() {
-    if (new URLSearchParams(window.location.search).get('reset') === '1') this.reset();
+    const query = new URLSearchParams(window.location.search);
+    this.previewChapter = previewChapterFor(query);
+    this.previewBattle = this.previewChapter === 3 && query.get('battle') === '1';
+    if (this.previewChapter || query.get('reset') === '1') this.reset();
     else this.reload();
+  }
+
+  private freshData(): SaveData {
+    const data = defaults();
+    const chapter = this.previewChapter;
+    if (!chapter) return data;
+    for (let i = 1; i < chapter; i++) data.chaptersDone.push(`bab${i}`);
+    data.discovered.lab = chapter >= 2;
+    data.where = chapter === 2 ? 'bab2' : 'kota';
+    data.lastMode = chapter === 1 || chapter === 4 || chapter === 5 ? 'glen' : 'superglen';
+    if (chapter >= 3) data.skills = { laser: true, shield: true, fly: true };
+    if (this.previewBattle) data.bab3.step = 'chase';
+    return data;
   }
 
   /** Re-read from storage (or keep the in-memory data when storage is unavailable or corrupt). */
   reload(): void {
+    if (this.previewChapter) {
+      this.data = this.freshData();
+      return;
+    }
     try {
       const txt = window.localStorage.getItem(SAVE_KEY);
       if (txt) this.data = sanitize(JSON.parse(txt));
@@ -263,6 +293,7 @@ export class SaveStore {
 
   /** Write to storage. Failure is silent: progress stays in memory for this session. */
   persist(): void {
+    if (this.previewChapter) return;
     try {
       window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
@@ -272,7 +303,8 @@ export class SaveStore {
 
   /** Forget everything (also used by `?reset=1`). */
   reset(): void {
-    this.data = defaults();
+    this.data = this.freshData();
+    if (this.previewChapter) return;
     try {
       window.localStorage.removeItem(SAVE_KEY);
     } catch {
@@ -283,7 +315,7 @@ export class SaveStore {
   /** Parents' page: forget the story and quiz progress but keep the settings (easy jump, sound). */
   resetProgress(): void {
     const settings = { ...this.data.settings };
-    this.data = defaults();
+    this.data = this.freshData();
     this.data.settings = settings;
     this.persist();
   }

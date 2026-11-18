@@ -827,7 +827,9 @@ export class Game {
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
-    const wanted = new URLSearchParams(window.location.search).get('level');
+    const wanted = this.save.previewChapter ? null : new URLSearchParams(window.location.search).get('level');
+    flow.sandbox = false;
+    flow.free = false;
     if (wanted && this.levels.has(wanted)) {
       // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
       flow.sandbox = true;
