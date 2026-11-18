@@ -138,9 +138,8 @@ export class Chapter5 {
         await ctx.dialog.say(L.glenAjak);
         await ctx.dialog.say(L.aaraIkut);
       } else if (this.step === 'city') {
-        this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + 7, Math.PI);
-        this.aara?.place(SNAKE_FIELD.x - 3.2, SNAKE_FIELD.z + 4.2, Math.PI * 0.8);
-        this.runIntro();
+        // Keep the walk to the park: the arena only activates when Glen actually arrives.
+        this.fieldGoal();
       } else if (this.step === 'fight') {
         this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + 7, Math.PI);
         this.runIntro();
@@ -231,6 +230,8 @@ export class Chapter5 {
     this.boss.showHud(true);
     ctx.objectives.clear();
     const b = this.boss;
+    // Aara watches from safely outside the ring instead of appearing inside combat.
+    this.aara?.place(b.x + 18, b.z + 2, -Math.PI / 2);
     ctx.battle.enter({
       id: 'ular_melar',
       name: 'Ular Melar',
