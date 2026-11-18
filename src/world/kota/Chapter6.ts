@@ -249,6 +249,7 @@ export class Chapter6 {
       name: 'Tikus Rakus',
       focus: () => ({ x: b.x, y: b.headAt.y * 0.7, z: b.z }),
       arena: { x: RAKUS_ARENA.x, z: RAKUS_ARENA.z, r: Combat.rakus.arenaRadius + 3.5 },
+      isolated: true,
       stars: () => ({ left: b.stars, max: b.maxStars }),
     });
     ctx.game.debugInfo.ch6Engaged = true;
