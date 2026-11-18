@@ -27,6 +27,7 @@ export class LabVisit {
     private readonly lab: Lab,
     lit: THREE.Material,
     private readonly exit: { x: number; z: number },
+    private readonly mode: 'first' | 'snakeCelebration' = 'first',
   ) {
     this.aara = new AaraActor(lit, ctx.dialog);
     this.aara.setLevel(3);
@@ -51,6 +52,10 @@ export class LabVisit {
   }
 
   start(): void {
+    if (this.mode === 'snakeCelebration') {
+      this.startSnakeCelebration();
+      return;
+    }
     const { ctx, lab } = this;
     this.follower.reset();
     ctx.game.debugInfo.ch5Lab = 'walk';
@@ -59,6 +64,33 @@ export class LabVisit {
       ctx.objectives.set(this.tmp.set(lab.ninoPos.x - 1.6, LAB_FLOOR, lab.ninoPos.z + 2.6));
       await ctx.seq.waitUntil(() => Math.hypot(ctx.player.position.x - lab.ninoPos.x, ctx.player.position.z - lab.ninoPos.z) < 6.5 && ctx.game.controlsEnabled);
       await this.meet();
+    });
+  }
+
+  private startSnakeCelebration(): void {
+    const { ctx, lab } = this;
+    const { seq, dialog, cameraRig, fx } = ctx;
+    this.scene = true;
+    this.aara.place(lab.ninoPos.x - 2.2, lab.ninoPos.z + 2.4, Math.PI);
+    ctx.audio.preload(ctx.dialog.idsWithPrefix('bab5_'));
+    ctx.seq.run(async () => {
+      await seq.waitUntil(() => startGate.started);
+      ctx.game.debugInfo.ch5Lab = 'celebration';
+      ctx.game.setControlsEnabled(false);
+      ctx.objectives.clear();
+      cameraRig.setFraming(this.tmp.set(lab.ninoPos.x - 1.2, LAB_FLOOR + 1.3, lab.ninoPos.z + 1.2), { weight: 0.6, distance: 3, yaw: -Math.PI / 2 });
+      await dialog.say(L.ninoPanggilLab, { lockControls: true });
+      await dialog.say(L.glenRayakan, { lockControls: true });
+      await dialog.say(L.aaraRayakan, { lockControls: true });
+      ctx.sfx.bling();
+      fx.sparkles.burst(lab.ninoPos.x, LAB_FLOOR + 1.3, lab.ninoPos.z, 24, 3, 0xffd23f, { gravity: 1, life: 1, up: 0.8 });
+      await dialog.say(L.ninoPulang, { lockControls: true });
+      cameraRig.setFraming(null);
+      ctx.save.setInterlude('snake_home');
+      this.done = true;
+      ctx.game.setControlsEnabled(true);
+      ctx.objectives.set(this.tmp.set(this.exit.x, 0, this.exit.z));
+      ctx.game.debugInfo.ch5Lab = 'celebrationDone';
     });
   }
 

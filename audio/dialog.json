@@ -133,6 +133,31 @@
     "delivery": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!"
   },
   {
+    "id": "bab5_nino_panggil_lab", "speaker": "nino", "lang": "id",
+    "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "delivery": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara."
+  },
+  {
+    "id": "bab5_glen_rayakan", "speaker": "glen", "lang": "id",
+    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "delivery": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!"
+  },
+  {
+    "id": "bab5_aara_rayakan", "speaker": "aara", "lang": "id",
+    "text": "Hore! Kita bertiga hebat sekali!",
+    "delivery": "[happy] Hore! Kita bertiga hebat sekali!"
+  },
+  {
+    "id": "bab5_nino_pulang", "speaker": "nino", "lang": "id",
+    "text": "Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "delivery": "[warm] Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai."
+  },
+  {
+    "id": "bab5_nino_latihan_besok", "speaker": "nino", "lang": "id",
+    "text": "Selamat pagi! Siap latihan Lompat Barongsai?",
+    "delivery": "[excited] Selamat pagi! Siap latihan Lompat Barongsai?"
+  },
+  {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",

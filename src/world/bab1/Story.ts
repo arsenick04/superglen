@@ -92,7 +92,8 @@ export class Story {
     if (ctx.save.data.interlude === '') this.p.door.enable();
     ctx.game.debugInfo.chapterDone = true;
     // The newly received costume does not skip straight into tomorrow's training.
-    if (ctx.save.data.interlude === 'costume_home' && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
+    if ((ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home') && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
+    else if (ctx.save.data.interlude === 'snake_return') this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
     else if (!ctx.save.isChapterDone('bab2')) this.setTarget(this.p.lab.ninoPos.x, this.p.lab.ninoPos.z);
     else if (fromHangar && this.p.exit) this.setTarget(this.p.exit.x, this.p.exit.z);
   }

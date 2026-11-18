@@ -96,6 +96,9 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
+  if (save.data.interlude === 'snake_lab') return { level: 'lab' };
+  if (save.data.interlude === 'snake_home') return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
+  if (save.data.interlude === 'snake_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   const slot = save.data.slot;
   // An encounter slot is valid only while that encounter's story step is
   // still active. This also protects old saves made just before a delayed
@@ -142,6 +145,7 @@ export function migrateSave(save: SaveStore): boolean {
 export function labNinoTalk(save: SaveStore): { line: string | null; next: string | null; clearInterlude?: boolean } {
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { line: 'bab1_nino_pulang_dulu', next: null };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return { line: null, next: 'bab2', clearInterlude: true };
+  if (save.data.interlude === 'snake_return') return { line: 'bab5_nino_latihan_besok', next: null };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
   return { line: 'bab2_nino_hebat', next: null };
 }
