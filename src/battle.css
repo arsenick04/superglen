@@ -170,6 +170,9 @@ html.battle.battle .hearts {
 /* The fights' own star bars (Ular Melar, Tikus Rakus) sit under the banner in battle colours. */
 html.battle.battle .ch5-stars {
   top: calc(env(safe-area-inset-top) + 88px);
+  /* Override the touch exploration bar's left alignment: the compact call-out owns that column. */
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(60, 10, 14, 0.6);
   border: 2px solid rgba(255, 210, 63, 0.8);
   box-shadow: 0 0 10px rgba(255, 90, 60, 0.35);

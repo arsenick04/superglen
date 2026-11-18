@@ -783,3 +783,14 @@ Setelah PR di-merge dan deploy selesai. Buka alamat biasa https://arsenick04.git
 - Chromium sistem digunakan melalui `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`; tanpa dependensi npm baru.
 
 Untuk dicoba: buka game di PC dan HP, reset zoom di pengaturan, lalu coba masuk arena Curut, berjalan, mengatur zoom, dan kembali ke kota.
+
+
+## Stabilisasi battle setelah kamera — 18 November 2026
+
+- HUD bintang Ular/Rakus kini di tengah di bawah banner, terpisah dari kolom seruan ringkas. Aturan battle lebih spesifik dari posisi kiri HUD jelajah touch.
+- Cincin arena memakai satu pass DoubleSide. Shader additive tidak bergantung pada urutan sisi dan tidak menulis depth, sehingga tidak membutuhkan pass depan/belakang terpisah. Menghapus satu submission tambahan secara struktural; jumlah draw call dan FPS sesudah perubahan belum diukur.
+- Setup smoke transisi Curut tidak lagi melewati 400 frame pertarungan kota insidental: serangan dimute, dialog diselesaikan, status kontrol/cerita/target diperiksa, lalu perpindahan level asli dipicu. Batas 30 detik serta asersi lama dipertahankan; tambah asersi pusat HUD bintang. Penyebab timeout sebelumnya belum dibuktikan saat runtime.
+- Pemeriksaan pembuat: typecheck, syntax smoke, build, check:reach (0 error/warning), check:quiz lulus. Review independen silang dari agen fitur injak dan review agen utama: tidak ada temuan penghalang.
+- Atas instruksi pemilik, tidak menjalankan browser/Playwright, screenshot baru, atau pengukuran FPS. Pengujian browser total menunggu game selesai. Pemilik menguji bermain sekarang.
+
+Untuk dicoba sendiri: di HP landscape masuk battle Ular/Rakus, pastikan bintang tidak menumpuk dengan seruan; masuk/keluar arena Curut dari kota dan ulangi setelah istirahat di rumah sakit.

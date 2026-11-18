@@ -39,3 +39,12 @@ Build, `check:reach`, `check:quiz` lulus. Smoke `kota` lulus. Semua pekerjaan be
 - **Musuh model pemilik (L19)** `src/world/kota/EnemyModels.ts`: grup `combat`, `bab3`, `bab5-fight`, `bab6-fight` belum lulus bersih; cek "tames it, in order" di bab5/bab6 gagal (kemungkinan karena teks dialog yang diubah).
 - **Kota Kenney (L18)** `CityModels.ts`, `CityDressing.ts`, `scripts/env-kenney.mjs`: pijakan panjat menonjol dari gedung pemilik, atap gedung pemilik lebih tinggi dari collider, pintu gedung Barongsai belum lurus, lubang di wajah singa, ubin jalan Kenney dan alas menara belum, tanah dan bukit jauh masih polos.
 - `hud-layout`, `hud-layout-touch`, `dlg-compact`: hasil terakhir tidak bisa dipercaya (dijalankan sebelum tombol zoom ada, sebagian crash).
+
+
+## Pembaruan 18 November 2026
+
+- T0 dan C2 sudah pernah di-merge; sebagian status antrean/serah terima 16 November di atas merupakan catatan lama.
+- Kamera PR #25 sudah di main: default 2,5 m, battleLook 0, Curut mengikuti Glen.
+- Paket stabilisasi setelah kamera: pusatkan HUD bintang battle agar tidak berbagi kolom dengan bubble; cincin arena additive DoubleSide memakai forceSinglePass (menghindari satu submission ekstra secara struktural); setup tes transisi Curut mematikan serangan kota insidental, menyelesaikan dialog dan memeriksa prasyarat tanpa memperpanjang timeout.
+- Build, typecheck, check:reach, check:quiz, syntax smoke, dan review silang lulus. Browser/FPS/draw call aktual tidak diuji atas permintaan pemilik; belum diklaim bahwa kegagalan suite sebelumnya sudah hijau. Optimasi kota menyeluruh T2 masih antre.
+- Fitur injak-pantul non-bos dikerjakan pada PR terpisah. Tidak ada dialog/audio baru.

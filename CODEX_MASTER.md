@@ -2,6 +2,12 @@
 
 Claude tidak aktif lagi untuk sementara (jatah habis). Kamu (Codex) bekerja sendiri sebagai pengembang **dan** pemeriksa. Baca `AGENTS.md` lebih dulu, lalu file ini. Pemilik proyek yang meng-merge PR (atau kamu, bila akunmu diizinkan).
 
+## Keputusan pemilik — 18 November 2026
+
+- Pengujian browser otomatis/Playwright ditunda sampai seluruh game selesai; pengujian bermain saat pengembangan dilakukan pemilik sendiri. Jangan menjalankan browser suite sekarang. Tetap jalankan build/typecheck, check:reach, check:quiz dan probe logika kecil yang relevan. Catat bahwa hasil browser, FPS, dan angka performa aktual belum diverifikasi; jangan menyatakan suite hijau tanpa menjalankannya.
+- Serangan injak-pantul hanya untuk Curut dan musuh non-bos (termasuk Curut pendamping Rakus). Bos tetap menggunakan mekanik pertarungan yang ada.
+- Untuk menghemat limit, gunakan paling banyak dua agen pekerja dengan tugas terpisah dan review silang, lalu pemeriksaan akhir oleh agen utama.
+
 ## Aturan kerja
 
 1. Kerjakan tugas **berurutan** (T0, T1, …). Satu tugas = satu cabang `codex/<tugas>` dan satu PR ke `main`. Jangan menumpuk tugas dalam satu PR. Setelah tiap PR di-merge (atau bila tugas berikutnya tidak bergantung padanya), lanjut ke tugas berikutnya dari `main` terbaru.
