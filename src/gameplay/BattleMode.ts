@@ -51,6 +51,8 @@ export interface BattleSpec {
   focus: () => { x: number; y: number; z: number } | null;
   /** The round arena (ring + soft wall); omit for a free-roaming fight (the market rats). */
   arena?: { x: number; z: number; r: number };
+  /** Enclose the boss fight in a simple dedicated stage that visually blocks the city. */
+  isolated?: boolean;
   /** Centre and radius of what the city people react to (default: the arena, or the enemy's place). */
   city?: { x: number; z: number; r: number };
   /** Stars left of the enemy (the fight owns its own bar when `ownBar` is false). Used to notice a broken star. */
@@ -123,6 +125,9 @@ export class BattleMode {
   private portraitId = '';
   private ring: THREE.Mesh | null = null;
   private ringMat: THREE.ShaderMaterial | null = null;
+  private arenaStage: THREE.Group | null = null;
+  private arenaStageMats: THREE.MeshStandardMaterial[] = [];
+  private arenaStageAlpha = 0;
   private readonly focusPos = new THREE.Vector3();
   private life: CityLife | null = null;
   private prevClear: { x: number; z: number; r: number } | null = null;
@@ -231,6 +236,7 @@ export class BattleMode {
     this.updateFocus();
     deps.cameraRig.setBattle(this.focusPos);
     if (spec.arena) this.buildRing(spec.arena);
+    if (spec.arena && spec.isolated) this.buildArenaStage(spec.arena);
     this.startCity();
     this.introStage = 0;
     if (spec.intro !== false) {
@@ -268,6 +274,7 @@ export class BattleMode {
     deps.player.flight.arena = null;
     this.armed = false;
     this.removeRing();
+    this.removeArenaStage();
     this.endCity();
     this.hitFlash = 0;
     this.fx.classList.remove('hit');
@@ -337,6 +344,10 @@ export class BattleMode {
     if (!spec) return;
     const { deps } = this;
     this.updateFocus();
+    if (this.arenaStageMats.length) {
+      this.arenaStageAlpha = Math.min(1, this.arenaStageAlpha + dt * 1.8);
+      for (const mat of this.arenaStageMats) mat.opacity = this.arenaStageAlpha * (mat.userData.targetOpacity as number);
+    }
 
     // Entrance shot: a sweep around Glen, then back to the lock-on.
     if (this.introLeft > 0) {
@@ -528,6 +539,38 @@ export class BattleMode {
     }
     this.ring = null;
     this.ringMat = null;
+  }
+
+  /** A cheap isolated boss room: solid floor plus a high inward-facing wall that fades in during the entrance. */
+  private buildArenaStage(a: { x: number; z: number; r: number }): void {
+    this.removeArenaStage();
+    const feet = this.deps.player.position.y - 0.55;
+    const group = new THREE.Group();
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x33283d, roughness: 0.88, transparent: true, opacity: 0 });
+    floorMat.userData.targetOpacity = 0.98;
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x21182d, roughness: 0.82, transparent: true, opacity: 0, side: THREE.BackSide });
+    wallMat.userData.targetOpacity = 0.96;
+    const floor = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.2, a.r + 1.2, 0.16, 64), floorMat);
+    floor.position.set(a.x, feet - 0.06, a.z);
+    floor.receiveShadow = true;
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.15, a.r + 1.15, 6.5, 64, 1, true), wallMat);
+    wall.position.set(a.x, feet + 3.2, a.z);
+    group.add(floor, wall);
+    this.deps.scene.add(group);
+    this.arenaStage = group;
+    this.arenaStageMats = [floorMat, wallMat];
+    this.arenaStageAlpha = 0;
+  }
+
+  private removeArenaStage(): void {
+    if (this.arenaStage) {
+      this.deps.scene.remove(this.arenaStage);
+      this.arenaStage.traverse((obj) => { if (obj instanceof THREE.Mesh) obj.geometry.dispose(); });
+      for (const mat of this.arenaStageMats) mat.dispose();
+    }
+    this.arenaStage = null;
+    this.arenaStageMats = [];
+    this.arenaStageAlpha = 0;
   }
 
   private startCity(): void {

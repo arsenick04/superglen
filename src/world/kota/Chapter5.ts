@@ -236,6 +236,7 @@ export class Chapter5 {
       name: 'Ular Melar',
       focus: () => ({ x: b.x, y: 1.1, z: b.z }),
       arena: { x: b.x, z: b.z, r: 15 },
+      isolated: true,
       stars: () => ({ left: b.stars, max: b.maxStars }),
       aura: 0x6fe08a,
     });
