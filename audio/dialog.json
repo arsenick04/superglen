@@ -126,6 +126,13 @@
     "delivery": "[cheerful] Besok pagi kita latihan, ya!"
   },
   {
+    "id": "bab1_nino_pulang_dulu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "delivery": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!"
+  },
+  {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",

@@ -58,6 +58,8 @@ export interface SaveData {
    * never (older saves). `world/progress.ts` routes "continue" with it.
    */
   where: string;
+  /** Short story pause between chapters. Empty keeps legacy saves on their old route. */
+  interlude: '' | 'costume_home' | 'costume_return';
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
@@ -147,6 +149,7 @@ function defaults(): SaveData {
     slot: null,
     discovered: { lab: false },
     where: '',
+    interlude: '',
     doneAt: {},
     quiz: defaultQuiz(),
     city: { coins: [], missions: [] },
@@ -245,6 +248,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   if (typeof r.where === 'string') out.where = r.where;
+  if (r.interlude === 'costume_home' || r.interlude === 'costume_return') out.interlude = r.interlude;
   if (typeof r.doneAt === 'object' && r.doneAt !== null) {
     for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
   }
@@ -336,6 +340,12 @@ export class SaveStore {
   setWhere(where: string): void {
     if (this.data.where === where) return;
     this.data.where = where;
+    this.persist();
+  }
+
+  setInterlude(interlude: SaveData['interlude']): void {
+    if (this.data.interlude === interlude) return;
+    this.data.interlude = interlude;
     this.persist();
   }
 
