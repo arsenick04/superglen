@@ -54,6 +54,11 @@ export const BAB5_LINES = {
   ularPergi: { id: 'bab5_ular_pergi', speaker: 'ular', text: 'Sss... aku pulang ke hutan. Dadah, sss!' },
   ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Keren, Superglen! Ular Melar sudah jinak.' },
   ninoTikus: { id: 'bab5_nino_tikus', speaker: 'nino', text: 'Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.' },
+  ninoPanggilLab: { id: 'bab5_nino_panggil_lab', speaker: 'nino', text: 'Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.' },
+  glenRayakan: { id: 'bab5_glen_rayakan', speaker: 'glen', text: 'Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!' },
+  aaraRayakan: { id: 'bab5_aara_rayakan', speaker: 'aara', text: 'Hore! Kita bertiga hebat sekali!' },
+  ninoPulang: { id: 'bab5_nino_pulang', speaker: 'nino', text: 'Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.' },
+  ninoLatihanBesok: { id: 'bab5_nino_latihan_besok', speaker: 'nino', text: 'Selamat pagi! Siap latihan Lompat Barongsai?' },
 } as const;
 
 export type Bab5Line = (typeof BAB5_LINES)[keyof typeof BAB5_LINES];

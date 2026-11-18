@@ -292,7 +292,7 @@ export class KotaLevel implements Level {
       this.startCh4();
     } else if (!sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5')) {
       this.startCh5();
-    } else if (!sandbox && ctx.save.isChapterDone('bab5') && !ctx.save.isChapterDone('bab6')) {
+    } else if (!sandbox && ctx.save.isChapterDone('bab5') && !ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === '') {
       this.startCh6();
     }
 
@@ -336,9 +336,9 @@ export class KotaLevel implements Level {
   private setupCostumeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
-    if (state !== 'costume_home' && state !== 'costume_return') return;
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return'].includes(state)) return;
     if (arrival === 'homeMorning') this.hud.show('Keesokan pagi', 0xf2b632, true);
-    if (state === 'costume_return') {
+    if (state === 'costume_return' || state === 'snake_return') {
       const d = CITY_LAYOUT.lab.door;
       this.setGoal({ x: d.x, z: d.z });
       ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
@@ -352,9 +352,9 @@ export class KotaLevel implements Level {
       radius: 3,
       icon: 'hand',
       promptHeight: 1.7,
-      enabled: () => ctx.save.data.interlude === 'costume_home',
+      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home',
       onInteract: () => {
-        ctx.save.setInterlude('costume_return');
+        ctx.save.setInterlude(ctx.save.data.interlude === 'snake_home' ? 'snake_return' : 'costume_return');
         setArrival('kota', 'homeMorning');
         void ctx.game.loadLevel('kota');
       },

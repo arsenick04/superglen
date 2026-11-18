@@ -43,4 +43,21 @@ const preview = new SaveStore();
 assert.equal(preview.data.interlude, '');
 assert.deepEqual(startPlanFor(preview), { level: 'bab2' }, 'direct chapter preview stays direct');
 
+fakeWindow.location.search = '';
+const snake = new SaveStore();
+snake.markChapterDone('bab1');
+snake.markChapterDone('bab2');
+snake.markChapterDone('bab3');
+snake.markChapterDone('bab4');
+snake.markChapterDone('bab5');
+snake.setInterlude('snake_lab');
+snake.setWhere('kota');
+assert.deepEqual(startPlanFor(snake), { level: 'lab' });
+snake.setInterlude('snake_home');
+assert.deepEqual(startPlanFor(snake), { level: 'kota' });
+snake.setInterlude('snake_return');
+assert.deepEqual(startPlanFor(snake), { level: 'kota', arrival: 'homeMorning' });
+snake.setWhere('lab');
+assert.deepEqual(startPlanFor(snake), { level: 'lab' });
+
 console.log('Costume day probe passed: home gate, next morning, reload, legacy save, and Chapter 2 preview.');

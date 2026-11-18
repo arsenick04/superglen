@@ -854,3 +854,12 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Misi warga dinonaktifkan sementara agar tidak mengganti tujuan wajib. Save lama tanpa checkpoint baru tidak dipaksa mundur, reload pada tiap sisi pergantian hari tetap aman, dan `?chapter=2` tetap langsung masuk latihan untuk pengujian.
 - Build dan probe non-browser `scripts/costume-day-probe.ts` lulus. Browser tidak dijalankan sesuai keputusan pemilik.
 - Berikutnya, PR terpisah akan menambahkan jeda setelah Ular dan latihan lompat Barongsai tiga tingkat sebelum Tikus Rakus.
+
+
+## Ular → Lab → pulang — 18 November 2026
+
+- Setelah Ular Melar jinak, hadiah dan status Chapter 5 disimpan sekali, tetapi Chapter 6 tidak langsung dibuat. Glen mendapat transisi kembali ke Lab melalui checkpoint `snake_lab`.
+- Di Lab, Nino, Glen, dan Aara merayakan kemenangan bersama. Nino lalu menyuruh Glen pulang; checkpoint `snake_home` mengarahkan ke Rumah Glen, dan interaksi rumah memuat pagi berikutnya sebagai `snake_return`.
+- Tikus Rakus ditahan selama seluruh interlude. Save/reload mengutamakan Lab atau rumah sesuai checkpoint; slot lama tidak dapat melompati jeda. Tautan preview chapter tetap langsung.
+- Build, check:quiz, probe state/reload, dan diff check lulus. Browser tidak dijalankan.
+- Setelah ini: PR terpisah membuka latihan Lompat Barongsai tiga tingkat; baru sesudah latihan itu gerbang Tikus Rakus dibuka.

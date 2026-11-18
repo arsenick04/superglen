@@ -165,7 +165,10 @@ export class Bab1Level implements Level {
       }
       this.story.setupReturning(arrival === 'labFromHangar');
       const b5 = ctx.save.data.bab5.step;
-      if (lab && !flow.sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5') && (b5 === 'lab' || b5 === 'walk')) {
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'snake_lab') {
+        this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 }, 'snakeCelebration');
+        this.visit.start();
+      } else if (lab && !flow.sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5') && (b5 === 'lab' || b5 === 'walk')) {
         this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 });
         this.visit.start();
       }

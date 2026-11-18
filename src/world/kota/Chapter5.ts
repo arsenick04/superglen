@@ -7,6 +7,7 @@ import { AaraActor } from './Aara';
 import { AaraFollower } from './AaraFollower';
 import { SnakeBoss } from './SnakeBoss';
 import { BAB5_DOOR, BAB5_LINES as L, SNAKE_FIELD } from './Bab5Data';
+import { travel } from '../progress';
 
 /** What the level gives Chapter 5 (so this file does not need to know the level class). */
 export interface Chapter5Hooks {
@@ -293,8 +294,9 @@ export class Chapter5 {
       await gone;
       await dialog.say(L.ninoTikus, { lockControls: true });
       cameraRig.setFraming(null);
-      // Chapter 5 is done: coins, stars, confetti; the city is free again.
+      // The snake is tamed, but the next chapter waits for a Lab celebration and a night at home.
       this.over = true;
+      ctx.save.setInterlude('snake_lab');
       ctx.save.markChapterDone('bab5');
       ctx.save.setBab5('');
       ctx.save.finishCityMission('bab5', 12);
@@ -303,9 +305,8 @@ export class Chapter5 {
       ctx.game.setTransformAllowed(true);
       ctx.objectives.clear();
       ctx.game.debugInfo.ch5Scene = 'done';
-      await new Celebration(ctx, 'Chapter 5 selesai!', fx.sparkles).play();
-      this.hooks.setGoal(null);
-      this.hooks.onDone();
+      await new Celebration(ctx, 'Ular Melar selesai!', fx.sparkles).play();
+      void travel(ctx.game, 'lab', 'labEntrance');
     });
   }
 
