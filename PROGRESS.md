@@ -829,3 +829,10 @@ Untuk dicoba sendiri:
 - Review silang oleh agen stabilisasi dan review agen utama: tidak ada temuan penghalang. Sumber smoke menambah asersi 1 aktif/6 antre, jeda tanpa musuh aktif, pergantian tujuh giliran dan ekspektasi pendamping satu; seluruh asersi progres/kemenangan lama dipertahankan. Browser tidak dijalankan sesuai instruksi pemilik.
 
 Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak, tunggu pergantian, lalu ulangi. Jangan ada Curut kedua yang menyerang selama giliran pertama atau lemparan tertinggal setelah ia jinak.
+
+## Dialog tembus pandang dan label lokasi setelah mulai — 18 November 2026
+
+- Permintaan pemilik mencakup seluruh nama jalan/daerah/lokasi. Semuanya memakai CityHud/.city-toast, sehingga latar bersama kini alpha 0,80; latar kartu dialog reguler/compact/battle alpha 0,82. Teks dan ikon tetap opak agar terbaca; tidak memakai opacity pada seluruh elemen.
+- .city-toast disembunyikan sebelum .game-started. CityHud tidak menghitung mundur durasi label sebelum StartGate dimulai dan getter teks kosong sebelum mulai; judul kota tetap mendapat durasi normal setelah ketukan pertama.
+- Typecheck, build dan diff check lulus. Review independen agen stabilisasi dan pemeriksaan agen utama menyetujui patch tanpa temuan penghalang. Pengujian browser/screenshot ditunda sesuai keputusan pemilik; tampilan akhir dicoba pemilik sendiri.
+- Audisi suara Glen dikerjakan terpisah melalui ElevenLabs Creative Studio: Chinyaku ditolak pemilik karena pengucapan Indonesia kurang alami; satu sampel honeypie (wanita Indonesia, youthful) sedang menunggu pilihan pemilik. Tidak mengganti suara produksi atau membuat ulang seluruh klip sebelum kandidat dipilih. Biaya dua audisi tercatat 95 + 126 = 221 kredit.
