@@ -90,6 +90,7 @@ export class KotaLevel implements Level {
   private glimmerMat!: THREE.MeshBasicMaterial;
   private t = 0;
   private labFound = false;
+  private hillIntroStarted = false;
   private lastHud = '';
   private lastDistrict = '';
 
@@ -226,8 +227,14 @@ export class KotaLevel implements Level {
         }
         this.hud.show('Gedung Barongsai Tua', 0xc9a46f, true);
         ctx.game.debugInfo.labFound = true;
-        if (!sandbox && !bab1) void ctx.game.playCinematic('hill');
-        this.onLabEntrance?.();
+        if (!sandbox && !bab1 && !this.hillIntroStarted) {
+          this.hillIntroStarted = true;
+          // The hill film is the doorway into the story building: when it ends,
+          // carry Glen straight inside instead of leaving him outside at the door.
+          void ctx.game.playCinematic('hill').then(() => this.enterLab());
+        } else {
+          this.onLabEntrance?.();
+        }
       },
     });
     // Going in: press at the door (hand icon). Works whenever the building is known (it is, once the zone above was reached).
