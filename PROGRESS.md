@@ -794,3 +794,18 @@ Untuk dicoba: buka game di PC dan HP, reset zoom di pengaturan, lalu coba masuk 
 - Atas instruksi pemilik, tidak menjalankan browser/Playwright, screenshot baru, atau pengukuran FPS. Pengujian browser total menunggu game selesai. Pemilik menguji bermain sekarang.
 
 Untuk dicoba sendiri: di HP landscape masuk battle Ular/Rakus, pastikan bintang tidak menumpuk dengan seruan; masuk/keluar arena Curut dari kota dan ulangi setelah istirahat di rumah sakit.
+
+
+## Injak-pantul musuh non-bos — 18 November 2026
+
+- Superglen yang sedang turun dan mendarat tepat pada kepala Curut memberi satu hit biasa, lalu memantul otomatis (tinggi pantul 1,2 m di parkour.ts). Berlaku pada Curut pasar/arena serta Curut pendamping Rakus; SnakeBoss/RakusBoss tidak didaftarkan sebagai permukaan injak dan mekanik bos tidak berubah. Glen biasa, terbang, kontrol terkunci, kontak dari samping/naik tidak memicu fitur ini.
+- Player memeriksa lintasan kaki sesudah gerakan diselesaikan controller, memilih kontak paling awal satu musuh, lalu menghentikan gerakan pada kepala sebelum memulai pantulan di langkah berikutnya. Tidak mengirim event mendarat/hentakan tanah pada kontak kepala itu; tidak menaikkan irama atau mereset jatah double jump. Hentakan area saat mendarat di tanah tetap bekerja.
+- Kontak memakai bidang kepala gameplay yang stabil (85% tinggi model, radius ramah 0,5 m di combat.ts); tidak mengejar bob/squash kosmetik. Posisi kontak visual serta rasa gerak perlu dicoba sendiri. Callback dilepas saat level dibuang; pending pantul dibersihkan pada teleport/respawn/pergantian mode. Tidak ada alokasi objek baru per langkah pada jalur kontak.
+- File: src/player/{Player,HeadStomp}.ts, src/world/kota/{MarketRats,RakusHelpers}.ts, src/config/{parkour,combat}.ts, scripts/head-stomp-probe.ts. Tidak ada dependensi/dialog/audio baru.
+- Pemeriksaan: typecheck, build, check:reach (0 error/warning), check:quiz, diff check lulus; `node_modules/.bin/tsx scripts/head-stomp-probe.ts` 8/8 (turun cepat, naik/samping, sudah di bawah kepala, posisi horizontal saat tumbukan, dekat tetapi meleset, batas radius). Probe ini memeriksa geometri kontak, bukan simulasi game penuh. Review independen oleh agen stabilisasi serta review agen utama: tidak ada temuan penghalang.
+- Tidak menjalankan pengujian browser otomatis sesuai keputusan pemilik; integrasi fisika dan tampilan belum diverifikasi saat bermain.
+
+Untuk dicoba sendiri:
+1. Di arena Curut, lompat lalu arahkan kaki ke kepala: satu hit dan pantul otomatis; lewat samping/naik tidak memantul. Ulangi untuk menjinakkan tanpa laser.
+2. Coba Curut kecil pendamping Rakus; tubuh Rakus dan Ular tidak menerima serangan injak baru. Hentakan di tanah dekat Curut tetap berfungsi.
+3. Setelah memantul, keluar/masuk arena atau pulihkan hati di rumah sakit: tidak ada pantulan tertinggal atau hit ganda.

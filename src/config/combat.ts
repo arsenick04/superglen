@@ -25,6 +25,8 @@ export const Combat = {
   rat: {
     /** Visual size multiplier of the old 0.6 m rat: about knee-to-waist of Glen. */
     scale: 1.5,
+    /** Head contact: crown below the ear tips, as a share of the normalized model height; feet + head allowance (m). */
+    headStomp: { heightShare: 0.85, radius: 0.5 },
     /** Hits to tame (stomp and laser each count 1). */
     hp: 5,
     hpEasy: 3,
@@ -58,7 +60,7 @@ export const Combat = {
     stun: 0.7,
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
     globalGap: 0.5,
-    /** Dedicated real-time Curut arena and fixed camera composition. */
+    /** Dedicated real-time Curut arena; the camera follows Glen. */
     arena: {
       radius: 5.2,
       returnInset: 0.2,

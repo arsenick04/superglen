@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { headContactTime } from '../src/player/HeadStomp';
+
+const from = { x: 0, y: 2, z: 0 };
+const to = { x: 0, y: 0, z: 0 };
+const contact = () => headContactTime(from, to, 0, 1, 0, 0.5);
+assert.equal(contact(), 0.5, 'fast fall crosses head before reaching the floor');
+to.y = 3;
+assert.equal(contact(), Infinity, 'rising through a head never stomps');
+to.y = 2;
+assert.equal(contact(), Infinity, 'sideways contact never stomps');
+from.y = 0.9;
+to.y = 0;
+assert.equal(contact(), Infinity, 'a fall already below the crown never stomps');
+from.y = 2;
+from.x = -1;
+to.x = 1;
+assert.equal(contact(), 0.5, 'use horizontal position at impact, even when endpoints miss');
+to.x = 3;
+assert.equal(contact(), Infinity, 'crossing the radius before head height is a near miss');
+from.x = to.x = 0.5;
+assert.equal(contact(), 0.5, 'allow the friendly radius boundary');
+from.x = to.x = 0.501;
+assert.equal(contact(), Infinity, 'outside the radius stays a miss');
+console.log('Head-stomp segment probe: 8 checks passed.');

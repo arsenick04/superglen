@@ -54,6 +54,8 @@ export const Parkour = {
   spinTime: 0.45,
   /** Cosmetic hop of Player.smallHop() (m/s launch speed, about 0.25 m). */
   smallHopSpeed: 3.4,
+  /** Automatic rebound after landing on an ordinary enemy's head (no rhythm increase). */
+  headBounceApex: 1.2,
 
   // ---- Landing ---------------------------------------------------------------------------------------------
   /** Landing faster than this (m/s) squashes a little. */
@@ -278,6 +280,7 @@ export const MAX_LEVEL = Parkour.levels.length - 1;
 export const LaunchSpeeds = {
   glen: launchSpeed(Parkour.glenApex),
   double: launchSpeed(Parkour.doubleJumpApex),
+  headBounce: launchSpeed(Parkour.headBounceApex),
   kick: launchSpeed(Parkour.wallKick.apex),
   levels: Parkour.levels.map((l) => launchSpeed(l.apex)) as readonly number[],
 };

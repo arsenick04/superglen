@@ -4,6 +4,7 @@ import type { HitInfo, Target } from '../../gameplay/Targets';
 import { Combat, CombatRng } from '../../config/combat';
 import { arrowGeo, pipGeo, ratGeo, RatConfig } from './MarketRats';
 import { enemyModels } from './EnemyModels';
+import { headContactTime, type FeetPoint } from '../../player/HeadStomp';
 
 const S_OFF = 0;
 const S_CHASE = 1;
@@ -44,6 +45,8 @@ export class RakusHelpers {
   private readonly targets: Target[] = [];
   private readonly ratMesh: THREE.InstancedMesh;
   private readonly ratModel: boolean;
+  private readonly headY: number;
+  private headCandidate = -1;
   private readonly q2 = new THREE.Quaternion();
   private readonly ax = new THREE.Vector3(1, 0, 0);
   private readonly az = new THREE.Vector3(0, 0, 1);
@@ -76,6 +79,7 @@ export class RakusHelpers {
   hurtGlen = 0;
   blocked = 0;
   hits = 0;
+  headStomps = 0;
   dodges = 0;
 
   constructor(
@@ -97,7 +101,9 @@ export class RakusHelpers {
     // The Curut Cemberut model (light copy) at the old rat's height; the procedural bun rat if it is missing.
     const procRat = ratGeo();
     procRat.computeBoundingBox();
-    const modelRat = enemyModels.geometry('curut_cemberut_lo', (procRat.boundingBox as THREE.Box3).max.y);
+    const ratH = (procRat.boundingBox as THREE.Box3).max.y;
+    this.headY = ratH * Combat.rat.scale * Combat.rat.headStomp.heightShare;
+    const modelRat = enemyModels.geometry('curut_cemberut_lo', ratH);
     const rg = modelRat ?? procRat;
     if (modelRat) procRat.dispose();
     this.ratModel = !!modelRat;
@@ -138,14 +144,38 @@ export class RakusHelpers {
         if (Math.hypot(this.hx[i] - e.x, this.hz[i] - e.z) < e.radius + 0.4 && Math.abs(e.y) < 3) this.hit(i, true);
       }
     });
+    const removeHeadStomp = ctx.player.registerHeadStomp({
+      contactTime: (from, to) => this.headContact(from, to),
+      stomp: () => {
+        this.headStomps++;
+        this.hit(this.headCandidate, true);
+      },
+    });
     ctx.onDispose(() => {
       this.disposed = true;
+      removeHeadStomp();
       for (const g of this.geos) g.dispose();
       for (const m of this.mats) m.dispose();
       this.ratMesh.dispose();
       this.arrowMesh.dispose();
       this.pipMesh.dispose();
     });
+  }
+
+  private headContact(from: FeetPoint, to: FeetPoint): number {
+    this.headCandidate = -1;
+    const { ctx } = this;
+    if (this.disposed || !this.enabled || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting) return Infinity;
+    let first = Infinity;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] === S_OFF || this.st[i] >= S_TAME || this.hp[i] === 0) continue;
+      const t = headContactTime(from, to, this.hx[i], this.headY, this.hz[i], Combat.rat.headStomp.radius);
+      if (t < first) {
+        first = t;
+        this.headCandidate = i;
+      }
+    }
+    return first;
   }
 
   /** Helpers that are still in the fight (not tamed yet). */
@@ -559,6 +589,6 @@ export class RakusHelpers {
   }
 
   counts(): Record<string, number> {
-    return { spawned: this.spawned, tamed: this.tamedCount, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, hurtGlen: this.hurtGlen, blocked: this.blocked, hits: this.hits, dodges: this.dodges, alive: this.alive };
+    return { spawned: this.spawned, tamed: this.tamedCount, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, hurtGlen: this.hurtGlen, blocked: this.blocked, hits: this.hits, headStomps: this.headStomps, dodges: this.dodges, alive: this.alive };
   }
 }
