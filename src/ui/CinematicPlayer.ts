@@ -5,7 +5,6 @@ export class CinematicPlayer {
   private readonly layer: HTMLDivElement;
   private readonly video: HTMLVideoElement;
   private readonly skip: HTMLButtonElement;
-  private readonly start: HTMLButtonElement;
   private readonly played = new Set<CinematicId>();
   private running = false;
 
@@ -24,12 +23,8 @@ export class CinematicPlayer {
     this.skip.className = 'cinematic-skip';
     this.skip.type = 'button';
     this.skip.textContent = 'Lewati';
-    this.start = document.createElement('button');
-    this.start.className = 'cinematic-start';
-    this.start.type = 'button';
-    this.start.textContent = '▶ Putar video';
-    this.start.hidden = true;
-    this.layer.append(this.video, top, bottom, this.start, this.skip);
+    this.layer.style.pointerEvents = 'auto';
+    this.layer.append(this.video, top, bottom, this.skip);
     root.appendChild(this.layer);
     this.skip.addEventListener('click', () => this.finish());
     this.skip.addEventListener('pointerup', (event) => {
@@ -42,16 +37,6 @@ export class CinematicPlayer {
       event.stopPropagation();
       this.finish();
     }, { passive: false });
-    const resume = (event: Event): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      // iOS permits media with sound here because this call is made directly
-      // from the child's tap. Keep the cinematic open if it still refuses.
-      void this.video.play().then(() => { this.start.hidden = true; }).catch(() => { this.start.hidden = false; });
-    };
-    this.start.addEventListener('click', resume);
-    this.start.addEventListener('pointerup', resume);
-    this.start.addEventListener('touchend', resume, { passive: false });
   }
 
   play(id: CinematicId): Promise<void> {
@@ -60,7 +45,7 @@ export class CinematicPlayer {
     this.running = true;
     this.lock(true);
     this.layer.hidden = false;
-    this.start.hidden = true;
+    this.video.muted = false;
     this.video.src = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
     this.video.currentTime = 0;
     return new Promise<void>((resolve) => {
@@ -68,7 +53,6 @@ export class CinematicPlayer {
         this.video.removeEventListener('ended', finish);
         this.video.removeEventListener('error', finish);
         this.layer.hidden = true;
-        this.start.hidden = true;
         this.video.pause();
         this.video.removeAttribute('src');
         this.video.load();
@@ -78,10 +62,13 @@ export class CinematicPlayer {
       };
       this.video.addEventListener('ended', finish, { once: true });
       this.video.addEventListener('error', finish, { once: true });
-      // A later story cinematic is not always considered part of a user
-      // gesture by mobile Safari. Do not silently skip it when autoplay is
-      // rejected: offer one explicit tap that can legally start sound.
-      void this.video.play().catch(() => { this.start.hidden = false; });
+      // Safari allows inline muted autoplay when audible autoplay is blocked.
+      // Never advance the story merely because a play request was rejected.
+      void this.video.play().catch(async () => {
+        if (!this.running) return;
+        this.video.muted = true;
+        try { await this.video.play(); } catch { /* Lewati remains available. */ }
+      });
     });
   }
 
