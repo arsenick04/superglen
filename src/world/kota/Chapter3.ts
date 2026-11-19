@@ -5,7 +5,6 @@ import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
 import { CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
-import { districtAt } from './CityData';
 import { Celebration } from '../Celebration';
 import { Easings } from '../../gameplay/Sequence';
 
@@ -176,11 +175,6 @@ export class Chapter3 {
         this.setStep('chase');
         ctx.game.setPlayerMode('superglen', false);
         await ctx.dialog.say(L.ninoCepat);
-        ctx.game.setControlsEnabled(false);
-        void ctx.game.loadLevel('battle-curut');
-      } else if (this.step === 'chase') {
-        ctx.game.setControlsEnabled(false);
-        void ctx.game.loadLevel('battle-curut');
       }
     });
   }
@@ -374,11 +368,19 @@ export class Chapter3 {
     const { ctx } = this;
     const p = ctx.player.position;
     if (this.arenaLoading) return true;
-    const inArea = districtAt(p.x, p.z).id === 'pasar';
+    // Reaching the actual market encounter starts the cinematic. Merely
+    // leaving the Barongsai building (or entering the broad Pasar district)
+    // must never teleport Glen into battle.
+    const inArea = Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius;
     if (this.arenaEnabled && this.step === 'chase' && inArea && !ctx.health.resting && startGate.started && ctx.game.controlsEnabled) {
       this.arenaLoading = true;
-      // loadLevel locks controls synchronously, before laser/player updates in Game.fixedStep.
-      void ctx.game.loadLevel('battle-curut');
+      ctx.game.setControlsEnabled(false);
+      ctx.seq.run(async () => {
+        await ctx.game.playCinematic('curut');
+        if (this.disposed) return;
+        ctx.game.setControlsEnabled(false);
+        await ctx.game.loadLevel('battle-curut');
+      });
       return true;
     }
     return false;
