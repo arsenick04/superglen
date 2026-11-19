@@ -6,6 +6,7 @@ export class CinematicPlayer {
   private readonly video: HTMLVideoElement;
   private readonly skip: HTMLButtonElement;
   private readonly played = new Set<CinematicId>();
+  private readonly prepared = new Map<CinematicId, Promise<string>>();
   private running = false;
 
   constructor(root: HTMLElement, private readonly lock: (locked: boolean) => void) {
@@ -39,23 +40,36 @@ export class CinematicPlayer {
     }, { passive: false });
   }
 
+  /** Fetch during exploration so the encounter does not wait on the network. */
+  preload(id: CinematicId): void {
+    if (this.prepared.has(id)) return;
+    const url = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
+    this.prepared.set(id, fetch(url).then((response) => {
+      if (!response.ok) throw new Error(`Cinematic ${id}: ${response.status}`);
+      return response.blob();
+    }).then((blob) => URL.createObjectURL(blob)).catch(() => url));
+  }
+
   play(id: CinematicId): Promise<void> {
     if (this.played.has(id) || this.running) return Promise.resolve();
     this.played.add(id);
     this.running = true;
     this.lock(true);
     this.layer.hidden = false;
+    this.layer.style.visibility = 'hidden';
     this.video.muted = false;
-    this.video.src = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
-    this.video.currentTime = 0;
     return new Promise<void>((resolve) => {
       const finish = (): void => {
         this.video.removeEventListener('ended', finish);
         this.video.removeEventListener('error', finish);
         this.layer.hidden = true;
+        this.layer.style.visibility = '';
         this.video.pause();
         this.video.removeAttribute('src');
         this.video.load();
+        const prepared = this.prepared.get(id);
+        if (prepared) void prepared.then((url) => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); });
+        this.prepared.delete(id);
         this.running = false;
         this.lock(false);
         resolve();
@@ -64,11 +78,21 @@ export class CinematicPlayer {
       this.video.addEventListener('error', finish, { once: true });
       // Safari allows inline muted autoplay when audible autoplay is blocked.
       // Never advance the story merely because a play request was rejected.
-      void this.video.play().catch(async () => {
+      const start = async (): Promise<void> => {
+        const url = await (this.prepared.get(id) ?? Promise.resolve(`${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`));
         if (!this.running) return;
-        this.video.muted = true;
-        try { await this.video.play(); } catch { /* Lewati remains available. */ }
-      });
+        this.video.src = url;
+        this.video.currentTime = 0;
+        try {
+          await this.video.play();
+        } catch {
+          if (!this.running) return;
+          this.video.muted = true;
+          try { await this.video.play(); } catch { /* Keep Lewati available. */ }
+        }
+        if (this.running) this.layer.style.visibility = '';
+      };
+      void start();
     });
   }
 

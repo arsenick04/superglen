@@ -123,6 +123,7 @@ export class Chapter5 {
   /** Called once the level is built. */
   start(): void {
     const { ctx } = this;
+    ctx.game.preloadCinematic('snake-defeat');
     this.hooks.dropMission();
     this.aara = new AaraActor(this.lit, ctx.dialog);
     this.aara.setLevel(3);

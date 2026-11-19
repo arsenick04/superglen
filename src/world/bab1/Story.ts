@@ -41,6 +41,7 @@ export class Story {
 
   constructor(parts: StoryParts) {
     this.p = parts;
+    parts.ctx.game.preloadCinematic('transform');
     const ui = parts.ctx.ui;
     this.flash = document.createElement('div');
     this.flash.className = 'bab1-flash';
