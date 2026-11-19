@@ -20,6 +20,7 @@ import { Chapter3 } from './Chapter3';
 import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
 import { Chapter5 } from './Chapter5';
+import { SNAKE_FIELD } from './Bab5Data';
 import { Chapter6 } from './Chapter6';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
@@ -136,6 +137,8 @@ export class KotaLevel implements Level {
     }
     if (arrival === 'marketBattle') {
       this.spawn = marketBattleSpawn(ctx.save.data.bab3.step);
+    } else if (arrival === 'snakeVictory') {
+      this.spawn = { x: SNAKE_FIELD.x, y: 0, z: SNAKE_FIELD.z + 9, yaw: Math.PI };
     } else if (arrival === 'homeMorning') {
       this.spawn = this.glenHomeSpot();
     } else if (arrival === 'hillDoor') {
@@ -300,8 +303,9 @@ export class KotaLevel implements Level {
       this.startCh4();
     } else if (!sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5')) {
       this.startCh5();
-    } else if (!sandbox && ctx.save.isChapterDone('bab5') && !ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === '') {
-      this.startCh6();
+    } else if (!sandbox && ctx.save.isChapterDone('bab5') && !ctx.save.isChapterDone('bab6')) {
+      if (ctx.save.data.interlude === 'snake_lab') this.startCh5();
+      else if (ctx.save.data.interlude === '') this.startCh6();
     }
 
     const info = game.debugInfo;
@@ -386,7 +390,7 @@ export class KotaLevel implements Level {
 
   /** L11b: Chapter 5 follows Chapter 4 (also when it was finished in an earlier session). */
   private startCh5(): void {
-    if (this.ch5 || this.ctx.save.isChapterDone('bab5')) return;
+    if (this.ch5 || (this.ctx.save.isChapterDone('bab5') && this.ctx.save.data.interlude !== 'snake_lab')) return;
     this.ch5 = new Chapter5(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),

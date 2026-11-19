@@ -7,7 +7,6 @@ import { AaraActor } from './Aara';
 import { AaraFollower } from './AaraFollower';
 import { SnakeBoss } from './SnakeBoss';
 import { BAB5_DOOR, BAB5_LINES as L, SNAKE_FIELD } from './Bab5Data';
-import { travel } from '../progress';
 
 /** What the level gives Chapter 5 (so this file does not need to know the level class). */
 export interface Chapter5Hooks {
@@ -41,6 +40,7 @@ export type Ch5Step = '' | 'walk' | 'lab' | 'city' | 'fight';
 export class Chapter5 {
   step: Ch5Step;
   private over = false;
+  private returningToLab = false;
   private disposed = false;
   private readonly tmp = new THREE.Vector3();
   private aara: AaraActor | null = null;
@@ -67,6 +67,8 @@ export class Chapter5 {
     private readonly lit: THREE.Material,
   ) {
     this.step = ctx.save.data.bab5.step as Ch5Step;
+    this.returningToLab = ctx.save.isChapterDone('bab5') && ctx.save.data.interlude === 'snake_lab';
+    this.over = this.returningToLab;
     this.lastExh = ctx.health.exhaustions;
     // During the fight the story lines are small call-outs that never stop it (Dialog compact mode).
     const dropRule = ctx.dialog.addCompactRule(() => this.engaged && !this.tamedScene);
@@ -130,6 +132,11 @@ export class Chapter5 {
     ctx.root.add(this.aara.group);
     ctx.onDispose(() => this.aara?.dispose());
     this.follower = new AaraFollower(this.aara, ctx.player);
+    if (this.returningToLab) {
+      this.follower.reset();
+      this.labReturnGoal();
+      return;
+    }
     if (this.step === 'city' || this.step === 'fight') this.buildBoss();
     this.applyStep();
     ctx.seq.run(async () => {
@@ -150,6 +157,11 @@ export class Chapter5 {
   }
 
   private doorGoal(): void {
+    this.hooks.setGoal({ x: BAB5_DOOR.x, z: BAB5_DOOR.z });
+    this.ctx.objectives.set(this.tmp.set(BAB5_DOOR.x, BAB5_DOOR.y, BAB5_DOOR.z + 0.9));
+  }
+
+  private labReturnGoal(): void {
     this.hooks.setGoal({ x: BAB5_DOOR.x, z: BAB5_DOOR.z });
     this.ctx.objectives.set(this.tmp.set(BAB5_DOOR.x, BAB5_DOOR.y, BAB5_DOOR.z + 0.9));
   }
@@ -306,12 +318,14 @@ export class Chapter5 {
       ctx.save.setBab5('');
       ctx.save.finishCityMission('bab5', 12);
       ctx.quiz.coinsChanged();
+      await ctx.dialog.say(L.ninoPanggilLab, { lockControls: true });
+      this.returningToLab = true;
+      this.follower?.reset();
+      this.labReturnGoal();
       ctx.game.setControlsEnabled(true);
       ctx.game.setTransformAllowed(true);
-      ctx.objectives.clear();
       ctx.game.debugInfo.ch5Scene = 'done';
       await new Celebration(ctx, 'Ular Melar selesai!', fx.sparkles).play();
-      void travel(ctx.game, 'lab', 'labEntrance');
     });
   }
 
@@ -334,6 +348,10 @@ export class Chapter5 {
   // ---- updates -----------------------------------------------------------------------------------------------
 
   fixedUpdate(dt = 1 / 60): void {
+    if (this.returningToLab && !this.disposed) {
+      this.follower?.fixedUpdate(dt);
+      return;
+    }
     if (this.over || this.disposed) return;
     this.clock += dt;
     const { ctx } = this;

@@ -80,7 +80,6 @@ export class LabVisit {
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       cameraRig.setFraming(this.tmp.set(lab.ninoPos.x - 1.2, LAB_FLOOR + 1.3, lab.ninoPos.z + 1.2), { weight: 0.6, distance: 3, yaw: -Math.PI / 2 });
-      await dialog.say(L.ninoPanggilLab, { lockControls: true });
       await dialog.say(L.glenRayakan, { lockControls: true });
       await dialog.say(L.aaraRayakan, { lockControls: true });
       ctx.sfx.bling();

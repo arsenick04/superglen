@@ -24,6 +24,7 @@ import { MARKET } from './kota/Bab3Data';
 /** Where a level should put the player when it was entered through a door (consumed by the level's build). */
 export type Arrival =
   | 'marketBattle'
+  | 'snakeVictory'
   /** City: outside Glen's house on the next morning. */
   | 'homeMorning'
   /** City: in front of the old building's door on the hill, facing away from it. */
@@ -96,7 +97,7 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
-  if (save.data.interlude === 'snake_lab') return { level: 'lab' };
+  if (save.data.interlude === 'snake_lab') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'snakeVictory' };
   if (save.data.interlude === 'snake_home') return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (save.data.interlude === 'snake_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   const slot = save.data.slot;

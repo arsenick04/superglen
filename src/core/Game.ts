@@ -62,6 +62,7 @@ import type { SlotSave } from './Save';
 const MAX_FRAME_DT = 0.1;
 /** Max physics steps per rendered frame. Leftover whole steps are dropped (the sub-step phase is kept). */
 const MAX_SUBSTEPS = 5;
+const SNAKE_RETURN_VO = new Set(['bab5_nino_panggil_lab', 'bab5_glen_rayakan', 'bab5_aara_rayakan', 'bab5_nino_pulang']);
 
 /** Read-only debug data for automated smoke tests and the browser console. */
 export interface DebugHandle {
@@ -708,15 +709,31 @@ export class Game {
       },
     );
     // Voice lines: the clip starts with the line and the bubble waits for it; advancing a line stops it.
-    this.dialog.onLineStart((id) => {
+    this.dialog.onLineStart((id, speaker, lineText) => {
       this.sfx.blip();
       if (!id) return;
       void this.audio.playVoice(id).then((r) => {
+        if (this.dialog.currentLine?.id !== id) return;
         // The clip has just started: keep the bubble for its whole length (plus a tail) from now.
         if (r.played) this.dialog.setLineDuration(this.dialog.lineElapsed + r.duration + AudioConfig.tail);
+        else if (SNAKE_RETURN_VO.has(id) && !this.muteUrl && this.save.data.settings.sound && 'speechSynthesis' in window) {
+          // These four story clips are still awaiting their packaged MP3s. Keep the scene audible on iOS too.
+          window.speechSynthesis.cancel();
+          const spoken = new SpeechSynthesisUtterance(lineText);
+          spoken.lang = 'id-ID';
+          spoken.rate = 0.95;
+          spoken.pitch = speaker === 'glen' ? 1.25 : speaker === 'aara' ? 1.12 : 1;
+          const indonesian = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('id'));
+          if (indonesian) spoken.voice = indonesian;
+          this.dialog.setLineDuration(this.dialog.lineElapsed + Math.max(3, lineText.length / 12));
+          window.speechSynthesis.speak(spoken);
+        }
       });
     });
-    this.dialog.onLineEnd(() => this.audio.stopVoice());
+    this.dialog.onLineEnd(() => {
+      this.audio.stopVoice();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    });
     wireQuizVoice(this.quiz, this.audio);
     this.interactions = new Interactions(
       uiRoot,
@@ -1129,6 +1146,7 @@ export class Game {
     this.save.setSound(on);
     this.audio.refresh();
     this.sfx.refresh();
+    if (!on && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   }
 
   /** Parents' page hook: background music on/off (saved). */
