@@ -283,7 +283,7 @@ export class Chapter5 {
     if (this.tamedScene) return;
     this.tamedScene = true;
     const { ctx } = this;
-    const { seq, dialog, cameraRig, fx } = ctx;
+    const { seq, cameraRig, fx } = ctx;
     const b = this.boss as SnakeBoss;
     seq.run(async () => {
       ctx.game.debugInfo.ch5Scene = 'tamed';
@@ -292,14 +292,10 @@ export class Chapter5 {
       b.showHud(false);
       this.engaged = false;
       ctx.battle.exit(true);
-      cameraRig.setFraming(b.headAt, { weight: 0.55, distance: 8 });
-      await b.tameLook();
-      await dialog.say(L.ularMaaf, { lockControls: true });
-      await dialog.say(L.ninoHebat, { lockControls: true });
-      const gone = b.slitherAway(-1, -1, 5.5);
-      await dialog.say(L.ularPergi, { lockControls: true });
-      await gone;
-      await dialog.say(L.ninoTikus, { lockControls: true });
+      await ctx.game.playCinematic('snake-defeat');
+      if (this.disposed) return;
+      ctx.game.setControlsEnabled(false);
+      await b.slitherAway(-1, -1, 0);
       cameraRig.setFraming(null);
       // The snake is tamed, but the next chapter waits for a Lab celebration and a night at home.
       this.over = true;
