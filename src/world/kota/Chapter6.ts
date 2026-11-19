@@ -135,17 +135,8 @@ export class Chapter6 {
         await ctx.dialog.say(L.glenSiap);
         this.buildBoss();
         this.setStep('city');
-        this.beginBattleAtArena();
-      } else if (this.step === 'city' || this.step === 'fight') {
-        this.beginBattleAtArena();
       }
     });
-  }
-
-  private beginBattleAtArena(): void {
-    this.hooks.placePlayer(RAKUS_ARENA.x, RAKUS_ARENA.z + 9, Math.PI);
-    if (this.step === 'city') this.runIntro();
-    else this.engage();
   }
 
   private arenaGoal(): void {
@@ -271,10 +262,8 @@ export class Chapter6 {
     if (this.introScene) return;
     this.introScene = true;
     const { ctx } = this;
-    const { seq, dialog, cameraRig } = ctx;
-    // The battle HUD/camera/music begin at the boundary, before the story dialogue.
+    const { seq } = ctx;
     ctx.game.setControlsEnabled(false);
-    this.engage();
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
       ctx.game.debugInfo.ch6Scene = 'intro';
@@ -282,12 +271,11 @@ export class Chapter6 {
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
-      await dialog.say(L.rakusMakan, { lockControls: true });
-      await dialog.say(L.glenKembali, { lockControls: true });
-      await dialog.say(L.rakusRaja, { lockControls: true });
-      await dialog.say(L.ninoPola, { lockControls: true });
-      cameraRig.setFraming(null);
+      await ctx.game.playCinematic('rakus-warehouse');
+      if (this.disposed) return;
+      ctx.game.setControlsEnabled(false);
       this.setStep('fight');
+      this.engage();
       this.introScene = false;
       ctx.game.setControlsEnabled(true);
       ctx.game.debugInfo.ch6Scene = 'fight';
