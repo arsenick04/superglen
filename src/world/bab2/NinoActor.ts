@@ -5,8 +5,7 @@ import { Avatar, type AvatarState } from '../../player/CharacterModels';
 import { Easings } from '../../gameplay/Sequence';
 
 /**
- * Nino for Chapter 2: a low-poly boy in his blue costume, hovering, always turning to look at Glen. `glideTo` moves him
- * with a soft ease. Placeholder art until the real model arrives.
+ * Nino for Chapter 2: walks on the floor and always turns to look at Glen.
  */
 export class NinoActor {
   readonly group = new THREE.Group();
@@ -23,6 +22,8 @@ export class NinoActor {
   private readonly lookAt = new THREE.Vector3();
   private looking = false;
   private hopT = 9;
+  private lastX = 0;
+  private lastZ = 0;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -37,7 +38,9 @@ export class NinoActor {
     this.glow.position.y = 0.65;
     this.group.add(this.fig.root, this.glow);
     this.pos.set(x, 0, z);
-    this.group.position.set(x, 0.3, z);
+    this.group.position.set(x, 0, z);
+    this.lastX = x;
+    this.lastZ = z;
     ctx.root.add(this.group);
     ctx.onDispose(() => this.fig.dispose());
   }
@@ -46,6 +49,7 @@ export class NinoActor {
   glideTo(x: number, z: number, duration = 1.6): Promise<void> {
     const sx = this.pos.x;
     const sz = this.pos.z;
+    duration = Math.max(duration, Math.hypot(x - sx, z - sz) / 2.2);
     return this.ctx.seq.tween(
       duration,
       (u) => {
@@ -86,15 +90,18 @@ export class NinoActor {
     else if (d < -Math.PI) d += Math.PI * 2;
     this.yaw += d * Math.min(1, dt * 6);
     this.group.rotation.y = this.yaw;
-    let hover = 0.3 + 0.06 * Math.sin(this.t * 2.2);
+    let height = 0;
     if (this.hopT < 0.4) {
       this.hopT += dt;
-      hover += Math.sin(Math.min(1, this.hopT / 0.4) * Math.PI) * 0.4;
+      height += Math.sin(Math.min(1, this.hopT / 0.4) * Math.PI) * 0.4;
     }
-    this.group.position.set(this.pos.x, hover * (1 - this.sit) + 0.0 * this.sit, this.pos.z);
+    this.group.position.set(this.pos.x, height * (1 - this.sit), this.pos.z);
     this.glow.scale.setScalar(1 + 0.08 * Math.sin(this.t * 3));
-    this.st.airborne = this.sit < 0.5;
-    this.st.flying = this.sit < 0.5;
+    this.st.speed = Math.hypot(this.pos.x - this.lastX, this.pos.z - this.lastZ) / Math.max(dt, 1 / 120);
+    this.lastX = this.pos.x;
+    this.lastZ = this.pos.z;
+    this.st.airborne = height > 0.02;
+    this.st.flying = false;
     this.st.talking = this.ctx.dialog.speaker === 'nino';
     this.st.vy = 0;
     this.fig.pose(dt, this.st);

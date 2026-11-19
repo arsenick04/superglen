@@ -24,7 +24,7 @@ export const SNAKE_FIELD = (() => {
 })();
 
 /** Aara's walk: she follows this close behind (m); further than `teleportDist` she appears next to the child. */
-export const FOLLOW = { gap: 2.6, speed: 6.2, maxSpeed: 12, teleportDist: 28 } as const;
+export const FOLLOW = { gap: 2.6, speed: 2.8, maxSpeed: 4.5, teleportDist: 28 } as const;
 
 export const BAB5_LINES = {
   glenAjak: { id: 'bab5_glen_ajak', speaker: 'glen', text: 'Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!' },

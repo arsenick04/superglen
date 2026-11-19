@@ -1,4 +1,4 @@
-export type CinematicId = 'open' | 'hill';
+export type CinematicId = 'open' | 'hill' | 'transform';
 
 /** Small, skippable cinematic layer with a black 16:9 stage. */
 export class CinematicPlayer {

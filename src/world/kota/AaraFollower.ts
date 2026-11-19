@@ -45,11 +45,11 @@ export class AaraFollower {
     const g = this.aara.group;
     const fy = p.y - FEET;
     if (this.player.grounded) {
-      if (!this.haveLast || Math.hypot(p.x - this.last.x, p.z - this.last.z) > 0.6 || Math.abs(fy - this.last.y) > 0.4) {
+      if (!this.haveLast || Math.hypot(p.x - this.last.x, p.z - this.last.z) > 0.28 || Math.abs(fy - this.last.y) > 0.25) {
         this.last = { x: p.x, y: fy, z: p.z };
         this.haveLast = true;
         this.trail.push(this.last);
-        if (this.trail.length > 90) this.trail.shift();
+        if (this.trail.length > 180) this.trail.shift();
       }
     }
     const dp = Math.hypot(p.x - g.position.x, p.z - g.position.z);
