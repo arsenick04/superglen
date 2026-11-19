@@ -62,7 +62,7 @@ export interface LevelGame {
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
   /** Play a one-shot cinematic overlay, if its asset is available. */
-  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut'): Promise<void>;
+  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears'): Promise<void>;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
   setPlayerMode(mode: PlayerMode, persist?: boolean): void;
   /**
