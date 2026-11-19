@@ -90,6 +90,13 @@ type ParamLike = {
 };
 
 export class AudioManager {
+  private cinematicMuted = false;
+
+  /** Silence game audio while an independent cinematic video owns the soundtrack. */
+  setCinematicMuted(muted: boolean): void {
+    this.cinematicMuted = muted;
+    this.applyGains(true);
+  }
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private voiceGain: GainNode | null = null;
@@ -227,7 +234,7 @@ export class AudioManager {
 
   /** ?mute=1 or settings.sound off. */
   get silent(): boolean {
-    return this.opts.muteUrl || !this.opts.soundOn();
+    return this.cinematicMuted || this.opts.muteUrl || !this.opts.soundOn();
   }
 
   private get musicSilent(): boolean {

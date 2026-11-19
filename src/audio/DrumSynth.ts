@@ -13,6 +13,7 @@ import { Parkour } from '../config/parkour';
  * file-based AudioManager (package B4), which may share it; this class never owns any file audio.
  */
 export class DrumSynth {
+  private cinematicMuted = false;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
@@ -26,7 +27,12 @@ export class DrumSynth {
   private vol = 1;
   setVolume(v: number): void {
     this.vol = Math.max(0, Math.min(1, v));
-    if (this.master) this.master.gain.value = 0.5 * this.vol;
+    if (this.master) this.master.gain.value = this.cinematicMuted ? 0 : 0.5 * this.vol;
+  }
+
+  setCinematicMuted(muted: boolean): void {
+    this.cinematicMuted = muted;
+    if (this.master) this.master.gain.value = muted ? 0 : 0.5 * this.vol;
   }
 
   /** The shared AudioContext (null before the first tap or without Web Audio). */
@@ -43,7 +49,7 @@ export class DrumSynth {
         if (!Ctor) return;
         const ctx = new Ctor();
         const master = ctx.createGain();
-        master.gain.value = 0.5 * this.vol;
+        master.gain.value = this.cinematicMuted ? 0 : 0.5 * this.vol;
         master.connect(ctx.destination);
         // One second-ish of white noise shared by every tick/roar.
         const len = Math.max(1, Math.floor(ctx.sampleRate * 0.5));
