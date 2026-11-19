@@ -315,26 +315,24 @@ export class Story {
     const from = lab.costume.position.clone();
     const pp = pl.visualPosition;
     let last = 0;
-    let flipped = false;
     ctx.fx.rings.spawn(pp.x, pp.y - 0.5, pp.z, 1.4, 0.5, 0xffd23f);
     await seq.tween(1.3, (t) => {
-      // Costume flies to Glen, who spins; flash at the peak, then the red suit takes over.
+      // The energy reaches Glen first; the cinematic then shows the full transformation.
       const f = Math.min(1, t / 0.5);
       lab.costume.position.set(from.x + (pp.x - from.x) * f, from.y + (pp.y + 0.2 - from.y) * f, from.z + (pp.z - from.z) * f);
       lab.costume.scale.setScalar(1 - 0.5 * f);
       pl.facing += (t - last) * Math.PI * 6;
       last = t;
-      const fl = t < 0.5 ? 0 : t < 0.62 ? (t - 0.5) / 0.12 : Math.max(0, 1 - (t - 0.62) / 0.3);
-      this.flash.style.opacity = String(fl);
-      if (!flipped && t >= 0.6) {
-        flipped = true;
-        lab.hideCostume();
-        game.setPlayerMode('superglen');
-        game.setTransformAllowed(true); // from now on the star / Q may switch back (hidden while controls are locked)
-        for (let i = 0; i < 3; i++) ctx.fx.rings.spawn(pp.x, pp.y - 0.5 + i * 0.5, pp.z, 1.6 + i * 0.9, 0.7, 0xffd23f);
-        sparkles.burst(pp.x, pp.y, pp.z, 40, 5, 0xffd23f, { gravity: 2 });
-      }
     });
+    await game.playCinematic('transform');
+    game.setControlsEnabled(false);
+    this.flash.style.opacity = '1';
+    lab.hideCostume();
+    game.setPlayerMode('superglen');
+    game.setTransformAllowed(true); // from now on the star / Q may switch back (hidden while controls are locked)
+    for (let i = 0; i < 3; i++) ctx.fx.rings.spawn(pp.x, pp.y - 0.5 + i * 0.5, pp.z, 1.6 + i * 0.9, 0.7, 0xffd23f);
+    sparkles.burst(pp.x, pp.y, pp.z, 40, 5, 0xffd23f, { gravity: 2 });
+    await seq.tween(0.25, (t) => { this.flash.style.opacity = String(1 - t); });
     this.flash.style.opacity = '0';
     await dialog.say('bab1_glen_superglen', { lockControls: true });
     ctx.audio.music.setScene('jelajah');

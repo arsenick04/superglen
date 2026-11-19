@@ -443,6 +443,11 @@ export class Chapter4 {
       info.ch4Scene = 'done';
       await new Celebration(ctx, 'Chapter 4 selesai!', fx.sparkles).play();
       ctx.game.setTransformAllowed(true);
+      // Chapter 5 creates its own Aara. Remove Chapter 4's actor first so she
+      // cannot appear twice during the hand-off between chapters.
+      this.aara?.group.removeFromParent();
+      this.aara?.dispose();
+      this.aara = null;
       this.hooks.onDone();
     });
   }
