@@ -557,6 +557,8 @@ export class Game {
     const uiRoot = ui ?? document.body;
     this.cinematics = new CinematicPlayer(uiRoot, (locked) => {
       this.levelControls = !locked;
+      this.audio.setCinematicMuted(locked);
+      this.synth.setCinematicMuted(locked);
       this.updateControls();
     });
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
