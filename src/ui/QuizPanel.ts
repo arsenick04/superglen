@@ -458,7 +458,7 @@ export class QuizPanel {
     const coins = this.onSolved ? this.onSolved(this.wrongs) : 0;
     this.coinsEl.textContent = String(this.deps.save.data.quiz.coins);
     if (coins > 0) this.floatPlus(coins);
-    this.ninoSays(ninoLine('pujian'));
+    this.ninoSays(ninoLine('pujian_kuis'));
     this.deps.synth.drum(Math.min(4, 1 + this.idx), true);
     this.deps.sfx.quizRight();
     this.after(0.18, () => this.deps.synth.drum(Math.min(4, 2 + this.idx), true));

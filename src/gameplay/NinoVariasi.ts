@@ -4,7 +4,7 @@
  */
 import data from '../../content/nino_variasi.json';
 
-export type VariasiKind = 'pujian' | 'coba_lagi' | 'semangat';
+export type VariasiKind = 'pujian' | 'pujian_kuis' | 'coba_lagi' | 'semangat';
 
 export interface VariasiLine {
   id: string;
@@ -14,6 +14,7 @@ export interface VariasiLine {
 
 const pools: Record<VariasiKind, VariasiLine[]> = {
   pujian: data.pujian.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
+  pujian_kuis: data.pujian.filter((l) => !/lompat|sasaran/i.test(l.text)).map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
   coba_lagi: data.coba_lagi.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
   semangat: data.semangat.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
 };
