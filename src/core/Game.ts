@@ -750,6 +750,7 @@ export class Game {
         this.updateControls();
       },
       playCinematic: (id) => this.cinematics.play(id),
+      preloadCinematic: (id) => this.cinematics.preload(id),
       get controlsEnabled() {
         return self.controlsEnabled;
       },

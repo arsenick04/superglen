@@ -150,6 +150,8 @@ export class Chapter3 {
   /** Called once the level is built. */
   start(): void {
     const { ctx } = this;
+    if (this.step === '' || this.step === 'chase') ctx.game.preloadCinematic('curut');
+    ctx.game.preloadCinematic('rakus-appears');
     this.hooks.dropMission();
     this.hooks.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
     // The last tame is saved before its delayed victory sequence runs. A

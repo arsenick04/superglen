@@ -121,6 +121,7 @@ export class Chapter6 {
   /** Called once the level is built. */
   start(): void {
     const { ctx } = this;
+    ctx.game.preloadCinematic('rakus-warehouse');
     this.hooks.dropMission();
     if (this.step === 'city' || this.step === 'fight') this.buildBoss();
     this.applyStep();
