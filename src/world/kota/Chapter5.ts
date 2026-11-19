@@ -142,8 +142,9 @@ export class Chapter5 {
         // Keep the walk to the park: the arena only activates when Glen actually arrives.
         this.fieldGoal();
       } else if (this.step === 'fight') {
-        this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + 7, Math.PI);
-        this.runIntro();
+        // Resuming a saved fight should preserve Glen's approach through the
+        // city. The boundary check below re-enters battle on arrival.
+        this.fieldGoal();
       }
     });
   }
