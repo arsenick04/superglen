@@ -6,10 +6,10 @@ export class CinematicPlayer {
   private readonly video: HTMLVideoElement;
   private readonly skip: HTMLButtonElement;
   private readonly played = new Set<CinematicId>();
-  private readonly prepared = new Map<CinematicId, Promise<string>>();
+  private readonly prepared = new Set<CinematicId>();
   private running = false;
 
-  constructor(root: HTMLElement, private readonly lock: (locked: boolean) => void) {
+  constructor(root: HTMLElement, private readonly lock: (locked: boolean) => void, private readonly onPlayback: (playing: boolean) => void) {
     this.layer = document.createElement('div');
     this.layer.className = 'cinematic-layer';
     this.layer.hidden = true;
@@ -40,14 +40,15 @@ export class CinematicPlayer {
     }, { passive: false });
   }
 
-  /** Fetch during exploration so the encounter does not wait on the network. */
+  /** Hint the browser to cache the URL before the encounter. Never gate playback on this. */
   preload(id: CinematicId): void {
     if (this.prepared.has(id)) return;
+    this.prepared.add(id);
     const url = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
-    this.prepared.set(id, fetch(url).then((response) => {
-      if (!response.ok) throw new Error(`Cinematic ${id}: ${response.status}`);
-      return response.blob();
-    }).then((blob) => URL.createObjectURL(blob)).catch(() => url));
+    const hint = document.createElement('link');
+    hint.rel = 'prefetch';
+    hint.href = url;
+    document.head.appendChild(hint);
   }
 
   play(id: CinematicId): Promise<void> {
@@ -59,38 +60,50 @@ export class CinematicPlayer {
     this.layer.style.visibility = 'hidden';
     this.video.muted = false;
     return new Promise<void>((resolve) => {
+      let started = false;
+      let timeout = window.setTimeout(() => finish(), 12000);
+      const onPlaying = (): void => {
+        window.clearTimeout(timeout);
+        if (started || !this.running) return;
+        started = true;
+        this.layer.style.visibility = '';
+        this.onPlayback(true);
+      };
+      const onWaiting = (): void => {
+        window.clearTimeout(timeout);
+        timeout = window.setTimeout(() => finish(), 12000);
+      };
       const finish = (): void => {
+        window.clearTimeout(timeout);
+        this.video.removeEventListener('playing', onPlaying);
+        this.video.removeEventListener('waiting', onWaiting);
         this.video.removeEventListener('ended', finish);
         this.video.removeEventListener('error', finish);
+        if (started) this.onPlayback(false);
         this.layer.hidden = true;
         this.layer.style.visibility = '';
         this.video.pause();
         this.video.removeAttribute('src');
         this.video.load();
-        const prepared = this.prepared.get(id);
-        if (prepared) void prepared.then((url) => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); });
-        this.prepared.delete(id);
         this.running = false;
         this.lock(false);
         resolve();
       };
+      this.video.addEventListener('playing', onPlaying);
+      this.video.addEventListener('waiting', onWaiting);
       this.video.addEventListener('ended', finish, { once: true });
       this.video.addEventListener('error', finish, { once: true });
       // Safari allows inline muted autoplay when audible autoplay is blocked.
       // Never advance the story merely because a play request was rejected.
       const start = async (): Promise<void> => {
-        const url = await (this.prepared.get(id) ?? Promise.resolve(`${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`));
-        if (!this.running) return;
-        this.video.src = url;
-        this.video.currentTime = 0;
+        this.video.src = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
         try {
           await this.video.play();
         } catch {
           if (!this.running) return;
           this.video.muted = true;
-          try { await this.video.play(); } catch { /* Keep Lewati available. */ }
+          try { await this.video.play(); } catch { finish(); }
         }
-        if (this.running) this.layer.style.visibility = '';
       };
       void start();
     });

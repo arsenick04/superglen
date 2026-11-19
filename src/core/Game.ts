@@ -557,10 +557,22 @@ export class Game {
     const uiRoot = ui ?? document.body;
     this.cinematics = new CinematicPlayer(uiRoot, (locked) => {
       this.levelControls = !locked;
-      this.audio.setCinematicMuted(locked);
-      this.synth.setCinematicMuted(locked);
       this.updateControls();
+    }, (playing) => {
+      this.audio.setCinematicMuted(playing);
+      this.synth.setCinematicMuted(playing);
+      if (!playing) {
+        // iOS may suspend Web Audio while an HTML video owns the audio session.
+        this.synth.unlock();
+        this.audio.unlock();
+      }
     });
+    window.addEventListener('pointerdown', () => {
+      if (this.synth.audioContext?.state === 'suspended') {
+        this.synth.unlock();
+        this.audio.unlock();
+      }
+    }, { capture: true, passive: true });
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
     this.quiz = new QuizEngine({
       save: this.save,
