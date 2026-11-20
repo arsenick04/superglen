@@ -54,6 +54,12 @@ assert.equal(startPlanFor(arena).level, 'battle-curut');
 assert.equal(arena.data.bab3.step, 'chase');
 assert.deepEqual([reads, writes, removes], [0, 0, 0]);
 
+fakeWindow.location.search = '?chapter=7&battle=1';
+const eagleArena = new SaveStore();
+assert.equal(startPlanFor(eagleArena).level, 'battle-elang');
+assert.equal(eagleArena.data.interlude, 'elang_met');
+assert.deepEqual([reads, writes, removes], [0, 0, 0]);
+
 const normalQueries = ['', '?chapter=0', '?chapter=8', '?chapter=03', '?chapter=3x', '?chapter=3.0', '?chapter=3%0A', '?chapter=', '?chapter=3%0A', '?chapter=3&chapter=4'];
 for (const query of normalQueries) {
   fakeWindow.location.search = query;
