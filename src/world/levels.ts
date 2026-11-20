@@ -7,6 +7,7 @@ import { KotaLevel } from './kota/KotaLevel';
 import { CurutArena } from './kota/CurutArena';
 import { JumpTrainingLevel } from './arena/JumpTrainingLevel';
 import { FlightTrainingLevel } from './arena/FlightTrainingLevel';
+import { EagleArena } from './kota/EagleArena';
 
 /**
  * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet (Chapter 1 starts in the city).
@@ -23,6 +24,7 @@ export const LEVELS: Readonly<Record<string, LevelFactory>> = {
   'battle-curut': () => new CurutArena(),
   'jump-training': () => new JumpTrainingLevel(),
   'flight-training': () => new FlightTrainingLevel(),
+  'battle-elang': () => new EagleArena(),
   /** Inside the old Barongsai building: the rest of Chapter 1, Nino's lab. */
   lab: () => new Bab1Level('lab'),
   bab2: () => new Bab2Level(),

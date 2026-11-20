@@ -1423,5 +1423,26 @@
     "lang": "id",
     "text": "Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
     "delivery": "[surprised] Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!"
+  },
+  {
+    "id": "elang_nino_lawan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sayap biru melempar bulu es, sayap merah melempar bulu api! Terbang, hindari atau tangkis bulunya, lalu tembak saat Elang berhenti sebentar.",
+    "delivery": "[encouraging] Sayap biru melempar bulu es, sayap merah melempar bulu api! Terbang, hindari atau tangkis bulunya, lalu tembak saat Elang berhenti sebentar."
+  },
+  {
+    "id": "elang_nino_terbang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "delivery": "[helpful] Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun."
+  },
+  {
+    "id": "elang_nino_menang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "delivery": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen."
   }
 ]

@@ -947,3 +947,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Selesai latihan terbang, Nino membunyikan alarm di Lab. Glen diminta menuju Bank; ketika keluar, kota sudah malam dan penanda mengarah ke atap Bank. Elang Belang terlihat melayang di sana, dengan sayap biru dan merah, lalu Glen bereaksi ketika mendekat di udara.
 - Progres alarm dan pertemuan Elang tersimpan setelah refresh. `?chapter=7` memulai pratinjau aman dari Lab setelah latihan; save utama tidak disentuh. Pertarungan terbang menyusul dalam PR berikutnya dan tetap berlangsung malam.
 - Build, pemeriksaan rute, kuis, probe pratinjau, dan pemeriksaan diff lulus. Browser ditunda sesuai keputusan pemilik. Dialog baru memakai suara perangkat sampai MP3 karakter tersedia.
+
+## Battle terbang Elang Belang — 20 November 2026
+
+- Saat Glen mendekati Elang di atas Bank, dialog pertemuan diikuti transisi langsung ke arena langit malam yang terpisah dari kota. Glen muncul di dalam arena sebagai Superglen dengan tombol terbang, laser, dan perisai aktif.
+- Elang bergantian menandai serangan sayap biru (bulu es) dan merah (bulu api), lalu meluncurkan tiga bulu ke posisi Glen. Bulu dapat dihindari atau ditangkis. Selama jeda setelah serangan, laser dari udara mengurangi bintang Elang. Kelelahan mengulang pertarungan dengan hati penuh.
+- Setelah Elang tenang, Glen kembali ke dekat Bank pada malam hari dan diarahkan pulang. Masuk rumah mengganti kota ke pagi. Progres menang dan tahap malam bertahan setelah refresh. Tautan `?chapter=7&battle=1` langsung ke arena dengan save sementara.
+- Build, check:reach, check:quiz, probe pratinjau, probe fase battle, dan diff check lulus. Browser masih diuji sendiri oleh pemilik. Dialog baru memakai suara cadangan perangkat sampai MP3 tersedia.

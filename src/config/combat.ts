@@ -232,6 +232,25 @@ export const Combat = {
       bossWait: 1.5,
     },
   },
+  /** Elang Belang: alternating ice and fire feather volleys in the separate night sky arena. */
+  eagle: {
+    stars: 4,
+    starsEasy: 3,
+    arenaRadius: 17,
+    flyHeight: 12,
+    hoverY: 7.5,
+    hoverZ: -5,
+    hoverSweepX: 4,
+    entryZ: 9,
+    cooldown: 1.7,
+    warning: 1.25,
+    recover: 3.3,
+    featherSpeed: 8,
+    featherRadius: 0.7,
+    featherLife: 4,
+    aimRadius: 1.55,
+    assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 28 },
+  },
   /** Laser assist: a small cone, generous up close, narrow far away. */
   laser: {
     assistRange: 16,

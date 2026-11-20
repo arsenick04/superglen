@@ -147,6 +147,13 @@ export class KotaLevel implements Level {
       this.spawn = { x: SNAKE_FIELD.x, y: 0, z: SNAKE_FIELD.z + 9, yaw: Math.PI };
     } else if (arrival === 'rakusVictory') {
       this.spawn = { x: RAKUS_ARENA.x, y: 0, z: RAKUS_ARENA.z, yaw: Math.PI };
+    } else if (arrival === 'elangVictory') {
+      const bank = CITY_LAYOUT.buildings.find((b) => b.kind === 'bank');
+      if (bank) {
+        const [fx, fz] = FACE_VEC[bank.face];
+        const half = bank.face < 2 ? bank.d / 2 : bank.w / 2;
+        this.spawn = { x: bank.x + fx * (half + 5), y: bank.base, z: bank.z + fz * (half + 5), yaw: Math.atan2(-fx, -fz) };
+      }
     } else if (arrival === 'homeMorning') {
       this.spawn = this.glenHomeSpot();
     } else if (arrival === 'hillDoor') {
@@ -272,7 +279,13 @@ export class KotaLevel implements Level {
     this.hud.show('Kota Botanica', 0xf2b632, true);
     this.setupHomeInterlude(arrival);
     if (!sandbox && (ctx.save.data.interlude === 'elang_bank' || ctx.save.data.interlude === 'elang_met')) {
-      this.elangIntro = new Chapter7Intro(ctx, () => this.hud.show('Elang Belang di atas Bank', 0x8bbdff, true));
+      this.elangIntro = new Chapter7Intro(ctx, () => {
+        this.hud.show('Elang Belang di atas Bank', 0x8bbdff, true);
+        ctx.seq.run(async () => {
+          await ctx.dialog.say('elang_glen_melihat', { lockControls: true });
+          await ctx.game.loadLevel('battle-elang');
+        });
+      });
       this.hud.show('Malam hari — menuju Bank', 0x8bbdff, true);
     }
     if (!sandbox && ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === 'rakus_letters') {
@@ -366,7 +379,7 @@ export class KotaLevel implements Level {
 
   /** Story pauses that require Glen to walk home before the next morning. */
   private isWalkingHome(): boolean {
-    return ['costume_home', 'snake_home', 'rakus_home', 'elang_bank', 'elang_met'].includes(this.ctx.save.data.interlude);
+    return ['costume_home', 'snake_home', 'rakus_home', 'elang_bank', 'elang_met', 'elang_home'].includes(this.ctx.save.data.interlude);
   }
 
   /** Evening lasts until Glen enters his house; a fresh city scene restores daylight in the morning. */
@@ -386,7 +399,8 @@ export class KotaLevel implements Level {
   private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
-    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab'].includes(state)) return;
+    if (arrival === 'homeMorning' && state === '') this.hud.show('Keesokan pagi', 0xf2b632, true);
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home'].includes(state)) return;
     if (arrival === 'homeMorning') {
       this.hud.show('Keesokan pagi', 0xf2b632, true);
       if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
@@ -406,9 +420,9 @@ export class KotaLevel implements Level {
       radius: 3,
       icon: 'hand',
       promptHeight: 1.7,
-      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home',
+      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home',
       onInteract: () => {
-        const next = ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        const next = ctx.save.data.interlude === 'elang_home' ? '' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
         if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
         ctx.save.setInterlude(next);
         setArrival('kota', 'homeMorning');
