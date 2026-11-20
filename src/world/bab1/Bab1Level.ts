@@ -20,6 +20,7 @@ import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
 import { flow, takeArrival, travel, LAB_EXIT_TARGET } from '../progress';
 import { DOOR_HALF } from './Layout';
+import { startGate } from '../../core/StartGate';
 
 /** Where Nino's quiz terminal stands in the lab (left of the entrance path). */
 export const TERMINAL_LAB = { x: -2.8, z: -64.6 } as const;
@@ -156,8 +157,8 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (ctx.save.data.interlude === 'snake_lab') {
-        // The celebration is an interior scene: arrive beside Nino, not in the front-door corridor.
+      if (ctx.save.data.interlude === 'snake_lab' || (lab && ctx.save.data.interlude === 'rakus_lab')) {
+        // Story returns begin beside Nino, not in the front-door corridor.
         this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
         this.atmosphere.snap(2);
         ctx.game.setPlayerMode('superglen', false);
@@ -169,6 +170,14 @@ export class Bab1Level implements Level {
         this.atmosphere.snap(2);
       }
       this.story.setupReturning(arrival === 'labFromHangar');
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'rakus_lab') {
+        ctx.game.setPlayerMode('superglen', false);
+        // Show the welcome only when Glen enters from the city, not on every refresh in the Lab.
+        if (arrival === 'labEntrance') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          await ctx.dialog.say('rakus_nino_lab_arrival', { lockControls: true });
+        });
+      }
       const b5 = ctx.save.data.bab5.step;
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'snake_lab') {
         this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 }, 'snakeCelebration');

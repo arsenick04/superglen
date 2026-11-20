@@ -106,13 +106,14 @@ export class LetterHunt {
     this.ctx.objectives.set(this.tmp.set(next.coin.x, next.coin.y - 0.85, next.coin.z));
   }
 
-  private finish(): void {
+  private finish(announce = false): void {
     if (this.complete) return;
     this.complete = true;
     this.ctx.save.setInterlude('rakus_lab');
     this.ctx.objectives.clear();
     this.setGoal(null);
     this.onComplete();
+    if (announce) void this.ctx.dialog.say('rakus_nino_lab_invite');
   }
 
   fixedUpdate(): void {
@@ -130,7 +131,7 @@ export class LetterHunt {
       this.row.setAttribute('aria-label', `Huruf SUPERGLEN: ${this.found.size} dari 9`);
       this.ctx.fx.sparkles.burst(c.x, c.y + 0.9, c.z, 18, 2.5, 0xffd23f, { gravity: 1.3 });
       this.ctx.sfx.coinDone();
-      if (this.found.size === this.spots.length) this.finish();
+      if (this.found.size === this.spots.length) this.finish(true);
       else this.markNext();
     }
   }

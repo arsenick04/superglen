@@ -924,3 +924,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Audit dialog cerita menemukan delapan ID tanpa MP3: satu Bab 1, lima Bab 5, dan dua dialog baru setelah Tikus Rakus. Saat klip tidak tersedia atau gagal diputar, dialog sekarang memakai suara bahasa Indonesia dari perangkat dan musik merendah selama baris berlangsung. Dua dialog baru dicatat di `audio/dialog.json` agar pipeline audio bisa membuat MP3-nya kelak.
 - Satu contoh suara Nino berhasil dibuat melalui ElevenLabs (84 kredit), tetapi unduhan aset dari lingkungan kerja ditolak HTTP 403; tidak ada MP3 baru yang dipasang dan tidak ada generasi tambahan. Suara perangkat adalah pengganti sementara, bukan suara karakter yang sudah disetujui.
 - Build, check:reach, check:quiz, JSON, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Huruf lengkap → kembali ke Lab — 20 November 2026
+
+- Setelah huruf SUPERGLEN terakhir diambil, Nino mengundang Glen kembali ke Lab dan penanda menuju pintu gedung Barongsai. Masuk gedung menempatkan Superglen langsung di dalam Lab dekat Nino; Nino menjelaskan latihan berikutnya adalah terbang sambil menembak dan memakai perisai. Refresh di Lab tidak mengulang dialog kedatangan. Interaksi dengan Nino tetap dapat mengulang instruksinya.
+- Dua dialog baru masuk daftar audio. MP3 karakter belum tersedia karena unduhan ElevenLabs diblokir proxy; suara cadangan perangkat tetap digunakan.
+- Build, check:reach, check:quiz, dan diff check lulus. Browser ditunda sesuai permintaan pemilik. Berikutnya: latihan terbang interaktif di hanggar.
