@@ -935,3 +935,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 
 - `?chapter=6&letters=1` membuka sesi pratinjau pagi setelah Tikus Rakus: Glen di depan rumah, sembilan huruf SUPERGLEN belum diambil, dan penanda menuju huruf pertama. Progres pratinjau hanya di memori; save permainan normal tidak disentuh. Refresh tautan memulai kembali sembilan huruf dari awal.
 - Build, check:reach, check:quiz, probe checkpoint dan isolasi save, serta diff check lulus. Browser tetap dicoba pemilik sendiri.
+
+## Latihan terbang setelah huruf — 20 November 2026
+
+- Percakapan Nino setelah huruf SUPERGLEN membawa Glen ke sesi baru dalam hanggar. Glen melewati tiga cincin terbang, menembak sasaran, lalu menangkis bola latihan di udara. Setelah selesai, Glen kembali ke lab.
+- Mode terbang sekarang dinyalakan atau dimatikan dengan satu ketukan: tombol roket pada layar sentuh, F pada keyboard, atau R1 pada gamepad. Lompat tetap terpisah. Tutorial awal Bab 2 mempertahankan kontrol tahan lompatnya.
+- Build, pemeriksaan rute dan kuis, serta probe logika tombol terbang lulus. Pengujian browser ditunda sesuai permintaan pemilik.

@@ -5,11 +5,12 @@ import { startGate } from '../core/StartGate';
 
 /**
  * Pad buttons per action (the same actions the keyboard and the touch buttons drive; nothing new):
- * Cross = jump (held = same as Space: flight / rhythm jump), Square = talk / take, Triangle = Glen <-> Superglen,
+ * Cross = jump, R1 = flight mode, Square = talk / take, Triangle = Glen <-> Superglen,
  * R2 or Circle = laser, L2 or L1 = shield.
  */
 const PAD_ACTIONS: Readonly<Record<Action, readonly number[]>> = {
   jump: [PadBtn.cross],
+  flight: [PadBtn.r1],
   interact: [PadBtn.square],
   transform: [PadBtn.triangle],
   laser: [PadBtn.r2, PadBtn.circle],
@@ -25,8 +26,8 @@ export class GamepadSource implements InputSource {
   readonly move: Vec2 = { x: 0, y: 0 };
 
   private readonly seen = new Uint32Array(PAD_BUTTONS);
-  private readonly latch: Record<Action, boolean> = { jump: false, laser: false, shield: false, interact: false, transform: false };
-  private readonly downNow: Record<Action, boolean> = { jump: false, laser: false, shield: false, interact: false, transform: false };
+  private readonly latch: Record<Action, boolean> = { jump: false, flight: false, laser: false, shield: false, interact: false, transform: false };
+  private readonly downNow: Record<Action, boolean> = { jump: false, flight: false, laser: false, shield: false, interact: false, transform: false };
   private lookX = 0;
   private lookY = 0;
   private lastSeq = -1;

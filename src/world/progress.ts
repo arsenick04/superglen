@@ -154,7 +154,7 @@ export function labNinoTalk(save: SaveStore): { line: string | null; next: strin
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { line: 'bab1_nino_pulang_dulu', next: null };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return { line: null, next: 'bab2', clearInterlude: true };
   if (save.data.interlude === 'snake_return') return { line: 'bab5_nino_latihan_besok', next: 'jump-training' };
-  if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: null };
+  if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: 'flight-training' };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
   return { line: 'bab2_nino_hebat', next: null };
 }

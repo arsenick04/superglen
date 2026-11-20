@@ -3,6 +3,7 @@ import { ACTIONS, type Action, type InputSource, type Vec2 } from './Input';
 /** Keyboard codes (layout independent, KeyboardEvent.code) per action. */
 const KEY_ACTIONS: Readonly<Record<Action, readonly string[]>> = {
   jump: ['Space'],
+  flight: ['KeyF'],
   laser: ['KeyJ'],
   shield: ['KeyK'],
   interact: ['KeyE', 'Enter', 'NumpadEnter'],

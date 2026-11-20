@@ -19,9 +19,9 @@
 /**
  * 'transform' is the Glen <-> Superglen switch: the touch star button and PC key Q (see player/ModeController.ts).
  */
-export type Action = 'jump' | 'laser' | 'shield' | 'interact' | 'transform';
+export type Action = 'jump' | 'flight' | 'laser' | 'shield' | 'interact' | 'transform';
 
-export const ACTIONS: readonly Action[] = ['jump', 'laser', 'shield', 'interact', 'transform'];
+export const ACTIONS: readonly Action[] = ['jump', 'flight', 'laser', 'shield', 'interact', 'transform'];
 
 export interface Vec2 {
   x: number;
