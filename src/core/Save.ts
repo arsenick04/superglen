@@ -59,12 +59,12 @@ export interface SaveData {
    */
   where: string;
   /** Short story pause between chapters. Empty keeps legacy saves on their old route. */
-  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters';
+  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab';
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
   /** Kota Botanica, package D3: ids of the coins taken and of the missions done (both survive reloads). */
-  city: { coins: string[]; missions: string[] };
+  city: { coins: string[]; missions: string[]; letters: number[] };
   /**
    * Chapter 3 ("Pasar Kacau!") progress in the city: `step` is '' (not started), 'chase', 'count', 'rakus' or 'closing'
    * (finished = 'bab3' in `chaptersDone`); `tamed` lists the indices of the little rats already tamed.
@@ -152,7 +152,7 @@ function defaults(): SaveData {
     interlude: '',
     doneAt: {},
     quiz: defaultQuiz(),
-    city: { coins: [], missions: [] },
+    city: { coins: [], missions: [], letters: [] },
     bab3: { step: '', tamed: [] },
     bab4: { step: '', clue: 0 },
     bab5: { step: '' },
@@ -208,6 +208,7 @@ function sanitize(raw: unknown): SaveData {
     const ids = (v: unknown, max: number): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.length < 40))].slice(0, max) : []);
     out.city.coins = ids(c.coins, 1000);
     out.city.missions = ids(c.missions, 100);
+    if (Array.isArray(c.letters)) out.city.letters = [...new Set(c.letters.filter((x): x is number => Number.isInteger(x) && x >= 0 && x < 9))].sort((a, b) => a - b);
   }
   if (typeof r.bab3 === 'object' && r.bab3 !== null) {
     const b = r.bab3 as Record<string, unknown>;
@@ -248,7 +249,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   if (typeof r.where === 'string') out.where = r.where;
-  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters') out.interlude = r.interlude;
+  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab') out.interlude = r.interlude;
   if (typeof r.doneAt === 'object' && r.doneAt !== null) {
     for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
   }
@@ -439,6 +440,15 @@ export class SaveStore {
     if (this.data.city.coins.includes(id)) return false;
     this.data.city.coins.push(id);
     this.data.quiz.coins += 1;
+    this.persist();
+    return true;
+  }
+
+  /** One position of the nine-letter SUPERGLEN hunt (the two E positions have different indices). */
+  takeCityLetter(index: number): boolean {
+    if (!Number.isInteger(index) || index < 0 || index >= 9 || this.data.city.letters.includes(index)) return false;
+    this.data.city.letters.push(index);
+    this.data.city.letters.sort((a, b) => a - b);
     this.persist();
     return true;
   }

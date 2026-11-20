@@ -899,3 +899,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Setelah Tikus Rakus jinak, Glen tetap di kota. Penanda peta dan tujuan menuntunnya berjalan dari gudang ke pintu rumah; interaksi di rumah mengaktifkan pagi berikutnya. Refresh saat perjalanan memulai lagi di area gudang, atau di titik kota yang disimpan manual setelah kemenangan.
 - Checkpoint `rakus_letters` menandai pagi setelah pulang. Permainan mengumpulkan huruf SUPERGLEN akan ditambahkan pada PR berikutnya; tahap ini hanya mengunci urutan pulang dan reload.
 - Build, check:reach, check:quiz, probe alur simpan, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 6 hingga menang, ikuti penanda ke rumah, lalu muat ulang halaman.
+
+
+## Berburu huruf SUPERGLEN — 20 November 2026
+
+- Pagi setelah pulang dari pertarungan Tikus Rakus, sembilan huruf SUPERGLEN muncul di lima titik jalan/taman dan empat atap di beberapa distrik. Semuanya memakai titik koin yang sudah terbukti bisa dicapai; koin biasa tetap dapat diambil. Huruf boleh dikumpulkan dalam urutan apa pun, sedangkan bintang peta dan panah menuntun ke huruf berikutnya yang belum didapat.
+- Baris huruf di HUD terisi saat huruf diambil. Progres tiap posisi disimpan (dua E berbeda), tetap ada setelah refresh; setelah sembilan lengkap, checkpoint `rakus_lab` dan penanda mengarah ke Lab. Undangan Nino dan latihan terbang menyusul dalam PR berikutnya.
+- Build, check:reach, check:quiz, probe huruf dan checkpoint, serta diff check lulus. Browser tetap dicoba pemilik sendiri.

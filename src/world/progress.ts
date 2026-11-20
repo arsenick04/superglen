@@ -101,8 +101,9 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.data.interlude === 'snake_lab') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'snakeVictory' };
   if (save.data.interlude === 'snake_home') return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (save.data.interlude === 'snake_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
-  if (save.data.interlude === 'rakus_home' || save.data.interlude === 'rakus_letters') {
+  if (save.data.interlude === 'rakus_home' || save.data.interlude === 'rakus_letters' || save.data.interlude === 'rakus_lab') {
     const slot = save.data.slot;
+    if (save.data.interlude === 'rakus_lab' && where === 'lab') return { level: 'lab' };
     if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
     return { level: 'kota', arrival: save.data.interlude === 'rakus_home' ? 'rakusVictory' : 'homeMorning' };
   }
