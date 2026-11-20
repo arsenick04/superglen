@@ -23,6 +23,7 @@ import { Chapter5 } from './Chapter5';
 import { SNAKE_FIELD } from './Bab5Data';
 import { Chapter6 } from './Chapter6';
 import { RAKUS_ARENA } from './Bab6Data';
+import { LetterHunt } from './LetterHunt';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
 
@@ -77,6 +78,7 @@ export class KotaLevel implements Level {
   ch5: Chapter5 | null = null;
   /** Chapter 6 (Gudang Pasar, Tikus Rakus) while it is on: Chapter 5 done, Chapter 6 not (null otherwise). */
   ch6: Chapter6 | null = null;
+  private letters: LetterHunt | null = null;
 
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
@@ -264,6 +266,12 @@ export class KotaLevel implements Level {
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
     this.setupHomeInterlude(arrival);
+    if (!sandbox && ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === 'rakus_letters') {
+      this.letters = new LetterHunt(ctx, (goal) => this.setGoal(goal), () => {
+        this.hud.show('SUPERGLEN lengkap! Nino menunggu di Lab', 0xffd23f, true);
+        this.setupHomeInterlude(null);
+      });
+    }
 
     if (!sandbox && !bab1) {
       // Chapter 1: guided walk from the school to the hill; the light in the old building shows from far away.
@@ -351,10 +359,10 @@ export class KotaLevel implements Level {
   private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
-    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters'].includes(state)) return;
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab'].includes(state)) return;
     if (arrival === 'homeMorning') this.hud.show('Keesokan pagi', 0xf2b632, true);
     if (state === 'rakus_letters') return;
-    if (state === 'costume_return' || state === 'snake_return') {
+    if (state === 'costume_return' || state === 'snake_return' || state === 'rakus_lab') {
       const d = CITY_LAYOUT.lab.door;
       this.setGoal({ x: d.x, z: d.z });
       ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
@@ -371,6 +379,7 @@ export class KotaLevel implements Level {
       enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home',
       onInteract: () => {
         const next = ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
         ctx.save.setInterlude(next);
         setArrival('kota', 'homeMorning');
         void ctx.game.loadLevel('kota');
@@ -459,6 +468,7 @@ export class KotaLevel implements Level {
     this.ch4?.fixedUpdate(dt);
     this.ch5?.fixedUpdate(dt);
     this.ch6?.fixedUpdate(dt);
+    this.letters?.fixedUpdate();
     this.d3?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
@@ -488,6 +498,7 @@ export class KotaLevel implements Level {
     this.ch4?.update(dt);
     this.ch5?.update(dt);
     this.ch6?.update(dt);
+    this.letters?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;
