@@ -228,6 +228,8 @@ export class Chapter6 {
   private engage(): void {
     const { ctx } = this;
     if (!this.boss) return;
+    // The warehouse cinematic hands control back with Glen already inside the battle arena.
+    this.hooks.placePlayer(RAKUS_ARENA.x, RAKUS_ARENA.z + Combat.rakus.entryOffset, Math.PI);
     this.engaged = true;
     if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);

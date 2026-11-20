@@ -906,3 +906,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Pagi setelah pulang dari pertarungan Tikus Rakus, sembilan huruf SUPERGLEN muncul di lima titik jalan/taman dan empat atap di beberapa distrik. Semuanya memakai titik koin yang sudah terbukti bisa dicapai; koin biasa tetap dapat diambil. Huruf boleh dikumpulkan dalam urutan apa pun, sedangkan bintang peta dan panah menuntun ke huruf berikutnya yang belum didapat.
 - Baris huruf di HUD terisi saat huruf diambil. Progres tiap posisi disimpan (dua E berbeda), tetap ada setelah refresh; setelah sembilan lengkap, checkpoint `rakus_lab` dan penanda mengarah ke Lab. Undangan Nino dan latihan terbang menyusul dalam PR berikutnya.
 - Build, check:reach, check:quiz, probe huruf dan checkpoint, serta diff check lulus. Browser tetap dicoba pemilik sendiri.
+
+## Masuk arena setelah sinematik — 20 November 2026
+
+- Curut mulai di tengah arena khusus setelah video pasar. Ular dan Tikus Rakus menempatkan Glen di dalam arena saat battle dimulai; saat kembali bertarung setelah istirahat, titik masuk yang sama dipakai.
+- Build, check:reach (melalui `node --import tsx` karena CLI tsx ditolak sandbox), check:quiz, dan diff check lulus. Browser tetap dicoba pemilik sendiri dari Chapter 3, 5, dan 6.
+- Berikutnya: penanda malam/pagi dan dialog setelah Tikus Rakus; audit VO dialog yang belum mempunyai berkas suara.

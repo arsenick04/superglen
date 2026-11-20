@@ -68,6 +68,7 @@ export const Combat = {
       /** Retreat onto the west road outside the visible Pasar district, so returning cannot immediately reenter. */
       returnSpot: { x: 48, y: 0, z: 0, yaw: Math.PI / 2 },
       radius: 5.2,
+      entryZ: 0,
       returnInset: 0.2,
       victoryDelay: 1.5,
       ratRingX: 3,
@@ -82,6 +83,8 @@ export const Combat = {
   },
   /** Ular Melar (Chapter 5 mini-boss): 5 stars of 2 laser hits each; the head glows when dizzy and only then does the laser count. */
   snake: {
+    /** Glen appears inside the isolated field when battle starts (m south of the coil). */
+    entryOffset: 10,
     /** Start the battle entrance at the field boundary; leaving farther away pauses the encounter. */
     areaEntryRadius: 34,
     areaExitRadius: 52,
@@ -143,6 +146,8 @@ export const Combat = {
    * Curut Cemberut helpers join between rounds. Everything is silly, nobody is hurt.
    */
   rakus: {
+    /** Glen appears inside the isolated warehouse arena after the cinematic (m south of its centre). */
+    entryOffset: 9,
     /** Start the battle entrance at the warehouse boundary; leaving farther away pauses the encounter. */
     areaEntryRadius: 32,
     areaExitRadius: 50,
