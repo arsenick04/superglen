@@ -912,3 +912,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Curut mulai di tengah arena khusus setelah video pasar. Ular dan Tikus Rakus menempatkan Glen di dalam arena saat battle dimulai; saat kembali bertarung setelah istirahat, titik masuk yang sama dipakai.
 - Build, check:reach (melalui `node --import tsx` karena CLI tsx ditolak sandbox), check:quiz, dan diff check lulus. Browser tetap dicoba pemilik sendiri dari Chapter 3, 5, dan 6.
 - Berikutnya: penanda malam/pagi dan dialog setelah Tikus Rakus; audit VO dialog yang belum mempunyai berkas suara.
+
+## Malam sebelum pulang, pagi setelah istirahat — 20 November 2026
+
+- Tiga perjalanan pulang kini berlangsung malam: sesudah Glen menerima kostum, sesudah perayaan Ular di Lab, dan sesudah Tikus Rakus jinak. Saat Glen masuk rumah, kota dimuat ulang dengan cahaya pagi. Status malam bertahan setelah refresh selama perjalanan pulang.
+- Sesudah Tikus Rakus, Nino meminta Glen pulang dan beristirahat. Esok pagi Nino menjelaskan pencarian huruf SUPERGLEN serta tujuan kembali ke Lab. Dua dialog baru memakai suara cadangan perangkat selama MP3 karakter belum tersedia.
+- Build, pemeriksaan rute kota, kuis, dan diff check lulus. Browser tidak diuji sesuai permintaan pemilik. Berikutnya: audit dan lengkapi VO dialog yang belum bersuara.

@@ -87,6 +87,7 @@ export class KotaLevel implements Level {
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
+  private hemi!: THREE.HemisphereLight;
   private dressing!: CityDressing;
   private follower: ShadowFollower | null = null;
   private readonly sunOffset = new THREE.Vector3(30, 45, 18);
@@ -166,6 +167,7 @@ export class KotaLevel implements Level {
     // Physical fog distances keep the same colour on touch and desktop; draw distance can still follow the preset.
     scene.fog = new THREE.Fog(0xc6e6fa, 140, 300);
     const hemi = new THREE.HemisphereLight(0xe1f3ff, 0xd3d9b5, 1.15);
+    this.hemi = hemi;
     root.add(hemi);
     this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
     // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
@@ -177,6 +179,7 @@ export class KotaLevel implements Level {
       this.sun.color.setHex(0xfff1d8);
       (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
+    if (!sandbox && this.isWalkingHome()) this.setNight();
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
@@ -356,11 +359,32 @@ export class KotaLevel implements Level {
   }
 
   /** Story pauses that require Glen to walk home before the next morning. */
+  private isWalkingHome(): boolean {
+    return ['costume_home', 'snake_home', 'rakus_home'].includes(this.ctx.save.data.interlude);
+  }
+
+  /** Evening lasts until Glen enters his house; a fresh city scene restores daylight in the morning. */
+  private setNight(): void {
+    const { scene } = this.ctx;
+    scene.background = new THREE.Color(0x172748);
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(0x263957);
+    scene.environmentIntensity = 0.12;
+    this.hemi.color.setHex(0x8da8d5);
+    this.hemi.groundColor.setHex(0x617a84);
+    this.hemi.intensity = 0.7;
+    this.sun.color.setHex(0xa8c8f2);
+    this.sun.intensity = 0.7;
+  }
+
+  /** Story pauses that require Glen to walk home before the next morning. */
   private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
     if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab'].includes(state)) return;
-    if (arrival === 'homeMorning') this.hud.show('Keesokan pagi', 0xf2b632, true);
+    if (arrival === 'homeMorning') {
+      this.hud.show('Keesokan pagi', 0xf2b632, true);
+      if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
+    }
     if (state === 'rakus_letters') return;
     if (state === 'costume_return' || state === 'snake_return' || state === 'rakus_lab') {
       const d = CITY_LAYOUT.lab.door;
@@ -428,6 +452,7 @@ export class KotaLevel implements Level {
       clearZone: (z) => {
         if (this.life) this.life.clearZone = z;
       },
+      nightFalls: () => this.setNight(),
       onDone: () => {
         this.setGoal(null);
         this.setupHomeInterlude(null);

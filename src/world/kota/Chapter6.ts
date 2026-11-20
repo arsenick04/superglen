@@ -17,6 +17,8 @@ export interface Chapter6Hooks {
   placePlayer(x: number, z: number, yaw: number): void;
   /** City life (cars, people) is not drawn inside this circle while the fight is on (null: everywhere again). */
   clearZone(zone: { x: number; z: number; r: number } | null): void;
+  /** Turn the city to evening before Nino sends Glen home. */
+  nightFalls(): void;
   /** Chapter 6 is over (the city is free again, the residents offer missions). */
   onDone(): void;
 }
@@ -312,6 +314,8 @@ export class Chapter6 {
       const home = b.trotHome();
       await dialog.say(L.ninoHebat, { lockControls: true });
       await home;
+      this.hooks.nightFalls();
+      await dialog.say(L.ninoPulang, { lockControls: true });
       cameraRig.setFraming(null);
       this.over = true;
       ctx.save.markChapterDone('bab6');
