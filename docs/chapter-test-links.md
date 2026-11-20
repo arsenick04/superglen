@@ -10,9 +10,10 @@ Setiap link memulai Chapter yang dipilih dengan progres sementara di memori. Sav
 | 4 — Aara dan alat penerjemah | https://arsenick04.github.io/superglen/?chapter=4 |
 | 5 — Perkenalan di Lab dan Ular Melar | https://arsenick04.github.io/superglen/?chapter=5 |
 | 6 — Tikus Rakus | https://arsenick04.github.io/superglen/?chapter=6 |
+| 7 — Alarm Elang Belang, Bank pada malam hari | https://arsenick04.github.io/superglen/?chapter=7 |
 
 Langsung ke arena Curut untuk mencoba injak-pantul: https://arsenick04.github.io/superglen/?chapter=3&battle=1
 
-Chapter 7 dan 8 belum tersedia. Ketuk layar mulai seperti biasa untuk mengaktifkan suara/kontrol. Chapter 3–6 tetap mencakup cerita dan perjalanan di dalam Chapter tersebut. Parameter `chapter` yang valid didahulukan dari `level`/`free`.
+Pertarungan Chapter 7 dan Chapter 8 belum tersedia. Ketuk layar mulai seperti biasa untuk mengaktifkan suara/kontrol. Chapter 3–6 tetap mencakup cerita dan perjalanan di dalam Chapter tersebut. Parameter `chapter` yang valid didahulukan dari `level`/`free`.
 
 Pengujian browser otomatis ditunda sesuai keputusan pemilik; jalur awal/save diverifikasi melalui probe non-browser, pemeriksaan tipe, dan build.

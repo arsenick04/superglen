@@ -16,12 +16,12 @@ import { CATEGORIES, isCategory, type Category } from '../quiz/types';
 export const SAVE_KEY = 'superglen.save.v1';
 export const SAVE_VERSION = 1;
 
-export type PreviewChapter = 1 | 2 | 3 | 4 | 5 | 6;
+export type PreviewChapter = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /** Only an unambiguous, exact chapter number enables a temporary play session. */
 export function previewChapterFor(query: URLSearchParams): PreviewChapter | null {
   const values = query.getAll('chapter');
-  return values.length === 1 && values[0].length === 1 && /^[1-6]$/.test(values[0]) ? Number(values[0]) as PreviewChapter : null;
+  return values.length === 1 && values[0].length === 1 && /^[1-7]$/.test(values[0]) ? Number(values[0]) as PreviewChapter : null;
 }
 
 export interface SaveData {
@@ -59,7 +59,7 @@ export interface SaveData {
    */
   where: string;
   /** Short story pause between chapters. Empty keeps legacy saves on their old route. */
-  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab';
+  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab' | 'elang_bank' | 'elang_met';
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
@@ -249,7 +249,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   if (typeof r.where === 'string') out.where = r.where;
-  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab') out.interlude = r.interlude;
+  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab' || r.interlude === 'elang_bank' || r.interlude === 'elang_met') out.interlude = r.interlude;
   if (typeof r.doneAt === 'object' && r.doneAt !== null) {
     for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
   }
@@ -278,7 +278,7 @@ export class SaveStore {
     if (!chapter) return data;
     for (let i = 1; i < chapter; i++) data.chaptersDone.push(`bab${i}`);
     data.discovered.lab = chapter >= 2;
-    data.where = chapter === 2 ? 'bab2' : 'kota';
+    data.where = chapter === 2 ? 'bab2' : chapter === 7 ? 'lab' : 'kota';
     data.lastMode = chapter === 1 || chapter === 4 || chapter === 5 ? 'glen' : 'superglen';
     if (chapter >= 3) data.skills = { laser: true, shield: true, fly: true };
     if (this.previewBattle) data.bab3.step = 'chase';
@@ -286,6 +286,7 @@ export class SaveStore {
       data.chaptersDone.push('bab6');
       data.interlude = 'rakus_letters';
     }
+    if (chapter === 7) data.interlude = 'elang_bank';
     return data;
   }
 

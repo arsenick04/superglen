@@ -1402,5 +1402,26 @@
     "lang": "id",
     "text": "Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
     "delivery": "[cheerful] Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai."
+  },
+  {
+    "id": "elang_nino_alarm",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "delivery": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!"
+  },
+  {
+    "id": "elang_glen_berangkat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku akan terbang ke Bank dan menolong mereka!",
+    "delivery": "[determined] Aku akan terbang ke Bank dan menolong mereka!"
+  },
+  {
+    "id": "elang_glen_melihat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "delivery": "[surprised] Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!"
   }
 ]

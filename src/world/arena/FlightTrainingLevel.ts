@@ -120,7 +120,7 @@ export class FlightTrainingLevel implements Level {
     ctx.seq.run(async () => {
       ctx.objectives.clear();
       await ctx.dialog.say({ speaker: 'nino', text: 'Hebat, Glen! Kamu bisa terbang, menembak, dan bertahan di udara. Latihan selesai!' }, { lockControls: true });
-      ctx.save.setInterlude('');
+      ctx.save.setInterlude('elang_bank');
       await travel(ctx.game, 'lab', 'labFromHangar');
     });
   }
