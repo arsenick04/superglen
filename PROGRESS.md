@@ -930,3 +930,8 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Setelah huruf SUPERGLEN terakhir diambil, Nino mengundang Glen kembali ke Lab dan penanda menuju pintu gedung Barongsai. Masuk gedung menempatkan Superglen langsung di dalam Lab dekat Nino; Nino menjelaskan latihan berikutnya adalah terbang sambil menembak dan memakai perisai. Refresh di Lab tidak mengulang dialog kedatangan. Interaksi dengan Nino tetap dapat mengulang instruksinya.
 - Dua dialog baru masuk daftar audio. MP3 karakter belum tersedia karena unduhan ElevenLabs diblokir proxy; suara cadangan perangkat tetap digunakan.
 - Build, check:reach, check:quiz, dan diff check lulus. Browser ditunda sesuai permintaan pemilik. Berikutnya: latihan terbang interaktif di hanggar.
+
+## Tautan langsung berburu huruf — 20 November 2026
+
+- `?chapter=6&letters=1` membuka sesi pratinjau pagi setelah Tikus Rakus: Glen di depan rumah, sembilan huruf SUPERGLEN belum diambil, dan penanda menuju huruf pertama. Progres pratinjau hanya di memori; save permainan normal tidak disentuh. Refresh tautan memulai kembali sembilan huruf dari awal.
+- Build, check:reach, check:quiz, probe checkpoint dan isolasi save, serta diff check lulus. Browser tetap dicoba pemilik sendiri.

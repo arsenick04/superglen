@@ -260,11 +260,14 @@ export class SaveStore {
   data: SaveData = defaults();
   readonly previewChapter: PreviewChapter | null;
   readonly previewBattle: boolean;
+  readonly previewLetters: boolean;
 
   constructor() {
     const query = new URLSearchParams(window.location.search);
     this.previewChapter = previewChapterFor(query);
     this.previewBattle = this.previewChapter === 3 && query.get('battle') === '1';
+    const letters = query.getAll('letters');
+    this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
     if (this.previewChapter || query.get('reset') === '1') this.reset();
     else this.reload();
   }
@@ -279,6 +282,10 @@ export class SaveStore {
     data.lastMode = chapter === 1 || chapter === 4 || chapter === 5 ? 'glen' : 'superglen';
     if (chapter >= 3) data.skills = { laser: true, shield: true, fly: true };
     if (this.previewBattle) data.bab3.step = 'chase';
+    if (this.previewLetters) {
+      data.chaptersDone.push('bab6');
+      data.interlude = 'rakus_letters';
+    }
     return data;
   }
 
