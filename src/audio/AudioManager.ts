@@ -157,6 +157,7 @@ export class AudioManager {
   /** Tests: false keeps the clock running while the game loop is paused for deterministic stepping. */
   followPause = true;
   private voiceActive = false;
+  private externalVoiceActive = false;
   private readonly lane = { voice: 0, sfx: 0, music: 0 };
 
   constructor(private readonly opts: AudioOptions) {
@@ -545,19 +546,26 @@ export class AudioManager {
     this.applyGains(false);
   }
 
+  /** Duck the music while device speech reads a dialog whose MP3 is unavailable. */
+  setExternalVoiceActive(active: boolean): void {
+    this.externalVoiceActive = active;
+    this.applyGains(false);
+  }
+
   /** The lane targets follow the settings and the duck state. */
   private applyGains(instant: boolean): void {
     const V = AudioConfig.volumes;
     const silent = this.silent;
     this.lane.voice = silent ? 0 : V.voice;
     this.lane.sfx = silent ? 0 : V.sfx * this.vol(this.opts.sfxVolume);
-    this.lane.music = this.musicSilent ? 0 : V.music * this.vol(this.opts.musicVolume) * (this.voiceActive ? AudioConfig.duckFactor : 1);
+    const voiceTalking = this.voiceActive || this.externalVoiceActive;
+    this.lane.music = this.musicSilent ? 0 : V.music * this.vol(this.opts.musicVolume) * (voiceTalking ? AudioConfig.duckFactor : 1);
     if (!this.master || !this.voiceGain || !this.sfxGain || !this.musicGain) return;
     const fast = 0.02;
     this.setParam(this.master.gain, V.master, fast);
     this.setParam(this.voiceGain.gain, this.lane.voice, fast);
     this.setParam(this.sfxGain.gain, this.lane.sfx, fast);
-    const down = this.voiceActive;
+    const down = voiceTalking;
     if (this.current && !this.current.node) this.fallbackVolume(this.current);
     for (const f of this.fading) if (!f.node) this.fallbackVolume(f);
     this.setParam(this.musicGain.gain, this.lane.music, instant ? 0.001 : down ? AudioConfig.duckDownTime : AudioConfig.duckUpTime);
@@ -565,7 +573,7 @@ export class AudioManager {
 
   /** The music is quieter right now because a voice clip plays. */
   get ducked(): boolean {
-    return this.voiceActive && !this.musicSilent;
+    return (this.voiceActive || this.externalVoiceActive) && !this.musicSilent;
   }
 
   // ---------------------------------------------------------------------------------------------------------------

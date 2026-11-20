@@ -162,6 +162,60 @@
     "category": "bab1"
   },
   {
+    "id": "bab1_nino_pulang_dulu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "tts": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab5_nino_panggil_lab",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "tts": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_glen_rayakan",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "tts": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_rayakan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hore! Kita bertiga hebat sekali!",
+    "tts": "[happy] Hore! Kita bertiga hebat sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "tts": "[warm] Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_latihan_besok",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi! Siap latihan Lompat Barongsai?",
+    "tts": "[excited] Selamat pagi! Siap latihan Lompat Barongsai?",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",
@@ -1726,6 +1780,24 @@
     "tts": "[proud] Mantap, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi.",
     "source": "audio/dialog.json",
     "category": "bab6"
+  },
+  {
+    "id": "rakus_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "tts": "[warm] Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "rakus_morning_letters",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "tts": "[cheerful] Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
   },
   {
     "id": "quiz_hitung_001",
