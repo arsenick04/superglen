@@ -237,6 +237,8 @@ export class Chapter5 {
   private engage(): void {
     const { ctx } = this;
     if (!this.boss) return;
+    // Put Glen on the fight floor as the arena opens, including on reentry after a rest.
+    this.hooks.placePlayer(SNAKE_FIELD.x, SNAKE_FIELD.z + Combat.snake.entryOffset, Math.PI);
     this.engaged = true;
     if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);

@@ -8,7 +8,7 @@ import { Combat, CombatRng } from '../../config/combat';
 /** A separate real-time encounter scene. City geometry and traffic are unloaded. */
 export class CurutArena implements Level {
   readonly id = 'battle-curut';
-  readonly spawn = { x: MARKET.hub.x, y: 0, z: 6, yaw: Math.PI };
+  readonly spawn = { x: MARKET.hub.x, y: 0, z: Combat.rat.arena.entryZ, yaw: Math.PI };
   private ctx!: LevelContext;
   private rats!: MarketRats;
   private leaving = false;
