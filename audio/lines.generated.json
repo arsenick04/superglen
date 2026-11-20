@@ -1800,6 +1800,24 @@
     "category": "lainnya"
   },
   {
+    "id": "rakus_nino_lab_invite",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "tts": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "rakus_nino_lab_arrival",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "tts": "[cheerful] Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
