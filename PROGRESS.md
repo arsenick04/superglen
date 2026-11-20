@@ -918,3 +918,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Tiga perjalanan pulang kini berlangsung malam: sesudah Glen menerima kostum, sesudah perayaan Ular di Lab, dan sesudah Tikus Rakus jinak. Saat Glen masuk rumah, kota dimuat ulang dengan cahaya pagi. Status malam bertahan setelah refresh selama perjalanan pulang.
 - Sesudah Tikus Rakus, Nino meminta Glen pulang dan beristirahat. Esok pagi Nino menjelaskan pencarian huruf SUPERGLEN serta tujuan kembali ke Lab. Dua dialog baru memakai suara cadangan perangkat selama MP3 karakter belum tersedia.
 - Build, pemeriksaan rute kota, kuis, dan diff check lulus. Browser tidak diuji sesuai permintaan pemilik. Berikutnya: audit dan lengkapi VO dialog yang belum bersuara.
+
+## Dialog tanpa MP3 tetap terdengar — 20 November 2026
+
+- Audit dialog cerita menemukan delapan ID tanpa MP3: satu Bab 1, lima Bab 5, dan dua dialog baru setelah Tikus Rakus. Saat klip tidak tersedia atau gagal diputar, dialog sekarang memakai suara bahasa Indonesia dari perangkat dan musik merendah selama baris berlangsung. Dua dialog baru dicatat di `audio/dialog.json` agar pipeline audio bisa membuat MP3-nya kelak.
+- Satu contoh suara Nino berhasil dibuat melalui ElevenLabs (84 kredit), tetapi unduhan aset dari lingkungan kerja ditolak HTTP 403; tidak ada MP3 baru yang dipasang dan tidak ada generasi tambahan. Suara perangkat adalah pengganti sementara, bukan suara karakter yang sudah disetujui.
+- Build, check:reach, check:quiz, JSON, dan diff check lulus. Browser tetap diuji pemilik sendiri.

@@ -1374,5 +1374,19 @@
     "lang": "id",
     "text": "Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
     "delivery": "[proud] Mantap, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
+  },
+  {
+    "id": "rakus_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "delivery": "[warm] Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!"
+  },
+  {
+    "id": "rakus_morning_letters",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "delivery": "[cheerful] Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!"
   }
 ]
