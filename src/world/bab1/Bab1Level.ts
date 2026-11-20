@@ -178,6 +178,13 @@ export class Bab1Level implements Level {
           await ctx.dialog.say('rakus_nino_lab_arrival', { lockControls: true });
         });
       }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {
+        ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          await ctx.dialog.say('elang_nino_alarm', { lockControls: true });
+          await ctx.dialog.say('elang_glen_berangkat', { lockControls: true });
+        });
+      }
       const b5 = ctx.save.data.bab5.step;
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'snake_lab') {
         this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 }, 'snakeCelebration');

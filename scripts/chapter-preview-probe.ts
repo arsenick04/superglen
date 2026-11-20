@@ -17,13 +17,17 @@ const fakeWindow = {
 };
 Object.defineProperty(globalThis, 'window', { value: fakeWindow, configurable: true });
 
-for (let chapter = 1; chapter <= 6; chapter++) {
+for (let chapter = 1; chapter <= 7; chapter++) {
   fakeWindow.location.search = `?chapter=${chapter}&level=lab&free=1&reset=1`;
   const save = new SaveStore();
   const seed = structuredClone(save.data);
   assert.equal(save.previewChapter, chapter);
   assert.deepEqual(seed.chaptersDone, Array.from({ length: chapter - 1 }, (_, i) => `bab${i + 1}`));
-  assert.equal(startPlanFor(save).level, chapter === 2 ? 'bab2' : 'kota');
+  assert.equal(startPlanFor(save).level, chapter === 2 ? 'bab2' : chapter === 7 ? 'lab' : 'kota');
+  if (chapter === 7) {
+    assert.equal(seed.interlude, 'elang_bank');
+    assert.equal(startPlanFor(save).arrival, 'labFromHangar');
+  }
   assert.equal(seed.discovered.lab, chapter >= 2);
   assert.deepEqual(seed.skills, { laser: chapter >= 3, shield: chapter >= 3, fly: chapter >= 3 });
   assert.deepEqual([seed.bab3.step, seed.bab4.step, seed.bab5.step, seed.bab6.step], ['', '', '', '']);
@@ -50,7 +54,7 @@ assert.equal(startPlanFor(arena).level, 'battle-curut');
 assert.equal(arena.data.bab3.step, 'chase');
 assert.deepEqual([reads, writes, removes], [0, 0, 0]);
 
-const normalQueries = ['', '?chapter=0', '?chapter=7', '?chapter=03', '?chapter=3x', '?chapter=3.0', '?chapter=3%0A', '?chapter=', '?chapter=3%0A', '?chapter=3&chapter=4'];
+const normalQueries = ['', '?chapter=0', '?chapter=8', '?chapter=03', '?chapter=3x', '?chapter=3.0', '?chapter=3%0A', '?chapter=', '?chapter=3%0A', '?chapter=3&chapter=4'];
 for (const query of normalQueries) {
   fakeWindow.location.search = query;
   assert.equal(previewChapterFor(new URLSearchParams(query)), null);
@@ -64,4 +68,4 @@ normal.persist();
 assert.equal(writes, 1);
 normal.reset();
 assert.equal(removes, 1, 'normal reset still removes the real save');
-console.log('Chapter preview probe passed: six seeds, reset/reload isolation, arena entry, and normal/invalid queries.');
+console.log('Chapter preview probe passed: seven seeds, reset/reload isolation, arena entry, and normal/invalid queries.');

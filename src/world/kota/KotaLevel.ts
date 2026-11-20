@@ -24,6 +24,7 @@ import { SNAKE_FIELD } from './Bab5Data';
 import { Chapter6 } from './Chapter6';
 import { RAKUS_ARENA } from './Bab6Data';
 import { LetterHunt } from './LetterHunt';
+import { Chapter7Intro } from './Chapter7Intro';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
 
@@ -79,6 +80,7 @@ export class KotaLevel implements Level {
   /** Chapter 6 (Gudang Pasar, Tikus Rakus) while it is on: Chapter 5 done, Chapter 6 not (null otherwise). */
   ch6: Chapter6 | null = null;
   private letters: LetterHunt | null = null;
+  private elangIntro: Chapter7Intro | null = null;
 
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
@@ -269,6 +271,10 @@ export class KotaLevel implements Level {
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
     this.setupHomeInterlude(arrival);
+    if (!sandbox && (ctx.save.data.interlude === 'elang_bank' || ctx.save.data.interlude === 'elang_met')) {
+      this.elangIntro = new Chapter7Intro(ctx, () => this.hud.show('Elang Belang di atas Bank', 0x8bbdff, true));
+      this.hud.show('Malam hari — menuju Bank', 0x8bbdff, true);
+    }
     if (!sandbox && ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === 'rakus_letters') {
       this.letters = new LetterHunt(ctx, (goal) => this.setGoal(goal), () => {
         this.hud.show('SUPERGLEN lengkap! Nino menunggu di Lab', 0xffd23f, true);
@@ -360,7 +366,7 @@ export class KotaLevel implements Level {
 
   /** Story pauses that require Glen to walk home before the next morning. */
   private isWalkingHome(): boolean {
-    return ['costume_home', 'snake_home', 'rakus_home'].includes(this.ctx.save.data.interlude);
+    return ['costume_home', 'snake_home', 'rakus_home', 'elang_bank', 'elang_met'].includes(this.ctx.save.data.interlude);
   }
 
   /** Evening lasts until Glen enters his house; a fresh city scene restores daylight in the morning. */
@@ -494,6 +500,7 @@ export class KotaLevel implements Level {
     this.ch5?.fixedUpdate(dt);
     this.ch6?.fixedUpdate(dt);
     this.letters?.fixedUpdate();
+    this.elangIntro?.fixedUpdate();
     this.d3?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
@@ -524,6 +531,7 @@ export class KotaLevel implements Level {
     this.ch5?.update(dt);
     this.ch6?.update(dt);
     this.letters?.update(dt);
+    this.elangIntro?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;

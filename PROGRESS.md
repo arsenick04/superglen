@@ -941,3 +941,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Percakapan Nino setelah huruf SUPERGLEN membawa Glen ke sesi baru dalam hanggar. Glen melewati tiga cincin terbang, menembak sasaran, lalu menangkis bola latihan di udara. Setelah selesai, Glen kembali ke lab.
 - Mode terbang sekarang dinyalakan atau dimatikan dengan satu ketukan: tombol roket pada layar sentuh, F pada keyboard, atau R1 pada gamepad. Lompat tetap terpisah. Tutorial awal Bab 2 mempertahankan kontrol tahan lompatnya.
 - Build, pemeriksaan rute dan kuis, serta probe logika tombol terbang lulus. Pengujian browser ditunda sesuai permintaan pemilik.
+
+## Pembuka Elang Belang pada malam hari — 20 November 2026
+
+- Selesai latihan terbang, Nino membunyikan alarm di Lab. Glen diminta menuju Bank; ketika keluar, kota sudah malam dan penanda mengarah ke atap Bank. Elang Belang terlihat melayang di sana, dengan sayap biru dan merah, lalu Glen bereaksi ketika mendekat di udara.
+- Progres alarm dan pertemuan Elang tersimpan setelah refresh. `?chapter=7` memulai pratinjau aman dari Lab setelah latihan; save utama tidak disentuh. Pertarungan terbang menyusul dalam PR berikutnya dan tetap berlangsung malam.
+- Build, pemeriksaan rute, kuis, probe pratinjau, dan pemeriksaan diff lulus. Browser ditunda sesuai keputusan pemilik. Dialog baru memakai suara perangkat sampai MP3 karakter tersedia.

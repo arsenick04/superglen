@@ -93,6 +93,7 @@ export interface StartPlan {
 export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewBattle) return { level: 'battle-curut' };
   if (save.previewChapter === 2) return { level: 'bab2' };
+  if (save.previewChapter === 7) return { level: 'lab', arrival: 'labFromHangar' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
@@ -106,6 +107,12 @@ export function startPlanFor(save: SaveStore): StartPlan {
     if (save.data.interlude === 'rakus_lab' && where === 'lab') return { level: 'lab' };
     if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
     return { level: 'kota', arrival: save.data.interlude === 'rakus_home' ? 'rakusVictory' : 'homeMorning' };
+  }
+  if (save.data.interlude === 'elang_bank' || save.data.interlude === 'elang_met') {
+    if (where === 'lab') return { level: 'lab' };
+    const slot = save.data.slot;
+    if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
+    return { level: 'kota', arrival: 'hillDoor' };
   }
   const slot = save.data.slot;
   // An encounter slot is valid only while that encounter's story step is
@@ -155,6 +162,7 @@ export function labNinoTalk(save: SaveStore): { line: string | null; next: strin
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return { line: null, next: 'bab2', clearInterlude: true };
   if (save.data.interlude === 'snake_return') return { line: 'bab5_nino_latihan_besok', next: 'jump-training' };
   if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: 'flight-training' };
+  if (save.data.interlude === 'elang_bank' || save.data.interlude === 'elang_met') return { line: 'elang_nino_alarm', next: null };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
   return { line: 'bab2_nino_hebat', next: null };
 }
