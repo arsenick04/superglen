@@ -313,6 +313,7 @@ export class Chapter6 {
       cameraRig.setFraming(null);
       this.over = true;
       ctx.save.markChapterDone('bab6');
+      ctx.save.setInterlude('rakus_home');
       ctx.save.setBab6('');
       ctx.save.finishCityMission('bab6', 15);
       ctx.quiz.coinsChanged();

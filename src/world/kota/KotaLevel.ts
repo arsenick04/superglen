@@ -22,6 +22,7 @@ import { Chapter4 } from './Chapter4';
 import { Chapter5 } from './Chapter5';
 import { SNAKE_FIELD } from './Bab5Data';
 import { Chapter6 } from './Chapter6';
+import { RAKUS_ARENA } from './Bab6Data';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
 
@@ -139,6 +140,8 @@ export class KotaLevel implements Level {
       this.spawn = marketBattleSpawn(ctx.save.data.bab3.step);
     } else if (arrival === 'snakeVictory') {
       this.spawn = { x: SNAKE_FIELD.x, y: 0, z: SNAKE_FIELD.z + 9, yaw: Math.PI };
+    } else if (arrival === 'rakusVictory') {
+      this.spawn = { x: RAKUS_ARENA.x, y: 0, z: RAKUS_ARENA.z, yaw: Math.PI };
     } else if (arrival === 'homeMorning') {
       this.spawn = this.glenHomeSpot();
     } else if (arrival === 'hillDoor') {
@@ -260,7 +263,7 @@ export class KotaLevel implements Level {
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
-    this.setupCostumeInterlude(arrival);
+    this.setupHomeInterlude(arrival);
 
     if (!sandbox && !bab1) {
       // Chapter 1: guided walk from the school to the hill; the light in the old building shows from far away.
@@ -344,12 +347,13 @@ export class KotaLevel implements Level {
     return { x: b.x + fx * (half + 2.8), y: b.base, z: b.z + fz * (half + 2.8), yaw: Math.atan2(-fx, -fz) };
   }
 
-  /** Chapter 1 ends at home; only the following morning may training begin. */
-  private setupCostumeInterlude(arrival: ReturnType<typeof takeArrival>): void {
+  /** Story pauses that require Glen to walk home before the next morning. */
+  private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
-    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return'].includes(state)) return;
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters'].includes(state)) return;
     if (arrival === 'homeMorning') this.hud.show('Keesokan pagi', 0xf2b632, true);
+    if (state === 'rakus_letters') return;
     if (state === 'costume_return' || state === 'snake_return') {
       const d = CITY_LAYOUT.lab.door;
       this.setGoal({ x: d.x, z: d.z });
@@ -364,9 +368,10 @@ export class KotaLevel implements Level {
       radius: 3,
       icon: 'hand',
       promptHeight: 1.7,
-      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home',
+      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home',
       onInteract: () => {
-        ctx.save.setInterlude(ctx.save.data.interlude === 'snake_home' ? 'snake_return' : 'costume_return');
+        const next = ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        ctx.save.setInterlude(next);
         setArrival('kota', 'homeMorning');
         void ctx.game.loadLevel('kota');
       },
@@ -416,6 +421,7 @@ export class KotaLevel implements Level {
       },
       onDone: () => {
         this.setGoal(null);
+        this.setupHomeInterlude(null);
         this.d3?.people.onChange?.();
       },
     });
