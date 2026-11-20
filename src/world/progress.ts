@@ -25,6 +25,7 @@ import { MARKET } from './kota/Bab3Data';
 export type Arrival =
   | 'marketBattle'
   | 'snakeVictory'
+  | 'rakusVictory'
   /** City: outside Glen's house on the next morning. */
   | 'homeMorning'
   /** City: in front of the old building's door on the hill, facing away from it. */
@@ -100,6 +101,11 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.data.interlude === 'snake_lab') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'snakeVictory' };
   if (save.data.interlude === 'snake_home') return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (save.data.interlude === 'snake_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'rakus_home' || save.data.interlude === 'rakus_letters') {
+    const slot = save.data.slot;
+    if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
+    return { level: 'kota', arrival: save.data.interlude === 'rakus_home' ? 'rakusVictory' : 'homeMorning' };
+  }
   const slot = save.data.slot;
   // An encounter slot is valid only while that encounter's story step is
   // still active. This also protects old saves made just before a delayed

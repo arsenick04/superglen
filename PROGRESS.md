@@ -892,3 +892,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 
 - Lab dan hanggar masing-masing membuat satu aktor Nino. Terminal kuis di ruangan yang sama sebelumnya juga menampilkan wajah Nino, sehingga terlihat seperti Nino kedua. Layar terminal kini menampilkan ikon buku kuis; fungsi kuis tetap sama.
 - Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 2 setelah alarm dan perjalanan melalui Lab menuju Pasar.
+
+
+## Tikus Rakus → pulang — 20 November 2026
+
+- Setelah Tikus Rakus jinak, Glen tetap di kota. Penanda peta dan tujuan menuntunnya berjalan dari gudang ke pintu rumah; interaksi di rumah mengaktifkan pagi berikutnya. Refresh saat perjalanan memulai lagi di area gudang, atau di titik kota yang disimpan manual setelah kemenangan.
+- Checkpoint `rakus_letters` menandai pagi setelah pulang. Permainan mengumpulkan huruf SUPERGLEN akan ditambahkan pada PR berikutnya; tahap ini hanya mengunci urutan pulang dan reload.
+- Build, check:reach, check:quiz, probe alur simpan, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 6 hingga menang, ikuti penanda ke rumah, lalu muat ulang halaman.
