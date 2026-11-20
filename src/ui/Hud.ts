@@ -106,9 +106,9 @@ export class Hud {
   }
 
   /** Extra key lines for the skills the story has unlocked so far. */
-  setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }): void {
+  setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }, flightToggle = true): void {
     const lines: string[] = [];
-    if (sk.fly) lines.push('Tahan Spasi: terbang');
+    if (sk.fly) lines.push(flightToggle ? 'F: mode terbang (tekan lagi untuk turun)' : 'Tahan Spasi: terbang');
     if (sk.laser) lines.push('J atau klik kiri: laser');
     if (sk.shield) lines.push('K atau klik kanan: perisai');
     if (lines.join() === this.skillLines.join()) return;

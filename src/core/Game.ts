@@ -340,7 +340,7 @@ export class Game {
   private levelControls = true;
   private fading = false;
   private dialogLocked = false;
-  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false, bike: false };
+  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false, flight: false, bike: false };
   /** The level lets the child switch Glen <-> Superglen (the star button / Q); the button also needs live controls. */
   private transformAllowed = false;
   private readonly modeCtl: ModeController;
@@ -850,7 +850,7 @@ export class Game {
         this.player.skills.shield.up = false;
         this.player.speedScale = 1;
         this.setSkills({ ...this.save.data.skills });
-        for (const a of ['jump', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
+        for (const a of ['jump', 'flight', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];
         this.player.setMode('glen');
         this.updateControls();
@@ -1127,7 +1127,8 @@ export class Game {
     }
     this.profile.laser = u.laser;
     this.profile.shield = u.shield;
-    this.hud?.setSkillHelp(u);
+    this.profile.flight = u.fly && this.player.flight.toggleEnabled;
+    this.hud?.setSkillHelp(u, this.player.flight.toggleEnabled);
     this.applyLayout();
   }
 

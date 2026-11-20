@@ -36,6 +36,9 @@ const LASER_ICON =
 const SHIELD_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L54 14 V32 C54 45 45 54 32 59 C19 54 10 45 10 32 V14 Z" fill="#fff"/><path d="M32 16 L45 21 V32 C45 40 40 46 32 50 Z" fill="#1fb5a8" opacity="0.55"/></svg>';
 
+const FLIGHT_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 C22 15 23 24 24 30 L17 38 V51 L27 46 L32 56 L37 46 L47 51 V38 L40 30 C41 24 42 15 32 5 Z" fill="#fff"/><circle cx="32" cy="27" r="5" fill="#44b8f4"/></svg>';
+
 // Sepeda: a bicycle bell (the jump button rings it while riding).
 const BELL_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 C20 6 14 16 14 28 V38 L8 48 H56 L50 38 V28 C50 16 44 6 32 6 Z" fill="#fff"/><circle cx="32" cy="54" r="5.5" fill="#fff"/><circle cx="32" cy="9" r="3.5" fill="#fff"/></svg>';
@@ -159,6 +162,7 @@ function storyLaserPlacement(m: ViewMetrics): Placement {
 const STORY_INTERACT: TouchButtonDef = { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: storyInteractPlacement };
 const STORY_LASER: TouchButtonDef = { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 166, place: storyLaserPlacement };
 const STORY_SHIELD: TouchButtonDef = { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150, place: shieldPlacement };
+const STORY_FLIGHT: TouchButtonDef = { action: 'flight', icon: FLIGHT_ICON, color: '#438bfa', size: 84, right: 242, bottom: 28, place: (m) => isShort(m) ? { size: MIN_BUTTON, right: 20, bottom: 0, top: 96 } : { size: 84, right: 246, bottom: 42 } };
 const GLEN_JUMP = GLEN_BUTTONS[0];
 const SUPERGLEN_JUMP = SUPERGLEN_BUTTONS[0];
 const TRANSFORM = GLEN_BUTTONS[2];
@@ -172,6 +176,7 @@ export interface ControlProfile {
   /** Unlocked skills (Superglen mode only). */
   laser: boolean;
   shield: boolean;
+  flight: boolean;
   /** Riding a bike (Glen): the big button rings the bell instead of jumping. */
   bike: boolean;
 }
@@ -184,7 +189,7 @@ const layoutCache = new Map<string, readonly TouchButtonDef[]>();
 export function getLayout(mode: PlayerMode, p: ControlProfile): readonly TouchButtonDef[] {
   if (p.legacyTest) return mode === 'superglen' ? SUPERGLEN_BUTTONS : GLEN_BUTTONS;
   const bike = p.bike && mode === 'glen';
-  const key = `${mode}|${p.transform ? 1 : 0}${bike ? 'b' : ''}${mode === 'superglen' ? `${p.laser ? 1 : 0}${p.shield ? 1 : 0}` : ''}`;
+  const key = `${mode}|${p.transform ? 1 : 0}${bike ? 'b' : ''}${mode === 'superglen' ? `${p.laser ? 1 : 0}${p.shield ? 1 : 0}${p.flight ? 1 : 0}` : ''}`;
   let defs = layoutCache.get(key);
   if (!defs) {
     const list: TouchButtonDef[] = [];
@@ -192,6 +197,7 @@ export function getLayout(mode: PlayerMode, p: ControlProfile): readonly TouchBu
       list.push(SUPERGLEN_JUMP, STORY_INTERACT);
       if (p.laser) list.push(STORY_LASER);
       if (p.shield) list.push(STORY_SHIELD);
+      if (p.flight) list.push(STORY_FLIGHT);
     } else {
       list.push(bike ? BIKE_JUMP : GLEN_JUMP, GLEN_BUTTONS[1]);
     }
@@ -310,7 +316,7 @@ export class TouchControls {
       this.layer.appendChild(b);
       this.buttons.set(d.action, b);
       if (this.pulsing.has(d.action)) b.classList.add('pulse');
-      if (d.action === 'jump' && this.jets) b.classList.add('jets');
+      if (d.action === 'flight' && this.jets) b.classList.add('jets');
     }
     this.applyPlacement();
   }
@@ -325,7 +331,7 @@ export class TouchControls {
   /** Jet-booster state on the jump button (a glowing, flickering look while flying). Event driven: no per-frame DOM work. */
   setJets(on: boolean): void {
     this.jets = on;
-    this.buttons.get('jump')?.classList.toggle('jets', on);
+    this.buttons.get('flight')?.classList.toggle('jets', on);
   }
 
   setPressed(action: Action, pressed: boolean): void {

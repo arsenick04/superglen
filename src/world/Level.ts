@@ -71,8 +71,7 @@ export interface LevelGame {
    * The star is hidden while controls are locked (sequences, dialogs, fades) even when allowed. */
   setTransformAllowed(allowed: boolean): void;
   /**
-   * Unlock / lock skills at runtime (omitted keys stay as they are). Updates the touch buttons (laser and shield; flying
-   * is the jump button held), the PC help card and the skill systems. Every level load starts from `save.data.skills`.
+   * Unlock / lock skills at runtime (omitted keys stay as they are). Updates touch buttons, PC help and skill systems.
    * `persist: true` also writes the unlocked ones into the save (use `ctx.save.unlockSkill` for story unlocks).
    */
   setSkills(skills: { laser?: boolean; shield?: boolean; fly?: boolean }, persist?: boolean): void;

@@ -53,8 +53,9 @@ export class Bab2Level implements Level {
     game.setTransformAllowed(false);
     game.setPlayerMode(done ? ctx.save.data.lastMode : 'superglen', done);
     // Finished chapter: every power is ready. Story: only Lompat Barongsai until each unlock step.
-    game.setSkills(done ? { laser: true, shield: true, fly: true } : { laser: false, shield: false, fly: false });
     const fl = ctx.player.flight;
+    if (!done) fl.toggleEnabled = false;
+    game.setSkills(done ? { laser: true, shield: true, fly: true } : { laser: false, shield: false, fly: false });
     fl.maxFlyHeight = FLY_MAX;
     fl.bounds = { minX: HALL.minX + 0.5, maxX: HALL.maxX - 0.5, minZ: HALL.minZ + 0.5, maxZ: HALL.maxZ - 0.5 };
 

@@ -481,6 +481,7 @@ export class Player {
     fi.can = sg && ((F.enabled && !this.chainHold) || F.forced);
     fi.jumpDown = jumpDown;
     fi.jumpPressed = pressed;
+    fi.flightPressed = this.inputEnabled && !this.ride && this.input.wasPressed('flight');
     fi.grounded = wasGrounded;
     fi.feetY = this.currPos.y - CENTER_TO_FEET;
     fi.groundY = this.hasGround ? this.groundY : Number.NaN;
