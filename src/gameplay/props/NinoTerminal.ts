@@ -66,7 +66,7 @@ export class NinoTerminal {
     ring.position.y = 0.11;
 
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.7, 0.08), navy);
-    this.mat = new THREE.MeshBasicMaterial({ map: this.faceTexture(), color: this.dim.clone(), fog: false });
+    this.mat = new THREE.MeshBasicMaterial({ map: this.quizTexture(), color: this.dim.clone(), fog: false });
     this.screen = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), this.mat);
     this.screen.position.z = 0.045;
     this.head.add(frame, this.screen);
@@ -86,39 +86,55 @@ export class NinoTerminal {
     });
   }
 
-  /** A friendly Nino face on a blue screen (drawn once). */
-  private faceTexture(): THREE.CanvasTexture {
+  /** A quiz book on the terminal, distinct from Nino standing beside it (drawn once). */
+  private quizTexture(): THREE.CanvasTexture {
     const c = document.createElement('canvas');
     c.width = 128;
     c.height = 86;
     const g = c.getContext('2d');
     if (g) {
       const bg = g.createLinearGradient(0, 0, 0, 86);
-      bg.addColorStop(0, '#2f78d6');
-      bg.addColorStop(1, '#6fd3ff');
+      bg.addColorStop(0, '#2155a3');
+      bg.addColorStop(1, '#46a7dd');
       g.fillStyle = bg;
       g.fillRect(0, 0, 128, 86);
-      g.fillStyle = '#9fd8ff';
+      g.fillStyle = '#ffffff';
       g.beginPath();
-      g.arc(64, 44, 31, 0, Math.PI * 2);
+      g.moveTo(19, 20);
+      g.quadraticCurveTo(42, 14, 62, 24);
+      g.lineTo(62, 67);
+      g.quadraticCurveTo(43, 57, 19, 64);
+      g.closePath();
       g.fill();
-      g.lineWidth = 4;
-      g.strokeStyle = '#ffffff';
-      g.stroke();
-      g.fillStyle = '#0b2a4a';
       g.beginPath();
-      g.arc(52, 40, 4.5, 0, Math.PI * 2);
-      g.arc(76, 40, 4.5, 0, Math.PI * 2);
+      g.moveTo(66, 24);
+      g.quadraticCurveTo(86, 14, 109, 20);
+      g.lineTo(109, 64);
+      g.quadraticCurveTo(85, 57, 66, 67);
+      g.closePath();
       g.fill();
-      g.lineCap = 'round';
-      g.strokeStyle = '#0b2a4a';
-      g.lineWidth = 4;
+      g.strokeStyle = '#2473b9';
+      g.lineWidth = 3;
       g.beginPath();
-      g.arc(64, 46, 12, 0.15 * Math.PI, 0.85 * Math.PI);
+      g.moveTo(64, 24);
+      g.lineTo(64, 69);
       g.stroke();
-      g.fillStyle = '#ffd23f';
+      g.fillStyle = '#f5ae25';
+      g.font = 'bold 35px sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('?', 42, 43);
       g.beginPath();
-      g.arc(64, 14, 4, 0, Math.PI * 2);
+      g.moveTo(88, 29);
+      g.lineTo(91, 37);
+      g.lineTo(100, 37);
+      g.lineTo(93, 43);
+      g.lineTo(96, 52);
+      g.lineTo(88, 47);
+      g.lineTo(80, 52);
+      g.lineTo(83, 43);
+      g.lineTo(76, 37);
+      g.lineTo(85, 37);
       g.fill();
     }
     const tex = new THREE.CanvasTexture(c);

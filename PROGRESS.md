@@ -886,3 +886,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Setelah video kekalahan Ular, Nino mengajak Glen dan Aara kembali ke Lab. Glen tetap di lapangan dan harus berjalan ke pintu gedung Barongsai; Aara mengikuti jejaknya. Masuk Lab tetap melalui interaksi pintu. Reload saat perjalanan kembali di lapangan, bukan langsung ke Lab.
 - Empat dialog setelah Ular belum mempunyai MP3 produksi. Suara cadangan Bahasa Indonesia dari perangkat dipakai khusus untuk empat baris itu, dengan pengaturan bunyi dan penghentian saat dialog selesai. Ajakan Nino tidak diulang lagi ketika sudah tiba di Lab. MP3 karakter masih perlu dipasang saat asetnya dapat diunduh.
 - Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; uji manual dari Chapter 5: kalahkan Ular, dengarkan ajakan Nino, ikuti penanda ke Lab bersama Aara, lalu dengarkan tiga dialog perayaan.
+
+
+## Tampilan Nino setelah latihan pertama — 20 November 2026
+
+- Lab dan hanggar masing-masing membuat satu aktor Nino. Terminal kuis di ruangan yang sama sebelumnya juga menampilkan wajah Nino, sehingga terlihat seperti Nino kedua. Layar terminal kini menampilkan ikon buku kuis; fungsi kuis tetap sama.
+- Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 2 setelah alarm dan perjalanan melalui Lab menuju Pasar.
