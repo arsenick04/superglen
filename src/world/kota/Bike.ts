@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
+import type { StaticBodyHandle } from '../../core/Physics';
 import type { CityBike } from './CityPlaces';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
 
@@ -61,6 +62,7 @@ function frameGeo(color: number): THREE.BufferGeometry {
 
 interface Parked {
   group: THREE.Group;
+  parkedBody: StaticBodyHandle | null;
   x: number;
   y: number;
   z: number;
@@ -101,7 +103,7 @@ export class BikeSystem {
       group.position.set(s.x, s.y, s.z);
       group.rotation.y = s.yaw;
       ctx.root.add(group);
-      this.bikes.push({ group, x: s.x, y: s.y, z: s.z, yaw: s.yaw });
+      this.bikes.push({ group, ...s, parkedBody: this.parkedBody(s) });
       ctx.interactions.add({
         position: () => this.position(i, this.promptPos),
         radius: BikeConfig.mountRadius,
@@ -161,10 +163,20 @@ export class BikeSystem {
     this.ctx.fx.sparkles.burst(p.x, p.y + 0.9, p.z, 5, 1.6, 0xffe27a, { gravity: 0, life: 0.5, up: 0.4 });
   }
 
+  private parkedBody(b: Pick<Parked, 'x' | 'y' | 'z' | 'yaw'>): StaticBodyHandle {
+    return this.ctx.physics.addFixedCuboid(
+      { x: 0.31, y: 0.42, z: 0.89 },
+      { x: b.x, y: b.y + 0.42, z: b.z },
+      { x: 0, y: Math.sin(b.yaw / 2), z: 0, w: Math.cos(b.yaw / 2) },
+    );
+  }
+
   private mount(i: number): void {
     if (this.riding >= 0 || this.ctx.player.mode !== 'glen' || !this.ctx.game.controlsEnabled) return;
     const { player, game } = this.ctx;
     const b = this.bikes[i];
+    if (b.parkedBody) this.ctx.physics.removeBody(b.parkedBody.body);
+    b.parkedBody = null;
     this.riding = i;
     this.mounts++;
     b.group.removeFromParent();
@@ -196,6 +208,7 @@ export class BikeSystem {
     b.group.position.set(b.x, b.y, b.z);
     b.group.rotation.set(0, b.yaw, 0);
     this.ctx.root.add(b.group);
+    b.parkedBody = this.parkedBody(b);
     this.riding = -1;
     this.cooldown = BikeConfig.remountCooldown;
     this.dismounts++;
