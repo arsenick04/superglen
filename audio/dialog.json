@@ -133,27 +133,37 @@
     "delivery": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!"
   },
   {
-    "id": "bab5_nino_panggil_lab", "speaker": "nino", "lang": "id",
+    "id": "bab5_nino_panggil_lab",
+    "speaker": "nino",
+    "lang": "id",
     "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
     "delivery": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara."
   },
   {
-    "id": "bab5_glen_rayakan", "speaker": "glen", "lang": "id",
+    "id": "bab5_glen_rayakan",
+    "speaker": "glen",
+    "lang": "id",
     "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
     "delivery": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!"
   },
   {
-    "id": "bab5_aara_rayakan", "speaker": "aara", "lang": "id",
+    "id": "bab5_aara_rayakan",
+    "speaker": "aara",
+    "lang": "id",
     "text": "Hore! Kita bertiga hebat sekali!",
     "delivery": "[happy] Hore! Kita bertiga hebat sekali!"
   },
   {
-    "id": "bab5_nino_pulang", "speaker": "nino", "lang": "id",
+    "id": "bab5_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
     "text": "Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
     "delivery": "[warm] Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai."
   },
   {
-    "id": "bab5_nino_latihan_besok", "speaker": "nino", "lang": "id",
+    "id": "bab5_nino_latihan_besok",
+    "speaker": "nino",
+    "lang": "id",
     "text": "Selamat pagi! Siap latihan Lompat Barongsai?",
     "delivery": "[excited] Selamat pagi! Siap latihan Lompat Barongsai?"
   },
@@ -1444,5 +1454,41 @@
     "lang": "id",
     "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
     "delivery": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen."
+  },
+  {
+    "id": "flight_nino_easy",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!"
+  },
+  {
+    "id": "flight_nino_medium",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola."
+  },
+  {
+    "id": "flight_nino_hard",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!"
+  },
+  {
+    "id": "flight_nino_laser",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian."
+  },
+  {
+    "id": "flight_nino_shield",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai."
+  },
+  {
+    "id": "flight_nino_done",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!"
   }
 ]
