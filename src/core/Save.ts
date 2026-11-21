@@ -261,6 +261,7 @@ export class SaveStore {
   readonly previewChapter: PreviewChapter | null;
   readonly previewBattle: boolean;
   readonly previewEagleBattle: boolean;
+  readonly previewFlightTraining: boolean;
   readonly previewLetters: boolean;
 
   constructor() {
@@ -268,6 +269,7 @@ export class SaveStore {
     this.previewChapter = previewChapterFor(query);
     this.previewBattle = this.previewChapter === 3 && query.get('battle') === '1';
     this.previewEagleBattle = this.previewChapter === 7 && query.get('battle') === '1';
+    this.previewFlightTraining = this.previewChapter === 7 && !this.previewEagleBattle && query.getAll('training').length === 1 && query.get('training') === '1';
     const letters = query.getAll('letters');
     this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
     if (this.previewChapter || query.get('reset') === '1') this.reset();

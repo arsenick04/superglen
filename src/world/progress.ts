@@ -95,6 +95,7 @@ export interface StartPlan {
 export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewBattle) return { level: 'battle-curut' };
   if (save.previewChapter === 2) return { level: 'bab2' };
+  if (save.previewFlightTraining) return { level: 'flight-training' };
   if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
   if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
   if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
