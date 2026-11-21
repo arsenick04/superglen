@@ -6,7 +6,7 @@ import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
 import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
-import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
+import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
  * Turns the city data (CityData.ts) into geometry recipes and collider lists:
@@ -734,6 +734,22 @@ function drawProps(B: Builder, L: CityLayout): void {
     const s = t.s;
     const hv = hsh(t.x, t.z, 2);
     const yaw = hv * 6.283;
+    const platforms = treePlatforms(t);
+    if (platforms.length) {
+      const crown = platforms[4];
+      const top = crown.center[1] + crown.size[1] / 2;
+      const trunk = top - t.base - 0.35;
+      const color = hv > 0.88 ? 0xf58fbd : LEAF[Math.floor(hv * LEAF.length)];
+      ch.lit.trunk(0.23 * s, trunk, [t.x, t.base + trunk / 2, t.z], 0x946140);
+      for (const { center, size } of platforms.slice(0, -1)) {
+        ch.lit.add(Sh.Body, center, size, 0x946140);
+        ch.deco.ball(0.14 * s, [center[0] * 2 - t.x, center[1], center[2] * 2 - t.z], color);
+      }
+      ch.lit.add(Sh.Sph1, [t.x, top - 0.48, t.z], [0.85 * s, 0.48, 0.85 * s], color);
+      ch.deco.add(Sh.Sph0, [t.x + 0.55 * s, top - 0.65, t.z], [0.48 * s, 0.32, 0.46 * s], color);
+      ch.deco.add(Sh.Sph0, [t.x - 0.47 * s, top - 0.62, t.z], [0.5 * s, 0.36, 0.55 * s], color);
+      continue;
+    }
     const kl = t.kind === 'pine' ? PINES : ROUND;
     if (kl.length) {
       const [id, h] = kl[Math.floor(hv * 997) % kl.length];
