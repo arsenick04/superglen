@@ -124,6 +124,7 @@ export class Chapter6 {
   start(): void {
     const { ctx } = this;
     ctx.game.preloadCinematic('rakus-warehouse');
+    ctx.game.preloadCinematic('rakus-defeat');
     this.hooks.dropMission();
     if (this.step === 'city' || this.step === 'fight') this.buildBoss();
     this.applyStep();
@@ -302,18 +303,14 @@ export class Chapter6 {
       this.helpers?.clear();
       this.engaged = false;
       ctx.battle.exit(true);
-      cameraRig.setFraming(b.headAt, { weight: 0.55, distance: 9 });
-      await b.tameLook();
-      await dialog.say(L.rakusSendawa, { lockControls: true });
-      const food = b.returnFood();
-      await dialog.say(L.rakusMaaf, { lockControls: true });
-      await dialog.say(L.rakusBagi, { lockControls: true });
-      await food;
+      await ctx.game.playCinematic('rakus-defeat');
+      if (this.disposed) return;
+      // CinematicPlayer releases its control lock when the video ends.
+      ctx.game.setControlsEnabled(false);
+      b.finishAfterCinematic();
       ctx.synth.cheer();
       await dialog.say(L.wargaHore, { lockControls: true });
-      const home = b.trotHome();
       await dialog.say(L.ninoHebat, { lockControls: true });
-      await home;
       this.hooks.nightFalls();
       await dialog.say(L.ninoPulang, { lockControls: true });
       cameraRig.setFraming(null);
