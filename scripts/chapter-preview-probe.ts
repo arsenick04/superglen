@@ -23,10 +23,10 @@ for (let chapter = 1; chapter <= 7; chapter++) {
   const seed = structuredClone(save.data);
   assert.equal(save.previewChapter, chapter);
   assert.deepEqual(seed.chaptersDone, Array.from({ length: chapter - 1 }, (_, i) => `bab${i + 1}`));
-  assert.equal(startPlanFor(save).level, chapter === 2 ? 'bab2' : chapter === 7 ? 'lab' : 'kota');
+  assert.equal(startPlanFor(save).level, chapter === 2 ? 'bab2' : 'kota');
   if (chapter === 7) {
     assert.equal(seed.interlude, 'elang_bank');
-    assert.equal(startPlanFor(save).arrival, 'labFromHangar');
+    assert.equal(startPlanFor(save).arrival, 'bankApproach');
   }
   assert.equal(seed.discovered.lab, chapter >= 2);
   assert.deepEqual(seed.skills, { laser: chapter >= 3, shield: chapter >= 3, fly: chapter >= 3 });
@@ -56,8 +56,9 @@ assert.deepEqual([reads, writes, removes], [0, 0, 0]);
 
 fakeWindow.location.search = '?chapter=7&battle=1';
 const eagleArena = new SaveStore();
-assert.equal(startPlanFor(eagleArena).level, 'battle-elang');
-assert.equal(eagleArena.data.interlude, 'elang_met');
+assert.deepEqual(startPlanFor(eagleArena), { level: 'kota', arrival: 'bankApproach' });
+assert.equal(eagleArena.data.interlude, 'elang_bank');
+assert.equal(eagleArena.data.where, 'kota');
 assert.deepEqual([reads, writes, removes], [0, 0, 0]);
 
 const normalQueries = ['', '?chapter=0', '?chapter=8', '?chapter=03', '?chapter=3x', '?chapter=3.0', '?chapter=3%0A', '?chapter=', '?chapter=3%0A', '?chapter=3&chapter=4'];

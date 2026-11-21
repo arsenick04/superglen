@@ -280,7 +280,7 @@ export class SaveStore {
     if (!chapter) return data;
     for (let i = 1; i < chapter; i++) data.chaptersDone.push(`bab${i}`);
     data.discovered.lab = chapter >= 2;
-    data.where = chapter === 2 ? 'bab2' : chapter === 7 ? 'lab' : 'kota';
+    data.where = chapter === 2 ? 'bab2' : 'kota';
     data.lastMode = chapter === 1 || chapter === 4 || chapter === 5 ? 'glen' : 'superglen';
     if (chapter >= 3) data.skills = { laser: true, shield: true, fly: true };
     if (this.previewBattle) data.bab3.step = 'chase';
@@ -288,7 +288,7 @@ export class SaveStore {
       data.chaptersDone.push('bab6');
       data.interlude = 'rakus_letters';
     }
-    if (chapter === 7) data.interlude = this.previewEagleBattle ? 'elang_met' : 'elang_bank';
+    if (chapter === 7) data.interlude = 'elang_bank';
     return data;
   }
 
