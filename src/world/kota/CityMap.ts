@@ -59,7 +59,7 @@ export class CityMap implements MapSource {
     return this.found() ? this.secretPos : null;
   }
 
-  draw(g: CanvasRenderingContext2D, px: number, big: boolean): void {
+  draw(g: CanvasRenderingContext2D, px: number, big: boolean, viewportPx = px): void {
     const L = CITY_LAYOUT;
     const k = px / (CITY.half * 2);
     const X = (x: number): number => (x + CITY.half) * k;
@@ -113,7 +113,7 @@ export class CityMap implements MapSource {
     }
 
     // Landmark icons (and names on the big map).
-    const R = px * (big ? 0.016 : 0.03);
+    const R = viewportPx * (big ? 0.016 : 0.03);
     for (const m of this.marks) this.glyph(g, X(m.x), Z(m.z), R, m.glyph, m.color);
     const sec = this.shownSecret();
     if (sec) this.glyph(g, X(sec.x), Z(sec.z), R * 1.1, 'secret', 0xffc928);

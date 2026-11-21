@@ -62,6 +62,7 @@ export class SettingsMenu {
   private isOpen = false;
   private confirming = false;
   private mapOpen = false;
+  private mapFromPlay = false;
   private toastTimer = 0;
 
   constructor(private readonly deps: SettingsDeps) {
@@ -207,10 +208,12 @@ export class SettingsMenu {
       return;
     }
     if (!this.deps.hasMap()) return;
-    if (!this.isOpen) {
+    const fromPlay = !this.isOpen;
+    if (fromPlay) {
       this.open();
       if (!this.isOpen) return;
     } else if (this.confirming) return;
+    this.mapFromPlay = fromPlay;
     this.mapOpen = true;
     this.panel.hidden = true;
     this.deps.openMap();
@@ -220,7 +223,10 @@ export class SettingsMenu {
   mapClosed(): void {
     if (!this.isOpen) return;
     this.mapOpen = false;
-    this.panel.hidden = false;
+    if (this.mapFromPlay) {
+      this.mapFromPlay = false;
+      this.close();
+    } else this.panel.hidden = false;
   }
 
   /** Re-read the state shown (sliders, which buttons apply). Call when the level changed. */

@@ -1484,7 +1484,7 @@ html.game-started .set-gear {
   transform: translate(-50%, 0);
 }
 
-/* ---- Mini map (kota): top-left under the gear and the drum icons; never takes a touch ---- */
+/* ---- Mini map (kota): top-left under the gear and the drum icons ---- */
 .minimap {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 108px);
@@ -1494,8 +1494,23 @@ html.game-started .set-gear {
   opacity: 0.6;
   border-radius: 14px;
   overflow: hidden;
-  pointer-events: none;
+  border: 0;
+  padding: 0;
+  background: #a8c58b;
+  cursor: pointer;
+  pointer-events: auto;
   z-index: 1;
+}
+.minimap-north {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  border-radius: 8px;
+  background: #26384a;
+  color: white;
+  font-weight: 700;
 }
 html.touch-ui .minimap {
   /* The top-left strip beside the gear clears the joystick below and all

@@ -4,6 +4,8 @@ import { MenuIcons } from './MenuIcons';
 
 /** Backing resolution of the mini map is this many canvas px per CSS px (capped: it is a small picture). */
 const MINI_DPR = 2;
+/** Width of the local view in world metres. */
+const MINI_SPAN = 72;
 /** The marker (arrow) size as a fraction of the map. */
 const ARROW = 0.045;
 
@@ -53,17 +55,14 @@ function drawGoal(g: CanvasRenderingContext2D, x: number, y: number, size: numbe
   g.restore();
 }
 
-/**
- * Mini map (a small corner picture during play) and the full map (an overlay from the settings panel). North is up and the
- * arrow turns with the player: a steady picture is easier for a child than a rotating one. The static layer is drawn once per
- * canvas (and again only when the source bumps its version); each frame only the arrow is redrawn, and only when its pixel
- * position or heading changed.
- */
+/** North-up local map centred on Glen, with a cached city layer and a separate full map. */
 export class MapView {
-  private readonly mini: HTMLDivElement;
+  private readonly mini: HTMLButtonElement;
   private readonly miniBase: HTMLCanvasElement;
   private readonly miniMark: HTMLCanvasElement;
+  private readonly miniCache = document.createElement('canvas');
   private readonly miniBaseG: CanvasRenderingContext2D | null;
+  private readonly miniCacheG = this.miniCache.getContext('2d');
   private readonly miniMarkG: CanvasRenderingContext2D | null;
   private readonly full: HTMLDivElement;
   private readonly fullBase: HTMLCanvasElement;
@@ -84,17 +83,25 @@ export class MapView {
   private goal: { x: number; z: number } | null = null;
   private goalDirty = false;
   /** Called when the full map closes (the settings panel comes back). */
+  onMiniOpen: (() => void) | null = null;
   onFullClose: (() => void) | null = null;
   /** Counters for tests. */
   staticDraws = 0;
   markerDraws = 0;
 
   constructor(root: HTMLElement) {
-    this.mini = make('div', 'minimap');
+    this.mini = make('button', 'minimap');
+    this.mini.type = 'button';
+    this.mini.setAttribute('aria-label', 'Buka peta kota');
+    this.mini.addEventListener('click', () => this.onMiniOpen?.());
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.mini.addEventListener(ev, (e) => e.stopPropagation());
     this.mini.hidden = true;
     this.miniBase = make('canvas', 'minimap-base');
     this.miniMark = make('canvas', 'minimap-mark');
-    this.mini.append(this.miniBase, this.miniMark);
+    const north = make('span', 'minimap-north');
+    north.textContent = 'U';
+    north.setAttribute('aria-hidden', 'true');
+    this.mini.append(this.miniBase, this.miniMark, north);
     root.appendChild(this.mini);
     this.miniBaseG = this.miniBase.getContext('2d');
     this.miniMarkG = this.miniMark.getContext('2d');
@@ -146,7 +153,7 @@ export class MapView {
   }
 
   private sizeMini(): void {
-    const css = touchMode.active ? 120 : 180;
+    const css = touchMode.active ? 80 : 180;
     const px = css * MINI_DPR;
     if (px === this.miniPx) return;
     this.miniPx = px;
@@ -161,8 +168,12 @@ export class MapView {
 
   private drawMiniBase(): void {
     const src = this.source;
-    if (!src || !this.miniBaseG) return;
-    src.draw(this.miniBaseG, this.miniPx, false);
+    if (!src || !this.miniCacheG) return;
+    // Render at the local view's world-to-pixel scale, so roads stay crisp when cropped.
+    const px = Math.round(this.miniPx * (src.half * 2) / MINI_SPAN);
+    this.miniCache.width = this.miniCache.height = px;
+    src.draw(this.miniCacheG, px, false, this.miniPx);
+    this.mx = -1;
     this.miniVersion = src.version;
     this.staticDraws++;
   }
@@ -198,23 +209,32 @@ export class MapView {
     const src = this.source;
     const g = this.miniMarkG;
     if (!src || !g) return;
-    const k = this.miniPx / (src.half * 2);
-    const px = Math.round((x + src.half) * k);
-    const py = Math.round((z + src.half) * k);
-    if (!force && !this.goalDirty && px === this.mx && py === this.my && Math.abs(heading - this.mh) < 0.05) return;
-    if (this.goal || this.goalDirty) {
-      // With a goal star the whole (small) layer is redrawn: star first, the player arrow on top.
-      g.clearRect(0, 0, this.miniPx, this.miniPx);
-      this.goalDirty = false;
-      if (this.goal) drawGoal(g, (this.goal.x + src.half) * k, (this.goal.z + src.half) * k, this.miniPx * 0.05);
-    } else {
-      const r = this.miniPx * ARROW * 1.6;
-      if (this.mx >= 0) g.clearRect(this.mx - r, this.my - r, r * 2, r * 2);
+    const bg = this.miniBaseG;
+    if (!bg) return;
+    const px = this.miniPx;
+    const mid = px / 2;
+    const k = this.miniCache.width / (src.half * 2);
+    const x0 = Math.round((x + src.half) * k);
+    const z0 = Math.round((z + src.half) * k);
+    const moved = x0 !== this.mx || z0 !== this.my;
+    if (!force && !moved && !this.goalDirty && Math.abs(heading - this.mh) < 0.05) return;
+    if (moved || force) {
+      bg.fillStyle = '#a8c58b';
+      bg.fillRect(0, 0, px, px);
+      bg.drawImage(this.miniCache, mid - x0, mid - z0);
     }
-    this.mx = px;
-    this.my = py;
+    g.clearRect(0, 0, px, px);
+    if (this.goal) {
+      const gx = (this.goal.x + src.half) * k - x0;
+      const gz = (this.goal.z + src.half) * k - z0;
+      const scale = Math.min(1, (mid - px * 0.11) / (Math.max(Math.abs(gx), Math.abs(gz)) || 1));
+      drawGoal(g, mid + gx * scale, mid + gz * scale, px * 0.05);
+    }
+    this.goalDirty = false;
+    this.mx = x0;
+    this.my = z0;
     this.mh = heading;
-    drawArrow(g, px, py, this.miniPx * ARROW, heading);
+    drawArrow(g, mid, mid, px * ARROW, heading);
     this.markerDraws++;
   }
 
@@ -280,10 +300,22 @@ export class MapView {
         return self.fullOpen;
       },
       get markerX() {
-        return self.mx;
+        return self.miniPx / 2;
       },
       get markerY() {
+        return self.miniPx / 2;
+      },
+      get centerX() {
+        return self.mx;
+      },
+      get centerZ() {
         return self.my;
+      },
+      get cacheSize() {
+        return self.miniCache.width;
+      },
+      get span() {
+        return MINI_SPAN;
       },
       get size() {
         return self.miniPx;

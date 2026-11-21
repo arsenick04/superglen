@@ -637,6 +637,7 @@ export class Game {
       close: () => parentsPage.close(),
     };
     this.maps = new MapView(uiRoot);
+    this.maps.onMiniOpen = () => this.settings.toggleMap();
     this.maps.onFullClose = () => this.settings.mapClosed();
     this.settings = new SettingsMenu({
       ui: uiRoot,

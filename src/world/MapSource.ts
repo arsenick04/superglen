@@ -8,7 +8,7 @@ export interface MapSource {
   /** Bumps when the static picture changes (a hidden place was found): the views redraw it once. */
   readonly version: number;
   /** Draw the whole static map into a `px` x `px` context. `big` (the full map) adds district and place names. */
-  draw(g: CanvasRenderingContext2D, px: number, big: boolean): void;
+  draw(g: CanvasRenderingContext2D, px: number, big: boolean, viewportPx?: number): void;
   /** Test helper: world position of the hidden place while the map shows it, else null. */
   shownSecret?(): { x: number; z: number } | null;
   /**
