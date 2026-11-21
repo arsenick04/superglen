@@ -50,7 +50,7 @@ export const Sh = {
   Ico: 18,
   /**
    * Building body: unit box without a bottom whose four vertical edges are rounded (a bevel strip with normals that blend from
-   * one wall to the next, so the corner shades soft). 22 triangles. Fits inside the box of the same size (visual only).
+   * one wall to the next, so the corner shades soft). 46 triangles. Fits inside the box of the same size (visual only).
    */
   Body: 19,
   /** Smooth upper hemisphere, base at y=0: distant scenery, never a climbable surface. */
@@ -144,11 +144,17 @@ function ico(): Template {
 function body(): Template {
   const b = 0.04; // bevel in unit space (scaled with the size: about 0.25 to 0.55 m on a house)
   const h = 0.5;
-  // Octagon in XZ, counter-clockwise seen from above; every side has the normals at its two ends.
-  const ring: [number, number, number, number][] = [
-    [h, -h + b, 1, 0], [h, h - b, 1, 0], [h - b, h, 0, 1], [-h + b, h, 0, 1],
-    [-h, h - b, -1, 0], [-h, -h + b, -1, 0], [-h + b, -h, 0, -1], [h - b, -h, 0, -1],
-  ];
+  // Four quarter-circle corners with radial normals. Adjacent arcs are joined by flat walls.
+  const ring: [number, number, number, number][] = [];
+  const corners = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
+  for (const [i, [sx, sz]] of corners.entries()) {
+    for (let j = 0; j <= 3; j++) {
+      const angle = (i * 3 + j) * Math.PI / 6;
+      const nx = Math.cos(angle);
+      const nz = Math.sin(angle);
+      ring.push([sx * (h - b) + b * nx, sz * (h - b) + b * nz, nx, nz]);
+    }
+  }
   const p: number[] = [], n: number[] = [], idx: number[] = [];
   const push = (x: number, y: number, z: number, nx: number, ny: number, nz: number): number => {
     p.push(x, y, z);
@@ -164,21 +170,21 @@ function body(): Template {
     if (gx * nx + gy * ny + gz * nz >= 0) idx.push(a, b2, c);
     else idx.push(a, c, b2);
   };
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < ring.length; i++) {
     const A = ring[i];
-    const B = ring[(i + 1) % 8];
+    const B = ring[(i + 1) % ring.length];
     const a0 = push(A[0], -h, A[1], A[2], 0, A[3]);
     const a1 = push(A[0], h, A[1], A[2], 0, A[3]);
     const b0 = push(B[0], -h, B[1], B[2], 0, B[3]);
     const b1 = push(B[0], h, B[1], B[2], 0, B[3]);
     // Mean outward direction of this side (a bevel side has two different end normals).
-    const mx = A[2] + B[2] || (A[0] + B[0]);
-    const mz = A[3] + B[3] || (A[1] + B[1]);
+    const mx = A[2] + B[2];
+    const mz = A[3] + B[3];
     tri(a0, b0, b1, mx, mz);
     tri(a0, b1, a1, mx, mz);
   }
   const top = ring.map((r) => push(r[0], h, r[1], 0, 1, 0));
-  for (let i = 1; i < 7; i++) tri(top[0], top[i], top[i + 1], 0, 0, 1);
+  for (let i = 1; i < top.length - 1; i++) tri(top[0], top[i], top[i + 1], 0, 0, 1);
   return { pos: Float32Array.from(p), nrm: Float32Array.from(n), uv: new Float32Array((p.length / 3) * 2), idx: Uint16Array.from(idx), verts: p.length / 3, tris: idx.length / 3 };
 }
 
