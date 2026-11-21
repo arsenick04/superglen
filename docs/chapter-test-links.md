@@ -11,6 +11,7 @@ Setiap link memulai Chapter yang dipilih dengan progres sementara di memori. Sav
 | 5 — Perkenalan di Lab dan Ular Melar | https://arsenick04.github.io/superglen/?chapter=5 |
 | 6 — Tikus Rakus | https://arsenick04.github.io/superglen/?chapter=6 |
 | 7 — Elang Belang: mendekati Bank dan battle terbang malam | https://arsenick04.github.io/superglen/?chapter=7 |
+| 8 — Hutan Botanica: latihan lompat pohon bersama Nino dan Aara | https://arsenick04.github.io/superglen/?chapter=8 |
 
 Langsung ke arena Curut untuk mencoba injak-pantul: https://arsenick04.github.io/superglen/?chapter=3&battle=1
 

@@ -2,6 +2,14 @@
 
 ## Laporan Codex
 
+### Pembuka Chapter 8 — Hutan Botanica (21 November 2026): siap diuji
+
+- Setelah Elang Belang dijinakkan dan Glen pulang untuk berganti hari, pagi berikutnya membuka area baru `forest-training`: Hutan Botanica.
+- Glen bermain bersama Nino dan Aara, lalu melompat antar-pohon dalam tiga tingkat: mudah (dahan besar), menengah (lebih kecil dan berjauhan), dan sulit (dahan tinggi yang membutuhkan double jump).
+- Jatuh ke tanah setelah mulai melompat mengulang tingkat yang sedang dimainkan, bukan seluruh latihan. Minimap dan full map khusus hutan tersedia.
+- Link langsung: `?chapter=8`. Setelah tiga tingkat selesai, progres `forest-training` tersimpan dan Glen kembali ke kota.
+- Lulus: `npm run build`, reachability melalui `node --import tsx scripts/reachability.ts` (0 error/warning), `npm run check:quiz`, dan `git diff --check`. Browser/smoke diserahkan kepada pemilik sesuai permintaan pengujian manual.
+
 ### Arena Curut Cemberut (17 November 2026): checkpoint siap uji
 
 - Pertarungan Curut sekarang berpindah dari kota ke arena real-time khusus. Kamera tetap tidak lagi terputar/ter-zoom saat bertarung, Glen dibatasi di dalam arena, dan framing touch dibuat lebih dekat agar Glen serta tujuh Curut tetap terlihat.
