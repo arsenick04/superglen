@@ -7455,7 +7455,7 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
-/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen, nothing blocks him, perf holds. */
+/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen and provide solid, walkable surfaces. */
 async function kotaLifeScenario(page, check, touch) {
   const tag = touch ? 'touch' : 'desktop';
   const dir = process.env.UI_SHOTS || OUT;
@@ -7512,9 +7512,29 @@ async function kotaLifeScenario(page, check, touch) {
     return { gap, minGap, vStop, vGo: window.__life.agent(info.index).v };
   });
   check(`kota-life ${tag}: a car stops 2.5-5 m before Glen in its lane, never closer, and drives on when he steps aside`, !!stop && stop.vStop < 0.3 && stop.gap > 2.5 && stop.gap < 5 && stop.minGap > 2.5 && stop.vGo > 2, JSON.stringify(stop));
-  // Nothing blocks the player: walk across the avenue and along the road through the traffic.
-  const w = await kotaTravel(page, 50, -20, 900);
-  check(`kota-life ${tag}: Glen walks 70 m through the busy avenue crossing to the goal`, Math.hypot(w.x - 50, w.z + 20) < 2, JSON.stringify({ x: w.x.toFixed(1), z: w.z.toFixed(1) }));
+  const collision = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(52.5, 20);
+    g.advance(20, false);
+    const info = window.__life.carOnLane('z', 52.5, 20, 16);
+    if (!info) return null;
+    g.advance(360, false);
+    const car = window.__life.agent(info.index);
+    g.teleportFeet(car.x - 1.9, 0.12, car.z);
+    g.advance(3, false);
+    g.walkTo(car.x + 3, car.z);
+    g.advance(40, false);
+    const sideGap = car.x - g.player.x;
+    g.cancelWalk();
+
+    const parked = window.__life.agent(info.index);
+    g.teleportFeet(parked.x, 2.25, parked.z);
+    g.advance(70, false);
+    return { sideGap, feet: g.feetY, grounded: g.grounded };
+  });
+  check(`kota-life ${tag}: the car blocks Glen from the side and supports him on top`,
+    !!collision && collision.sideGap > 0.6 && collision.sideGap < 1.85
+      && collision.grounded && collision.feet > 1 && collision.feet < 2.1, JSON.stringify(collision));
   // Perf at the busiest spot and one screenshot of the busy city.
   const busy = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7752,8 +7772,11 @@ async function minimapScenario(page, check, touch) {
     return { x: d.markerX, y: d.markerY, cx: d.centerX, cz: d.centerZ, size: d.size, span: d.span, st: d.staticDraws, md: d.markerDraws, secret: d.secret };
   });
   const a = await mk();
-  await page.evaluate(() => window.__superglen.placePlayer(-60, -70));
-  await sleep(1200);
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    game.placePlayer(-60, -70);
+    game.advance(1, false);
+  });
   const b = await mk();
   check(`minimap ${tag}: 72 m view follows Glen with a fixed centre marker`, b.span === 72 && Math.hypot(b.cx - a.cx, b.cz - a.cz) > 20 && b.x === b.size / 2 && b.y === b.size / 2, JSON.stringify({ a, b }));
   await sleep(800);
