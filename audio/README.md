@@ -67,7 +67,7 @@ Untuk ganti: ubah `mandarin.voice_id` di `audio/voices.json`, lalu `npm run audi
 Tulis dalam aksara Han (misal 你好), bukan pinyin, dan `language_code: "zh"`. Pinyin di data soal hanya untuk tampilan. Tag emosi membuat nada lebih naik-turun; kalau nada Mandarin terdengar berlebihan, ganti tag di `audio/delivery.json` (`speak_zh`) atau hilangkan. Minta penutur asli mengecek nada sebelum dipakai anak.
 
 ## Bank soal 60 per kategori (2026-11-15)
-Semua 300 soal quiz (5 kategori x 60) dan 16 variasi Nino (`nino_pujian_01..08`, `nino_coba_01..04`, `nino_semangat_01..04`, dari `content/nino_variasi.json`) sudah bersuara; total 520 klip di manifest, `--dry-run` = 0 untuk dibuat. Dicek dengan Scribe; klip yang masih meragukan: lihat laporan sesi (suku kata `quiz_baca_031..039` tanpa jeda, beberapa kata Mandarin satu aksara). Perbaiki dengan menambah `_ids` di `audio/delivery.json` (pola `[curious] Mana suku kata... ba?`) lalu `--only=<id>`.
+Variasi Nino untuk kuis dan latihan berasal dari `content/nino_variasi.json`: pujian, coba lagi, dan motivasi diputar bergantian agar respons tidak selalu berupa pujian. Dicek dengan Scribe; klip yang masih meragukan: lihat laporan sesi (suku kata `quiz_baca_031..039` tanpa jeda, beberapa kata Mandarin satu aksara). Perbaiki dengan menambah `_ids` di `audio/delivery.json` (pola `[curious] Mana suku kata... ba?`) lalu `--only=<id>`.
 
 ## Perlu dicek penutur asli / telinga manusia
 - Kata Mandarin satu aksara (Scribe tidak andal untuk satu suku kata, nada belum didengar penutur asli): 三 五 八 狗 家 一 二 七 九 球 马 牛 鸡 书 笔 大 黑色, juga 奶奶 (terbaca 乃乃), 老虎 (terbaca 老胡), 爷爷, 妹妹.

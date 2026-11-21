@@ -1134,15 +1134,6 @@
     "category": "lainnya"
   },
   {
-    "id": "nino_pujian_04",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Lompatanmu tinggi sekali!",
-    "tts": "[proud] Lompatanmu tinggi sekali!",
-    "source": "audio/dialog.json",
-    "category": "lainnya"
-  },
-  {
     "id": "nino_pujian_05",
     "speaker": "nino",
     "lang": "id",

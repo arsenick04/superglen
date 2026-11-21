@@ -42,7 +42,7 @@ export function wireQuizVoice(quiz: QuizEngine, audio: AudioManager): void {
         if (g !== gen) return;
         if (r.played) return r.ended;
         // The forest quiz has its own Aara recordings. Device speech is a robust fallback while an asset is missing.
-        if (kind === 'prompt' && id.startsWith('aara_')) return deviceAara(_text, g);
+        if (id.startsWith('aara_')) return deviceAara(_text, g);
       });
       return;
     }

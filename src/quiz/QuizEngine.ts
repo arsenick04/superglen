@@ -209,7 +209,7 @@ export class QuizEngine {
       for (let i = 0; i < count; i++) cats.push(opts.category);
     }
     const taken = new Set<string>();
-    this.panel.openChallenge(reason, reason === 'terminal');
+    this.panel.openChallenge(reason, reason === 'terminal', opts.promptSpeaker ?? 'nino');
     // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
     this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
     for (let i = 0; i < count; i++) {
