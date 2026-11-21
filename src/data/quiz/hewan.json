@@ -838,5 +838,30 @@
       { "id": "c", "item": "jerapah" }
     ],
     "answer": "c"
+  },
+  {
+    "id": "hewan_061", "category": "hewan", "level": 1,
+    "prompt": "Hewan mana yang suka bergelantungan di pohon?", "audio_id": "quiz_hewan_061", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "item": "monyet" }, { "id": "b", "item": "ikan" }, { "id": "c", "item": "ayam" }], "answer": "a"
+  },
+  {
+    "id": "hewan_062", "category": "hewan", "level": 1,
+    "prompt": "Hewan mana yang hidup di air?", "audio_id": "quiz_hewan_062", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "item": "kucing" }, { "id": "b", "item": "ikan" }, { "id": "c", "item": "ayam" }], "answer": "b"
+  },
+  {
+    "id": "hewan_063", "category": "hewan", "level": 2,
+    "prompt": "Hewan mana yang punya belalai?", "audio_id": "quiz_hewan_063", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "item": "jerapah" }, { "id": "b", "item": "singa" }, { "id": "c", "item": "gajah" }], "answer": "c"
+  },
+  {
+    "id": "hewan_064", "category": "hewan", "level": 2,
+    "prompt": "Hewan mana yang punya pelindung keras di punggung?", "audio_id": "quiz_hewan_064", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "item": "kura_kura" }, { "id": "b", "item": "kelinci" }, { "id": "c", "item": "burung" }], "answer": "a"
+  },
+  {
+    "id": "hewan_065", "category": "hewan", "level": 3,
+    "prompt": "Hewan mana yang biasanya aktif pada malam hari?", "audio_id": "quiz_hewan_065", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "Ayam" }, { "id": "b", "text": "Burung hantu" }, { "id": "c", "text": "Kupu-kupu" }], "answer": "b"
   }
 ]
