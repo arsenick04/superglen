@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import type { BikeSystem } from './Bike';
 import type { CityMission, CityResident, ItemIcon, MissionItem } from './CityPlaces';
-import { box, cone, cyl, merge, sph } from './ColorMesh';
+import { box, cone, cyl, merge, sph, type Part } from './ColorMesh';
 
 const SKIN = 0xf1c9a0;
 const FEET = 0.55;
@@ -27,20 +27,21 @@ export const PeopleConfig = {
 // ---- Models (merged coloured primitives: one mesh each) ---------------------------------------------------------------------
 
 export function personGeo(color: number, hair: number): THREE.BufferGeometry {
-  const eye = 0x2b1a12;
   return merge([
-    { g: cyl(0.2, 0.34, 0.85, 8), c: color, p: [0, 0.56, 0] },
-    { g: cyl(0.075, 0.075, 0.16, 6), c: 0x3a3a48, p: [-0.11, 0.08, 0] },
-    { g: cyl(0.075, 0.075, 0.16, 6), c: 0x3a3a48, p: [0.11, 0.08, 0] },
-    { g: cyl(0.07, 0.07, 0.5, 6), c: color, p: [-0.31, 0.78, 0], r: [0, 0, 0.35] },
-    { g: cyl(0.07, 0.07, 0.5, 6), c: color, p: [0.31, 0.78, 0], r: [0, 0, -0.35] },
-    { g: sph(0.075, 6, 4), c: SKIN, p: [-0.4, 0.53, 0] },
-    { g: sph(0.075, 6, 4), c: SKIN, p: [0.4, 0.53, 0] },
-    { g: sph(0.26, 10, 7), c: SKIN, p: [0, 1.22, 0] },
-    { g: sph(0.285, 10, 6), c: hair, p: [0, 1.29, -0.035], s: [1, 0.78, 1] },
-    { g: sph(0.034, 6, 4), c: eye, p: [-0.09, 1.23, 0.235] },
-    { g: sph(0.034, 6, 4), c: eye, p: [0.09, 1.23, 0.235] },
-    { g: sph(0.05, 6, 4), c: 0xf29a8a, p: [0, 1.15, 0.25], s: [1.6, 0.5, 0.6] },
+    { g: new THREE.CapsuleGeometry(0.26, 0.27, 4, 12), c: color, p: [0, 0.56, 0], s: [1, 1, 0.72] },
+    { g: sph(0.255, 16, 10), c: SKIN, p: [0, 1.22, 0] },
+    { g: new THREE.SphereGeometry(0.271, 16, 6, 0, Math.PI * 2, 0, 1.62), c: hair, p: [0, 1.225, -0.04] },
+    { g: sph(0.045, 8, 5), c: SKIN, p: [0, 1.19, 0.241], s: [0.8, 0.8, 1] },
+    { g: sph(0.046, 8, 5), c: 0xa45546, p: [0, 1.127, 0.23], s: [1, 0.45, 0.4] },
+    ...[-1, 1].flatMap((side): Part[] => [
+      { g: sph(0.092, 8, 5), c: 0x343b50, p: [side * 0.115, 0.075, 0.045], s: [1, 0.8, 1.5] },
+      { g: new THREE.CapsuleGeometry(0.075, 0.28, 2, 8), c: color, p: [side * 0.29, 0.66, 0], r: [0, 0, side * 0.34] },
+      { g: sph(0.072, 8, 5), c: SKIN, p: [side * 0.353, 0.47, 0] },
+      { g: sph(0.056, 8, 5), c: SKIN, p: [side * 0.246, 1.199, 0] },
+      { g: sph(0.042, 8, 6), c: 0xfffaf1, p: [side * 0.092, 1.248, 0.225], s: [1, 1.14, 0.55] },
+      { g: sph(0.025, 8, 5), c: 0x33221e, p: [side * 0.092, 1.248, 0.245], s: [1, 1.15, 0.5] },
+      { g: sph(0.008, 6, 4), c: 0xffffff, p: [side * 0.092 - 0.008, 1.257, 0.255] },
+    ]),
   ]);
 }
 
@@ -218,7 +219,7 @@ interface Active {
 const STAR_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 23 L60 24.5 L45 38 L49.5 58 L32 47.5 L14.5 58 L19 38 L4 24.5 L24 23 Z" fill="#ffd23f" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
 
 /**
- * Friendly residents (8, simple low-poly figures with an idle sway) and their tiny missions. One mission at a time; every
+ * Friendly residents (8, with a gentle idle sway) and their tiny missions. One mission at a time; every
  * mission is optional and never blocks the story. Flow: talk -> a short line -> the beam and the map star show the first thing
  * to do -> do it -> small celebration, coins, saved as done. Talking to another giver while one mission runs asks Ya / Tidak.
  */

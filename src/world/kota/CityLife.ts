@@ -179,8 +179,9 @@ function walkerGeo(): THREE.BufferGeometry {
   const body = tag(
     [
       { g: new THREE.CapsuleGeometry(0.19, 0.21, 1, 8), c: W, p: [0, 0.73, 0], s: [1, 1, 0.76] },
-      { g: sph(0.2, 8, 5), c: SKIN, p: [0, 1.12, 0] },
-      { g: new THREE.SphereGeometry(0.21, 8, 3, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
+      { g: sph(0.2, 12, 8), c: SKIN, p: [0, 1.12, 0] },
+      { g: new THREE.SphereGeometry(0.21, 12, 5, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
+      { g: sph(0.033, 6, 4), c: SKIN, p: [0, 1.105, 0.192], s: [0.92, 0.86, 1.15] },
       ...[-1, 1].flatMap((s): Part[] => [
         { g: sph(0.045, 6, 3), c: SKIN, p: [s * 0.196, 1.105, 0] },
         { g: sph(0.036, 6, 3), c: 0xfffdf6, p: [s * 0.073, 1.14, 0.179], s: [1, 1.2, 0.45] },
@@ -562,11 +563,10 @@ export class CityLife {
     this.anim.setUsage(THREE.DynamicDrawUsage);
     pedGeo.setAttribute('aAnim', this.anim);
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
-    // Soft rounded car from the env models (scripts/build-env-assets.mjs); the box car is the fallback.
+    // Prefer the rounded toy car from the local env library.
     const envCar = envModels.geometry('car');
-    // L18: Kenney sedan (car kit, CC0) when loaded: only its paint takes the per-car colour (aMask), glass / tyres / lights keep theirs.
-    const kCar = cityModels.carGeometry();
-    this.cars = kCar ? mk(kCar, paintMaterial(), 70) : mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
+    const kCar = envCar ? null : cityModels.carGeometry();
+    this.cars = envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
     this.motos = mk(motoGeo(), carMat, 40);
     this.bikes = mk(bikeGeo(), carMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
