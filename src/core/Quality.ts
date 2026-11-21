@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { compatibilityMode } from './Platform';
 
 export type QualityLevel = 'high' | 'low';
 
@@ -31,6 +32,20 @@ function pickPreset(): QualityPreset {
   const isTouch = detectTouch();
   // Manual override for testing: ?quality=low or ?quality=high
   const forced = new URLSearchParams(window.location.search).get('quality');
+  if (compatibilityMode() && forced !== 'high') {
+    return {
+      level: 'low',
+      isTouch,
+      maxPixelRatio: 1,
+      antialias: false,
+      shadows: true,
+      shadowMapType: THREE.BasicShadowMap,
+      shadowMapSize: 1024,
+      shadowArea: 18,
+      cameraFar: 150,
+      targetFps: 30,
+    };
+  }
   const level: QualityLevel = forced === 'low' || forced === 'high' ? forced : isTouch ? 'low' : 'high';
 
   if (level === 'high') {
