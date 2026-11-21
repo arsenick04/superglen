@@ -1004,3 +1004,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 
 - `?chapter=7&training=1` memulai latihan terbang lanjutan dengan save pratinjau di memori; setelah selesai, Glen kembali ke Lab sehingga alarm dan video Elang dapat diuji tanpa mengulang Chapter sebelumnya. Tautan `?chapter=7` tetap mulai mendekati Bank.
 - Build, probe isolasi save pratinjau, dan diff check lulus.
+
+## Mode kompatibilitas browser PS5 — 21 November 2026
+
+- User-agent PlayStation 4/5 otomatis memakai preset konsol: pixel ratio maksimum 1, tanpa MSAA dan post-processing, shadow map 1024, target 30 fps. `?compat=1` menyediakan mode yang sama untuk diagnosis browser lain.
+- Rapier WebAssembly kini selesai diinisialisasi sebelum aset GLB/HDR opsional dimuat. Pada konsol, pustaka lingkungan, musuh, kota, dan langit dimuat berurutan untuk menurunkan lonjakan memori; model karakter menyusul setelah game berhasil dibuat dan memakai figur prosedural sementara.
+- Pesan gagal boot kini menjelaskan apakah WebGL 2 atau WebAssembly tidak tersedia, atau kemungkinan memori/komponen 3D gagal. Build, check:reach, check:quiz, dan diff check lulus. Pengujian perangkat PS5 dilakukan pemilik.
