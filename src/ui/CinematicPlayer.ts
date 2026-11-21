@@ -1,4 +1,4 @@
-export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat';
+export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet';
 
 /** Small, skippable cinematic layer that fills the available screen. */
 export class CinematicPlayer {
@@ -57,6 +57,8 @@ export class CinematicPlayer {
     this.layer.hidden = false;
     this.layer.style.visibility = 'hidden';
     this.video.muted = false;
+    // Silence gameplay audio before buffering starts, so no VO/music leaks into the first video frames.
+    this.onPlayback(true);
     return new Promise<void>((resolve) => {
       let started = false;
       let timeout = window.setTimeout(() => finish(), 12000);
@@ -65,7 +67,6 @@ export class CinematicPlayer {
         if (started || !this.running) return;
         started = true;
         this.layer.style.visibility = '';
-        this.onPlayback(true);
       };
       const onWaiting = (): void => {
         window.clearTimeout(timeout);
@@ -77,7 +78,7 @@ export class CinematicPlayer {
         this.video.removeEventListener('waiting', onWaiting);
         this.video.removeEventListener('ended', finish);
         this.video.removeEventListener('error', finish);
-        if (started) this.onPlayback(false);
+        this.onPlayback(false);
         this.layer.hidden = true;
         this.layer.style.visibility = '';
         this.video.pause();

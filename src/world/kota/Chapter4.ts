@@ -109,6 +109,7 @@ export class Chapter4 {
     // A detective: Glen without the costume, the switch is off until the chapter is over.
     ctx.game.setTransformAllowed(false);
     ctx.game.setPlayerMode('glen', false);
+    ctx.game.preloadCinematic('aara-meet');
     if (this.step === '' || this.step === 'school') this.pointToSchool();
     if (this.step === 'aara') this.runAara();
     if (this.step === 'park') this.enterPark();
@@ -176,8 +177,8 @@ export class Chapter4 {
       const a = this.aara as AaraActor;
       a.setLevel(0);
       cameraRig.setFraming(this.tmp.set((AARA.pos.x + AARA.stage.x) / 2, 1.2, AARA.pos.z), { weight: 0.55, distance: 3 });
-      await dialog.say(L.aaraHalo, { lockControls: true });
-      await dialog.say(L.glenMau, { lockControls: true });
+      await ctx.game.playCinematic('aara-meet');
+      ctx.game.setControlsEnabled(false);
       const after = [L.aaraBenar1, L.aaraBenar2, L.aaraBenar3];
       for (let i = 0; i < AARA_QUESTIONS.length; i++) {
         const q = this.english(AARA_QUESTIONS[i]);

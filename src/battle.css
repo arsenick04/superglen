@@ -5,6 +5,7 @@
 .cinematic-skip { position: absolute; z-index: 2; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); min-width: 88px; min-height: 44px; border: 2px solid rgba(255,255,255,.8); border-radius: 999px; color: #fff; background: rgba(0,0,0,.62); font: 800 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .cinematic-start { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%,-50%); min-width: 168px; min-height: 54px; padding: 10px 20px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: rgba(194,35,35,.9); box-shadow: 0 5px 20px rgba(0,0,0,.45); font: 800 18px system-ui,sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .cinematic-start[hidden] { display: none; }
+.story-alarm { position: fixed; z-index: 90; top: max(12%, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 10px 24px; border: 2px solid #ffdf83; border-radius: 14px; background: rgba(143, 18, 18, .9); color: #fff; font: 900 clamp(20px, 4vw, 32px) system-ui, sans-serif; letter-spacing: .08em; text-shadow: 0 2px 5px #530000; pointer-events: none; }
 
 /* ---- BATTLE MODE (src/gameplay/BattleMode.ts): `html.battle` is on while a fight runs. The doubled class beats the older
    `html.touch-ui ...` rules of styles.css without caring about the order of the style sheets. ---- */

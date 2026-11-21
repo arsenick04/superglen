@@ -64,6 +64,7 @@ export class FlightTrainingLevel implements Level {
     ctx.player.flight.maxFlyHeight = 8.5;
     ctx.player.flight.bounds = { minX: HALL.minX + 1, maxX: HALL.maxX - 1, minZ: HALL.minZ + 1, maxZ: HALL.maxZ - 1 };
     ctx.audio.music.setScene('latihan');
+    ctx.game.preloadCinematic('elang-chaos');
 
     this.rings = ROUTES.map((route) => route.points.map(([x, z], i) => {
       const ring = new FlyRing(ctx, { x, y: 9, z, yaw: Math.PI, radius: route.radius, rearmAfter: 0, onPass: () => this.passRing(i) });

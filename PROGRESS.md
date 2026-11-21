@@ -992,3 +992,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Video pemilik dari Drive dipasang sesudah bintang terakhir Elang habis, sebelum dialog kemenangan Nino dan perjalanan pulang. Video diubah dari HEVC MOV 25 MB menjadi H.264/AAC MP4 7,4 MB, 1280×720, 17,1 detik dengan indeks MP4 di depan untuk Safari.
 - Seluruh video sinematik kini mengisi layar dengan `object-fit: cover`; bilah hitam atas/bawah pada pemutar dihapus. Tombol Lewati dan peredaman audio game tetap memakai pemutar yang sama.
 - Build, check:reach, check:quiz, ffprobe, dan diff check lulus. Browser tetap diuji pemilik.
+
+## Video alarm Elang dan pertemuan Aara — 21 November 2026
+
+- Sesudah latihan terbang lanjutan dan kembali ke Lab, alarm kota tampil dengan bunyi baru, kemudian video Elang mengacau kota diputar sebelum Glen berangkat ke Bank. Dialog Nino yang mengulang kabar Elang dihapus dari urutan itu. Klip Elang dipotong dari bilah hitam yang tertanam pada sumber, menjadi MP4 H.264/AAC 1280×648 (5 MB).
+- Saat Glen pertama kali mendekati Aara di depan sekolah, video pertemuan diputar sebelum kuis bahasa Inggris. Dialog salam Glen/Aara yang sama dengan isi video tidak diulang. Klip diremux H.264/AAC 1280×720 (3,2 MB).
+- Alarm pertama di hanggar sebelum Curut juga mendapat bunyi alarm. Game audio dibisukan sejak pemutar mulai memuat video, sehingga musik/VO tidak bocor saat video mulai; dipulihkan ketika video selesai atau dilewati.
+- Build, check:reach, check:quiz, ffprobe media, dan diff check lulus. Browser tetap diuji pemilik.
