@@ -27,6 +27,7 @@ import { LetterHunt } from './LetterHunt';
 import { Chapter7Intro } from './Chapter7Intro';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
+import { AaraActor } from './Aara';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -81,6 +82,7 @@ export class KotaLevel implements Level {
   ch6: Chapter6 | null = null;
   private letters: LetterHunt | null = null;
   private elangIntro: Chapter7Intro | null = null;
+  private forestAara: AaraActor | null = null;
 
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
@@ -403,12 +405,72 @@ export class KotaLevel implements Level {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
     if (arrival === 'homeMorning' && state === '') this.hud.show('Keesokan pagi', 0xf2b632, true);
-    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home'].includes(state)) return;
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home', 'forest_invite', 'forest_lab', 'forest_ready'].includes(state)) return;
     if (arrival === 'homeMorning') {
       this.hud.show('Keesokan pagi', 0xf2b632, true);
       if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
     }
     if (state === 'rakus_letters') return;
+    if (state === 'forest_invite') {
+      const home = this.glenHomeSpot();
+      this.forestAara = new AaraActor(this.lit, ctx.dialog);
+      this.forestAara.place(home.x + 2.2, home.z + 1.2, home.yaw + Math.PI);
+      this.forestAara.setLevel(3);
+      ctx.root.add(this.forestAara.group);
+      ctx.onDispose(() => this.forestAara?.dispose());
+      this.setGoal({ x: home.x + 2.2, z: home.z + 1.2 });
+      ctx.objectives.set(new THREE.Vector3(home.x + 2.2, home.y, home.z + 1.2));
+      ctx.interactions.add({
+        position: new THREE.Vector3(home.x + 2.2, home.y, home.z + 1.2),
+        radius: 2.6,
+        icon: 'talk',
+        promptHeight: 1.8,
+        enabled: () => ctx.save.data.interlude === 'forest_invite',
+        onInteract: () => ctx.seq.run(async () => {
+          this.forestAara?.emote('wave');
+          await ctx.dialog.say({ id: 'forest_aara_home', speaker: 'aara', text: 'Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_lab');
+          const d = CITY_LAYOUT.lab.door;
+          this.setGoal({ x: d.x, z: d.z });
+          ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+        }),
+      });
+      return;
+    }
+    if (state === 'forest_lab') {
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      return;
+    }
+    if (state === 'forest_ready') {
+      const b = CITY_LAYOUT.buildings.find((x) => x.id === CITY_LAYOUT.lab.building);
+      if (!b) return;
+      // The forest path starts behind the old building (opposite its south-facing front door).
+      const access = { x: b.x, y: b.base, z: b.z - b.d / 2 - 2.2 };
+      this.setGoal({ x: access.x, z: access.z });
+      ctx.objectives.set(new THREE.Vector3(access.x, access.y, access.z));
+      const marker = new THREE.Mesh(
+        new THREE.TorusGeometry(1.1, 0.1, 8, 24),
+        new THREE.MeshBasicMaterial({ color: 0x8fe36c, transparent: true, opacity: 0.8, toneMapped: false }),
+      );
+      marker.rotation.x = Math.PI / 2;
+      marker.position.set(access.x, access.y + 0.08, access.z);
+      ctx.root.add(marker);
+      ctx.interactions.add({
+        position: new THREE.Vector3(access.x, access.y, access.z),
+        radius: 2.5,
+        icon: 'hand',
+        promptHeight: 1.8,
+        enabled: () => ctx.save.data.interlude === 'forest_ready',
+        onInteract: () => {
+          ctx.save.setInterlude('forest_training');
+          void ctx.game.loadLevel('forest-training');
+        },
+      });
+      this.hud.show('Jalur menuju Hutan Botanica', 0x77c95a, true);
+      return;
+    }
     if (state === 'costume_return' || state === 'snake_return' || state === 'rakus_lab') {
       const d = CITY_LAYOUT.lab.door;
       this.setGoal({ x: d.x, z: d.z });
@@ -425,13 +487,9 @@ export class KotaLevel implements Level {
       promptHeight: 1.7,
       enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home',
       onInteract: () => {
-        const next = ctx.save.data.interlude === 'elang_home' ? 'forest_training' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        const next = ctx.save.data.interlude === 'elang_home' ? 'forest_invite' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
         if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
         ctx.save.setInterlude(next);
-        if (next === 'forest_training') {
-          void ctx.game.loadLevel('forest-training');
-          return;
-        }
         setArrival('kota', 'homeMorning');
         void ctx.game.loadLevel('kota');
       },
@@ -554,6 +612,7 @@ export class KotaLevel implements Level {
     this.ch6?.update(dt);
     this.letters?.update(dt);
     this.elangIntro?.update(dt);
+    this.forestAara?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;

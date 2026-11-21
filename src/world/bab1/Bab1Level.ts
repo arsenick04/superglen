@@ -21,6 +21,7 @@ import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './St
 import { flow, takeArrival, travel, LAB_EXIT_TARGET } from '../progress';
 import { DOOR_HALF } from './Layout';
 import { startGate } from '../../core/StartGate';
+import { AaraActor } from '../kota/Aara';
 
 /** Where Nino's quiz terminal stands in the lab (left of the entrance path). */
 export const TERMINAL_LAB = { x: -2.8, z: -64.6 } as const;
@@ -65,6 +66,8 @@ export class Bab1Level implements Level {
   private terminal!: NinoTerminal;
   /** Chapter 5: Aara meets Nino here (null otherwise). */
   private visit: LabVisit | null = null;
+  /** Chapter 8 invitation: Aara waits beside Nino before the walk to the forest entrance. */
+  private forestAara: AaraActor | null = null;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -157,7 +160,7 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (ctx.save.data.interlude === 'snake_lab' || (lab && ctx.save.data.interlude === 'rakus_lab')) {
+      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready'))) {
         // Story returns begin beside Nino, not in the front-door corridor.
         this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
         this.atmosphere.snap(2);
@@ -176,6 +179,21 @@ export class Bab1Level implements Level {
         if (arrival === 'labEntrance') ctx.seq.run(async () => {
           await ctx.seq.waitUntil(() => startGate.started);
           await ctx.dialog.say('rakus_nino_lab_arrival', { lockControls: true });
+        });
+      }
+      if (lab && !flow.sandbox && (ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready')) {
+        this.forestAara = new AaraActor(mats.lit, ctx.dialog);
+        this.forestAara.place(this.lab.ninoPos.x + 2.2, this.lab.ninoPos.z + 0.8, Math.PI);
+        this.forestAara.setLevel(3);
+        ctx.root.add(this.forestAara.group);
+        ctx.onDispose(() => this.forestAara?.dispose());
+        if (ctx.save.data.interlude === 'forest_lab') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          this.forestAara?.emote('wave');
+          await ctx.dialog.say({ id: 'forest_aara_lab', speaker: 'aara', text: 'Kami sudah datang, Nino. Latihan apa hari ini?' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_nino_lab', speaker: 'nino', text: 'Kita akan berlatih lompat pohon di Hutan Botanica! Keluar dan cari jalur di belakang gedung ini.' }, { lockControls: true });
+          ctx.save.setInterlude('forest_ready');
+          ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
         });
       }
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {
@@ -258,6 +276,7 @@ export class Bab1Level implements Level {
     this.streetFx?.update(dt);
     this.terminal.update(dt);
     this.visit?.update(dt);
+    this.forestAara?.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

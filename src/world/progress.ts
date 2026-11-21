@@ -97,9 +97,13 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewChapter === 2) return { level: 'bab2' };
   if (save.previewFlightTraining) return { level: 'flight-training' };
   if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
-  if (save.previewChapter === 8 || save.data.interlude === 'forest_training') return { level: 'forest-training' };
+  if (save.previewForestTraining || save.data.interlude === 'forest_training') return { level: 'forest-training' };
+  if (save.previewChapter === 8) return { level: 'kota', arrival: 'homeMorning' };
   if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
   if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
+  if (save.data.interlude === 'forest_invite') return { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'forest_lab') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'homeMorning' };
+  if (save.data.interlude === 'forest_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
