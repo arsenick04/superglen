@@ -742,7 +742,7 @@ function drawProps(B: Builder, L: CityLayout): void {
       const color = hv > 0.88 ? 0xf58fbd : LEAF[Math.floor(hv * LEAF.length)];
       ch.lit.trunk(0.23 * s, trunk, [t.x, t.base + trunk / 2, t.z], 0x946140);
       for (const { center, size } of platforms.slice(0, -1)) {
-        ch.lit.add(Sh.Sph1, center, [size[0] / 2, size[1] / 2, size[2] / 2], 0x946140);
+        ch.lit.add(Sh.Body, center, size, 0x946140);
         ch.deco.ball(0.14 * s, [center[0] * 2 - t.x, center[1], center[2] * 2 - t.z], color);
       }
       ch.lit.add(Sh.Sph1, [t.x, top - 0.48, t.z], [0.85 * s, 0.48, 0.85 * s], color);
