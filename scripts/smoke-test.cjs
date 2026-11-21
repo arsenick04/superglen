@@ -7760,8 +7760,12 @@ async function minimapScenario(page, check, touch) {
   const c = await mk();
   check(`minimap ${tag}: idle frames reuse the cached map and marker`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
   check(`minimap ${tag}: the old Barongsai building starts hidden`, c.secret === null, JSON.stringify(c.secret));
-  await page.evaluate(() => window.__superglen.teleportFeet(100.5, 8, -99.2));
-  await sleep(1500);
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    const { labX, labY, labZ } = game.levelInfo;
+    game.teleportFeet(labX, labY + 0.2, labZ + 1.2);
+    game.advance(8, false);
+  });
   const d = await mk();
   check(`minimap ${tag}: discovering the building refreshes the map layer`, d.secret !== null && d.st > c.st, JSON.stringify(d));
   await page.evaluate(() => window.__superglen.placePlayer(0, 26));
