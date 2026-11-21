@@ -23,20 +23,14 @@ export class EagleArena implements Level {
     const moon = new THREE.DirectionalLight(0xc4dcff, 1.5);
     moon.position.set(-14, 24, 8);
     ctx.root.add(moon);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(28, 56), new THREE.MeshStandardMaterial({ color: 0x71899e, roughness: 0.9 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.02;
-    ctx.root.add(floor);
-    const center = new THREE.Mesh(new THREE.CircleGeometry(Combat.eagle.arenaRadius - 0.8, 56), new THREE.MeshStandardMaterial({ color: 0x8792ad, roughness: 0.85 }));
-    center.rotation.x = -Math.PI / 2;
-    center.position.y = 0.005;
-    ctx.root.add(center);
+    this.buildNightCity(ctx);
     ctx.physics.addFixedCuboid({ x: 32, y: 0.5, z: 32 }, { x: 0, y: -0.5, z: 0 });
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
     ctx.game.setSkills({ fly: true, laser: true, shield: true });
     ctx.player.flight.maxFlyHeight = Combat.eagle.flyHeight;
-    ctx.player.flight.bounds = { minX: -17, maxX: 17, minZ: -17, maxZ: 17 };
+    const radius = Combat.eagle.arenaRadius;
+    ctx.player.flight.bounds = { minX: -radius, maxX: radius, minZ: -radius, maxZ: radius };
     ctx.health.setShown(true);
     ctx.onDispose(() => {
       ctx.health.setShown(false);
@@ -76,6 +70,72 @@ export class EagleArena implements Level {
   }
 
   dispose(): void {}
+
+  /** A rooftop above lit streets: scenery stays outside the flight space, with no crowd/city simulation. */
+  private buildNightCity(ctx: LevelContext): void {
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x7b8eaa, roughness: 0.9 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x354c70, roughness: 0.9 });
+    const streetMat = new THREE.MeshStandardMaterial({ color: 0x26374b });
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffdb8b });
+    const roof = new THREE.Mesh(box, roofMat);
+    roof.position.y = -0.3;
+    roof.scale.set(42, 0.6, 42);
+    ctx.root.add(roof);
+    const bank = new THREE.Mesh(box, bodyMat);
+    bank.position.set(0, -5, 0);
+    bank.scale.set(42, 9.4, 42);
+    ctx.root.add(bank);
+    const streets = new THREE.Mesh(new THREE.PlaneGeometry(180, 180), streetMat);
+    streets.rotation.x = -Math.PI / 2;
+    streets.position.y = -9.8;
+    ctx.root.add(streets);
+    // Instancing keeps the skyline and hundreds of lit windows to two draw calls.
+    const buildings = new THREE.InstancedMesh(box, bodyMat, 24);
+    const windows = new THREE.InstancedMesh(box, lightMat, 24 * 12);
+    const matrix = new THREE.Matrix4();
+    const position = new THREE.Vector3();
+    const scale = new THREE.Vector3();
+    const rotation = new THREE.Quaternion();
+    let wi = 0;
+    for (let i = 0; i < 24; i++) {
+      const angle = i / 24 * Math.PI * 2;
+      const radius = i % 2 ? 55 : 39;
+      const height = 8 + (i * 7 % 15);
+      const x = Math.sin(angle) * radius;
+      const z = Math.cos(angle) * radius;
+      position.set(x, height / 2 - 9.8, z);
+      scale.set(8, height, 8);
+      buildings.setMatrixAt(i, matrix.compose(position, rotation, scale));
+      for (let row = 0; row < 3; row++) for (let col = 0; col < 4; col++) {
+        const y = -7 + row * (height - 3) / 3;
+        // Put windows on the inward-facing facade.
+        if (Math.abs(x) > Math.abs(z)) {
+          position.set(x - Math.sign(x) * 4.02, y, z + (col - 1.5) * 1.7);
+          scale.set(0.05, 1.1, 0.8);
+        } else {
+          position.set(x + (col - 1.5) * 1.7, y, z - Math.sign(z) * 4.02);
+          scale.set(0.8, 1.1, 0.05);
+        }
+        windows.setMatrixAt(wi++, matrix.compose(position, rotation, scale));
+      }
+    }
+    ctx.root.add(buildings, windows);
+    const moonDisc = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffefcc }));
+    moonDisc.position.set(-35, 35, -55);
+    ctx.root.add(moonDisc);
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const paint = canvas.getContext('2d');
+    if (paint) {
+      paint.fillStyle = '#24395a'; paint.fillRect(0, 0, 512, 128);
+      paint.fillStyle = '#ffe3a1'; paint.font = 'bold 72px sans-serif';
+      paint.textAlign = 'center'; paint.fillText('BANK', 256, 92);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.25), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), side: THREE.DoubleSide }));
+      sign.position.set(0, 2, -21);
+      ctx.root.add(sign);
+    }
+  }
 
   private enterBattle(): void {
     const b = this.boss;

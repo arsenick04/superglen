@@ -966,3 +966,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Video pemilik tentang Tikus Rakus yang mengembalikan makanan dipasang segera sesudah bintang terakhirnya habis dan battle ditutup. Adegan permintaan maaf serta pengembalian makanan di game tidak diulang sesudah video; progres, sorak warga, dan pesan Nino untuk pulang pada malam hari tetap berjalan.
 - Klip 10 detik, H.264/AAC, 1280×720 diremux dengan metadata MP4 di awal. Pemutaran otomatis, bilah hitam, tombol Lewati, dan audio game yang meredup memakai pemutar sinematik yang sama.
 - Build, validasi media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Revisi Elang Belang dan latihan terbang — 21 November 2026
+
+- Chapter 7 preview dimulai di jalan menuju Bank pada malam hari. Glen harus mendekati Elang di atas Bank untuk memicu video dan arena. Tautan `?chapter=7&battle=1` kini mengikuti alur yang sama.
+- Tahan Lompat kembali mengaktifkan terbang setelah skill terbuka; tombol mode terbang baru terbuka saat latihan lanjutan. Latihan terdiri dari tiga ronde lingkaran, sasaran, dan tangkisan yang makin sulit.
+- Elang terbang mengitari arena dengan gerakan sayap dan serangan es/api beruntun yang meningkat. Arena memakai atap Bank dan siluet kota malam. Angka tantangan ada di `src/config/combat.ts`.
+- Build, check:reach, check:quiz, dan probe preview lulus. Browser diuji pemilik. MP3 dialog baru masih perlu diisi; fallback suara perangkat tersedia. Probe `battle-entry-probe` lama gagal pada assert Curut yang tidak terkait revisi Elang.
