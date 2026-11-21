@@ -713,6 +713,8 @@ function drawTower(B: Builder, b: CityBuilding, dressed = false): void {
 
 const KENNEY_ROUND: [string, number][] = [['nat_tree_oak', 1.23], ['nat_tree_default', 1.71], ['nat_tree_detailed', 1.33], ['nat_tree_plateau', 1.25], ['nat_tree_fat', 1.15], ['nat_tree_oak_fall', 1.23]];
 const KENNEY_PINE: [string, number][] = [['nat_tree_pineRoundA', 1.37], ['nat_tree_pineTallA_detailed', 1.53], ['nat_tree_pineRoundC', 1.25], ['nat_tree_pineDefaultA', 1.55]];
+const QUATERNIUS_ROUND = ['quat_normal_1', 'quat_normal_3', 'quat_maple_2'];
+const QUATERNIUS_PINE = ['quat_pine_2'];
 
 const LEAF = [0x6fcf5a, 0x5cc04f, 0x86d85e, 0x4fb561];
 const LEAF_DARK = [0x4fae4a, 0x3f9f47, 0x5fbf4f, 0x3a9650];
@@ -725,9 +727,17 @@ function drawProps(B: Builder, L: CityLayout): void {
     lamp: envModels.shape('lamp'),
     bench: envModels.shape('bench'),
   };
-  // L18: Kenney nature kit trees (CC0) when loaded: [model, height at s = 1].
-  const ROUND = KENNEY_ROUND.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
-  const PINES = KENNEY_PINE.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const quaternius = (names: readonly string[]) => names
+    .map((n) => {
+      const m = cityModels.get(n);
+      return [cityModels.template(n), m ? m.max.y - m.min.y : 1] as const;
+    })
+    .filter(([id]) => id >= 0);
+  // Prefer the fuller Quaternius silhouettes; the compact Kenney set remains the offline/runtime fallback.
+  const qr = quaternius(QUATERNIUS_ROUND);
+  const qp = quaternius(QUATERNIUS_PINE);
+  const ROUND = qr.length ? qr : KENNEY_ROUND.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
+  const PINES = qp.length ? qp : KENNEY_PINE.map(([n, h]) => [cityModels.template(n), h] as const).filter(([id]) => id >= 0);
   const lampK = cityModels.template('road_light-curved');
   for (const t of L.trees) {
     const ch = B.at(t.x, t.z);
