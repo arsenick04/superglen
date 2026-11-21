@@ -34,18 +34,18 @@ const COURSES: readonly TreeCourse[] = [
   {
     name: 'menengah', start: { x: 0, z: 18 }, color: 0xf2b632,
     steps: [
-      { x: -2, z: 10, top: 1.5, radius: 1.45 }, { x: 3, z: 3, top: 2.4, radius: 1.35 },
-      { x: -3, z: -4, top: 3.4, radius: 1.25 }, { x: 3, z: -11, top: 4.4, radius: 1.15 },
-      { x: -1, z: -18, top: 5.1, radius: 1.1 },
+      { x: -2, z: 10, top: 1.5, radius: 1.65 }, { x: 3, z: 3, top: 2.4, radius: 1.55 },
+      { x: -3, z: -4, top: 3.4, radius: 1.45 }, { x: 3, z: -11, top: 4.4, radius: 1.4 },
+      { x: -1, z: -18, top: 5.1, radius: 1.35 },
     ],
   },
   {
     name: 'sulit', start: { x: 30, z: 18 }, color: 0xe76f51,
     // The long rises and gaps require Superglen's air jump; every landing remains generous enough for a child.
     steps: [
-      { x: 30, z: 9, top: 1.7, radius: 1.05 }, { x: 25, z: 0, top: 4.9, radius: 0.95 },
-      { x: 33, z: -9, top: 7.9, radius: 0.9 }, { x: 25, z: -18, top: 10.7, radius: 0.85 },
-      { x: 33, z: -27, top: 12.2, radius: 0.85 },
+      { x: 30, z: 9, top: 1.7, radius: 1.35 }, { x: 25, z: 0, top: 4.9, radius: 1.25 },
+      { x: 33, z: -9, top: 7.9, radius: 1.2 }, { x: 25, z: -18, top: 10.7, radius: 1.15 },
+      { x: 33, z: -27, top: 12.2, radius: 1.15 },
     ],
   },
 ] as const;
@@ -145,6 +145,10 @@ export class ForestTrainingLevel implements Level {
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
     ctx.game.setSkills({ laser: false, shield: false, fly: false });
+    // Careful platform movement should feel controllable on a small touch stick.
+    ctx.player.levelSpeedScale = 0.76;
+    // A second tap is unambiguously the air jump in this lesson, even while descending near a branch.
+    ctx.player.preferAirJump = true;
     const bounds = { minX: -HALF + 2, maxX: HALF - 2, minZ: -HALF + 2, maxZ: HALF - 2 };
     ctx.player.flight.bounds = bounds;
     ctx.player.flight.groundBounds = { ...bounds, margin: 4, push: 3 };
@@ -204,12 +208,14 @@ export class ForestTrainingLevel implements Level {
     for (const step of course.steps) {
       const trunkHeight = Math.max(2.2, step.top - 0.18);
       kit.solidCyl(0.48, trunkHeight, [step.x, trunkHeight / 2, step.z], 0x8a5a3c);
-      // The branch is the forgiving collider; leaves stay visual and do not snag Glen.
-      kit.solidCyl(step.radius, 0.34, [step.x, step.top - 0.17, step.z], 0x765036);
+      // A broad, flat leaf crown is the forgiving collider. Decorative leaf blobs end exactly at the same
+      // top height, so Glen stands on the visible canopy instead of appearing submerged inside it.
+      kit.solidCyl(step.radius, 0.34, [step.x, step.top - 0.17, step.z], course.color);
       kit.glow.cyl(step.radius + 0.05, 0.055, [step.x, step.top + 0.03, step.z], 0xffd23f);
-      kit.deco.sph(step.radius * 0.9, [step.x - step.radius * 0.55, step.top + 0.7, step.z], course.color, [1, 0.68, 1], 1);
-      kit.deco.sph(step.radius * 0.85, [step.x + step.radius * 0.55, step.top + 0.75, step.z + 0.2], course.color, [1, 0.72, 1], 1);
-      kit.deco.sph(step.radius * 0.75, [step.x, step.top + 1.05, step.z - 0.35], course.color, [1, 0.75, 1], 1);
+      const y = step.top - step.radius * 0.34;
+      kit.deco.sph(step.radius * 0.9, [step.x - step.radius * 0.42, y, step.z], course.color, [1, 0.4, 1], 1);
+      kit.deco.sph(step.radius * 0.86, [step.x + step.radius * 0.42, y, step.z + 0.16], course.color, [1, 0.42, 1], 1);
+      kit.deco.sph(step.radius * 0.78, [step.x, y - 0.04, step.z - step.radius * 0.34], course.color, [1, 0.44, 1], 1);
     }
   }
 

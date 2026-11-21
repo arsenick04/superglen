@@ -853,6 +853,8 @@ export class Game {
         this.player.rhythm.reset();
         this.player.skills.shield.up = false;
         this.player.speedScale = 1;
+        this.player.levelSpeedScale = 1;
+        this.player.preferAirJump = false;
         this.setSkills({ ...this.save.data.skills });
         for (const a of ['jump', 'flight', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];

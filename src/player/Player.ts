@@ -124,6 +124,10 @@ export class Player {
   readonly flight: Flight;
   /** Multiplier on walking and flying speed (the raised shield sets 0.6 each fixed step). */
   speedScale = 1;
+  /** Per-level walking assist (1 normally; forest tree training slows careful platform movement). */
+  levelSpeedScale = 1;
+  /** Training assist: a second airborne press always uses the air jump instead of becoming a landing buffer. */
+  preferAirJump = false;
   /**
    * Riding a bike (city): faster, gentler start and stop, wide smooth turns, and no jumping (the jump button is the bell).
    * Set by the city's bike system, null on foot. The numbers are `BikeConfig.ride`.
@@ -403,7 +407,7 @@ export class Player {
       const dx = mx / len;
       const dy = my / len;
       const t = Math.min(1, len / C.analogFullAt);
-      const speed = (flyingNow ? FlightConfig.flySpeed : (this.ride ? this.ride.runSpeed : T.runSpeed)) * this.speedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
+      const speed = (flyingNow ? FlightConfig.flySpeed : (this.ride ? this.ride.runSpeed : T.runSpeed)) * this.speedScale * this.levelSpeedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
       this.wishDir.set(dx * cosY - dy * sinY, 0, -dx * sinY - dy * cosY);
       this.targetVel.copy(this.wishDir).multiplyScalar(speed);
     } else {
@@ -536,7 +540,7 @@ export class Player {
         sg &&
         !this.doubleUsed &&
         this.airTime >= Parkour.doubleJumpMinDelay &&
-        !this.aboutToLand()
+        (this.preferAirJump || !this.aboutToLand())
       ) {
         this.startJump(true, false, false);
         jumped = true;
