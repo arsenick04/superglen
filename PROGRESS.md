@@ -973,3 +973,10 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Tahan Lompat kembali mengaktifkan terbang setelah skill terbuka; tombol mode terbang baru terbuka saat latihan lanjutan. Latihan terdiri dari tiga ronde lingkaran, sasaran, dan tangkisan yang makin sulit.
 - Elang terbang mengitari arena dengan gerakan sayap dan serangan es/api beruntun yang meningkat. Arena memakai atap Bank dan siluet kota malam. Angka tantangan ada di `src/config/combat.ts`.
 - Build, check:reach, check:quiz, dan probe preview lulus. Browser diuji pemilik. MP3 dialog baru masih perlu diisi; fallback suara perangkat tersedia. Probe `battle-entry-probe` lama gagal pada assert Curut yang tidak terkait revisi Elang.
+
+## Elang: hindari es dan api sebelum membalas — 21 November 2026
+
+- Elang bergerak lebih cepat dan berpindah mendatar dengan pola berlapis, sekaligus mengikuti tinggi terbang Glen. Saat ia kelelahan, geraknya melambat agar tembakan balasan tetap terbaca.
+- Setiap rangkaian memuat serangan es dan api. Kesempatan menembak baru muncul setelah semua proyektil selesai dan Glen berhasil menghindari atau menangkis tanpa kehilangan hati; bila terkena, Elang mengulang rangkaian.
+- Proyektil es/api diperbesar dengan warna terang dan selubung cahaya. Cincin bidik dihilangkan; tanda seru dekat Glen muncul sesaat sebelum lontaran dan saat proyektil mendekat.
+- Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser tetap oleh pemilik.
