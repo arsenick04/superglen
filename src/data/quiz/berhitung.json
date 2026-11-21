@@ -888,31 +888,31 @@
     "answer": "b"
   },
   {
-    "id": "hitung_061", "category": "berhitung", "level": 1,
+    "id": "hitung_061", "set": "forest", "category": "berhitung", "level": 1,
     "prompt": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?", "audio_id": "quiz_hitung_061",
     "display": { "kind": "none" },
     "choices": [{ "id": "a", "text": "5" }, { "id": "b", "text": "4" }, { "id": "c", "text": "6" }], "answer": "a"
   },
   {
-    "id": "hitung_062", "category": "berhitung", "level": 1,
+    "id": "hitung_062", "set": "forest", "category": "berhitung", "level": 1,
     "prompt": "Mana angka yang paling besar?", "audio_id": "quiz_hitung_062",
     "display": { "kind": "none" },
     "choices": [{ "id": "a", "text": "4" }, { "id": "b", "text": "8" }, { "id": "c", "text": "6" }], "answer": "b"
   },
   {
-    "id": "hitung_063", "category": "berhitung", "level": 2,
+    "id": "hitung_063", "set": "forest", "category": "berhitung", "level": 2,
     "prompt": "Ada 9 pisang. Dimakan 3. Sisanya berapa?", "audio_id": "quiz_hitung_063",
     "display": { "kind": "none" },
     "choices": [{ "id": "a", "text": "5" }, { "id": "b", "text": "7" }, { "id": "c", "text": "6" }], "answer": "c"
   },
   {
-    "id": "hitung_064", "category": "berhitung", "level": 2,
+    "id": "hitung_064", "set": "forest", "category": "berhitung", "level": 2,
     "prompt": "Empat ditambah empat sama dengan?", "audio_id": "quiz_hitung_064",
     "display": { "kind": "equation", "text": "4 + 4 = ?" },
     "choices": [{ "id": "a", "text": "8" }, { "id": "b", "text": "7" }, { "id": "c", "text": "9" }], "answer": "a"
   },
   {
-    "id": "hitung_065", "category": "berhitung", "level": 3,
+    "id": "hitung_065", "set": "forest", "category": "berhitung", "level": 3,
     "prompt": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?", "audio_id": "quiz_hitung_065",
     "display": { "kind": "none" },
     "choices": [{ "id": "a", "text": "7" }, { "id": "b", "text": "8" }, { "id": "c", "text": "9" }], "answer": "b"

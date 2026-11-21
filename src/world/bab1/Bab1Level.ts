@@ -183,7 +183,8 @@ export class Bab1Level implements Level {
       }
       if (lab && !flow.sandbox && (ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz' || ctx.save.data.interlude === 'forest_quiz_done')) {
         this.forestAara = new AaraActor(mats.lit, ctx.dialog);
-        this.forestAara.place(this.lab.ninoPos.x + 2.2, this.lab.ninoPos.z + 0.8, Math.PI);
+        this.forestAara.place(this.spawn.x + 1.55, this.spawn.z + 0.35, Math.PI);
+        this.forestAara.group.position.y = LAB_FLOOR;
         this.forestAara.setLevel(3);
         ctx.root.add(this.forestAara.group);
         ctx.onDispose(() => this.forestAara?.dispose());
@@ -200,7 +201,7 @@ export class Bab1Level implements Level {
           this.forestAara?.emote('cheer');
           await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Lima lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
           await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!' }, { lockControls: true });
-          const result = await ctx.quiz.run({ category: 'mix', count: 5, reason: 'story' });
+          const result = await ctx.quiz.run({ category: 'mix', count: 5, reason: 'story', questionSet: 'forest', promptSpeaker: 'aara' });
           if (!result.completed) return;
           this.forestAara?.emote('cheer');
           await ctx.dialog.say({ id: 'forest_aara_quiz_complete', speaker: 'aara', text: 'Hebat! Lima pertanyaan berhasil kamu jawab, Glen!' }, { lockControls: true });

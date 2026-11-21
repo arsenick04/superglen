@@ -14,11 +14,36 @@ export function wireQuizVoice(quiz: QuizEngine, audio: AudioManager): void {
   let gen = 0;
   let chain: Promise<void> = Promise.resolve();
   const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  const deviceAara = (text: string, generation: number): Promise<void> => new Promise((resolve) => {
+    if (audio.silent || document.hidden || !('speechSynthesis' in window)) return resolve();
+    window.speechSynthesis.cancel();
+    const spoken = new SpeechSynthesisUtterance(text);
+    spoken.lang = 'id-ID';
+    spoken.rate = 0.96;
+    spoken.pitch = 1.12;
+    const indonesian = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('id'));
+    if (indonesian) spoken.voice = indonesian;
+    const done = (): void => {
+      if (generation === gen) audio.setExternalVoiceActive(false);
+      resolve();
+    };
+    spoken.onend = done;
+    spoken.onerror = done;
+    audio.setExternalVoiceActive(true);
+    window.speechSynthesis.speak(spoken);
+  });
   quiz.onSpeak((id, _text, kind) => {
     if (kind === 'prompt' || kind === 'nino') {
       const g = ++gen;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      audio.setExternalVoiceActive(false);
       // Nino's feedback must not wait behind anything; a prompt starts the chain the words hang on.
-      chain = audio.playVoice(id).then((r) => (g === gen ? r.ended : undefined));
+      chain = audio.playVoice(id).then(async (r) => {
+        if (g !== gen) return;
+        if (r.played) return r.ended;
+        // The forest quiz has its own Aara recordings. Device speech is a robust fallback while an asset is missing.
+        if (kind === 'prompt' && id.startsWith('aara_')) return deviceAara(_text, g);
+      });
       return;
     }
     const g = gen;
