@@ -179,9 +179,20 @@ export class Bab1Level implements Level {
         });
       }
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {
+        ctx.game.preloadCinematic('elang-chaos');
         ctx.seq.run(async () => {
           await ctx.seq.waitUntil(() => startGate.started);
-          await ctx.dialog.say('elang_nino_alarm', { lockControls: true });
+          ctx.game.setControlsEnabled(false);
+          const alert = document.createElement('div');
+          alert.className = 'story-alarm';
+          alert.textContent = '⚠ ALARM KOTA';
+          ctx.ui.appendChild(alert);
+          ctx.onDispose(() => alert.remove());
+          ctx.sfx.alarm();
+          await ctx.seq.wait(1.1);
+          alert.remove();
+          await ctx.game.playCinematic('elang-chaos');
+          ctx.game.setControlsEnabled(false);
           await ctx.dialog.say('elang_glen_berangkat', { lockControls: true });
         });
       }

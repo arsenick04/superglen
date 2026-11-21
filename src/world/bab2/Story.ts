@@ -288,6 +288,7 @@ export class Story {
     const p = ctx.player.visualPosition;
     void nino.glideTo(p.x + 1.8, p.z - 1.2, 1.2);
     hangar.setAlarm(true);
+    ctx.sfx.alarm();
     ctx.cameraRig.setFraming(this.tmp.set(p.x * 0.5, 7.5, -32), { weight: 0.45, yaw: 0, distance: 3 });
     await seq.wait(0.6);
     await seq.tween(0.7, (t) => hangar.showMarket(t));
