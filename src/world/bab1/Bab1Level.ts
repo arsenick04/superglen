@@ -160,7 +160,7 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready'))) {
+      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz'))) {
         // Story returns begin beside Nino, not in the front-door corridor.
         this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
         this.atmosphere.snap(2);
@@ -181,7 +181,7 @@ export class Bab1Level implements Level {
           await ctx.dialog.say('rakus_nino_lab_arrival', { lockControls: true });
         });
       }
-      if (lab && !flow.sandbox && (ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready')) {
+      if (lab && !flow.sandbox && (ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz')) {
         this.forestAara = new AaraActor(mats.lit, ctx.dialog);
         this.forestAara.place(this.lab.ninoPos.x + 2.2, this.lab.ninoPos.z + 0.8, Math.PI);
         this.forestAara.setLevel(3);
@@ -194,6 +194,12 @@ export class Bab1Level implements Level {
           await ctx.dialog.say({ id: 'forest_nino_lab', speaker: 'nino', text: 'Kita akan berlatih lompat pohon di Hutan Botanica! Keluar dan cari jalur di belakang gedung ini.' }, { lockControls: true });
           ctx.save.setInterlude('forest_ready');
           ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
+        });
+        else if (ctx.save.data.interlude === 'forest_quiz') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          this.forestAara?.emote('cheer');
+          await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Lima lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!' }, { lockControls: true });
         });
       }
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {

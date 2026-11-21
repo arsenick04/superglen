@@ -104,6 +104,7 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.data.interlude === 'forest_invite') return { level: 'kota', arrival: 'homeMorning' };
   if (save.data.interlude === 'forest_lab') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'homeMorning' };
   if (save.data.interlude === 'forest_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
+  if (save.data.interlude === 'forest_quiz') return { level: 'lab', arrival: 'labEntrance' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };

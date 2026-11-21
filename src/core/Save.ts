@@ -59,7 +59,7 @@ export interface SaveData {
    */
   where: string;
   /** Short story pause between chapters. Empty keeps legacy saves on their old route. */
-  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab' | 'elang_bank' | 'elang_met' | 'elang_home' | 'forest_invite' | 'forest_lab' | 'forest_ready' | 'forest_training';
+  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab' | 'elang_bank' | 'elang_met' | 'elang_home' | 'forest_invite' | 'forest_lab' | 'forest_ready' | 'forest_training' | 'forest_quiz';
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
@@ -249,7 +249,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   if (typeof r.where === 'string') out.where = r.where;
-  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab' || r.interlude === 'elang_bank' || r.interlude === 'elang_met' || r.interlude === 'elang_home' || r.interlude === 'forest_invite' || r.interlude === 'forest_lab' || r.interlude === 'forest_ready' || r.interlude === 'forest_training') out.interlude = r.interlude;
+  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab' || r.interlude === 'elang_bank' || r.interlude === 'elang_met' || r.interlude === 'elang_home' || r.interlude === 'forest_invite' || r.interlude === 'forest_lab' || r.interlude === 'forest_ready' || r.interlude === 'forest_training' || r.interlude === 'forest_quiz') out.interlude = r.interlude;
   if (typeof r.doneAt === 'object' && r.doneAt !== null) {
     for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
   }
