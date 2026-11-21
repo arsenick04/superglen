@@ -202,8 +202,8 @@ export function treePlatforms(t: CityTree): { center: [number, number, number]; 
     { center: [t.x + r, t.base + step - 0.1, t.z], size: [1.55 * t.s, 0.2, 0.56 * t.s] },
     { center: [t.x, t.base + step * 2 - 0.1, t.z + r], size: [0.56 * t.s, 0.2, 1.55 * t.s] },
     { center: [t.x - r, t.base + step * 3 - 0.1, t.z], size: [1.55 * t.s, 0.2, 0.56 * t.s] },
-    { center: [t.x, t.base + step * 4 - 0.1, t.z - r], size: [0.56 * t.s, 0.2, 1.55 * t.s] },
-    { center: [t.x, t.base + step * 5 - 0.1, t.z], size: [0.9 * t.s, 0.2, 0.9 * t.s] },
+    { center: [t.x, t.base + step * 4 - 0.1, t.z - 0.9 * t.s], size: [0.56 * t.s, 0.2, 1.79 * t.s] },
+    { center: [t.x, t.base + step * 5 - 0.1, t.z], size: [0.78 * t.s, 0.2, 0.78 * t.s] },
   ];
 }
 
