@@ -38,6 +38,7 @@ export class EagleArena implements Level {
     });
     this.boss = new EagleBoss(ctx, () => this.win());
     ctx.game.preloadCinematic('elang');
+    ctx.game.preloadCinematic('elang-defeat');
     ctx.game.debugInfo.elangStage = 'fight';
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
@@ -154,6 +155,8 @@ export class EagleArena implements Level {
     ctx.seq.run(async () => {
       ctx.game.setControlsEnabled(false);
       ctx.battle.exit(true);
+      await ctx.game.playCinematic('elang-defeat');
+      ctx.game.setControlsEnabled(false);
       await ctx.dialog.say('elang_nino_menang', { lockControls: true });
       ctx.save.markChapterDone('bab7');
       ctx.save.setInterlude('elang_home');

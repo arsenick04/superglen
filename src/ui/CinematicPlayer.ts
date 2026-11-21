@@ -1,6 +1,6 @@
-export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang';
+export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat';
 
-/** Small, skippable cinematic layer with a black 16:9 stage. */
+/** Small, skippable cinematic layer that fills the available screen. */
 export class CinematicPlayer {
   private readonly layer: HTMLDivElement;
   private readonly video: HTMLVideoElement;
@@ -18,14 +18,12 @@ export class CinematicPlayer {
     this.video.playsInline = true;
     this.video.preload = 'auto';
     this.video.setAttribute('aria-label', 'Cinematic Superglen');
-    const top = document.createElement('div'); top.className = 'cinematic-bar cinematic-bar-top';
-    const bottom = document.createElement('div'); bottom.className = 'cinematic-bar cinematic-bar-bottom';
     this.skip = document.createElement('button');
     this.skip.className = 'cinematic-skip';
     this.skip.type = 'button';
     this.skip.textContent = 'Lewati';
     this.layer.style.pointerEvents = 'auto';
-    this.layer.append(this.video, top, bottom, this.skip);
+    this.layer.append(this.video, this.skip);
     root.appendChild(this.layer);
     this.skip.addEventListener('click', () => this.finish());
     this.skip.addEventListener('pointerup', (event) => {
