@@ -5743,28 +5743,6 @@
     "generated_at": "2026-11-15T07:50:35.255Z",
     "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
-  "nino_pujian_04": {
-    "id": "nino_pujian_04",
-    "speaker": "nino",
-    "voice_id": "q8qwd1jY2jS3AWOBeq25",
-    "voice": "Pratama - Clear, Confident and Warm",
-    "model": "eleven_v4",
-    "settings": {
-      "stability": 0.35,
-      "similarity_boost": 0.8
-    },
-    "pitchSemitones": 2,
-    "lang": "id",
-    "hash": "b885b75f85a6ab60",
-    "tts": "[proud] Lompatanmu tinggi sekali!",
-    "chars": 33,
-    "bytes": 23241,
-    "duration": 1.91,
-    "lufs": -16.5,
-    "peak_dbtp": -3,
-    "generated_at": "2026-11-15T07:50:37.026Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
-  },
   "nino_pujian_05": {
     "id": "nino_pujian_05",
     "speaker": "nino",

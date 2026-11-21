@@ -43,11 +43,12 @@ async function boot(): Promise<void> {
   } else {
     await Promise.all([envModels.load(), enemyModels.load(), cityModels.load(), preloadSky()]);
   }
+  // Do not reveal procedural/blocky character placeholders on the first playable frame.
+  // If a GLB genuinely fails, Avatar still keeps its safe fallback instead of blocking startup forever.
+  await characterModels.load();
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
   const game = new Game(container);
-  // Animated character models can replace their procedural figures after the first playable frame.
-  void characterModels.load();
   if (!document.hidden) game.start();
   void versionGuard.check(); // on the start screen a newer build reloads right away
 }
