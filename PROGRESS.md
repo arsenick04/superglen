@@ -9,6 +9,7 @@
 - Jatuh ke tanah setelah mulai melompat mengulang tingkat yang sedang dimainkan, bukan seluruh latihan. Minimap dan full map khusus hutan tersedia.
 - Link langsung: `?chapter=8`. Setelah tiga tingkat selesai, progres `forest-training` tersimpan dan Glen kembali ke kota.
 - Lulus: `npm run build`, reachability melalui `node --import tsx scripts/reachability.ts` (0 error/warning), `npm run check:quiz`, dan `git diff --check`. Browser/smoke diserahkan kepada pemilik sesuai permintaan pengujian manual.
+- Revisi dari tes iPhone: puncak visual daun kini tepat menyentuh collider sehingga Superglen berdiri di atas tajuk, bukan tenggelam; pijakan menengah/sulit diperlebar, kecepatan berjalan latihan diturunkan menjadi 76%, dan ketukan kedua di udara selalu menjadi double jump. Video kiriman baru disambung sesudah video Elang dikalahkan dalam satu pemutaran 27 detik agar tidak ada jeda musik/VO di antaranya.
 
 ### Arena Curut Cemberut (17 November 2026): checkpoint siap uji
 
