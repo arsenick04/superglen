@@ -281,6 +281,7 @@ export class CityPeople {
       mesh.rotation.y = r.yaw;
       mesh.castShadow = false;
       ctx.root.add(mesh);
+      ctx.physics.addFixedCylinder(0.75, 0.4, { x: r.x, y: 0.75, z: r.z });
       this.people.push({ data: r, mesh, phase: i * 1.7, yaw: r.yaw });
       ctx.interactions.add({
         position: new THREE.Vector3(r.x, 0.8, r.z),

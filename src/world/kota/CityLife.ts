@@ -1,3 +1,5 @@
+import RAPIER from '@dimforge/rapier3d-compat';
+import { PlayerConfig } from '../../player/PlayerConfig';
 import { envModels } from './EnvModels';
 import { cityModels, paintMaterial } from './CityModels';
 import * as THREE from 'three';
@@ -10,8 +12,7 @@ import { box, cyl, merge, sph, type Part } from './ColorMesh';
  * playing in the parks and school fields (chasing, kicking a ball, hopping), bicycles, motorbikes and cars in the lanes of the road
  * network of `CITY_LAYOUT.roads`.
  *
- *  - Nothing has a collider and nothing ever pushes the player: vehicles and walkers only brake and wait (a car stops about 3 m
- *    before Glen when he stands in its lane, e.g. while crossing the street).
+ *  - Nearby agents have kinematic colliders. Traffic and pedestrians brake and wait for Glen.
  *  - Cheap: ONE InstancedMesh per kind (5 draw calls in all, no shadow casting), per-instance colour, walkers posed in the vertex
  *    shader. Only agents within `simRadius` of the player are simulated (at most `maxSim`), the rest stay frozen where they are;
  *    only those within `showRadius` and inside the camera frustum are written to the instance buffers.
@@ -65,6 +66,8 @@ interface Lane {
 interface Agent {
   /** 0 car, 1 moto, 2 bike, 3 walker, 4 kid. */
   kind: number;
+  body?: RAPIER.RigidBody;
+  placed?: boolean;
   lane: Lane | null;
   /** Position along the lane axis (vehicles, walkers). */
   s: number;
@@ -572,6 +575,7 @@ export class CityLife {
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
+    for (const m of this.meshes) m.geometry.computeBoundingBox();
     ctx.onDispose(() => {
       for (const m of this.meshes) {
         m.geometry.dispose();
@@ -628,22 +632,15 @@ export class CityLife {
     }
   }
 
-  update(dt: number): void {
-    const d = Math.min(dt, 0.05);
+  fixedUpdate(d: number): void {
     this.t += d;
-    const p = this.ctx.player.visualPosition;
+    const p = this.ctx.player.position;
     const onGround = p.y < 2.3;
     const sim2 = LifeConfig.simRadius * LifeConfig.simRadius;
     this.cheerLeft = Math.max(0, this.cheerLeft - d);
     this.shoutGap = Math.max(0, this.shoutGap - d);
     this.fleeing = 0;
     this.watching = 0;
-    const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
-    const cam = this.ctx.cameraRig.camera;
-    this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const n = [0, 0, 0, 0, 0];
-    const ped = this.peds.instanceMatrix.array as Float32Array;
-    const marr = [this.cars.instanceMatrix.array as Float32Array, this.motos.instanceMatrix.array as Float32Array, this.bikes.instanceMatrix.array as Float32Array, ped];
     let sim = 0;
     let stopped = 0;
     const ag = this.agents;
@@ -654,7 +651,15 @@ export class CityLife {
       const dx = (ln ? (ln.ax === 'x' ? a.s : ln.c) : a.cx) - p.x;
       const dz = (ln ? (ln.ax === 'x' ? ln.c : a.s) : a.cz) - p.z;
       const d2 = dx * dx + dz * dz;
-      if (d2 > sim2 + 400 || sim >= LifeConfig.maxSim) continue;
+      if ((d2 > sim2 + 400 || sim >= LifeConfig.maxSim) && !a.body) {
+        a.placed = false;
+        continue;
+      }
+      const wasPlaced = a.placed === true;
+      const oldX = a.x;
+      const oldY = a.y;
+      const oldZ = a.z;
+      const oldS = a.s;
       sim++;
       if (a.kind < 3) this.vehicle(a, d, p.x, p.z, onGround);
       else if (a.kind === 3) {
@@ -662,8 +667,87 @@ export class CityLife {
         else this.walker(a, d, p.x, p.z, onGround);
       } else this.kid(a);
       if (a.kind >= 3) this.react(a, d, p.x, p.z);
+      this.syncCollider(a, p, wasPlaced, oldX, oldY, oldZ, oldS);
+      a.placed = true;
       if (a.v < 0.15 && a.kind < 4) stopped++;
       if (a.kind === 4 && a.mode === 1 && a.a0 === 0 && a.ball >= 0) this.ballStep(a);
+    }
+    this.simulated = sim;
+    this.stopped = stopped;
+  }
+
+  private readonly colliderPosition = { x: 0, y: 0, z: 0 };
+  private readonly colliderRotation = { x: 0, y: 0, z: 0, w: 1 };
+
+  private syncCollider(a: Agent, p: THREE.Vector3, placed: boolean, oldX: number, oldY: number, oldZ: number, oldS: number): void {
+    const limit = a.body ? 18 : 14;
+    if ((a.x - p.x) ** 2 + (a.z - p.z) ** 2 > limit ** 2) {
+      if (a.body) this.ctx.physics.removeBody(a.body);
+      a.body = undefined;
+      return;
+    }
+    const scale = this.meshes[Math.min(3, a.kind)].geometry.boundingBox!;
+    const halfX = (scale.max.x - scale.min.x) * a.sx / 2;
+    const halfZ = (scale.max.z - scale.min.z) * a.sz / 2;
+    const halfY = scale.max.y * a.sy / 2;
+    const sin = Math.sin(a.yaw);
+    const cos = Math.cos(a.yaw);
+    const dx = p.x - a.x;
+    const dz = p.z - a.z;
+    const feet = p.y - PlayerConfig.height / 2;
+    const radius = PlayerConfig.radius;
+    const overlaps = Math.abs(dx * cos - dz * sin) < halfX + radius
+      && Math.abs(dx * sin + dz * cos) < halfZ + radius
+      && feet < a.y + halfY * 2 - 0.04 && p.y + PlayerConfig.height / 2 > a.y;
+    if (overlaps && placed && a.body) {
+      a.x = oldX;
+      a.y = oldY;
+      a.z = oldZ;
+      a.s = oldS;
+      a.v = a.amp = 0;
+    }
+
+    const zone = this.clearZone;
+    const hidden = zone && (a.x - zone.x) ** 2 + (a.z - zone.z) ** 2 < zone.r ** 2;
+    if (hidden) {
+      if (a.body) this.ctx.physics.removeBody(a.body);
+      a.body = undefined;
+      return;
+    }
+
+    // A teleport or lane wrap can place the player inside the footprint. Wait until clear before adding a body.
+    if (!a.body && overlaps) return;
+    const position = this.colliderPosition;
+    position.x = a.x;
+    position.y = a.y + halfY;
+    position.z = a.z;
+    const rotation = this.colliderRotation;
+    rotation.y = Math.sin(a.yaw / 2);
+    rotation.w = Math.cos(a.yaw / 2);
+    if (a.body) {
+      a.body.setNextKinematicTranslation(position);
+      a.body.setNextKinematicRotation(rotation);
+    } else {
+      a.body = this.ctx.physics.world.createRigidBody(
+        RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(position.x, position.y, position.z).setRotation(rotation),
+      );
+      this.ctx.physics.track(a.body);
+      const desc = a.kind < 3 ? RAPIER.ColliderDesc.cuboid(halfX, halfY, halfZ) : RAPIER.ColliderDesc.cylinder(halfY, Math.max(halfX, halfZ));
+      this.ctx.physics.world.createCollider(desc, a.body);
+    }
+  }
+
+  update(): void {
+    const p = this.ctx.player.visualPosition;
+    const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
+    const cam = this.ctx.cameraRig.camera;
+    this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const n = this.counts;
+    n.fill(0);
+
+    const ag = this.agents;
+    for (const a of ag) {
+      if (!a.placed) continue;
       // Draw: near and in view.
       const ex = a.x - p.x;
       const ez = a.z - p.z;
@@ -680,7 +764,7 @@ export class CityLife {
       const c = Math.cos(a.yaw);
       const s = Math.sin(a.yaw);
       const o = idx * 16;
-      const m = marr[k];
+      const m = this.meshes[k].instanceMatrix.array as Float32Array;
       m[o] = a.sx * c;
       m[o + 1] = 0;
       m[o + 2] = -a.sx * s;
@@ -726,21 +810,18 @@ export class CityLife {
       const mesh = this.meshes[k];
       mesh.count = n[k];
       mesh.visible = n[k] > 0;
-      this.counts[k] = n[k];
       if (n[k] > 0) {
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor && k < 4) mesh.instanceColor.needsUpdate = true;
       }
     }
     if (n[3] > 0) this.anim.needsUpdate = true;
-    this.simulated = sim;
     this.shown = n[0] + n[1] + n[2] + n[3] + n[4];
-    this.stopped = stopped;
     const info = this.ctx.game.debugInfo;
     info.lifeAgents = ag.length;
-    info.lifeSim = sim;
+    info.lifeSim = this.simulated;
     info.lifeShown = this.shown;
-    info.lifeStopped = stopped;
+    info.lifeStopped = this.stopped;
   }
 
   /** Vehicle: cruise along the lane, brake for the vehicle ahead and for Glen standing (or crossing) in the lane. Never moves into Glen. */

@@ -519,6 +519,7 @@ export class KotaLevel implements Level {
     this.letters?.fixedUpdate();
     this.elangIntro?.fixedUpdate();
     this.d3?.fixedUpdate(dt);
+    this.life?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
       const d = CITY_LAYOUT.lab.door;
@@ -542,7 +543,7 @@ export class KotaLevel implements Level {
     }
     this.hud.update(dt, p.x, p.z);
     this.d3?.update(dt);
-    this.life?.update(dt);
+    this.life?.update();
     this.ch3?.update(dt);
     this.ch4?.update(dt);
     this.ch5?.update(dt);
