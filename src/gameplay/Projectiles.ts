@@ -50,14 +50,11 @@ export const ProjectileConfig = {
   /** Reflected balls fly back at least this fast (m/s) and a bit faster than they came. */
   reflectMinSpeed: 8,
   reflectBoost: 1.25,
-  /** The dome catches anything within this many degrees of the facing (generous). */
-  blockArcDeg: 75,
   /** A reflected ball counts as returned within this distance of its target (m). */
   returnRadius: 0.8,
   squashTime: 0.45,
 } as const;
 
-const COS_BLOCK = Math.cos((ProjectileConfig.blockArcDeg * Math.PI) / 180);
 const PLAYER_HALF_CYL = 0.23; // (height - 2 radius) / 2 of the player capsule
 const PLAYER_RADIUS = 0.32;
 
@@ -358,13 +355,9 @@ export class Projectiles {
           const rz = qz - sh.z;
           const lim = sh.radius + p.radius;
           if (rx * rx + ry * ry + rz * rz <= lim * lim && ry > -0.9 && p.vel.x * rx + p.vel.y * ry + p.vel.z * rz < 0) {
-            const dh = Math.hypot(rx, rz);
-            const cos = dh < 0.05 ? 1 : (rx * Math.sin(sh.yaw) + rz * Math.cos(sh.yaw)) / dh;
-            if (cos >= COS_BLOCK) {
               p.pos.set(qx, qy, qz);
               this.reflect(p);
               return;
-            }
           }
         }
         const ay = Math.max(pp.y - PLAYER_HALF_CYL, Math.min(pp.y + PLAYER_HALF_CYL, qy));

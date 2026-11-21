@@ -547,7 +547,7 @@ export class Game {
       flashes: this.flashes,
       stars: this.stars,
     });
-    this.shield = new Shield(this.scene, this.player, this.input, () => this.projectiles);
+    this.shield = new Shield(this.scene, this.player, this.input);
     this.laser = new Laser(this.scene, this.player, this.input, this.physics, this.cameraRig, this.targets, {
       sparkles: this.sparkles,
       flashes: this.flashes,

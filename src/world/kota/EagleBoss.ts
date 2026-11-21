@@ -95,12 +95,15 @@ export class EagleBoss {
     const c = Combat.eagle;
     if (!attacking || this.phase === 'tamed') return;
     this.time += dt;
-    this.orbit += dt * c.orbitSpeed * (this.phase === 'recover' ? c.recoveryMotion : 1);
     const bird = this.visual.group.position;
-    const x = Math.sin(this.orbit) * c.hoverSweepX + Math.sin(this.orbit * 2.3) * 2.5;
-    const z = c.hoverZ + Math.cos(this.orbit * 1.7) * c.hoverSweepZ;
-    const wantY = THREE.MathUtils.clamp(this.ctx.player.position.y + c.heightOffset, c.minHoverY, c.flyHeight - c.aimRadius);
-    bird.set(THREE.MathUtils.clamp(x, -13, 13), bird.y + (wantY - bird.y) * Math.min(1, dt * c.heightFollow), z);
+    // The dramatic reposition happens only between attacks; aiming and countering have a stationary target.
+    if (this.phase === 'cooldown') {
+      this.orbit += dt * c.orbitSpeed;
+      const x = Math.sin(this.orbit) * c.hoverSweepX + Math.sin(this.orbit * 2.3) * 2.5;
+      const z = c.hoverZ + Math.cos(this.orbit * 1.7) * c.hoverSweepZ;
+      const wantY = THREE.MathUtils.clamp(this.ctx.player.position.y + c.heightOffset, c.minHoverY, c.flyHeight - c.aimRadius);
+      bird.set(THREE.MathUtils.clamp(x, -13, 13), bird.y + (wantY - bird.y) * Math.min(1, dt * c.heightFollow), z);
+    }
     this.aim.copy(bird);
     this.updateFeathers(dt);
     if (this.phase !== 'warning') this.alert.visible = this.feathers.some((f) => f.active && f.pos.distanceTo(this.ctx.player.position) < 5);
@@ -142,7 +145,7 @@ export class EagleBoss {
   update(): void {
     const bird = this.visual.group.position;
     const player = this.ctx.player.position;
-    this.visual.update(this.time, this.phase === 'warning' ? this.wing : null, Math.atan2(player.x - bird.x, player.z - bird.z), this.phase === 'recover' ? 0 : Math.cos(this.orbit) * 0.25);
+    this.visual.update(this.time, this.phase === 'warning' ? this.wing : null, Math.atan2(player.x - bird.x, player.z - bird.z), this.phase === 'cooldown' ? Math.cos(this.orbit) * 0.25 : 0);
   }
 
   tame(): void {
