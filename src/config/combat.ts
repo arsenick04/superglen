@@ -234,20 +234,40 @@ export const Combat = {
   },
   /** Elang Belang: alternating ice and fire feather volleys in the separate night sky arena. */
   eagle: {
-    stars: 4,
-    starsEasy: 3,
+    stars: 7,
+    starsEasy: 4,
+    hitsPerStar: 2,
+    hitsPerStarEasy: 1,
     arenaRadius: 17,
     flyHeight: 12,
     hoverY: 7.5,
     hoverZ: -5,
-    hoverSweepX: 4,
+    hoverSweepX: 9,
+    hoverSweepZ: 5,
+    hoverSweepY: 1.8,
+    orbitSpeed: 0.7,
+    recoveryMotion: 0.16,
     entryZ: 9,
-    cooldown: 1.7,
-    warning: 1.25,
-    recover: 3.3,
-    featherSpeed: 8,
+    cooldown: 1.2,
+    cooldownEasy: 2,
+    warning: 1.05,
+    warningEasy: 1.65,
+    recover: 2.8,
+    recoverEasy: 4.2,
+    burstShots: [2, 3, 4],
+    burstShotsEasy: 2,
+    featherCount: 5,
+    featherCountEasy: 3,
+    featherPool: 30,
+    featherSpread: 1.35,
+    featherSpeed: 10,
+    featherSpeedEasy: 7,
+    featherSpeedPerStage: 1.5,
     featherRadius: 0.7,
     featherLife: 4,
+    wingOffset: 1.1,
+    lockShare: 0.45,
+    playerHitRadius: 0.45,
     aimRadius: 1.55,
     assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 28 },
   },
@@ -272,3 +292,10 @@ export const Combat = {
 
 /** Random source of the fight (tests replace it for determinism). */
 export const CombatRng = { next: (): number => Math.random() };
+
+/** Harmless advanced-flight practice: more targets and faster balls each round. */
+export const FlightTrainingCombat = [
+  { targets: 2, blocks: 2, interval: 3.5, speed: 6, targetSpeed: 0, targetRadius: 1.1 },
+  { targets: 3, blocks: 3, interval: 2.8, speed: 7, targetSpeed: 1.2, targetRadius: 0.9 },
+  { targets: 4, blocks: 4, interval: 2.1, speed: 8, targetSpeed: 2, targetRadius: 0.75 },
+] as const;

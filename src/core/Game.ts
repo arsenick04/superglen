@@ -845,6 +845,9 @@ export class Game {
         this.player.ride = null;
         this.player.rideLift = 0;
         this.player.flight.resetLevelSettings();
+        this.player.flight.toggleEnabled = this.save.isChapterDone('flight-training-unlocked')
+          || ['elang_bank', 'elang_met', 'elang_home'].includes(this.save.data.interlude)
+          || this.save.isChapterDone('bab7');
         this.player.rhythm.cap = MAX_LEVEL;
         this.player.rhythm.reset();
         this.player.skills.shield.up = false;
