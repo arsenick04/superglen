@@ -980,3 +980,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Setiap rangkaian memuat serangan es dan api. Kesempatan menembak baru muncul setelah semua proyektil selesai dan Glen berhasil menghindari atau menangkis tanpa kehilangan hati; bila terkena, Elang mengulang rangkaian.
 - Proyektil es/api diperbesar dengan warna terang dan selubung cahaya. Cincin bidik dihilangkan; tanda seru dekat Glen muncul sesaat sebelum lontaran dan saat proyektil mendekat.
 - Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser tetap oleh pemilik.
+
+## Perisai gelembung dan Elang ramah anak — 21 November 2026
+
+- Sekali tekan mengaktifkan perisai hologram biru bulat selama tiga detik. Perisai melindungi dari seluruh arah, termasuk proyektil latihan dan serangan bos; tahan tombol tidak memperpanjang durasi.
+- Elang berpindah tempat hanya sebelum menyerang. Ia diam saat memberi tanda, melontarkan es/api, dan ketika terbuka untuk tembakan Glen. Bintang dan jumlah proyektil dikurangi, jeda menghindar dan membalas diperpanjang.
+- Build, check:reach, check:quiz, diff check lulus. Browser diuji pemilik. VO baru tertahan karena konektor ElevenLabs dapat membuat klip tetapi URL aset tidak dapat diunduh ke workspace (HTTP 403); tidak ada kredit tambahan dipakai untuk klip yang belum bisa dipasang.

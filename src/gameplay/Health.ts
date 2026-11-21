@@ -85,7 +85,7 @@ export class Health {
   }
 
   /**
-   * Something bumps Glen. Shield up and the thing coming from the front: blocked (nothing lost). Safe moments after a hit: ignored.
+   * Something bumps Glen. The active bubble blocks from every direction. Safe moments after a hit: ignored.
    * Otherwise one heart goes.
    */
   hurt(srcX: number, srcZ: number): HurtResult {
@@ -96,19 +96,15 @@ export class Health {
     const d = Math.hypot(dx, dz) || 1;
     const sh = this.player.skills;
     if (sh.shield.up) {
-      const fy = this.player.facing;
-      const cos = (dx * Math.sin(fy) + dz * Math.cos(fy)) / d;
-      if (cos > Math.cos((Combat.hurt.shieldArcDeg * Math.PI) / 180)) {
         this.blocks++;
         this.invuln = Combat.hurt.blockGrace;
         sh.stats.shieldBlocks++;
         const x = p.x + (dx / d) * 1.1;
         const z = p.z + (dz / d) * 1.1;
-        this.fx.sparkles.burst(x, p.y, z, 12, 3, 0xffd23f, { up: 0.3, life: 0.6, gravity: 1.5 });
+        this.fx.sparkles.burst(x, p.y, z, 12, 3, 0x64caff, { up: 0.3, life: 0.6, gravity: 1.5 });
         this.sfx.pop();
         sh.emit('shieldBlock', { x, y: p.y, z });
         return 'blocked';
-      }
     }
     this.hits++;
     const left = this.hearts - 1;
