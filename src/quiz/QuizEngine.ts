@@ -213,10 +213,10 @@ export class QuizEngine {
     // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
     this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
     for (let i = 0; i < count; i++) {
-      const q = this.choose(cats[i], taken);
+      const q = this.choose(cats[i], taken, opts.questionSet);
       taken.add(q.id);
       this.deps.audio.preload(this.audioIds(q));
-      const prep = this.prepare(q);
+      const prep = this.prepare(q, opts.promptSpeaker);
       const out = await this.panel.ask(prep, i, count, (wrong) => {
         const rec = this.record(q, wrong);
         result.answers.push(rec.answer);
@@ -254,8 +254,10 @@ export class QuizEngine {
   // ---------------------------------------------------------------------------------------------------------------
 
   /** A question for `cat` at the child's current level, avoiding the recently asked ones and the ones already in this challenge. */
-  choose(cat: Category, taken: ReadonlySet<string>): Question {
-    const pool = this.bank.byCategory[cat];
+  choose(cat: Category, taken: ReadonlySet<string>, questionSet?: string): Question {
+    const all = this.bank.byCategory[cat];
+    const pool = questionSet ? all.filter((q) => q.set === questionSet) : all;
+    if (pool.length === 0) throw new Error(`Quiz: no questions for ${cat} in set ${questionSet}`);
     const level = this.data.cats[cat].level;
     const recent = new Set(this.data.recent);
     const fresh = pool.filter((q) => !taken.has(q.id));
@@ -280,7 +282,8 @@ export class QuizEngine {
   }
 
   /** Shuffle the on-screen order of the three choices (the answer is tracked by position). */
-  prepare(q: Question): PreparedQuestion {
+  prepare(q: Question, promptSpeaker: 'nino' | 'aara' = 'nino'): PreparedQuestion {
+    if (promptSpeaker === 'aara') q = { ...q, audio_id: `aara_${q.audio_id}` };
     const order = this.shuffle([...q.choices]) as [Choice, Choice, Choice];
     const correctIndex = order.findIndex((c) => c.id === q.answer) as 0 | 1 | 2;
     return { q, order, correctIndex };

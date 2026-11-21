@@ -840,31 +840,31 @@
     "answer": "a"
   },
   {
-    "id": "mandarin_061", "category": "mandarin", "level": 1,
+    "id": "mandarin_061", "set": "forest", "category": "mandarin", "level": 1,
     "prompt": "Artinya apa, ya?", "audio_id": "quiz_mandarin_061",
     "display": { "kind": "speak", "text": "树", "lang": "zh", "pinyin": "shù", "speak_audio_id": "quiz_mandarin_061_kata" },
     "choices": [{ "id": "a", "text": "Pohon" }, { "id": "b", "text": "Bunga" }, { "id": "c", "text": "Rumah" }], "answer": "a"
   },
   {
-    "id": "mandarin_062", "category": "mandarin", "level": 1,
+    "id": "mandarin_062", "set": "forest", "category": "mandarin", "level": 1,
     "prompt": "Artinya apa, ya?", "audio_id": "quiz_mandarin_062",
     "display": { "kind": "speak", "text": "朋友", "lang": "zh", "pinyin": "péng you", "speak_audio_id": "quiz_mandarin_062_kata" },
     "choices": [{ "id": "a", "text": "Guru" }, { "id": "b", "text": "Teman" }, { "id": "c", "text": "Adik" }], "answer": "b"
   },
   {
-    "id": "mandarin_063", "category": "mandarin", "level": 2,
+    "id": "mandarin_063", "set": "forest", "category": "mandarin", "level": 2,
     "prompt": "Artinya apa, ya?", "audio_id": "quiz_mandarin_063",
     "display": { "kind": "speak", "text": "森林", "lang": "zh", "pinyin": "sēn lín", "speak_audio_id": "quiz_mandarin_063_kata" },
     "choices": [{ "id": "a", "text": "Kota" }, { "id": "b", "text": "Sekolah" }, { "id": "c", "text": "Hutan" }], "answer": "c"
   },
   {
-    "id": "mandarin_064", "category": "mandarin", "level": 2,
+    "id": "mandarin_064", "set": "forest", "category": "mandarin", "level": 2,
     "prompt": "Artinya apa, ya?", "audio_id": "quiz_mandarin_064",
     "display": { "kind": "speak", "text": "跳", "lang": "zh", "pinyin": "tiào", "speak_audio_id": "quiz_mandarin_064_kata" },
     "choices": [{ "id": "a", "text": "Melompat" }, { "id": "b", "text": "Duduk" }, { "id": "c", "text": "Tidur" }], "answer": "a"
   },
   {
-    "id": "mandarin_065", "category": "mandarin", "level": 3,
+    "id": "mandarin_065", "set": "forest", "category": "mandarin", "level": 3,
     "prompt": "Artinya apa, ya?", "audio_id": "quiz_mandarin_065",
     "display": { "kind": "speak", "text": "一起玩", "lang": "zh", "pinyin": "yì qǐ wán", "speak_audio_id": "quiz_mandarin_065_kata" },
     "choices": [{ "id": "a", "text": "Pulang ke rumah" }, { "id": "b", "text": "Bermain bersama" }, { "id": "c", "text": "Makan bersama" }], "answer": "b"

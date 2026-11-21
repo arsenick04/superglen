@@ -61,6 +61,7 @@ function collect() {
       const src = `src/data/quiz/${name}.json`;
       const cat = CAT_OF_QUIZ[q.id.split('_')[0]] || 'quiz_nino';
       if (q.audio_id && q.prompt) add({ id: q.audio_id, speaker: 'nino', lang: 'id', text: q.prompt, source: src, category: cat, recorded: q.source === 'recorded' });
+      if (q.set === 'forest' && q.audio_id && q.prompt) add({ id: `aara_${q.audio_id}`, speaker: 'aara', lang: 'id', text: q.prompt, source: src, category: 'quiz_aara', recorded: false });
       const d = q.display;
       if (d?.kind === 'speak' && d.speak_audio_id && d.text) {
         const zh = d.lang === 'zh';

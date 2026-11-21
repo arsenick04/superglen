@@ -50,6 +50,8 @@ export interface Question {
   display: Display;
   choices: [Choice, Choice, Choice];
   answer: ChoiceId;
+  /** Optional pool used by a story-specific challenge. */
+  set?: string;
 }
 
 /** A question as shown: the three choices in on-screen order (shuffled) and the position of the right one. */
@@ -66,6 +68,8 @@ export interface QuizRunOptions {
   /** Number of questions (default 3). */
   count?: number;
   reason?: QuizReason;
+  questionSet?: string;
+  promptSpeaker?: 'nino' | 'aara';
 }
 
 export interface StickerRef {

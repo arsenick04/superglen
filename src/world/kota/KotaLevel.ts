@@ -28,6 +28,7 @@ import { Chapter7Intro } from './Chapter7Intro';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
 import { AaraActor } from './Aara';
+import { AaraFollower } from './AaraFollower';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -83,6 +84,7 @@ export class KotaLevel implements Level {
   private letters: LetterHunt | null = null;
   private elangIntro: Chapter7Intro | null = null;
   private forestAara: AaraActor | null = null;
+  private forestAaraFollower: AaraFollower | null = null;
 
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
@@ -414,7 +416,8 @@ export class KotaLevel implements Level {
     if (state === 'forest_invite') {
       const home = this.glenHomeSpot();
       this.forestAara = new AaraActor(this.lit, ctx.dialog);
-      this.forestAara.place(home.x + 2.2, home.z + 1.2, home.yaw + Math.PI);
+      // Face Glen's front door while waiting, rather than looking out toward the road.
+      this.forestAara.place(home.x + 2.2, home.z + 1.2, home.yaw);
       this.forestAara.setLevel(3);
       ctx.root.add(this.forestAara.group);
       ctx.onDispose(() => this.forestAara?.dispose());
@@ -430,6 +433,10 @@ export class KotaLevel implements Level {
           this.forestAara?.emote('wave');
           await ctx.dialog.say({ id: 'forest_aara_home', speaker: 'aara', text: 'Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!' }, { lockControls: true });
           ctx.save.setInterlude('forest_lab');
+          if (this.forestAara) {
+            this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
+            this.forestAaraFollower.reset();
+          }
           const d = CITY_LAYOUT.lab.door;
           this.setGoal({ x: d.x, z: d.z });
           ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
@@ -438,6 +445,14 @@ export class KotaLevel implements Level {
       return;
     }
     if (state === 'forest_lab') {
+      if (!this.forestAara) {
+        this.forestAara = new AaraActor(this.lit, ctx.dialog);
+        this.forestAara.setLevel(3);
+        ctx.root.add(this.forestAara.group);
+        ctx.onDispose(() => this.forestAara?.dispose());
+        this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
+        this.forestAaraFollower.reset();
+      }
       const d = CITY_LAYOUT.lab.door;
       this.setGoal({ x: d.x, z: d.z });
       ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
@@ -580,6 +595,7 @@ export class KotaLevel implements Level {
     this.ch6?.fixedUpdate(dt);
     this.letters?.fixedUpdate();
     this.elangIntro?.fixedUpdate();
+    this.forestAaraFollower?.fixedUpdate(dt);
     this.d3?.fixedUpdate(dt);
     this.life?.fixedUpdate(dt);
     const p = this.ctx.player.position;
