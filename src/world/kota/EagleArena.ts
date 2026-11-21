@@ -43,9 +43,12 @@ export class EagleArena implements Level {
       if (ctx.save.data.slot?.level === 'battle-elang') ctx.save.setSlot(null);
     });
     this.boss = new EagleBoss(ctx, () => this.win());
+    ctx.game.preloadCinematic('elang');
     ctx.game.debugInfo.elangStage = 'fight';
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
+      // The city approach already played it; direct arena previews and resumed fights still get the introduction.
+      await ctx.game.playCinematic('elang');
       this.enterBattle();
       await ctx.dialog.say('elang_nino_lawan', { lockControls: true });
     });
