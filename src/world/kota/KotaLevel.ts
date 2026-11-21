@@ -279,10 +279,11 @@ export class KotaLevel implements Level {
     this.hud.show('Kota Botanica', 0xf2b632, true);
     this.setupHomeInterlude(arrival);
     if (!sandbox && (ctx.save.data.interlude === 'elang_bank' || ctx.save.data.interlude === 'elang_met')) {
+      ctx.game.preloadCinematic('elang');
       this.elangIntro = new Chapter7Intro(ctx, () => {
         this.hud.show('Elang Belang di atas Bank', 0x8bbdff, true);
         ctx.seq.run(async () => {
-          await ctx.dialog.say('elang_glen_melihat', { lockControls: true });
+          await ctx.game.playCinematic('elang');
           await ctx.game.loadLevel('battle-elang');
         });
       });

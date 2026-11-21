@@ -954,3 +954,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Elang bergantian menandai serangan sayap biru (bulu es) dan merah (bulu api), lalu meluncurkan tiga bulu ke posisi Glen. Bulu dapat dihindari atau ditangkis. Selama jeda setelah serangan, laser dari udara mengurangi bintang Elang. Kelelahan mengulang pertarungan dengan hati penuh.
 - Setelah Elang tenang, Glen kembali ke dekat Bank pada malam hari dan diarahkan pulang. Masuk rumah mengganti kota ke pagi. Progres menang dan tahap malam bertahan setelah refresh. Tautan `?chapter=7&battle=1` langsung ke arena dengan save sementara.
 - Build, check:reach, check:quiz, probe pratinjau, probe fase battle, dan diff check lulus. Browser masih diuji sendiri oleh pemilik. Dialog baru memakai suara cadangan perangkat sampai MP3 tersedia.
+
+## Video pembuka battle Elang — 21 November 2026
+
+- Video pemilik (10 detik, H.264/AAC, 1280×720) dipasang sebagai `cin_elang.mp4` sebelum battle Elang Belang. Klip diremux dengan indeks MP4 di awal agar bisa mulai lebih cepat saat di-stream.
+- Jalur normal dari Bank memutar video otomatis setelah Glen bertemu Elang, lalu langsung memuat arena malam. Tautan langsung ke arena dan refresh saat pertarungan tertunda juga memutar video sebelum battle aktif. Tombol Lewati, bilah hitam 16:9, dan peredaman musik game memakai pemutar sinematik yang sudah ada.
+- Build, pemeriksaan media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
