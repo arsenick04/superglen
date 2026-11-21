@@ -986,3 +986,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Sekali tekan mengaktifkan perisai hologram biru bulat selama tiga detik. Perisai melindungi dari seluruh arah, termasuk proyektil latihan dan serangan bos; tahan tombol tidak memperpanjang durasi.
 - Elang berpindah tempat hanya sebelum menyerang. Ia diam saat memberi tanda, melontarkan es/api, dan ketika terbuka untuk tembakan Glen. Bintang dan jumlah proyektil dikurangi, jeda menghindar dan membalas diperpanjang.
 - Build, check:reach, check:quiz, diff check lulus. Browser diuji pemilik. VO baru tertahan karena konektor ElevenLabs dapat membuat klip tetapi URL aset tidak dapat diunduh ke workspace (HTTP 403); tidak ada kredit tambahan dipakai untuk klip yang belum bisa dipasang.
+
+## Video kemenangan Elang dan tampilan sinematik penuh — 21 November 2026
+
+- Video pemilik dari Drive dipasang sesudah bintang terakhir Elang habis, sebelum dialog kemenangan Nino dan perjalanan pulang. Video diubah dari HEVC MOV 25 MB menjadi H.264/AAC MP4 7,4 MB, 1280×720, 17,1 detik dengan indeks MP4 di depan untuk Safari.
+- Seluruh video sinematik kini mengisi layar dengan `object-fit: cover`; bilah hitam atas/bawah pada pemutar dihapus. Tombol Lewati dan peredaman audio game tetap memakai pemutar yang sama.
+- Build, check:reach, check:quiz, ffprobe, dan diff check lulus. Browser tetap diuji pemilik.

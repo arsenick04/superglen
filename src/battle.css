@@ -1,10 +1,7 @@
-/* Cinematics are always presented on a black 16:9 stage. */
+/* Cinematics fill the screen on desktop and phones. */
 .cinematic-layer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000; }
 .cinematic-layer[hidden] { display: none; }
-.cinematic-video { width: min(100vw, 177.7778vh); height: min(100vh, 56.25vw); object-fit: contain; display: block; background: #000; }
-.cinematic-bar { position: absolute; left: 0; right: 0; height: 8vh; background: #000; pointer-events: none; }
-.cinematic-bar-top { top: 0; }
-.cinematic-bar-bottom { bottom: 0; }
+.cinematic-video { width: 100vw; height: 100vh; object-fit: cover; display: block; background: #000; }
 .cinematic-skip { position: absolute; z-index: 2; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); min-width: 88px; min-height: 44px; border: 2px solid rgba(255,255,255,.8); border-radius: 999px; color: #fff; background: rgba(0,0,0,.62); font: 800 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .cinematic-start { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%,-50%); min-width: 168px; min-height: 54px; padding: 10px 20px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: rgba(194,35,35,.9); box-shadow: 0 5px 20px rgba(0,0,0,.45); font: 800 18px system-ui,sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .cinematic-start[hidden] { display: none; }
