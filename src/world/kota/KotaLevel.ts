@@ -147,12 +147,14 @@ export class KotaLevel implements Level {
       this.spawn = { x: SNAKE_FIELD.x, y: 0, z: SNAKE_FIELD.z + 9, yaw: Math.PI };
     } else if (arrival === 'rakusVictory') {
       this.spawn = { x: RAKUS_ARENA.x, y: 0, z: RAKUS_ARENA.z, yaw: Math.PI };
-    } else if (arrival === 'elangVictory') {
+    } else if (arrival === 'elangVictory' || arrival === 'bankApproach') {
       const bank = CITY_LAYOUT.buildings.find((b) => b.kind === 'bank');
       if (bank) {
         const [fx, fz] = FACE_VEC[bank.face];
         const half = bank.face < 2 ? bank.d / 2 : bank.w / 2;
-        this.spawn = { x: bank.x + fx * (half + 5), y: bank.base, z: bank.z + fz * (half + 5), yaw: Math.atan2(-fx, -fz) };
+        // Preview starts outside the encounter so the player approaches the Bank naturally.
+        const distance = arrival === 'bankApproach' ? half + 20 : half + 5;
+        this.spawn = { x: bank.x + fx * distance, y: bank.base, z: bank.z + fz * distance, yaw: Math.atan2(-fx, -fz) };
       }
     } else if (arrival === 'homeMorning') {
       this.spawn = this.glenHomeSpot();

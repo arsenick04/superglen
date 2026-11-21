@@ -27,6 +27,7 @@ export type Arrival =
   | 'snakeVictory'
   | 'rakusVictory'
   | 'elangVictory'
+  | 'bankApproach'
   /** City: outside Glen's house on the next morning. */
   | 'homeMorning'
   /** City: in front of the old building's door on the hill, facing away from it. */
@@ -93,9 +94,8 @@ export interface StartPlan {
 
 export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewBattle) return { level: 'battle-curut' };
-  if (save.previewEagleBattle) return { level: 'battle-elang' };
   if (save.previewChapter === 2) return { level: 'bab2' };
-  if (save.previewChapter === 7) return { level: 'lab', arrival: 'labFromHangar' };
+  if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
   if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
   if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
   const where = save.data.where;
