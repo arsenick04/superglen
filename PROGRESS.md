@@ -999,3 +999,8 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Saat Glen pertama kali mendekati Aara di depan sekolah, video pertemuan diputar sebelum kuis bahasa Inggris. Dialog salam Glen/Aara yang sama dengan isi video tidak diulang. Klip diremux H.264/AAC 1280×720 (3,2 MB).
 - Alarm pertama di hanggar sebelum Curut juga mendapat bunyi alarm. Game audio dibisukan sejak pemutar mulai memuat video, sehingga musik/VO tidak bocor saat video mulai; dipulihkan ketika video selesai atau dilewati.
 - Build, check:reach, check:quiz, ffprobe media, dan diff check lulus. Browser tetap diuji pemilik.
+
+## Tautan uji alarm Elang — 21 November 2026
+
+- `?chapter=7&training=1` memulai latihan terbang lanjutan dengan save pratinjau di memori; setelah selesai, Glen kembali ke Lab sehingga alarm dan video Elang dapat diuji tanpa mengulang Chapter sebelumnya. Tautan `?chapter=7` tetap mulai mendekati Bank.
+- Build, probe isolasi save pratinjau, dan diff check lulus.

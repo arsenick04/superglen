@@ -16,6 +16,8 @@ Langsung ke arena Curut untuk mencoba injak-pantul: https://arsenick04.github.io
 
 Checkpoint mendekati Bank pada malam hari (dekati Elang di atas Bank untuk memutar video, lalu langsung masuk arena): https://arsenick04.github.io/superglen/?chapter=7&battle=1
 
+Mulai dari latihan terbang lanjutan untuk menguji alarm dan video Elang di Lab sesudah latihan: https://arsenick04.github.io/superglen/?chapter=7&training=1
+
 Chapter 8 belum tersedia. Ketuk layar mulai seperti biasa untuk mengaktifkan suara/kontrol. Chapter 3–7 tetap mencakup cerita dan perjalanan di dalam Chapter tersebut. Parameter `chapter` yang valid didahulukan dari `level`/`free`.
 
 Pengujian browser otomatis ditunda sesuai keputusan pemilik; jalur awal/save diverifikasi melalui probe non-browser, pemeriksaan tipe, dan build.
