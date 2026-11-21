@@ -14,7 +14,7 @@ interface Feather {
   active: boolean;
 }
 
-/** A gentle, readable airborne duel: alternating blue ice and red fire feather volleys. */
+/** An escalating aerial duel: telegraphed fire/ice bursts, then a clear recovery window. */
 export class EagleBoss {
   readonly visual = new EagleVisual();
   readonly aim = new THREE.Vector3();
@@ -35,10 +35,15 @@ export class EagleBoss {
   private timer: number = Combat.eagle.cooldown;
   private time = 0;
   private warnedGround = false;
+  private orbit = 0;
+  private burstLeft = 0;
+  private starHits = 0;
+  private readonly easy: boolean;
 
   constructor(private readonly ctx: LevelContext, private readonly onTamed: () => void) {
     const c = Combat.eagle;
-    this.maxStars = ctx.save.data.settings.easyFight ? c.starsEasy : c.stars;
+    this.easy = ctx.save.data.settings.easyFight;
+    this.maxStars = this.easy ? c.starsEasy : c.stars;
     this.stars = this.maxStars;
     ctx.root.add(this.visual.group);
     this.markMat = new THREE.MeshBasicMaterial({ color: 0x4dabf7, transparent: true, opacity: 0.65, depthWrite: false, side: THREE.DoubleSide });
@@ -46,7 +51,7 @@ export class EagleBoss {
     this.mark.visible = false;
     ctx.root.add(this.mark);
     const geo = new THREE.ConeGeometry(0.28, 0.9, 5);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < c.featherPool; i++) {
       const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x4dabf7 }));
       mesh.visible = false;
       ctx.root.add(mesh);
@@ -62,7 +67,9 @@ export class EagleBoss {
   reset(): void {
     this.stars = this.maxStars;
     this.phase = 'cooldown';
-    this.timer = Combat.eagle.cooldown;
+    this.timer = this.easy ? Combat.eagle.cooldownEasy : Combat.eagle.cooldown;
+    this.starHits = 0;
+    this.burstLeft = 0;
     this.wing = 'ice';
     this.target.enabled = false;
     this.mark.visible = false;
@@ -71,41 +78,47 @@ export class EagleBoss {
 
   fixedUpdate(dt: number, attacking: boolean): void {
     const c = Combat.eagle;
+    if (!attacking || this.phase === 'tamed') return;
     this.time += dt;
+    this.orbit += dt * c.orbitSpeed * (this.phase === 'recover' ? c.recoveryMotion : 1);
     const bird = this.visual.group.position;
-    bird.set(Math.sin(this.time * 0.52) * c.hoverSweepX, c.hoverY + Math.sin(this.time * 1.4) * 0.65, c.hoverZ + Math.sin(this.time * 0.4) * 1.5);
+    bird.set(Math.sin(this.orbit) * c.hoverSweepX, c.hoverY + Math.sin(this.orbit * 1.8) * c.hoverSweepY, c.hoverZ + Math.cos(this.orbit) * c.hoverSweepZ);
+    bird.y = Math.min(bird.y, c.flyHeight - c.aimRadius);
     this.aim.copy(bird);
     this.updateFeathers(dt);
-    if (!attacking || this.phase === 'tamed') return;
     this.timer -= dt;
     if (this.phase === 'cooldown' && this.timer <= 0) {
-      this.phase = 'warning';
-      this.timer = c.warning;
-      this.locked.copy(this.ctx.player.position);
-      this.markMat.color.setHex(this.wing === 'ice' ? 0x4dabf7 : 0xff644e);
-      this.mark.visible = true;
+      this.burstLeft = this.easy ? c.burstShotsEasy : c.burstShots[this.stage];
+      this.beginWarning();
     } else if (this.phase === 'warning') {
-      if (this.timer > c.warning * 0.45) this.locked.copy(this.ctx.player.position);
+      const duration = this.easy ? c.warningEasy : c.warning;
+      if (this.timer > duration * c.lockShare) this.locked.copy(this.ctx.player.position);
       this.mark.position.copy(this.locked);
-      this.mark.scale.setScalar(1 + (1 - this.timer / c.warning) * 0.8);
+      this.mark.scale.setScalar(1 + (1 - this.timer / duration) * 0.8);
       if (this.timer <= 0) {
         this.fire();
-        this.mark.visible = false;
-        this.phase = 'recover';
-        this.timer = c.recover;
-        this.target.enabled = true;
         this.volleys++;
         this.wing = this.wing === 'ice' ? 'fire' : 'ice';
+        if (--this.burstLeft > 0) this.beginWarning();
+        else {
+          this.mark.visible = false;
+          this.phase = 'recover';
+          this.timer = this.easy ? c.recoverEasy : c.recover;
+          this.target.enabled = true;
+          this.starHits = 0;
+        }
       }
     } else if (this.phase === 'recover' && this.timer <= 0) {
       this.target.enabled = false;
       this.phase = 'cooldown';
-      this.timer = c.cooldown;
+      this.timer = this.easy ? c.cooldownEasy : c.cooldown;
     }
   }
 
   update(): void {
-    this.visual.update(this.time, this.phase === 'warning' ? this.wing : null);
+    const bird = this.visual.group.position;
+    const player = this.ctx.player.position;
+    this.visual.update(this.time, this.phase === 'warning' ? this.wing : null, Math.atan2(player.x - bird.x, player.z - bird.z), this.phase === 'recover' ? 0 : Math.cos(this.orbit) * 0.25);
     if (this.mark.visible) this.mark.quaternion.copy(this.ctx.cameraRig.camera.quaternion);
   }
 
@@ -116,17 +129,36 @@ export class EagleBoss {
     for (const f of this.feathers) { f.active = false; f.mesh.visible = false; }
   }
 
+  private get stage(): number {
+    return Math.min(2, Math.floor((this.maxStars - this.stars) * 3 / this.maxStars));
+  }
+
+  private beginWarning(): void {
+    this.phase = 'warning';
+    this.timer = this.easy ? Combat.eagle.warningEasy : Combat.eagle.warning;
+    this.locked.copy(this.ctx.player.position);
+    this.markMat.color.setHex(this.wing === 'ice' ? 0x4dabf7 : 0xff644e);
+    this.mark.visible = true;
+  }
+
   private fire(): void {
     const c = Combat.eagle;
     const from = this.visual.group.position;
-    for (let i = 0; i < 3; i++) {
+    const count = this.easy ? c.featherCountEasy : c.featherCount;
+    const speed = this.easy ? c.featherSpeedEasy : c.featherSpeed + this.stage * c.featherSpeedPerStage;
+    for (let i = 0; i < count; i++) {
       const f = this.feathers.find((x) => !x.active);
       if (!f) break;
       f.active = true;
       f.age = 0;
-      f.pos.set(from.x + (this.wing === 'ice' ? -1.1 : 1.1), from.y, from.z);
-      this.direction.set(this.locked.x + (i - 1) * 1.1 - f.pos.x, this.locked.y + (i - 1) * 0.35 - f.pos.y, this.locked.z - f.pos.z).normalize();
-      f.velocity.copy(this.direction).multiplyScalar(c.featherSpeed);
+      f.pos.set(from.x + (this.wing === 'ice' ? -c.wingOffset : c.wingOffset), from.y, from.z);
+      // Fan spreads perpendicular to the shot, so dodging is readable from every camera angle.
+      this.direction.subVectors(this.locked, f.pos).normalize();
+      const spread = (i - (count - 1) / 2) * c.featherSpread;
+      const dx = this.locked.x + this.direction.z * spread - f.pos.x;
+      const dz = this.locked.z - this.direction.x * spread - f.pos.z;
+      this.direction.set(dx, this.locked.y - f.pos.y, dz).normalize();
+      f.velocity.copy(this.direction).multiplyScalar(speed);
       f.mesh.position.copy(f.pos);
       f.mesh.quaternion.setFromUnitVectors(this.up, this.direction);
       (f.mesh.material as THREE.MeshBasicMaterial).color.setHex(this.wing === 'ice' ? 0x4dabf7 : 0xff644e);
@@ -145,7 +177,7 @@ export class EagleBoss {
       if (f.age > Combat.eagle.featherLife || f.pos.y < 0.2) {
         f.active = false;
         f.mesh.visible = false;
-      } else if (f.pos.distanceTo(p) < Combat.eagle.featherRadius + 0.45) {
+      } else if (f.pos.distanceTo(p) < Combat.eagle.featherRadius + Combat.eagle.playerHitRadius) {
         const result = this.ctx.health.hurt(this.visual.group.position.x, this.visual.group.position.z);
         if (result === 'hit') this.hits++;
         if (result === 'blocked') this.blocks++;
@@ -164,6 +196,11 @@ export class EagleBoss {
       }
       return;
     }
+    this.starHits++;
+    if (this.starHits < (this.easy ? Combat.eagle.hitsPerStarEasy : Combat.eagle.hitsPerStar)) {
+      this.ctx.fx.sparkles.burst(this.aim.x, this.aim.y, this.aim.z, 12, 2, 0xffd23f);
+      return;
+    }
     this.stars--;
     this.ctx.fx.sparkles.burst(this.aim.x, this.aim.y, this.aim.z, 24, 4, 0xffd23f, { up: 0.5, life: 0.8, gravity: 1 });
     if (this.stars <= 0) {
@@ -172,7 +209,9 @@ export class EagleBoss {
     } else {
       this.target.enabled = false;
       this.phase = 'cooldown';
-      this.timer = Combat.eagle.cooldown;
+      this.timer = this.easy ? Combat.eagle.cooldownEasy : Combat.eagle.cooldown;
+      this.starHits = 0;
+      this.burstLeft = 0;
     }
   }
 }
