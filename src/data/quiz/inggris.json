@@ -838,5 +838,30 @@
       { "id": "c", "text": "four", "lang": "en" }
     ],
     "answer": "b"
+  },
+  {
+    "id": "inggris_061", "category": "inggris", "level": 1,
+    "prompt": "Apa bahasa Inggrisnya pohon?", "audio_id": "quiz_inggris_061", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "tree", "lang": "en" }, { "id": "b", "text": "chair", "lang": "en" }, { "id": "c", "text": "book", "lang": "en" }], "answer": "a"
+  },
+  {
+    "id": "inggris_062", "category": "inggris", "level": 1,
+    "prompt": "Apa bahasa Inggrisnya teman?", "audio_id": "quiz_inggris_062", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "family", "lang": "en" }, { "id": "b", "text": "friend", "lang": "en" }, { "id": "c", "text": "teacher", "lang": "en" }], "answer": "b"
+  },
+  {
+    "id": "inggris_063", "category": "inggris", "level": 2,
+    "prompt": "Kata mana yang berarti hutan?", "audio_id": "quiz_inggris_063", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "garden", "lang": "en" }, { "id": "b", "text": "market", "lang": "en" }, { "id": "c", "text": "forest", "lang": "en" }], "answer": "c"
+  },
+  {
+    "id": "inggris_064", "category": "inggris", "level": 2,
+    "prompt": "Apa bahasa Inggrisnya melompat?", "audio_id": "quiz_inggris_064", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "jump", "lang": "en" }, { "id": "b", "text": "sleep", "lang": "en" }, { "id": "c", "text": "eat", "lang": "en" }], "answer": "a"
+  },
+  {
+    "id": "inggris_065", "category": "inggris", "level": 3,
+    "prompt": "Kalimat mana yang berarti ayo bermain?", "audio_id": "quiz_inggris_065", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "Good night", "lang": "en" }, { "id": "b", "text": "Let's play", "lang": "en" }, { "id": "c", "text": "Thank you", "lang": "en" }], "answer": "b"
   }
 ]

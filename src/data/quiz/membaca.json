@@ -838,5 +838,30 @@
       { "id": "c", "text": "c" }
     ],
     "answer": "a"
+  },
+  {
+    "id": "baca_061", "category": "membaca", "level": 1,
+    "prompt": "Huruf pertama kata ini apa?", "audio_id": "quiz_baca_061", "display": { "kind": "text", "text": "hutan" },
+    "choices": [{ "id": "a", "text": "h" }, { "id": "b", "text": "u" }, { "id": "c", "text": "t" }], "answer": "a"
+  },
+  {
+    "id": "baca_062", "category": "membaca", "level": 1,
+    "prompt": "Kata mana yang cocok?", "audio_id": "quiz_baca_062", "display": { "kind": "text", "text": "Aara dan Glen adalah ..." },
+    "choices": [{ "id": "a", "text": "pohon" }, { "id": "b", "text": "teman" }, { "id": "c", "text": "jalan" }], "answer": "b"
+  },
+  {
+    "id": "baca_063", "category": "membaca", "level": 2,
+    "prompt": "Suku kata mana yang melengkapi kata ini?", "audio_id": "quiz_baca_063", "display": { "kind": "text", "text": "po - ..." },
+    "choices": [{ "id": "a", "text": "hon" }, { "id": "b", "text": "han" }, { "id": "c", "text": "hin" }], "answer": "a"
+  },
+  {
+    "id": "baca_064", "category": "membaca", "level": 2,
+    "prompt": "Kata mana yang berarti bergerak ke atas dari tanah?", "audio_id": "quiz_baca_064", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "berjalan" }, { "id": "b", "text": "melompat" }, { "id": "c", "text": "duduk" }], "answer": "b"
+  },
+  {
+    "id": "baca_065", "category": "membaca", "level": 3,
+    "prompt": "Kalimat mana yang ditulis dengan benar?", "audio_id": "quiz_baca_065", "display": { "kind": "none" },
+    "choices": [{ "id": "a", "text": "Glen bermain di hutan." }, { "id": "b", "text": "glen Bermain di hutan" }, { "id": "c", "text": "Glenbermain dihutan." }], "answer": "a"
   }
 ]
