@@ -9,6 +9,8 @@ import { registerTemplate, type Sh } from './CityMesher';
  *  - public/env/kenney.glb: Kenney CC0 kits (houses, shops, towers, trees, cars, street furniture), palette baked into vertex
  *    colours by scripts/env-kenney.mjs. Each model has a full mesh and (most) a simplified `@1` far LOD. Attributes: position,
  *    normal, color (linear), aMask (1 = repaintable accent: house roof / car paint, 0.5 = wall tinted per building, 0 = as baked).
+ *  - public/env/quaternius-nature.glb: a tiny texture-free subset of Quaternius Ultimate Stylized Nature. Its colours are baked
+ *    into vertices by scripts/quaternius-nature.py, so the four tree variants can still be merged into streamed city chunks.
  *  - public/env/buildings/*.glb: the owner's custom buildings (textured, PBR). public/env/buildings/manifest.json says which city
  *    building each one replaces (`kind`, or `glen` for Glen's house) and how its body sits inside the model (`body`, `yaw`).
  *
@@ -134,8 +136,8 @@ class CityModels {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
       const base = import.meta.env.BASE_URL;
-      const kenney = loader
-        .loadAsync(`${base}env/kenney.glb`)
+      const loadLibrary = (url: string): Promise<void> => loader
+        .loadAsync(url)
         .then((gltf) => {
           if (finished) return;
           const lods = new Map<string, THREE.BufferGeometry>();
@@ -157,6 +159,10 @@ class CityModels {
           }
         })
         .catch(() => undefined);
+      const libraries = Promise.all([
+        loadLibrary(`${base}env/kenney.glb`),
+        loadLibrary(`${base}env/quaternius-nature.glb`),
+      ]);
       const custom = fetch(`${base}env/buildings/manifest.json`)
         .then((r) => (r.ok ? (r.json() as Promise<{ buildings: Record<string, { file: string } & BuildingHint> }>) : null))
         .then((man) => {
@@ -191,7 +197,7 @@ class CityModels {
           );
         })
         .catch(() => undefined);
-      void Promise.all([kenney, custom]).then(() => {
+      void Promise.all([libraries, custom]).then(() => {
         if (!finished) this.ready = this.models.size > 0 || this.buildings.size > 0;
         done();
       });
