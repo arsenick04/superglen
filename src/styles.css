@@ -1491,7 +1491,7 @@ html.game-started .set-gear {
   left: calc(env(safe-area-inset-left) + 8px);
   width: 180px;
   height: 180px;
-  opacity: 0.6;
+  opacity: 0.88;
   border-radius: 14px;
   overflow: hidden;
   border: 0;

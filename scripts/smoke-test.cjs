@@ -7735,6 +7735,9 @@ async function settingsScenario(page, check, touch) {
 async function minimapScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
   await menuBoot(page, touch);
+  const intro = page.locator('.cinematic-skip:visible');
+  if (await intro.count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => window.__superglen.map.visible && !document.querySelector('.cinematic-layer:not([hidden])'));
   const m = await page.evaluate(() => {
     const e = document.querySelector('.minimap');
     const r = e.getBoundingClientRect();
