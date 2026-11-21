@@ -10,6 +10,8 @@
 - Link langsung: `?chapter=8`. Setelah tiga tingkat selesai, progres `forest-training` tersimpan dan Glen kembali ke kota.
 - Lulus: `npm run build`, reachability melalui `node --import tsx scripts/reachability.ts` (0 error/warning), `npm run check:quiz`, dan `git diff --check`. Browser/smoke diserahkan kepada pemilik sesuai permintaan pengujian manual.
 - Revisi dari tes iPhone: puncak visual daun kini tepat menyentuh collider sehingga Superglen berdiri di atas tajuk, bukan tenggelam; pijakan menengah/sulit diperlebar, kecepatan berjalan latihan diturunkan menjadi 76%, dan ketukan kedua di udara selalu menjadi double jump. Video kiriman baru disambung sesudah video Elang dikalahkan dalam satu pemutaran 27 detik agar tidak ada jeda musik/VO di antaranya.
+- Revisi alur: pagi hari Aara menunggu di depan rumah dan mengajak Glen berjalan ke Lab. Di dalam Lab Nino mengajak keduanya berlatih di hutan; setelah keluar, jalur hutan hanya dapat dibuka lewat tombol aksi di belakang gedung Barongsai tua. Preview `?chapter=8` memulai alur lengkap, sedangkan `?chapter=8&training=1` langsung masuk latihan.
+- Revisi kesulitan: jarak level 2 dan 3 dipendekkan menjadi sekitar 5–7 m, kenaikan penting level 3 tetap 2,4–2,5 m sehingga memerlukan double jump. Cakram kuning dihapus dan collider pijakan dibuat tak terlihat tepat di bawah tajuk daun. Pohon latar ditambah dari 52 menjadi 96 supaya hutan terasa lebih padat tanpa menambah rute wajib.
 
 ### Arena Curut Cemberut (17 November 2026): checkpoint siap uji
 
