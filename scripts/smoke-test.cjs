@@ -8472,13 +8472,22 @@ async function kotaD3Scenario(page, check, touch) {
 
   // ---- Map icons (mini map and full map) ----
   // Count the pixels of a colour in a window around a world spot (icons may overlap a landmark glyph a little).
-  const pix = (sel, x, z, kind) => page.evaluate(([sel, x, z, kind]) => {
+  const pix = (sel, x, z, kind) => page.evaluate(async ([sel, x, z, kind]) => {
     const cv = document.querySelector(sel);
-    const k = cv.width / 300;
+    const game = window.__superglen;
+    const map = game.map;
+    const mini = sel === '.minimap-base';
+    if (mini) {
+      game.teleportFeet(x + 7, 2, z);
+      await game.advanceAsync(4, false);
+    }
+    const k = (mini ? map.cacheSize : cv.width) / (2 * map.half);
+    const dx = mini ? cv.width / 2 - map.centerX : 0;
+    const dz = mini ? cv.height / 2 - map.centerZ : 0;
     const g = cv.getContext('2d');
     const w = Math.round(cv.width * 0.03);
-    const px = Math.round((x + 150) * k) - w;
-    const py = Math.round((z + 150) * k) - w;
+    const px = Math.round((x + map.half) * k + dx) - w;
+    const py = Math.round((z + map.half) * k + dz) - w;
     const d = g.getImageData(Math.max(0, px), Math.max(0, py), 2 * w + 1, 2 * w + 1).data;
     let n = 0;
     for (let i = 0; i < d.length; i += 4) {
