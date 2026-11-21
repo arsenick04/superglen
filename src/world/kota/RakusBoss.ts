@@ -1019,6 +1019,23 @@ export class RakusBoss {
     this.group.visible = false;
   }
 
+  /** The supplied victory film already shows his apology and the returned food. Match its finished state immediately. */
+  finishAfterCinematic(): void {
+    this.phase = 'gone';
+    this.vulnerable = false;
+    this.level = 0;
+    this.glow.visible = false;
+    this.ringOut.visible = this.ringFill.visible = false;
+    this.group.visible = false;
+    for (let i = 0; i < this.C.pileCount; i++) {
+      this.alive[i] = false;
+      this.pk[i] = 0;
+      this.flyT[i] = -1;
+      this.respawn[i] = 1e9;
+    }
+    this.syncTargets();
+  }
+
   /** Where the camera looks while he talks. */
   get headAt(): THREE.Vector3 {
     return this.aimPt;

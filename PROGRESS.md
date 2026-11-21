@@ -960,3 +960,9 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - Video pemilik (10 detik, H.264/AAC, 1280×720) dipasang sebagai `cin_elang.mp4` sebelum battle Elang Belang. Klip diremux dengan indeks MP4 di awal agar bisa mulai lebih cepat saat di-stream.
 - Jalur normal dari Bank memutar video otomatis setelah Glen bertemu Elang, lalu langsung memuat arena malam. Tautan langsung ke arena dan refresh saat pertarungan tertunda juga memutar video sebelum battle aktif. Tombol Lewati, bilah hitam 16:9, dan peredaman musik game memakai pemutar sinematik yang sudah ada.
 - Build, pemeriksaan media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Video kemenangan Tikus Rakus — 21 November 2026
+
+- Video pemilik tentang Tikus Rakus yang mengembalikan makanan dipasang segera sesudah bintang terakhirnya habis dan battle ditutup. Adegan permintaan maaf serta pengembalian makanan di game tidak diulang sesudah video; progres, sorak warga, dan pesan Nino untuk pulang pada malam hari tetap berjalan.
+- Klip 10 detik, H.264/AAC, 1280×720 diremux dengan metadata MP4 di awal. Pemutaran otomatis, bilah hitam, tombol Lewati, dan audio game yang meredup memakai pemutar sinematik yang sama.
+- Build, validasi media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
