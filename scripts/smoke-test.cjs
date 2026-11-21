@@ -7455,7 +7455,7 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
-/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen, nothing blocks him, perf holds. */
+/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen and provide solid, walkable surfaces. */
 async function kotaLifeScenario(page, check, touch) {
   const tag = touch ? 'touch' : 'desktop';
   const dir = process.env.UI_SHOTS || OUT;
@@ -7512,9 +7512,29 @@ async function kotaLifeScenario(page, check, touch) {
     return { gap, minGap, vStop, vGo: window.__life.agent(info.index).v };
   });
   check(`kota-life ${tag}: a car stops 2.5-5 m before Glen in its lane, never closer, and drives on when he steps aside`, !!stop && stop.vStop < 0.3 && stop.gap > 2.5 && stop.gap < 5 && stop.minGap > 2.5 && stop.vGo > 2, JSON.stringify(stop));
-  // Nothing blocks the player: walk across the avenue and along the road through the traffic.
-  const w = await kotaTravel(page, 50, -20, 900);
-  check(`kota-life ${tag}: Glen walks 70 m through the busy avenue crossing to the goal`, Math.hypot(w.x - 50, w.z + 20) < 2, JSON.stringify({ x: w.x.toFixed(1), z: w.z.toFixed(1) }));
+  const collision = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(52.5, 20);
+    g.advance(20, false);
+    const info = window.__life.carOnLane('z', 52.5, 20, 16);
+    if (!info) return null;
+    g.advance(360, false);
+    const car = window.__life.agent(info.index);
+    g.teleportFeet(car.x - 1.9, 0.12, car.z);
+    g.advance(3, false);
+    g.walkTo(car.x + 3, car.z);
+    g.advance(40, false);
+    const sideGap = car.x - g.player.x;
+    g.cancelWalk();
+
+    const parked = window.__life.agent(info.index);
+    g.teleportFeet(parked.x, 2.25, parked.z);
+    g.advance(70, false);
+    return { sideGap, feet: g.feetY, grounded: g.grounded };
+  });
+  check(`kota-life ${tag}: the car blocks Glen from the side and supports him on top`,
+    !!collision && collision.sideGap > 0.6 && collision.sideGap < 1.85
+      && collision.grounded && collision.feet > 1 && collision.feet < 2.1, JSON.stringify(collision));
   // Perf at the busiest spot and one screenshot of the busy city.
   const busy = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7735,47 +7755,49 @@ async function settingsScenario(page, check, touch) {
 async function minimapScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
   await menuBoot(page, touch);
+  const intro = page.locator('.cinematic-skip:visible');
+  if (await intro.count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => window.__superglen.map.visible && !document.querySelector('.cinematic-layer:not([hidden])'));
   const m = await page.evaluate(() => {
     const e = document.querySelector('.minimap');
     const r = e.getBoundingClientRect();
     const cs = getComputedStyle(e);
     return { w: r.width, h: r.height, op: parseFloat(cs.opacity), pe: cs.pointerEvents, hidden: e.hidden, canvases: e.querySelectorAll('canvas').length, d: window.__superglen.map };
   });
-  check(`minimap ${tag}: visible in the city, opacity < 1, ignores touches`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'none', JSON.stringify({ op: m.op, pe: m.pe }));
-  check(`minimap ${tag}: size ${touch ? '110-140' : '~180'} px, two canvases (static + marker)`, m.canvases === 2 && (touch ? m.w >= 110 && m.w <= 140 : m.w >= 170 && m.w <= 190), JSON.stringify({ w: m.w, h: m.h }));
+  check(`minimap ${tag}: visible and accepts clicks or taps`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'auto', JSON.stringify({ op: m.op, pe: m.pe }));
+  check(`minimap ${tag}: two canvases and correct display size`, m.canvases === 2 && (touch ? m.w === 80 : m.w === 180), JSON.stringify({ w: m.w, h: m.h }));
   await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}`);
-  // The marker follows the player; the static layer is not redrawn per frame.
-  const mk = () => page.evaluate(() => { const d = window.__superglen.map; const g = window.__superglen; return { x: d.markerX, y: d.markerY, size: d.size, half: d.half, st: d.staticDraws, md: d.markerDraws, px: g.player.x, pz: g.player.z }; });
+  const mk = () => page.evaluate(() => {
+    const d = window.__superglen.map;
+    return { x: d.markerX, y: d.markerY, cx: d.centerX, cz: d.centerZ, size: d.size, span: d.span, st: d.staticDraws, md: d.markerDraws, secret: d.secret };
+  });
   const a = await mk();
-  await page.evaluate(() => window.__superglen.placePlayer(-60, -70));
-  await sleep(1200);
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    game.placePlayer(-60, -70);
+    game.advance(1, false);
+  });
   const b = await mk();
-  const k = b.size / (b.half * 2);
-  check(`minimap ${tag}: the marker moves with the player and sits at the projected position`, Math.hypot(b.x - a.x, b.y - a.y) > 20 && Math.abs(b.x - (b.px + b.half) * k) <= 4 && Math.abs(b.y - (b.pz + b.half) * k) <= 4, JSON.stringify({ a, b }));
+  check(`minimap ${tag}: 72 m view follows Glen with a fixed centre marker`, b.span === 72 && Math.hypot(b.cx - a.cx, b.cz - a.cz) > 20 && b.x === b.size / 2 && b.y === b.size / 2, JSON.stringify({ a, b }));
   await sleep(800);
   const c = await mk();
-  check(`minimap ${tag}: the marker is not redrawn while standing still and the static layer stays as drawn`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
-  // Hidden building: not on the map until found.
-  const px0 = await page.evaluate(() => {
-    const g = window.__superglen;
-    const lx = g.levelInfo.labX, lz = g.levelInfo.labZ;
-    const d = g.map;
-    const k = d.size / (d.half * 2);
-    const cv = document.querySelector('.minimap-base');
-    const ctx = cv.getContext('2d');
-    const cx = Math.round((102 + d.half) * k), cy = Math.round((-104.5 + d.half) * k);
-    window.__labPx = [cx, cy];
-    const grab = () => Array.from(ctx.getImageData(cx - 3, cy - 3, 7, 7).data).join(',');
-    window.__grab = grab;
-    return { secret: d.secret, sig: grab(), lab: [lx, lz] };
+  check(`minimap ${tag}: idle frames reuse the cached map and marker`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
+  check(`minimap ${tag}: the old Barongsai building starts hidden`, c.secret === null, JSON.stringify(c.secret));
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    const { labX, labY, labZ } = game.levelInfo;
+    game.teleportFeet(labX, labY + 0.2, labZ + 1.2);
+    game.advance(8, false);
   });
-  check(`minimap ${tag}: the old Barongsai building is not on the map before it is found (no marker, nothing drawn at its spot)`, px0.secret === null, JSON.stringify(px0.secret));
-  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 2, z + 1.2); }, [100.5, 6, -100.4]);
-  await sleep(1500);
-  const px1 = await page.evaluate(() => ({ secret: window.__superglen.map.secret, sig: window.__grab(), found: window.__superglen.levelInfo.labFound, saved: JSON.parse(localStorage.getItem('superglen.save.v1')).discovered }));
-  check(`minimap ${tag}: after reaching its door the building is on the map (picture at its spot changed, discovery saved)`, px1.found === true && px1.secret !== null && px1.sig !== px0.sig && px1.saved.lab === true, JSON.stringify({ found: px1.found, secret: px1.secret, same: px1.sig === px0.sig, saved: px1.saved }));
+  const d = await mk();
+  check(`minimap ${tag}: discovering the building refreshes the map layer`, d.secret !== null && d.st > c.st, JSON.stringify(d));
   await page.evaluate(() => window.__superglen.placePlayer(0, 26));
   await sleep(900);
+
+  await menuHit(page, '.minimap', touch);
+  check(`minimap ${tag}: direct open pauses the game`, await page.evaluate(() => window.__superglen.map.fullOpen && window.__superglen.settings.frozen));
+  await menuHit(page, '.fullmap-close', touch);
+  check(`minimap ${tag}: direct close resumes exploration`, await page.evaluate(() => !window.__superglen.map.fullOpen && !window.__superglen.settings.frozen));
 
   // No overlap with the HUD and the touch controls (Superglen mode: laser, shield and the drum icons are up too).
   await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
@@ -8477,13 +8499,22 @@ async function kotaD3Scenario(page, check, touch) {
 
   // ---- Map icons (mini map and full map) ----
   // Count the pixels of a colour in a window around a world spot (icons may overlap a landmark glyph a little).
-  const pix = (sel, x, z, kind) => page.evaluate(([sel, x, z, kind]) => {
+  const pix = (sel, x, z, kind) => page.evaluate(async ([sel, x, z, kind]) => {
     const cv = document.querySelector(sel);
-    const k = cv.width / 300;
+    const game = window.__superglen;
+    const map = game.map;
+    const mini = sel === '.minimap-base';
+    if (mini) {
+      game.teleportFeet(x + 7, 2, z);
+      await game.advanceAsync(4, false);
+    }
+    const k = (mini ? map.cacheSize : cv.width) / (2 * map.half);
+    const dx = mini ? cv.width / 2 - map.centerX : 0;
+    const dz = mini ? cv.height / 2 - map.centerZ : 0;
     const g = cv.getContext('2d');
     const w = Math.round(cv.width * 0.03);
-    const px = Math.round((x + 150) * k) - w;
-    const py = Math.round((z + 150) * k) - w;
+    const px = Math.round((x + map.half) * k + dx) - w;
+    const py = Math.round((z + map.half) * k + dz) - w;
     const d = g.getImageData(Math.max(0, px), Math.max(0, py), 2 * w + 1, 2 * w + 1).data;
     let n = 0;
     for (let i = 0; i < d.length; i += 4) {
