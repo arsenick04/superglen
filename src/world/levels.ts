@@ -8,6 +8,7 @@ import { CurutArena } from './kota/CurutArena';
 import { JumpTrainingLevel } from './arena/JumpTrainingLevel';
 import { FlightTrainingLevel } from './arena/FlightTrainingLevel';
 import { EagleArena } from './kota/EagleArena';
+import { ForestTrainingLevel } from './arena/ForestTrainingLevel';
 
 /**
  * Level that loads when the URL has no (valid) `?level=<id>` and nothing is saved yet (Chapter 1 starts in the city).
@@ -25,6 +26,8 @@ export const LEVELS: Readonly<Record<string, LevelFactory>> = {
   'jump-training': () => new JumpTrainingLevel(),
   'flight-training': () => new FlightTrainingLevel(),
   'battle-elang': () => new EagleArena(),
+  /** Newly unlocked forest after Elang Belang: three tree-jumping courses with Nino and Aara. */
+  'forest-training': () => new ForestTrainingLevel(),
   /** Inside the old Barongsai building: the rest of Chapter 1, Nino's lab. */
   lab: () => new Bab1Level('lab'),
   bab2: () => new Bab2Level(),

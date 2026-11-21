@@ -425,9 +425,13 @@ export class KotaLevel implements Level {
       promptHeight: 1.7,
       enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home',
       onInteract: () => {
-        const next = ctx.save.data.interlude === 'elang_home' ? '' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        const next = ctx.save.data.interlude === 'elang_home' ? 'forest_training' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
         if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
         ctx.save.setInterlude(next);
+        if (next === 'forest_training') {
+          void ctx.game.loadLevel('forest-training');
+          return;
+        }
         setArrival('kota', 'homeMorning');
         void ctx.game.loadLevel('kota');
       },

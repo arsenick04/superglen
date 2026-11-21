@@ -97,6 +97,7 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewChapter === 2) return { level: 'bab2' };
   if (save.previewFlightTraining) return { level: 'flight-training' };
   if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
+  if (save.previewChapter === 8 || save.data.interlude === 'forest_training') return { level: 'forest-training' };
   if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
   if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
   const where = save.data.where;
