@@ -21,7 +21,11 @@ const until = (phase) => {
   for(let i=0;i<3000&&arena.phase!==phase;i++) arena.fixedUpdate(1/60);
   assert.equal(arena.phase, phase);
 };
-until('recover');assert.equal(arena.misses,1);assert.equal(arena.target.enabled,false);
+until('wind');
+const locked = arena.landing.clone();feet.x=1;arena.fixedUpdate(1/60);feet.x=0;
+assert(arena.landing.equals(locked),'warning must lock to the future impact, not chase Glen');
+assert(Math.abs(arena.alert.position.y-locked.y-.13)<1e-6,'warning sits on the crown');
+until('recover');assert.equal(arena.alert.visible,false);assert.equal(arena.misses,1);assert.equal(arena.target.enabled,false);
 until('wind');until('recover');assert.equal(arena.misses,2);
 until('open');assert.equal(arena.target.enabled,true);
 const stars=arena.stars;arena.hit();assert.equal(arena.stars,stars-1);assert.equal(arena.target.enabled,false);
