@@ -52,8 +52,8 @@
     "id": "bab1_glen_lab",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wah, lab rahasia!",
-    "delivery": "[amazed] Wah, lab rahasia!"
+    "text": "Wah, laboratorium rahasia!",
+    "delivery": "[amazed] Wah, laboratorium rahasia!"
   },
   {
     "id": "bab1_glen_tombol",
@@ -143,8 +143,8 @@
     "id": "bab5_glen_rayakan",
     "speaker": "glen",
     "lang": "id",
-    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
-    "delivery": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!"
+    "text": "Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!",
+    "delivery": "[excited] Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!"
   },
   {
     "id": "bab5_aara_rayakan",
@@ -269,8 +269,8 @@
     "id": "bab2_glen_enak",
     "speaker": "glen",
     "lang": "id",
-    "text": "Nyam, enak!",
-    "delivery": "[delighted] Nyam, enak!"
+    "text": "Yum! Enak!",
+    "delivery": "[delighted] Yum! Enak!"
   },
   {
     "id": "bab2_nino_alarm",
@@ -640,8 +640,8 @@
     "id": "kota_glen_ketemu",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ketemu! Ayo antar pulang.",
-    "delivery": "[excited] Ketemu! Ayo antar pulang."
+    "text": "Wah, ketemu! Ayo bawa pulang.",
+    "delivery": "[excited] Wah, ketemu! Ayo bawa pulang."
   },
   {
     "id": "kota_glen_semua",
@@ -780,8 +780,8 @@
     "id": "bab4_glen_taman",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ayo ke taman, kita selidiki!",
-    "delivery": "[brave] Ayo ke taman, kita selidiki!"
+    "text": "Ayo kita ke taman! Kita survei dikit!",
+    "delivery": "[brave] Ayo kita ke taman! Kita survei dikit!"
   },
   {
     "id": "bab4_aara_taman",
@@ -1018,8 +1018,8 @@
     "id": "bab4_glen_kenal",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aku kenal seseorang yang bisa membantu!",
-    "delivery": "[hopeful] Aku kenal seseorang yang bisa membantu!"
+    "text": "Aku tahu orang yang bisa membantu!",
+    "delivery": "[hopeful] Aku tahu orang yang bisa membantu!"
   },
   {
     "id": "combat_nino_semangat",
@@ -1074,8 +1074,8 @@
     "id": "bab5_glen_ajak",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
-    "delivery": "[excited] Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!"
+    "text": "Aara, ikut aku ke gedung tua. Ada temanku di sana!",
+    "delivery": "[excited] Aara, ikut aku ke gedung tua. Ada temanku di sana!"
   },
   {
     "id": "bab5_aara_ikut",
@@ -1095,8 +1095,8 @@
     "id": "bab5_glen_masuk",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
-    "delivery": "[cheerful] Ayo masuk, Aara. Tekan tombol tangan di pintu."
+    "text": "Ayo Aara, tekan tombol itu di pintu.",
+    "delivery": "[cheerful] Ayo Aara, tekan tombol itu di pintu."
   },
   {
     "id": "bab5_nino_halo",
@@ -1494,8 +1494,8 @@
     "id": "forest_glen_flight_broken",
     "speaker": "glen",
     "lang": "id",
-    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
-    "delivery": "[worried] Oh tidak, alat terbangku rusak! [determined] Aku harus melompat untuk menolong monyet-monyet itu!"
+    "text": "Aduh, alat terbangku rusak! Aku harus menolong monyet-monyet itu!",
+    "delivery": "[worried] Aduh, alat terbangku rusak! [determined] Aku harus menolong monyet-monyet itu!"
   },
   {
     "id": "forest_nino_rescue_ten",
@@ -1508,8 +1508,8 @@
     "id": "forest_glen_monkeys_safe",
     "speaker": "glen",
     "lang": "id",
-    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
-    "delivery": "[relieved] Semua monyet sudah aman! [determined] Sekarang kita harus mencari sumber api."
+    "text": "Monyet-monyet sudah aman! Kita harus padamkan api itu!",
+    "delivery": "[relieved] Monyet-monyet sudah aman! [determined] Kita harus padamkan api itu!"
   },
   {
     "id": "forest_aara_play",
@@ -1557,8 +1557,8 @@
     "id": "forest_glen_explain",
     "speaker": "glen",
     "lang": "id",
-    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
-    "delivery": "[surprised] Bukan aku! [earnest] Kami datang menolong monyet-monyet. [gently] Tenang dulu, Gorilla!"
+    "text": "Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!",
+    "delivery": "[surprised] Bukan! [earnest] Kami datang untuk menolong. [gently] Tenang dulu, Gorilla!"
   },
   {
     "id": "forest_nino_gorilla_pattern",

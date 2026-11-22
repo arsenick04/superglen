@@ -92,7 +92,7 @@ export class ForestRescueLevel implements Level {
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
       if (!ctx.save.isChapterDone('forest-rescue-canopy-intro')) {
-        await ctx.dialog.say({ id: 'forest_glen_flight_broken', speaker: 'glen', text: 'Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!' }, { lockControls: true });
+        await ctx.dialog.say({ id: 'forest_glen_flight_broken', speaker: 'glen', text: 'Aduh, alat terbangku rusak! Aku harus menolong monyet-monyet itu!' }, { lockControls: true });
         await ctx.dialog.say({ id: 'forest_nino_rescue_ten', speaker: 'nino', text: 'Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. Jangan menyentuh tanah! Kalau jatuh, penyelamatan diulang dari awal.' }, { lockControls: true });
         ctx.save.markChapterDone('forest-rescue-canopy-intro');
       }
@@ -109,7 +109,7 @@ export class ForestRescueLevel implements Level {
   private finish(): void {
     this.busy = true;this.ctx.save.markChapterDone('forest-rescue');
     this.ctx.seq.run(async () => {
-      await this.ctx.dialog.say({ id: 'forest_glen_monkeys_safe', speaker: 'glen', text: 'Semua monyet sudah aman! Sekarang kita harus mencari sumber api.' }, { lockControls: true });
+      await this.ctx.dialog.say({ id: 'forest_glen_monkeys_safe', speaker: 'glen', text: 'Monyet-monyet sudah aman! Kita harus padamkan api itu!' }, { lockControls: true });
       this.ctx.save.setWhere('battle-gorilla');
       await this.ctx.game.loadLevel('battle-gorilla');
     });

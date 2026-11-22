@@ -99,3 +99,7 @@ Tidak ada.
 ## Kalimat yang masih belum direkam
 
 Semua kalimat sudah ada.
+
+## Catatan: teks rekaman mengikuti anak
+
+Untuk suara berasal `recorded` (rekaman asli), teks layar/subtitle sekarang mengikuti yang benar-benar diucapkan anak, untuk id: bab1_glen_lab, bab2_glen_enak, bab5_glen_rayakan, bab4_glen_taman, bab4_glen_kenal, bab5_glen_ajak, bab5_glen_masuk, kota_glen_ketemu, forest_glen_flight_broken, forest_glen_monkeys_safe, forest_glen_explain. Tidak diubah: bab6_glen_siap, bab1_glen_gedung, bab1_glen_tertawa, bab3_glen_lucu2, bab4_glen_mulai (tidak jelas terdengar). bab2_glen_siap teksnya sudah sama.

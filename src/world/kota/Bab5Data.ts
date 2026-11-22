@@ -27,10 +27,10 @@ export const SNAKE_FIELD = (() => {
 export const FOLLOW = { gap: 2.6, speed: 2.8, maxSpeed: 4.5, teleportDist: 28 } as const;
 
 export const BAB5_LINES = {
-  glenAjak: { id: 'bab5_glen_ajak', speaker: 'glen', text: 'Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!' },
+  glenAjak: { id: 'bab5_glen_ajak', speaker: 'glen', text: 'Aara, ikut aku ke gedung tua. Ada temanku di sana!' },
   aaraIkut: { id: 'bab5_aara_ikut', speaker: 'aara', text: 'Gedung tua? Wah, seru! Aku ikut!' },
   aaraSinga: { id: 'bab5_aara_singa', speaker: 'aara', text: 'Wow! Kepala singa yang besar! Keren sekali!' },
-  glenMasuk: { id: 'bab5_glen_masuk', speaker: 'glen', text: 'Ayo masuk, Aara. Tekan tombol tangan di pintu.' },
+  glenMasuk: { id: 'bab5_glen_masuk', speaker: 'glen', text: 'Ayo Aara, tekan tombol itu di pintu.' },
   // The lab: Aara and Nino meet (8 lines).
   ninoHalo: { id: 'bab5_nino_halo', speaker: 'nino', text: 'Selamat datang, Glen! Siapa temanmu ini?' },
   aaraKagum: { id: 'bab5_aara_kagum', speaker: 'aara', text: 'Halo! Aku Aara. Wah, ruangan ini canggih sekali!' },
@@ -55,7 +55,7 @@ export const BAB5_LINES = {
   ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Keren, {nama}! Ular Melar sudah jinak.' },
   ninoTikus: { id: 'bab5_nino_tikus', speaker: 'nino', text: 'Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.' },
   ninoPanggilLab: { id: 'bab5_nino_panggil_lab', speaker: 'nino', text: 'Kembali ke Lab, {nama}! Kita rayakan kemenangan kalian bersama Aara.' },
-  glenRayakan: { id: 'bab5_glen_rayakan', speaker: 'glen', text: 'Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!' },
+  glenRayakan: { id: 'bab5_glen_rayakan', speaker: 'glen', text: 'Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!' },
   aaraRayakan: { id: 'bab5_aara_rayakan', speaker: 'aara', text: 'Hore! Kita bertiga hebat sekali!' },
   ninoPulang: { id: 'bab5_nino_pulang', speaker: 'nino', text: 'Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.' },
   ninoLatihanBesok: { id: 'bab5_nino_latihan_besok', speaker: 'nino', text: 'Selamat pagi! Siap latihan Lompat Barongsai?' },

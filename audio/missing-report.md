@@ -5,7 +5,7 @@ Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
 - missing-clip: 8
 - stale-text: 0
 - missing-in-dialog-json: 8
-- menunggu varian nama (tidak dibuat sekarang): 15
+- menunggu varian nama (tidak dibuat sekarang): 8
 - perlu dibuat sekarang: 0 kalimat, sekitar 0 karakter
 
 ## Perlu dibuat (urut prioritas)
@@ -31,6 +31,13 @@ Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
 | id | speaker | text | status | chars | src |
 |---|---|---|---|---|---|
 | demo_halo | nino | Halo! | missing-in-dialog-json | 5 | src/world/DemoLevel.ts:58 |
+| forest_gorilla_sorry | gorila | Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json | 72 | src/world/arena/GorillaArena.ts:171 |
+| forest_aara_quiz_ready | aara | Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}! | missing-in-dialog-json | 57 | src/world/bab1/Bab1Level.ts:203 |
+| forest_aara_quiz_complete | aara | Hebat! Lima pertanyaan berhasil kamu jawab, {nama}! | missing-in-dialog-json | 51 | src/world/bab1/Bab1Level.ts:207 |
+| forest_aara_sunset | aara | Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}! | missing-in-dialog-json | 60 | src/world/bab1/Bab1Level.ts:209 |
+| forest_nino_fire | nino | {nama}, lihat layar! Ada kebakaran besar di Hutan Botanica! | missing-in-dialog-json | 59 | src/world/bab1/Bab1Level.ts:232 |
+| forest_aara_home | aara | Pagi, {nama}! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru! | missing-in-dialog-json | 73 | src/world/kota/KotaLevel.ts:486 |
+| forest_nino_urgent | nino | {nama}, segera datang ke Lab! Ada keadaan genting di Hutan Botanica! | missing-in-dialog-json | 68 | src/world/kota/KotaLevel.ts:518 |
 
 ## Menunggu varian nama (sapaan Glen/Superglen oleh tokoh lain)
 
@@ -40,13 +47,6 @@ Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
 | elang_nino_alarm | nino | Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana! | missing-clip (waiting name) | 128 | audio/dialog.json |
 | elang_nino_menang | nino | Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen. | missing-clip (waiting name) | 92 | audio/dialog.json |
 | elang_nino_terbang | nino | Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun. | missing-clip (waiting name) | 100 | audio/dialog.json |
-| forest_aara_home | aara | Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru! | missing-in-dialog-json (waiting name) | 71 | src/world/kota/KotaLevel.ts:486 |
-| forest_aara_quiz_complete | aara | Hebat! Lima pertanyaan berhasil kamu jawab, Glen! | missing-in-dialog-json (waiting name) | 49 | src/world/bab1/Bab1Level.ts:207 |
-| forest_aara_quiz_ready | aara | Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen! | missing-in-dialog-json (waiting name) | 55 | src/world/bab1/Bab1Level.ts:203 |
-| forest_aara_sunset | aara | Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen! | missing-in-dialog-json (waiting name) | 58 | src/world/bab1/Bab1Level.ts:209 |
-| forest_gorilla_sorry | gorila | Maaf, Glen. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json (waiting name) | 70 | src/world/arena/GorillaArena.ts:169 |
-| forest_nino_fire | nino | Glen, lihat layar! Ada kebakaran besar di Hutan Botanica! | missing-in-dialog-json (waiting name) | 57 | src/world/bab1/Bab1Level.ts:232 |
-| forest_nino_urgent | nino | Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica! | missing-in-dialog-json (waiting name) | 66 | src/world/kota/KotaLevel.ts:518 |
 | rakus_morning_letters | nino | Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya! | missing-clip (waiting name) | 110 | audio/dialog.json |
 | rakus_nino_lab_arrival | nino | Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai. | missing-clip (waiting name) | 116 | audio/dialog.json |
 | rakus_nino_lab_invite | nino | Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi! | missing-clip (waiting name) | 104 | audio/dialog.json |

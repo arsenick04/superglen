@@ -79,7 +79,7 @@ export class GorillaArena implements Level {
       await ctx.seq.waitUntil(()=>startGate.started);
       if(ctx.save.isChapterDone('forest-gorilla')){this.phase='done';this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';return;}
       await ctx.dialog.say({id:'forest_gorilla_accuse',speaker:'gorila',text:'Kamu manusia yang membakar hutanku? Pergi dari sini!'},{lockControls:true});
-      await ctx.dialog.say({id:'forest_glen_explain',speaker:'glen',text:'Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!'},{lockControls:true});
+      await ctx.dialog.say({id:'forest_glen_explain',speaker:'glen',text:'Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!'},{lockControls:true});
       await ctx.dialog.say({id:'forest_nino_gorilla_pattern',speaker:'nino',text:'Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. Alat terbangmu masih rusak, jadi tetap di atas pohon!'},{lockControls:true});
       this.started=true;this.enterBattle();
     });
