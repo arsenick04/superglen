@@ -98,13 +98,17 @@ export function startPlanFor(save: SaveStore): StartPlan {
   if (save.previewFlightTraining) return { level: 'flight-training' };
   if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
   if (save.previewForestTraining || save.data.interlude === 'forest_training') return { level: 'forest-training' };
-  if (save.previewChapter === 8) return { level: 'kota', arrival: 'homeMorning' };
+  if (save.previewChapter === 8 && !save.previewForestQuiz && !save.previewForestFire) return { level: 'kota', arrival: 'homeMorning' };
   if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
   if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
   if (save.data.interlude === 'forest_invite') return { level: 'kota', arrival: 'homeMorning' };
   if (save.data.interlude === 'forest_lab') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'homeMorning' };
   if (save.data.interlude === 'forest_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
   if (save.data.interlude === 'forest_quiz' || save.data.interlude === 'forest_quiz_done') return { level: 'lab', arrival: 'labEntrance' };
+  if (save.data.interlude === 'forest_home') return { level: 'kota', arrival: 'hillDoor' };
+  if (save.data.interlude === 'forest_fire_invite') return { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'forest_fire_lab') return { level: 'lab', arrival: 'labEntrance' };
+  if (save.data.interlude === 'forest_fire_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
   if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };

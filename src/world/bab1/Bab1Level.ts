@@ -160,7 +160,7 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz' || ctx.save.data.interlude === 'forest_quiz_done'))) {
+      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz' || ctx.save.data.interlude === 'forest_quiz_done' || ctx.save.data.interlude === 'forest_fire_lab'))) {
         // Story returns begin beside Nino, not in the front-door corridor.
         this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
         this.atmosphere.snap(2);
@@ -206,8 +206,38 @@ export class Bab1Level implements Level {
           this.forestAara?.emote('cheer');
           await ctx.dialog.say({ id: 'forest_aara_quiz_complete', speaker: 'aara', text: 'Hebat! Lima pertanyaan berhasil kamu jawab, Glen!' }, { lockControls: true });
           ctx.save.markChapterDone('forest-quiz');
-          ctx.save.setInterlude('forest_quiz_done');
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_home');
+          await travel(ctx.game, 'kota', 'hillDoor');
         });
+        else if (ctx.save.data.interlude === 'forest_quiz_done') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_home');
+          await travel(ctx.game, 'kota', 'hillDoor');
+        });
+      }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'forest_fire_lab') {
+        ctx.game.preloadCinematic('forest-fire');
+        ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          const alert = document.createElement('div');
+          alert.className = 'story-alarm';
+          alert.textContent = '⚠ KEBAKARAN HUTAN';
+          ctx.ui.appendChild(alert);
+          ctx.onDispose(() => alert.remove());
+          ctx.sfx.alarm();
+          await ctx.seq.wait(1.1);
+          alert.remove();
+          await ctx.dialog.say({ id: 'forest_nino_fire', speaker: 'nino', text: 'Glen, lihat layar! Ada kebakaran besar di Hutan Botanica!' }, { lockControls: true });
+          await ctx.game.playCinematic('forest-fire');
+          await ctx.dialog.say({ id: 'forest_nino_hurry', speaker: 'nino', text: 'Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_fire_ready');
+          ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
+        });
+      }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'forest_fire_ready') {
+        ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
       }
       if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {
         ctx.game.preloadCinematic('elang-chaos');
