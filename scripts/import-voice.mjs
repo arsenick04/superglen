@@ -9,6 +9,7 @@
  * match to the speaker's lines in audio/dialog.json (normalised Levenshtein + token overlap, threshold --threshold 0.8),
  * then loudness-normalise (-16 LUFS, mono, 96 kbps mp3) to public/audio/<id>.mp3 and mark "source": "recorded" in audio/manifest.json.
  * Report: audio/import-report.md. Transcripts are cached (audio/.import-cache.json), so a real run after a dry run costs nothing extra.
+ * --by-number: a number in the file name ("glen 12.m4a") is the line number; the file becomes that line whatever the transcript says (score still reported).
  * --out=<dir> redirects every write (public/audio, audio/manifest.json, originals, report, cache) to a scratch root.
  */
 import fs from 'node:fs';
@@ -29,7 +30,8 @@ const THRESH = parseFloat(arg('threshold', '0.8'));
 const GAP = parseFloat(arg('gap', '0.8'));
 const MARGIN = 0.08;
 const NO_SPLIT = flag('no-split');
-if (!DIR) { console.error('Usage: npm run audio:import -- --dir=<folder> [--speaker=glen] [--dry-run] [--out=<dir>] [--threshold=0.8] [--gap=0.8] [--no-split]'); process.exit(1); }
+const BY_NUMBER = flag('by-number');
+if (!DIR) { console.error('Usage: npm run audio:import -- --dir=<folder> [--speaker=glen] [--dry-run] [--out=<dir>] [--threshold=0.8] [--gap=0.8] [--no-split] [--by-number]'); process.exit(1); }
 
 const AUDIO_EXT = /\.(m4a|mp3|wav|webm|ogg|oga|opus|aac|flac|caf|mp4|3gp|amr)$/i;
 const P = {
@@ -136,11 +138,11 @@ function measure(f, af = 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json') { co
 function encodeClip(segWav, outMp3) {
   const mid = path.join(tmp, 'mid.wav');
   ff(['-i', segWav, '-af', 'highpass=f=70,acompressor=threshold=-20dB:ratio=3:attack=5:release=120:makeup=1', '-ac', '1', '-ar', '44100', mid]);
-  const gain = -16 - parseFloat(measure(mid).input_i);
+  const pre = measure(mid), gain = -16 - parseFloat(pre.input_i);
   ff(['-i', mid, '-af', `volume=${gain.toFixed(2)}dB,alimiter=limit=0.84:level=disabled:attack=2:release=40,afade=t=in:d=0.01`, '-ac', '1', '-ar', '44100', '-c:a', 'libmp3lame', '-b:a', '96k', outMp3]);
   const q = measure(outMp3);
   const dur = parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', outMp3], { encoding: 'utf8' }).stdout);
-  return { lufs: +parseFloat(q.input_i).toFixed(1), peak: +parseFloat(q.input_tp).toFixed(1), dur: +dur.toFixed(2) };
+  return { lufs: +parseFloat(q.input_i).toFixed(1), peak: +parseFloat(q.input_tp).toFixed(1), dur: +dur.toFixed(2), pre_lufs: +parseFloat(pre.input_i).toFixed(1), pre_peak: +parseFloat(pre.input_tp).toFixed(1) };
 }
 
 // ---- main ---------------------------------------------------------------------------------------------------------------------
@@ -163,6 +165,20 @@ for (const f of files) {
   for (let i = 0; i < segs.length; i++) {
     const sf = path.join(tmp, `f${fi}_s${i}.wav`); cut(wav, segs[i].start, segs[i].end, sf);
     try { texts.push(await transcribe(sf)); } catch (e) { console.error(`  ${f.name} seg ${i + 1}: ${e.message}`); texts.push(null); }
+  }
+  const idByNum = new Map([...numOf].map(([id, n]) => [n, id]));
+  const nums = BY_NUMBER ? [...f.name.replace(/\.[^.]+$/, '').matchAll(/\d+/g)].map((m) => +m[0]) : [];
+  const forcedId = nums.length ? idByNum.get(nums[nums.length - 1]) : null;
+  if (forcedId && !texts.includes(null)) {
+    // separate sentences that clearly match different lines are kept apart; otherwise the whole file is one clip
+    const each = texts.map((t) => bestMatches(t)[0]);
+    const distinct = segs.length >= 2 && each.every((m) => m.score >= THRESH) && new Set(each.map((m) => m.id)).size === segs.length;
+    if (!distinct) {
+      const t = texts.join(' '), a = segs[0].start, b = segs[segs.length - 1].end;
+      const sc = similarity(norm(t), lineNorm.find((x) => x.d.id === forcedId).n);
+      takes.push({ id: forcedId, score: sc, dur: b - a, file: f.name, seg: 1, text: t, wav, a, b, fi, forced: true, merged: segs.length });
+      continue;
+    }
   }
   let prevIdx = -1;
   for (let i = 0; i < segs.length;) {
@@ -213,7 +229,7 @@ if (!DRY) {
     manifest[t.id] = { id: t.id, speaker: SPEAKER, source: 'recorded', original_file: t.file, transcript: t.text, match_score: +t.score.toFixed(3),
       bytes: fs.statSync(outMp3).size, duration: q.dur, lufs: q.lufs, peak_dbtp: q.peak, imported_at: new Date().toISOString(),
       normalized: 'loudnorm -16 LUFS, mono 44.1k 96k, highpass 70 Hz, light compression' };
-    results.push({ id: t.id, ...q });
+    results.push({ id: t.id, ...q }); t.q = q;
   }
   for (const d of dupes) d.alts.forEach((t, k) => { const seg = path.join(tmp, `alt_${d.id}_${k}.wav`); cut(t.wav, t.a, t.b, seg); ff(['-i', seg, '-c:a', 'flac', path.join(P.originals, 'alt', `${d.id}.alt${k + 1}.flac`)]); });
   fs.mkdirSync(path.dirname(P.manifest), { recursive: true });
@@ -230,6 +246,20 @@ L.push(`# Laporan impor suara: ${SPEAKER}${DRY ? ' (DRY RUN, tidak ada file ditu
 L.push(`Folder: \`${DIR}\` | file audio: ${files.length} | segmen cocok: ${takes.length} | baris unik cocok: ${chosen.length} dari ${dialog.length} | ambang: ${THRESH}`, '');
 L.push('## Cocok', '', '| No | Id | Skor | File | Transkrip |', '|---|---|---|---|---|');
 for (const t of [...chosen].sort((a, b) => numOf.get(a.id) - numOf.get(b.id))) L.push(`| ${numOf.get(t.id)} | ${t.id} | ${pct(t.score)} | ${t.file} #${t.seg} | ${t.text.replace(/\|/g, '/')} |`);
+L.push('', '## Tabel lengkap (semua kalimat)', '', '| No | Id | Teks yang diharapkan | Terdengar | Skor | Durasi (s) | LUFS asli -> akhir | Puncak akhir | Catatan |', '|---|---|---|---|---|---|---|---|---|');
+for (const d of [...dialog].sort((a, b) => numOf.get(a.id) - numOf.get(b.id))) {
+  const t = chosen.find((x) => x.id === d.id), mm = manifest[d.id];
+  if (!t && !(mm?.source === 'recorded')) { L.push(`| ${numOf.get(d.id)} | ${d.id} | ${d.text} | - | - | - | - | - | BELUM DIREKAM |`); continue; }
+  const sc = t ? t.score : mm.match_score, dur = t ? (t.q?.dur ?? t.dur) : mm.duration, heard = t ? t.text : mm.transcript, q = t?.q;
+  const fl = [];
+  if (sc < THRESH) fl.push(`SKOR RENDAH (< ${THRESH}): putuskan pakai teks baru atau rekam ulang`);
+  if (dur < 0.6) fl.push('TERLALU PENDEK (< 0,6 s)');
+  if (dur > 12) fl.push('TERLALU PANJANG (> 12 s)');
+  if (q && q.pre_peak >= -0.5) fl.push('KEMUNGKINAN CLIPPING');
+  if (q && q.pre_lufs < -35) fl.push('SANGAT PELAN (dikuatkan ' + (-16 - q.pre_lufs).toFixed(0) + ' dB)');
+  if (t?.merged > 1) fl.push(`${t.merged} potongan digabung`);
+  L.push(`| ${numOf.get(d.id)} | ${d.id} | ${d.text.replace(/\|/g, '/')} | ${String(heard).replace(/\|/g, '/')} | ${pct(sc)} | ${(+dur).toFixed(2)} | ${q ? q.pre_lufs + ' -> ' + q.lufs : (mm?.lufs ?? '-')} | ${q ? q.peak : (mm?.peak_dbtp ?? '-')} | ${fl.join('; ')} |`);
+}
 L.push('', '## Rekaman ganda (dipakai yang terbaik)', '');
 if (!dupes.length) L.push('Tidak ada.');
 for (const d of dupes) L.push(`- ${numOf.get(d.id)} ${d.id}: dipakai ${d.keep.file} #${d.keep.seg} (${pct(d.keep.score)}, ${d.keep.dur.toFixed(1)} s); cadangan: ${d.alts.map((t) => `${t.file} #${t.seg} (${pct(t.score)}, ${t.dur.toFixed(1)} s)`).join(', ')}${DRY ? '' : ' (disimpan di recorded-originals/' + SPEAKER + '/alt/)'}`);
