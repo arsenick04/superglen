@@ -1,0 +1,148 @@
+NASKAH REKAMAN GLEN / SUPERGLEN
+Baca kalimatnya saja. Nama file rekaman sebaiknya sama dengan ID.
+Jeda 1–2 detik sebelum dan sesudah kalimat; boleh 2 versi ekspresi.
+Catatan: inventaris deklarasi, bukan urutan pemutaran. Baris katalog yang tidak dirujuk kode dipisahkan di akhir; dialog sinematik/video tidak tercakup.
+
+DIALOG DARI KODE / ID YANG DIRUJUK
+
+[bab1_glen_dinding]
+Wow, dindingnya terbuka!
+Sumber: audio/dialog.json
+
+[bab1_glen_gedung]
+Wah, gedung Barongsai tua di atas bukit! Ada cahaya di dalam.
+Sumber: audio/dialog.json
+
+[bab1_glen_gelap]
+Gelap, ya. Nyalakan senter dulu.
+Sumber: audio/dialog.json
+
+[bab1_glen_lab]
+Wah, lab rahasia!
+Sumber: audio/dialog.json
+
+[bab1_glen_lompat]
+Ayo, kita lompat!
+Sumber: audio/dialog.json
+
+[bab1_glen_pagar]
+Ada celah di pagar. Aku bisa masuk!
+Sumber: audio/dialog.json
+
+[bab1_glen_panel]
+Apa ini? Ada panel yang menyala.
+Sumber: audio/dialog.json
+
+[bab1_glen_pulang]
+Hore, pulang sekolah! Eh, ada cahaya di atas bukit?
+Sumber: audio/dialog.json
+
+[bab1_glen_siapa]
+Kamu siapa?
+Sumber: audio/dialog.json
+
+[bab1_glen_superglen]
+Aku jadi Superglen!
+Sumber: audio/dialog.json
+
+[bab1_glen_tertawa]
+Hahaha, geli!
+Sumber: audio/dialog.json
+
+[bab1_glen_tombol]
+Ada tombol besar. Tekan, ah!
+Sumber: audio/dialog.json
+
+[bab2_glen_aduh]
+Aduh! Kepala kena atap!
+Sumber: audio/dialog.json
+
+[bab2_glen_enak]
+Nyam, enak!
+Sumber: audio/dialog.json
+
+[bab2_glen_siap]
+Superglen siap!
+Sumber: audio/dialog.json
+
+[bab3_glen_hei]
+Hei, jangan lari!
+Sumber: src/world/kota/Bab3Data.ts
+
+[bab3_glen_lucu2]
+Hihi, Curut Cemberutnya lucu sekali!
+Sumber: src/world/kota/Bab3Data.ts
+
+[bab3_glen_semua2]
+Semua Curut Cemberut sudah kabur!
+Sumber: src/world/kota/Bab3Data.ts
+
+[bab4_glen_kenal]
+Aku kenal seseorang yang bisa membantu!
+Sumber: src/world/kota/Bab4Data.ts
+
+[bab4_glen_kulit]
+Ini kulit ular yang ganti kulit! Besar sekali!
+Sumber: src/world/kota/Bab4Data.ts
+
+[bab4_glen_mau]
+Mau! Aku siap menjawab.
+Sumber: src/world/kota/Bab4Data.ts
+
+[bab4_glen_mulai]
+Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!
+Sumber: src/world/kota/Bab4Data.ts
+
+[bab4_glen_taman]
+Ayo ke taman, kita selidiki!
+Sumber: src/world/kota/Bab4Data.ts
+
+[bab5_glen_ajak]
+Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!
+Sumber: src/world/kota/Bab5Data.ts
+
+[bab5_glen_masuk]
+Ayo masuk, Aara. Tekan tombol tangan di pintu.
+Sumber: src/world/kota/Bab5Data.ts
+
+[bab5_glen_rayakan]
+Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!
+Sumber: src/world/kota/Bab5Data.ts
+
+[bab5_glen_super]
+Aara, ini rahasia. Aku adalah Superglen!
+Sumber: src/world/kota/Bab5Data.ts
+
+[bab5_glen_ular]
+Nino, lihat kulit ular ini. Besar sekali!
+Sumber: src/world/kota/Bab5Data.ts
+
+[bab6_glen_kembali]
+Hei, Tikus Rakus! Kembalikan makanan kota!
+Sumber: src/world/kota/Bab6Data.ts
+
+[bab6_glen_siap]
+Siap, Nino! Ayo ke gudang!
+Sumber: src/world/kota/Bab6Data.ts
+
+[elang_glen_berangkat]
+Aku akan terbang ke Bank dan menolong mereka!
+Sumber: audio/dialog.json
+
+[kota_glen_ketemu]
+Ketemu! Ayo antar pulang.
+Sumber: audio/dialog.json
+
+[kota_glen_semua]
+Sudah semua! Ayo kembali.
+Sumber: audio/dialog.json
+
+[src/world/DemoLevel.ts:81]
+Ayo kita main lagi!
+Sumber: src/world/DemoLevel.ts
+
+KATALOG LAMA — KONFIRMASI SEBELUM MEREKAM
+
+[elang_glen_melihat]
+Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!
+Sumber: audio/dialog.json

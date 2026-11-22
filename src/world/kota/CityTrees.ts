@@ -38,7 +38,7 @@ export function preloadCityTrees(): Promise<void> {
 }
 
 export function hasCityTree(tree: CityTree): boolean {
-  return !tree.far && (templates.get(tree.kind)?.length ?? 0) > 0;
+  return (templates.get(tree.kind)?.length ?? 0) > 0;
 }
 
 /** Reuse each textured mesh across nearby trees; the city owns all colliders. */
