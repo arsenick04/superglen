@@ -36,6 +36,7 @@ Model: `eleven_v4` (paling ekspresif yang tersedia di paket ini, 1 karakter = 1 
 | lina | Maya - Warm, Calm and Soft (`U3dExJoUNcmTY5H6GMuG`), Bu Lina penjual kue (D4 L5) | stability 0.3, similarity 0.8 | 0 |
 | rakus | Clowny - Funny and Cheerful (`UafGxvF2q1XMC9Qy4tPR`), Si Tikus Rakus, cempreng dan jenaka | stability 0.3, similarity 0.8 | +3 semiton |
 | ular | Ami - Expressive, Friendly and Clear (`oEOMTAySmTfDmVF6zZ2i`), Ular Melar, lucu dan mendesis | stability 0.25, similarity 0.8 | -1 semiton |
+| gorila | Bagas - Deep & Relaxed (`aJiaMo73BheNakP6EPev`), Gorilla Gembira, dalam dan lembut (2026-11-22) | stability 0.3, similarity 0.8 | -2 semiton |
 | aara | Kak Ceria - Cute Kids Storyteller (`d15jrIAARvF899pDoC6T`), Aara di Chapter 4 (D5 L5) | stability 0.3, similarity 0.8 | 0 |
 | misterius | Den - expressive, clear, smooth (`HmwgE8AfbDbaZpgAi4Bn`), Sosok Misterius, tenang dan hangat (D5 L5) | stability 0.45, similarity 0.8 | -1 semiton |
 | english | Josh - Teacher for Kids (`nzFihrBIvB34imQBuxub`), kata bahasa Inggris di quiz | stability 0.35 | 0 |

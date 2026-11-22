@@ -1867,7 +1867,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!",
-    "tts": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!",
+    "tts": "[excited] Level satu! [encouraging] Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. [cheerful] Lewati empat lingkaran besar!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1876,7 +1876,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
-    "tts": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
+    "tts": "[excited] Level dua! [encouraging] Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1885,7 +1885,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!",
-    "tts": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!",
+    "tts": "[excited] Level tiga! [determined] Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. [encouraging] Tetap tenang dan gunakan perisai!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1894,7 +1894,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
-    "tts": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
+    "tts": "[cheerful] Lintasan selesai! [encouraging] Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1903,7 +1903,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
-    "tts": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
+    "tts": "[curious] Sekarang hadapi mesin bola. [encouraging] Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1912,7 +1912,151 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!",
-    "tts": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!",
+    "tts": "[excited] Tiga level selesai! [proud] Glen sudah mahir terbang, membidik, dan bertahan di udara. [cheerful] Ayo kembali ke Lab!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_glen_flight_broken",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
+    "tts": "[worried] Oh tidak, alat terbangku rusak! [determined] Aku harus melompat untuk menolong monyet-monyet itu!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_rescue_ten",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. Jangan menyentuh tanah! Kalau jatuh, penyelamatan diulang dari awal.",
+    "tts": "[encouraging] Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. [serious] Jangan menyentuh tanah! [warm] Kalau jatuh, penyelamatan diulang dari awal.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_glen_monkeys_safe",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
+    "tts": "[relieved] Semua monyet sudah aman! [determined] Sekarang kita harus mencari sumber api.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_aara_play",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hutannya luas sekali! Ayo bermain lompat dari pohon ke pohon!",
+    "tts": "[excited] Hutannya luas sekali! [playful] Ayo bermain lompat dari pohon ke pohon!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_three",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada tiga lintasan: mudah, menengah, dan sulit. Selesaikan satu per satu, ya!",
+    "tts": "[cheerful] Ada tiga lintasan: mudah, menengah, dan sulit. [encouraging] Selesaikan satu per satu, ya!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_medium",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lintasan mudah selesai! Sekarang pijakannya lebih kecil dan lebih berjauhan.",
+    "tts": "[proud] Lintasan mudah selesai! [curious] Sekarang pijakannya lebih kecil dan lebih berjauhan.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_aara_hard",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Berikutnya lintasan sulit! Gunakan double jump untuk mencapai dahan yang tinggi.",
+    "tts": "[excited] Berikutnya lintasan sulit! [encouraging] Gunakan double jump untuk mencapai dahan yang tinggi.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_done",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.",
+    "tts": "[excited] Lima tingkat selesai! [warm] Ayo kembali ke Lab dan beristirahat bersama.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_gorilla_accuse",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Kamu manusia yang membakar hutanku? Pergi dari sini!",
+    "tts": "[angry] Kamu manusia yang membakar hutanku? [sad] Pergi dari sini!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_glen_explain",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
+    "tts": "[surprised] Bukan aku! [earnest] Kami datang menolong monyet-monyet. [gently] Tenang dulu, Gorilla!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_gorilla_pattern",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. Alat terbangmu masih rusak, jadi tetap di atas pohon!",
+    "tts": "[serious] Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. [encouraging] Alat terbangmu masih rusak, jadi tetap di atas pohon!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_glen_help_fire",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!",
+    "tts": "[warm] Tidak apa-apa, Gorilla. [determined] Ayo kita selamatkan hutan ini bersama!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_aara_lab",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kami sudah datang, Nino. Latihan apa hari ini?",
+    "tts": "[cheerful] Kami sudah datang, Nino. [curious] Latihan apa hari ini?",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_lab",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kita akan berlatih lompat pohon di Hutan Botanica! Keluar dan cari jalur di belakang gedung ini.",
+    "tts": "[excited] Kita akan berlatih lompat pohon di Hutan Botanica! [encouraging] Keluar dan cari jalur di belakang gedung ini.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_return",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lima lintasan selesai! Kalian sudah kembali dengan selamat.",
+    "tts": "[proud] Lima lintasan selesai! [warm] Kalian sudah kembali dengan selamat.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "forest_nino_hurry",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!",
+    "tts": "[urgent] Kita harus segera ke sana. [determined] Gunakan jalur di belakang gedung Barongsai!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -2461,7 +2605,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
-    "tts": "[curious] Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "tts": "[curious] Ada tiga monyet, lalu datang dua lagi. Jadi berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -2470,7 +2614,7 @@
     "speaker": "aara",
     "lang": "id",
     "text": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
-    "tts": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "tts": "[curious] Ada tiga monyet, lalu datang dua lagi. Jadi berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_aara"
   },
@@ -2497,7 +2641,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
-    "tts": "[cheerful] Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "tts": "[curious] Ada sembilan pisang. Dimakan tiga. Sisanya berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -2506,7 +2650,7 @@
     "speaker": "aara",
     "lang": "id",
     "text": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
-    "tts": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "tts": "[curious] Ada sembilan pisang. Dimakan tiga. Sisanya berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_aara"
   },
@@ -2533,7 +2677,7 @@
     "speaker": "nino",
     "lang": "id",
     "text": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
-    "tts": "[playful] Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "tts": "[playful] Glen melompati lima pohon, lalu tiga pohon. Semuanya berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
   },
@@ -2542,7 +2686,7 @@
     "speaker": "aara",
     "lang": "id",
     "text": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
-    "tts": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "tts": "[playful] Glen melompati lima pohon, lalu tiga pohon. Semuanya berapa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_aara"
   },
@@ -4405,7 +4549,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "树",
-    "tts": "[cheerful] 树",
+    "tts": "[cheerful] 树！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },
@@ -4486,7 +4630,7 @@
     "speaker": "mandarin",
     "lang": "zh",
     "text": "跳",
-    "tts": "[cheerful] 跳",
+    "tts": "[cheerful] 跳！",
     "source": "src/data/quiz/mandarin.json",
     "category": "speak_zh"
   },

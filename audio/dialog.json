@@ -1452,36 +1452,154 @@
     "id": "flight_nino_easy",
     "speaker": "nino",
     "lang": "id",
-    "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!"
+    "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!",
+    "delivery": "[excited] Level satu! [encouraging] Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. [cheerful] Lewati empat lingkaran besar!"
   },
   {
     "id": "flight_nino_medium",
     "speaker": "nino",
     "lang": "id",
-    "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola."
+    "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
+    "delivery": "[excited] Level dua! [encouraging] Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola."
   },
   {
     "id": "flight_nino_hard",
     "speaker": "nino",
     "lang": "id",
-    "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!"
+    "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!",
+    "delivery": "[excited] Level tiga! [determined] Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. [encouraging] Tetap tenang dan gunakan perisai!"
   },
   {
     "id": "flight_nino_laser",
     "speaker": "nino",
     "lang": "id",
-    "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian."
+    "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
+    "delivery": "[cheerful] Lintasan selesai! [encouraging] Tetap terbang dan tembak semua sasaran yang muncul bergantian."
   },
   {
     "id": "flight_nino_shield",
     "speaker": "nino",
     "lang": "id",
-    "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai."
+    "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
+    "delivery": "[curious] Sekarang hadapi mesin bola. [encouraging] Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai."
   },
   {
     "id": "flight_nino_done",
     "speaker": "nino",
     "lang": "id",
-    "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!"
+    "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!",
+    "delivery": "[excited] Tiga level selesai! [proud] Glen sudah mahir terbang, membidik, dan bertahan di udara. [cheerful] Ayo kembali ke Lab!"
+  },
+  {
+    "id": "forest_glen_flight_broken",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
+    "delivery": "[worried] Oh tidak, alat terbangku rusak! [determined] Aku harus melompat untuk menolong monyet-monyet itu!"
+  },
+  {
+    "id": "forest_nino_rescue_ten",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. Jangan menyentuh tanah! Kalau jatuh, penyelamatan diulang dari awal.",
+    "delivery": "[encouraging] Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. [serious] Jangan menyentuh tanah! [warm] Kalau jatuh, penyelamatan diulang dari awal."
+  },
+  {
+    "id": "forest_glen_monkeys_safe",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
+    "delivery": "[relieved] Semua monyet sudah aman! [determined] Sekarang kita harus mencari sumber api."
+  },
+  {
+    "id": "forest_aara_play",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hutannya luas sekali! Ayo bermain lompat dari pohon ke pohon!",
+    "delivery": "[excited] Hutannya luas sekali! [playful] Ayo bermain lompat dari pohon ke pohon!"
+  },
+  {
+    "id": "forest_nino_three",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada tiga lintasan: mudah, menengah, dan sulit. Selesaikan satu per satu, ya!",
+    "delivery": "[cheerful] Ada tiga lintasan: mudah, menengah, dan sulit. [encouraging] Selesaikan satu per satu, ya!"
+  },
+  {
+    "id": "forest_nino_medium",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lintasan mudah selesai! Sekarang pijakannya lebih kecil dan lebih berjauhan.",
+    "delivery": "[proud] Lintasan mudah selesai! [curious] Sekarang pijakannya lebih kecil dan lebih berjauhan."
+  },
+  {
+    "id": "forest_aara_hard",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Berikutnya lintasan sulit! Gunakan double jump untuk mencapai dahan yang tinggi.",
+    "delivery": "[excited] Berikutnya lintasan sulit! [encouraging] Gunakan double jump untuk mencapai dahan yang tinggi."
+  },
+  {
+    "id": "forest_nino_done",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.",
+    "delivery": "[excited] Lima tingkat selesai! [warm] Ayo kembali ke Lab dan beristirahat bersama."
+  },
+  {
+    "id": "forest_gorilla_accuse",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Kamu manusia yang membakar hutanku? Pergi dari sini!",
+    "delivery": "[angry] Kamu manusia yang membakar hutanku? [sad] Pergi dari sini!"
+  },
+  {
+    "id": "forest_glen_explain",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
+    "delivery": "[surprised] Bukan aku! [earnest] Kami datang menolong monyet-monyet. [gently] Tenang dulu, Gorilla!"
+  },
+  {
+    "id": "forest_nino_gorilla_pattern",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. Alat terbangmu masih rusak, jadi tetap di atas pohon!",
+    "delivery": "[serious] Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. [encouraging] Alat terbangmu masih rusak, jadi tetap di atas pohon!"
+  },
+  {
+    "id": "forest_glen_help_fire",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!",
+    "delivery": "[warm] Tidak apa-apa, Gorilla. [determined] Ayo kita selamatkan hutan ini bersama!"
+  },
+  {
+    "id": "forest_aara_lab",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kami sudah datang, Nino. Latihan apa hari ini?",
+    "delivery": "[cheerful] Kami sudah datang, Nino. [curious] Latihan apa hari ini?"
+  },
+  {
+    "id": "forest_nino_lab",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kita akan berlatih lompat pohon di Hutan Botanica! Keluar dan cari jalur di belakang gedung ini.",
+    "delivery": "[excited] Kita akan berlatih lompat pohon di Hutan Botanica! [encouraging] Keluar dan cari jalur di belakang gedung ini."
+  },
+  {
+    "id": "forest_nino_return",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lima lintasan selesai! Kalian sudah kembali dengan selamat.",
+    "delivery": "[proud] Lima lintasan selesai! [warm] Kalian sudah kembali dengan selamat."
+  },
+  {
+    "id": "forest_nino_hurry",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!",
+    "delivery": "[urgent] Kita harus segera ke sana. [determined] Gunakan jalur di belakang gedung Barongsai!"
   }
 ]

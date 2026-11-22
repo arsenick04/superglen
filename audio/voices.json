@@ -206,5 +206,15 @@
     "pitchSemitones": -1,
     "labels": "id, standard accent, young female, neutral, characters",
     "note": "L11b 2026-11-15: Ular Melar, lucu dan mendesis, tidak menakutkan; Ami (Voice Library) nada -1 semiton"
+  },
+  "gorila": {
+    "voice_id": "aJiaMo73BheNakP6EPev",
+    "name": "Bagas - Deep & Relaxed",
+    "model": "eleven_v4",
+    "stability": 0.3,
+    "similarity_boost": 0.8,
+    "pitchSemitones": -2,
+    "labels": "id, standard accent, deep, gentle, friendly",
+    "note": "Fase hutan 2026-11-22: Gorilla Gembira, dalam, hangat, lembut; sedih lalu gembira lewat tag penyampaian. Nada -2 semiton supaya terdengar besar tapi tidak menakutkan"
   }
 }

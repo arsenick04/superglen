@@ -16,6 +16,7 @@ Suara cerita dan soal dibuat dengan ElevenLabs (model `eleven_v4`, tag emosi sep
 | Dokter Ani | Citra - Gentle, Inviting and Calm | `RbNgJzKAV7jpYJNtCBpj` | Indonesia, perempuan muda, lembut |
 | Kak Bima | Aldo - Youth, Friendly, Natural | `H7dnu83omjrDrtfihMsb` | Indonesia, laki-laki muda, ceria |
 | Bu Lina (penjual kue pasar) | Maya - Warm, Calm and Soft | `U3dExJoUNcmTY5H6GMuG` | Indonesia, perempuan paruh baya, hangat |
+| Gorilla Gembira (Bab 8) | Bagas - Deep & Relaxed | `aJiaMo73BheNakP6EPev` | Indonesia, laki-laki, dalam dan lembut, nada -2 semiton (Voice Library, ditambahkan ke akun 2026-11-22) |
 | Si Tikus Rakus | Clowny - Funny and Cheerful | `UafGxvF2q1XMC9Qy4tPR` | Indonesia, laki-laki muda bernada tinggi jenaka, nada +3 semiton |
 | Ular Melar | Ami - Expressive, Friendly and Clear | `oEOMTAySmTfDmVF6zZ2i` | Indonesia, perempuan muda ramah dan ekspresif, nada -1 semiton, desisan lewat teks penyampaian |
 | Warga / kerumunan (Bab 6, "Hore!") | Defasyalala - Warm, Expressive and Clear (suara Mbak Lala) | `JaUVfDrFcfwGIsv8X2kN` | Indonesia, perempuan muda, bersemangat |
