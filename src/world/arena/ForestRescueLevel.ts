@@ -5,14 +5,19 @@ import { makeMaterials } from '../bab1/Batch';
 import { buildForestScenery } from './ForestScenery';
 import { Parkour } from '../../config/parkour';
 import { startGate } from '../../core/StartGate';
+import { ForestFireEffects } from './ForestFireEffects';
+import { ForestRescueSound } from './ForestRescueSound';
 
 /** First forest emergency: ten friendly monkeys wait on accessible tree platforms. */
 export class ForestRescueLevel implements Level {
   readonly id = 'forest-rescue';
-  readonly spawn = { x: 0, y: 0, z: 24, yaw: Math.PI };
+  readonly spawn = { x: -Parkour.forestRescue.spacing * 2, y: Parkour.forestRescue.canopyHeight, z: 24, yaw: Math.PI };
   private ctx!: LevelContext;
   private readonly monkeys: { group: THREE.Group; point: THREE.Vector3; saved: boolean }[] = [];
-  private readonly flames: THREE.Mesh[] = [];
+  private fire!: ForestFireEffects;
+  private sound!: ForestRescueSound;
+  private readonly feet = new THREE.Vector3();
+  private resetCooldown = 1;
   private hud!: HTMLDivElement;
   private time = 0;
   private busy = false;
@@ -27,20 +32,22 @@ export class ForestRescueLevel implements Level {
     sun.position.set(-12, 25, 10);
     ctx.root.add(sun);
     const kit = new Kit(ctx.physics, makeMaterials());
-    kit.solid([110, 0.4, 110], [0, -0.2, 0], 0x729657);
+    kit.solid([110, 0.4, 110], [0, -0.2, 0], 0x453a2c);
+    const landing = (x: number, z: number, top: number): void => {
+      kit.solidCyl(.3, top, [x, top/2, z], 0x895e40);
+      ctx.physics.addFixedCylinder(.16, Parkour.forestRescue.landingRadius, {x,y:top-.16,z});
+      for(let side=-1;side<=1;side++)kit.lit.sph(1.8,[x+side*.95,top-.45,z+(side%2)*.35],side===0?0x6fad47:0x497e37,[1,.3,1],1);
+    };
+    landing(this.spawn.x,this.spawn.z,this.spawn.y);
     const brown = new THREE.MeshStandardMaterial({ color: 0x98613c, roughness: 0.9 });
     const cream = new THREE.MeshStandardMaterial({ color: 0xffdbab });
     const eye = new THREE.MeshStandardMaterial({ color: 0x292526 });
     for (let i = 0; i < 10; i++) {
-      const x = (i % 5 - 2) * 9;
-      const z = 9 - Math.floor(i / 5) * 22;
-      const top = Parkour.glenApex * (i % 3 + 1) * 0.55;
-      // Wide steps ascend beside the trunk; each rise is below Glen's first jump.
-      for (let j = 0; j <= i % 3; j++) {
-        const y = Parkour.glenApex * (j + 1) * 0.55;
-        kit.solidCyl(1.7, 0.28, [x + (i % 3 - j) * 2.7, y - 0.14, z], 0x5e9d46);
-      }
-      kit.solidCyl(0.25, top, [x, top / 2, z], 0x895e40);
+      const column = i < 5 ? i : 9-i;
+      const x = (column-2)*Parkour.forestRescue.spacing;
+      const z = 24-(Math.floor(i/5)+1)*Parkour.forestRescue.spacing;
+      const top = Parkour.forestRescue.canopyHeight;
+      landing(x,z,top);
       const group = new THREE.Group();
       const part = (r: number, material: THREE.Material, x: number, y: number, z: number): void => {
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 7), material);
@@ -51,6 +58,8 @@ export class ForestRescueLevel implements Level {
       for (const side of [-1, 1]) {
         part(0.12, brown, side * 0.29, 0.8, 0);part(0.035, eye, side * 0.08, 0.8, 0.37);
         part(0.09, brown, side * 0.22, 0.12, 0.12);
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.055,.32,2,6),brown);
+        arm.position.set(side*.3,.6,0);arm.rotation.z=side*.65;arm.name='panic-arm';group.add(arm);
       }
       group.position.set(x, top, z);
       const saved = ctx.save.isChapterDone(`forest-monkey-${i}`);
@@ -67,14 +76,12 @@ export class ForestRescueLevel implements Level {
         },
       });
     }
-    for (let i = 0; i < 16; i++) {
-      const x = (i % 2 ? -1 : 1) * (24 + i % 4 * 3), z = 22 - i * 3;
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.2, 6), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff9143 : 0xffc259 }));
-      flame.position.set(x, 1.1, z);ctx.root.add(flame);this.flames.push(flame);
-    }
-    kit.build(ctx.root);buildForestScenery(ctx);
+    kit.build(ctx.root);buildForestScenery(ctx,true);
+    this.fire = new ForestFireEffects(ctx);this.sound = new ForestRescueSound(ctx);
+    ctx.audio.music.setScene('pertarungan');
     ctx.game.setPlayerMode('superglen', false);ctx.game.setTransformAllowed(false);
     ctx.game.setSkills({ laser: false, shield: true, fly: false });
+    ctx.player.preferAirJump=true;ctx.player.levelSpeedScale=.76;
     const bounds = { minX: -45, maxX: 45, minZ: -38, maxZ: 40 };
     ctx.player.flight.bounds = bounds;ctx.player.flight.groundBounds = bounds;
     this.hud = document.createElement('div');
@@ -83,10 +90,10 @@ export class ForestRescueLevel implements Level {
     this.refresh();
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
-      if (!ctx.save.isChapterDone('forest-rescue-intro')) {
+      if (!ctx.save.isChapterDone('forest-rescue-canopy-intro')) {
         await ctx.dialog.say({ id: 'forest_glen_flight_broken', speaker: 'glen', text: 'Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!' }, { lockControls: true });
-        await ctx.dialog.say({ id: 'forest_nino_rescue_ten', speaker: 'nino', text: 'Ada sepuluh monyet yang perlu ditolong. Naiki pijakan, dekati mereka, lalu tekan tombol tangan. Kamu pasti bisa, Glen!' }, { lockControls: true });
-        ctx.save.markChapterDone('forest-rescue-intro');
+        await ctx.dialog.say({ id: 'forest_nino_rescue_ten', speaker: 'nino', text: 'Selamatkan sepuluh monyet dari atas pohon. Dekati mereka, lalu tekan tangan. Jangan menyentuh tanah! Kalau jatuh, penyelamatan diulang dari awal.' }, { lockControls: true });
+        ctx.save.markChapterDone('forest-rescue-canopy-intro');
       }
     });
   }
@@ -107,7 +114,26 @@ export class ForestRescueLevel implements Level {
   }
   update(dt: number): void {
     this.time += dt;
-    for (let i = 0; i < this.flames.length; i++) this.flames[i].scale.y = 0.85 + Math.sin(this.time * 4 + i) * 0.16;
+    this.fire.update(dt);
+    this.sound.update(dt,startGate.started&&!this.monkeys.every(m=>m.saved));
+    for(let i=0;i<this.monkeys.length;i++) {
+      const m=this.monkeys[i];if(m.saved)continue;
+      m.group.position.y=m.point.y-.4+Math.abs(Math.sin(this.time*4+i*1.7))*.45;
+      m.group.rotation.y=Math.sin(this.time*2+i)*.4;
+      for(const part of m.group.children)if(part.name==='panic-arm')part.rotation.z=Math.sin(this.time*9+i)*.7;
+    }
+  }
+  fixedUpdate(dt: number): void {
+    if(!this.ctx.game.controlsEnabled||!startGate.started||this.ctx.save.isChapterDone('forest-rescue'))return;
+    this.resetCooldown=Math.max(0,this.resetCooldown-dt);
+    this.ctx.player.getFeetPosition(this.feet);
+    if(this.resetCooldown>0||this.feet.y>Parkour.forestRescue.resetFeetHeight)return;
+    this.ctx.save.data.chaptersDone=this.ctx.save.data.chaptersDone.filter(id=>!/^forest-monkey-\d+$/.test(id));
+    for(const m of this.monkeys){m.saved=false;m.group.visible=true;}
+    this.ctx.save.persist();
+    this.ctx.player.rhythm.reset();this.ctx.player.placeAt(this.spawn.x,this.spawn.y,this.spawn.z,Math.PI);
+    this.ctx.cameraRig.snapBehind(Math.PI);this.resetCooldown=1;this.refresh();
+    this.hud.textContent='Jatuh! Kembali ke pohon awal — 0/10';
   }
   dispose(): void {}
 }

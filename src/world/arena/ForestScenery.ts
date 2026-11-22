@@ -4,7 +4,7 @@ import type { LevelContext } from '../Level';
 import { treeMaterial } from '../kota/TreeMaterial';
 
 /** Small Quaternius grove behind the lesson clearing; course landings stay visible. */
-export function buildForestScenery(ctx: LevelContext): void {
+export function buildForestScenery(ctx: LevelContext, dense = false): void {
   let disposed = false;
   const geometries: THREE.BufferGeometry[] = [];
   const materials = new Set<THREE.Material>();
@@ -21,8 +21,13 @@ export function buildForestScenery(ctx: LevelContext): void {
     { name: 'Bush', height: 1.25, points: [[-10, 33], [11, 34], [-19, 35], [21, 36], [-25, 41], [27, 42]] },
     { name: 'Rock_1', height: 0.9, points: [[-8, 36], [8, 38], [-24, 35], [25, 35]] },
   ];
+  if (dense) for (let i = 0; i < 72; i++) {
+    const angle = i * 2.399, radius = 19 + i % 8 * 2.8;
+    plans[i % 2].points.push([Math.cos(angle) * radius, 18 + Math.sin(angle) * radius]);
+  }
   for (const plan of plans) {
-    void new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${plan.name}_upright.glb`).then(({ scene }) => {
+    const asset = dense && plan.name.includes('Tree') ? `${plan.name}_city` : plan.name;
+    void new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${asset}_upright.glb`).then(({ scene }) => {
       scene.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(scene);
       const scale = plan.height / Math.max(0.01, bounds.max.y - bounds.min.y);
@@ -60,7 +65,7 @@ export function buildForestScenery(ctx: LevelContext): void {
           matrix.copy(dummy.matrix);
           instances.setMatrixAt(index, matrix);
         });
-        instances.castShadow = true;
+        instances.castShadow = !dense;
         instances.receiveShadow = true;
         ctx.root.add(instances);
         ctx.onDispose(() => instances.dispose());
