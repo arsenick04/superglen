@@ -1046,3 +1046,9 @@ Rekaman pemilik setelah koreksi sumbu masih menunjukkan batang mendatar. Aset ki
 
 Daun kota/hutan memakai MeshStandardMaterial baru: opaque cutout alphaTest 0.15, DoubleSide dan shadowSide DoubleSide, anisotropy 4; batang opaque. Mengganti material Physical hasil impor BLEND dan alphaTest lama 0.5. Probe scripts/tree-render-probe.html memakai loader/instancing CityTrees dan shadow map; render Chromium lokal dari atas dan bawah memperlihatkan kanopi. Build dan pemeriksaan aset lulus. Kasus hilangnya daun pada Safari belum direproduksi di Chromium; hasil iPhone masih perlu konfirmasi. Probe tidak menguji seluruh alur game.
 
+# 22 November 2026 — cemara, naskah Glen, penyelamatan monyet
+
+PR cemara: pohon flag far kini ikut memakai Quaternius dalam radius renderer kota. Naskah public/recording/glen-dialogue.txt/json memuat inventaris deklarasi Glen plus katalog audio lama terpisah; dibuat ulang lewat scripts/export-glen-dialogue.mjs.
+
+Tahap hutan berikut: akses belakang gedung setelah alarm membuka forest-rescue. Sepuluh monyet menunggu pada pijakan bertingkat; dekati dan tekan tangan untuk menolong. Penghitung, panah tujuan dan progres tiap monyet disimpan (flag forest-monkey-0..9); refresh jalur normal kembali ke misi. Terbang dikunci dan dialog Glen menjelaskan kerusakannya. Setelah 10/10 ada penutup singkat; Gorilla Gembira dan pemadaman api belum termasuk tahap ini. Api dekoratif, belum menjadi mekanik bahaya. Model monyet sementara berupa bentuk membulat. Build, check:quiz dan reachability lulus; gameplay/touch diuji pemilik. Link tes langsung: ?level=forest-rescue (mode debug, gunakan link normal untuk menguji resume cerita). VO baru belum direkam.
+

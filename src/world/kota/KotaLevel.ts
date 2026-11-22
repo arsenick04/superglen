@@ -534,13 +534,18 @@ export class KotaLevel implements Level {
       marker.rotation.x = Math.PI / 2;
       marker.position.set(access.x, access.y + 0.08, access.z);
       ctx.root.add(marker);
-      if (state === 'forest_ready') ctx.interactions.add({
+      ctx.interactions.add({
         position: new THREE.Vector3(access.x, access.y, access.z),
         radius: 2.5,
         icon: 'hand',
         promptHeight: 1.8,
-        enabled: () => ctx.save.data.interlude === 'forest_ready',
+        enabled: () => ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_fire_ready',
         onInteract: () => {
+          if (ctx.save.data.interlude === 'forest_fire_ready') {
+            ctx.save.setWhere('forest-rescue');
+            void ctx.game.loadLevel('forest-rescue');
+            return;
+          }
           ctx.save.setInterlude('forest_training');
           void ctx.game.loadLevel('forest-training');
         },

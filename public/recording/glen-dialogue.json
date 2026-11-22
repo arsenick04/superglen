@@ -243,6 +243,18 @@
     "status": "Katalog audio — perlu konfirmasi penggunaan"
   },
   {
+    "id": "forest_glen_flight_broken",
+    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
+    "source": "src/world/arena/ForestRescueLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "forest_glen_monkeys_safe",
+    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
+    "source": "src/world/arena/ForestRescueLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
     "id": "kota_glen_ketemu",
     "speaker": "glen",
     "lang": "id",
