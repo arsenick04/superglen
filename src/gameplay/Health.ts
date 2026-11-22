@@ -106,10 +106,26 @@ export class Health {
         sh.emit('shieldBlock', { x, y: p.y, z });
         return 'blocked';
     }
+    this.player.knock(-dx, -dz, Combat.hurt.knockSpeed, Combat.hurt.knockTime);
+    this.loseHeart();
+    return 'hit';
+  }
+
+  /**
+   * Glen fell off a platform: one heart (same path as a hit: stars, boing, safe time, HUD), no push, the shield does not
+   * count. Ignored while safe or resting. At zero hearts the usual exhaustion/rest follows.
+   */
+  fall(): HurtResult {
+    if (this.invuln > 0 || this.calm > 0 || this.exhaustTimer >= 0) return 'ignored';
+    this.loseHeart();
+    return 'hit';
+  }
+
+  private loseHeart(): void {
+    const p = this.player.position;
     this.hits++;
     const left = this.hearts - 1;
     this.invuln = Combat.hurt.invuln;
-    this.player.knock(-dx, -dz, Combat.hurt.knockSpeed, Combat.hurt.knockTime);
     this.fx.stars.show(this.player.visualPosition, 0.85, 1.3);
     this.fx.sparkles.burst(p.x, p.y, p.z, 10, 2.6, 0xffe14d, { up: 0.5, life: 0.6, gravity: 3 });
     this.synth.boing();
@@ -122,7 +138,6 @@ export class Health {
       this.save.setHearts(left);
     }
     this.paint();
-    return 'hit';
   }
 
   /** Nothing can hurt Glen for `seconds` (no blinking): the entrance shot of a fight. */
@@ -218,6 +233,7 @@ export class Health {
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       },
       hurt: (x: number, z: number) => self.hurt(x, z),
+      fall: () => self.fall(),
       face: (yaw: number) => self.player.turnTo(yaw),
       heal: (n: number) => self.heal(n),
       fill: () => self.fill(),

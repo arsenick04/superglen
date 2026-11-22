@@ -43,6 +43,7 @@ export class GorillaArena implements Level {
   private maxStars: number = C.stars;
   private started = false;
   private lastExhaustions = 0;
+  private safe = new THREE.Vector3();
   private modelReady = false;
 
   build(ctx: LevelContext): void {
@@ -70,8 +71,9 @@ export class GorillaArena implements Level {
     const bounds={minX:-C.arenaRadius,maxX:C.arenaRadius,minZ:-C.arenaRadius,maxZ:C.arenaRadius};
     ctx.player.flight.bounds=bounds;ctx.player.flight.groundBounds=bounds;
     ctx.health.setShown(true);this.lastExhaustions=ctx.health.exhaustions;
-    this.hud=document.createElement('div');this.hud.style.cssText='position:absolute;top:23%;left:50%;transform:translateX(-50%);background:#fff9;padding:8px 14px;border-radius:16px;pointer-events:none;color:#513b29';
+    this.hud=document.createElement('div');this.hud.className='gorilla-hint';
     ctx.ui.append(this.hud);ctx.onDispose(()=>{this.hud.remove();ctx.health.setShown(false);});
+    this.safe.set(this.spawn.x,this.spawn.y,this.spawn.z);
     this.reset();
     ctx.seq.run(async()=>{
       await ctx.seq.waitUntil(()=>startGate.started);
@@ -120,7 +122,16 @@ export class GorillaArena implements Level {
     if(ctx.health.exhaustions!==this.lastExhaustions){this.lastExhaustions=ctx.health.exhaustions;this.reset();this.enterBattle();return;}
     if(ctx.battle.entering)return;
     ctx.player.getFeetPosition(this.feet);
-    if(this.feet.y<P.resetFeetHeight){this.reset();ctx.player.placeAt(this.spawn.x,this.spawn.y,this.spawn.z,Math.PI);ctx.cameraRig.snapBehind(Math.PI);return;}
+    if(this.feet.y<P.resetFeetHeight){
+      // A fall costs one heart and puts Glen back on the last safe canopy; the Gorilla's stars and chain stay.
+      ctx.health.fall();
+      ctx.player.placeAt(this.safe.x,this.safe.y,this.safe.z,Math.PI);ctx.cameraRig.snapBehind(Math.PI);return;
+    }
+    if(ctx.player.grounded)for(const perch of this.perches){
+      if(Math.abs(this.feet.y-perch.y)<.3&&Math.hypot(this.feet.x-perch.x,this.feet.z-perch.z)<P.radius-.4){this.safe.copy(perch);break;}
+    }
+    const forced=ctx.game.debugInfo.gorillaForceStars;// test hook: set the energy once
+    if(typeof forced==='number'){this.stars=forced;delete ctx.game.debugInfo.gorillaForceStars;}
     this.timer-=dt;
     if(this.phase==='retreat'){
       const t=Math.min(1,1-this.timer/C.retreatTime);this.boss.position.lerpVectors(this.from,this.landing,t);this.boss.position.y+=Math.sin(t*Math.PI)*C.leapArc*.6;
@@ -157,7 +168,7 @@ export class GorillaArena implements Level {
   private win(): void {
     const ctx=this.ctx;ctx.battle.exit(true);ctx.audio.music.setScene('jelajah');ctx.save.markChapterDone('forest-gorilla');
     ctx.seq.run(async()=>{
-      await ctx.dialog.say({id:'forest_gorilla_sorry',speaker:'gorila',text:'Maaf, Glen. Aku salah paham. Ternyata kamu datang untuk menolong kami.'},{lockControls:true});
+      await ctx.dialog.say({id:'forest_gorilla_sorry',speaker:'gorila',text:'Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami.'},{lockControls:true});
       await ctx.dialog.say({id:'forest_glen_help_fire',speaker:'glen',text:'Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!'},{lockControls:true});
       this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';
     });
@@ -177,7 +188,7 @@ export class GorillaArena implements Level {
     if(this.alert.visible)this.alert.material.opacity=.28+.58*(.5+.5*Math.sin(this.visualTime*16));
     this.aim.copy(this.boss.position);this.aim.y+=C.height*.6;
     this.boss.rotation.y=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
-    if(this.phase!=='done')this.hud.textContent=`Energi Gorilla: ${this.stars}/${this.maxStars} — `+(this.phase==='open'?'Sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`);
+    if(this.phase!=='done'){const t=this.phase==='open'?'Sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`;if(this.hud.textContent!==t)this.hud.textContent=t;}
   }
   dispose(): void {}
 }
