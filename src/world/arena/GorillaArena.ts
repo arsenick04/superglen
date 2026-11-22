@@ -10,6 +10,7 @@ import { enemyModels } from '../kota/EnemyModels';
 import { buildForestScenery } from './ForestScenery';
 import { ForestFireEffects } from './ForestFireEffects';
 import { ForestRescueSound } from './ForestRescueSound';
+import { poseGorillaArms } from './GorillaPose';
 
 const C = Combat.gorilla, P = Parkour.gorillaCanopy;
 type Phase = 'wait' | 'wind' | 'leap' | 'retreat' | 'recover' | 'open' | 'done';
@@ -26,7 +27,9 @@ export class GorillaArena implements Level {
   private readonly feet = new THREE.Vector3();
   private readonly perches: THREE.Vector3[] = [];
   private target!: Target;
-  private alert!: THREE.Sprite;
+  private alert!: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+  private armDrop = { value: 1.05 };
+  private visualTime = 0;
   private hud!: HTMLDivElement;
   private fire!: ForestFireEffects;
   private sound!: ForestRescueSound;
@@ -55,10 +58,8 @@ export class GorillaArena implements Level {
     kit.build(ctx.root);buildForestScenery(ctx,true);
     this.fire=new ForestFireEffects(ctx);this.sound=new ForestRescueSound(ctx);
     ctx.root.add(this.boss);this.installModel();
-    const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;
-    const paint=canvas.getContext('2d')!;paint.fillStyle='#ffbd44';paint.font='bold 58px sans-serif';paint.textAlign='center';paint.fillText('!',32,55);
-    this.alert=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),depthTest:false,toneMapped:false}));
-    this.alert.scale.set(1.4,1.4,1);this.alert.visible=false;ctx.root.add(this.alert);
+    this.alert=new THREE.Mesh(new THREE.CircleGeometry(C.hitRadius,48),new THREE.MeshBasicMaterial({color:0xff2525,transparent:true,opacity:.7,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-2}));
+    this.alert.rotation.x=-Math.PI/2;this.alert.visible=false;this.alert.renderOrder=3;ctx.root.add(this.alert);
     this.maxStars=ctx.save.data.settings.easyFight?C.starsEasy:C.stars;this.stars=this.maxStars;
     this.target=ctx.targets.add({id:'gorilla',position:()=>this.aim,radius:C.targetRadius,enabled:false,onHit:()=>this.hit()});
     ctx.game.setPlayerMode('superglen',false);ctx.game.setTransformAllowed(false);
@@ -85,7 +86,9 @@ export class GorillaArena implements Level {
       return;
     }
     for(const child of this.boss.children)if(child instanceof THREE.Mesh)child.geometry.dispose();
-    this.boss.clear();this.boss.add(new THREE.Mesh(geometry,enemyModels.material('gorilla_gembira')!.clone()));this.modelReady=true;
+    const material=enemyModels.material('gorilla_gembira')!.clone();
+    this.armDrop=poseGorillaArms(geometry,material,C.height);
+    this.boss.clear();this.boss.add(new THREE.Mesh(geometry,material));this.modelReady=true;
   }
   private reset(): void {
     this.boss.position.copy(this.perches[1]);this.phase='wait';this.timer=C.cooldown;
@@ -100,7 +103,7 @@ export class GorillaArena implements Level {
     for(const perch of this.perches){const d=Math.hypot(player.x-perch.x,player.z-perch.z);if(d<best){best=d;closest=perch;}}
     const dx=player.x-closest.x,dz=player.z-closest.z,d=Math.hypot(dx,dz),k=d>0?Math.min(1,(P.radius-.5)/d):0;
     this.landing.set(closest.x+dx*k,closest.y,closest.z+dz*k);
-    this.alert.position.copy(this.landing);this.alert.position.y+=2;
+    this.alert.position.copy(this.landing);this.alert.position.y+=.13;
   }
   private retreat(): void {
     let farthest=this.perches[0],best=-1;const player=this.ctx.player.position;
@@ -153,6 +156,11 @@ export class GorillaArena implements Level {
   }
   update(dt: number): void {
     if(!this.modelReady)this.installModel();this.fire.update(dt);this.sound.update(dt,false);
+    this.visualTime+=dt;
+    const drop=this.phase==='leap'||this.phase==='retreat'?.45:this.phase==='wind'?.75:1.1;
+    this.armDrop.value=THREE.MathUtils.lerp(this.armDrop.value,drop,Math.min(1,dt*8));
+    this.boss.rotation.x=this.phase==='wind'?.12:this.phase==='open'?.07:0;
+    if(this.alert.visible)this.alert.material.opacity=.28+.58*(.5+.5*Math.sin(this.visualTime*16));
     this.aim.copy(this.boss.position);this.aim.y+=C.height*.6;
     this.boss.rotation.y=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
     if(this.phase!=='done')this.hud.textContent=this.phase==='open'?'Gorilla beristirahat — sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`;

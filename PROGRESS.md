@@ -1070,3 +1070,7 @@ Setelah 10 monyet diselamatkan, pindah ke battle-gorilla di kanopi 3×3. Gorilla
 
 Build, check:quiz dan reachability lulus. check-gorilla-pattern.mjs menguji gate dua serangan gagal, satu laser per kesempatan dan reset hitungan ketika Glen kena. Gameplay, kamera kanopi dan FPS/touch belum diuji sesuai permintaan pemilik.
 
+# 22 November 2026 — pose Gorilla dan area sasaran
+
+Lengan model statis T-pose sekarang diberi bobot bahu halus melalui vertex shader: turun saat diam/istirahat dan terangkat sedikit ketika melompat, transisi halus; badan condong ketika bersiap. Peringatan ! diganti bidang merah penuh berkedip di kanopi (radius sama dengan hitRadius), tetap terkunci di sasaran dari windup sampai mendarat. Build dan pemeriksaan pola lulus, termasuk tes penanda tidak mengejar Glen. Render Chromium lokal pose diam/melompat diperiksa; gameplay iPhone belum diuji.
+
