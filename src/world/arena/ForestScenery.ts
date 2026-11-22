@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { LevelContext } from '../Level';
+import { treeMaterial } from '../kota/TreeMaterial';
 
 /** Small Quaternius grove behind the lesson clearing; course landings stay visible. */
 export function buildForestScenery(ctx: LevelContext): void {
@@ -35,7 +36,8 @@ export function buildForestScenery(ctx: LevelContext): void {
         geometry.translate(-center.x, -bounds.min.y, -center.z);
         geometry.scale(scale, scale, scale);
         geometries.push(geometry);
-        const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
+        const mapped = Array.isArray(object.material) ? object.material.map(treeMaterial) : treeMaterial(object.material);
+        const meshMaterials = Array.isArray(mapped) ? mapped : [mapped];
         for (const material of meshMaterials) {
           materials.add(material);
           if (material instanceof THREE.MeshStandardMaterial) {
@@ -43,13 +45,13 @@ export function buildForestScenery(ctx: LevelContext): void {
             if (material.map) textures.add(material.map);
             if (/Leaves/i.test(material.name)) {
               material.transparent = false;
-              material.alphaTest = 0.5;
+              material.alphaTest = 0.15;
               material.side = THREE.DoubleSide;
             }
           }
         }
         if (disposed) return;
-        const instances = new THREE.InstancedMesh(geometry, object.material, plan.points.length);
+        const instances = new THREE.InstancedMesh(geometry, mapped, plan.points.length);
         plan.points.forEach(([x, z], index) => {
           dummy.position.set(x, 0, z);
           dummy.rotation.set(0, index * 2.399, 0);

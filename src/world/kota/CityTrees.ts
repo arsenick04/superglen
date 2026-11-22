@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { LevelContext } from '../Level';
 import { CITY_LAYOUT, treePlatforms, type CityTree } from './CityData';
+import { treeMaterial } from './TreeMaterial';
 
 interface TreePart { geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[] }
 const templates = new Map<string, TreePart[]>();
@@ -27,17 +28,8 @@ export function preloadCityTrees(): Promise<void> {
           geometry.applyMatrix4(object.matrixWorld);
           geometry.translate(-center.x, -bounds.min.y, -center.z);
           geometry.scale(1 / Math.max(size.x, size.z), 1 / size.y, 1 / Math.max(size.x, size.z));
-          for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-            if (material instanceof THREE.MeshStandardMaterial) {
-              material.roughness = 0.85;
-              if (/Leaves/i.test(material.name)) {
-                material.transparent = false;
-                material.alphaTest = 0.5;
-                material.side = THREE.DoubleSide;
-              }
-            }
-          }
-          parts.push({ geometry, material: object.material });
+          const material = Array.isArray(object.material) ? object.material.map(treeMaterial) : treeMaterial(object.material);
+          parts.push({ geometry, material });
         });
         if (!frozen) templates.set(kind, parts);
       } catch (error) { console.warn(`City tree unavailable: ${kind}`, error); }
