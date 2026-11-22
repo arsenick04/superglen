@@ -6,6 +6,7 @@ import { envModels } from './world/kota/EnvModels';
 import { cityModels } from './world/kota/CityModels';
 import { preloadSky } from './world/kota/Sky';
 import { enemyModels } from './world/kota/EnemyModels';
+import { preloadCityTrees } from './world/kota/CityTrees';
 import { compatibilityMode, isPlayStationBrowser } from './core/Platform';
 
 function showFatal(err: unknown): void {
@@ -46,6 +47,7 @@ async function boot(): Promise<void> {
   // Do not reveal procedural/blocky character placeholders on the first playable frame.
   // If a GLB genuinely fails, Avatar still keeps its safe fallback instead of blocking startup forever.
   await characterModels.load();
+  await preloadCityTrees();
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
   const game = new Game(container);

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CityDressing } from './CityDressing';
+import { CityTrees } from './CityTrees';
 import { applySky } from './Sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
@@ -95,6 +96,7 @@ export class KotaLevel implements Level {
   private sun!: THREE.DirectionalLight;
   private hemi!: THREE.HemisphereLight;
   private dressing!: CityDressing;
+  private trees!: CityTrees;
   private follower: ShadowFollower | null = null;
   private readonly sunOffset = new THREE.Vector3(30, 45, 18);
   private glimmer!: THREE.Mesh;
@@ -224,6 +226,8 @@ export class KotaLevel implements Level {
     this.dressing = new CityDressing(CITY_LAYOUT, root);
     ctx.onDispose(() => this.dressing.dispose());
     this.dressing.update(this.spawn.x, this.spawn.z, true);
+    this.trees = new CityTrees(ctx);
+    this.trees.update(this.spawn.x, this.spawn.z);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);
@@ -672,6 +676,7 @@ export class KotaLevel implements Level {
     this.t += dt;
     this.streamer.update(p.x, p.z);
     this.dressing.update(p.x, p.z);
+    this.trees.update(p.x, p.z);
     if (this.follower) this.follower.follow(p);
     else {
       this.sun.position.copy(p).add(this.sunOffset);

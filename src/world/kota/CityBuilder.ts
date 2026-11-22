@@ -6,6 +6,7 @@ import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
 import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
+import { hasCityTree } from './CityTrees';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -735,6 +736,12 @@ function drawProps(B: Builder, L: CityLayout): void {
     const hv = hsh(t.x, t.z, 2);
     const yaw = hv * 6.283;
     const platforms = treePlatforms(t);
+    if (hasCityTree(t)) {
+      // Imported tree supplies trunk and foliage; keep the climbable branch
+      // steps explicit so their visuals remain aligned with the shared physics.
+      for (const { center, size } of platforms.slice(0, -1)) ch.lit.add(Sh.Body, center, size, 0x946140);
+      continue;
+    }
     if (platforms.length) {
       const crown = platforms[4];
       const top = crown.center[1] + crown.size[1] / 2;

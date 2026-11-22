@@ -1030,3 +1030,7 @@ Pengendara sepeda/motor memakai bentuk membulat dan roda motor bulat; warna kuli
 
 Empat aset asli (pohon rimbun, cemara, semak, batu) dikonversi ke GLB dengan tekstur WebP 512 px, total sekitar 1 MB. Grove contoh ada di belakang tempat berkumpul di latihan hutan, bisa dibuka dengan `?chapter=8&training=1`. Menggunakan instancing dan batang ber-collision; lintasan latihan tetap sama. Build, check:quiz dan reachability lulus. Browser/visual/performa belum diuji sesuai permintaan pemilik; perlu mencoba tekstur daun dan bayangan di iPhone. Warga belum memakai paket karakter manusia impor.
 
+# 22 November 2026 — pohon Quaternius di seluruh kota
+
+Pohon round/pine non-far di seluruh tata letak kota kini memakai GLB Quaternius bertekstur. Versi kota disederhanakan lewat scripts/build-city-trees.mjs, dimuat sebelum kota dibangun; kegagalan unduh mempertahankan pohon lama. Render instanced mencakup radius 85 m di sekitar Glen, diperbarui setelah bergerak 3 m. Hutan tepi jauh tetap memakai layer skyline lama. Pijakan cabang dan seluruh collider/rute berasal dari CityData, tanpa perubahan. Build, check:quiz dan reachability lulus. Pengujian browser/visual/FPS ditunda sesuai permintaan pemilik; coba jalan dari sekolah ke perumahan dan pasar, lalu memanjat pohon. Model warga impor tetap tugas terpisah.
+
