@@ -7,13 +7,14 @@ import { Parkour } from '../../config/parkour';
 import { startGate } from '../../core/StartGate';
 import { ForestFireEffects } from './ForestFireEffects';
 import { ForestRescueSound } from './ForestRescueSound';
+import { RescueMonkey } from './RescueMonkey';
 
 /** First forest emergency: ten friendly monkeys wait on accessible tree platforms. */
 export class ForestRescueLevel implements Level {
   readonly id = 'forest-rescue';
   readonly spawn = { x: -Parkour.forestRescue.spacing * 2, y: Parkour.forestRescue.canopyHeight, z: 24, yaw: Math.PI };
   private ctx!: LevelContext;
-  private readonly monkeys: { group: THREE.Group; point: THREE.Vector3; saved: boolean }[] = [];
+  private readonly monkeys: { group: THREE.Group; point: THREE.Vector3; saved: boolean; avatar: RescueMonkey }[] = [];
   private fire!: ForestFireEffects;
   private sound!: ForestRescueSound;
   private readonly feet = new THREE.Vector3();
@@ -46,7 +47,7 @@ export class ForestRescueLevel implements Level {
       const column = i < 5 ? i : 9-i;
       const x = (column-2)*Parkour.forestRescue.spacing;
       const z = 24-(Math.floor(i/5)+1)*Parkour.forestRescue.spacing;
-      const top = Parkour.forestRescue.canopyHeight;
+      const top = Parkour.forestRescue.canopyHeight + Parkour.forestRescue.heightOffsets[i];
       landing(x,z,top);
       const group = new THREE.Group();
       const part = (r: number, material: THREE.Material, x: number, y: number, z: number): void => {
@@ -64,7 +65,7 @@ export class ForestRescueLevel implements Level {
       group.position.set(x, top, z);
       const saved = ctx.save.isChapterDone(`forest-monkey-${i}`);
       group.visible = !saved;ctx.root.add(group);
-      const monkey = { group, point: new THREE.Vector3(x, top + 0.4, z), saved };
+      const monkey = { group, point: new THREE.Vector3(x, top + 0.4, z), saved, avatar: new RescueMonkey(group,ctx) };
       this.monkeys.push(monkey);
       ctx.interactions.add({ position: monkey.point, radius: 2, icon: 'hand', promptHeight: 1.5,
         enabled: () => !monkey.saved && !this.busy,
@@ -118,6 +119,7 @@ export class ForestRescueLevel implements Level {
     this.sound.update(dt,startGate.started&&!this.monkeys.every(m=>m.saved));
     for(let i=0;i<this.monkeys.length;i++) {
       const m=this.monkeys[i];if(m.saved)continue;
+      m.avatar.update(dt);
       m.group.position.y=m.point.y-.4+Math.abs(Math.sin(this.time*4+i*1.7))*.45;
       m.group.rotation.y=Math.sin(this.time*2+i)*.4;
       for(const part of m.group.children)if(part.name==='panic-arm')part.rotation.z=Math.sin(this.time*9+i)*.7;
