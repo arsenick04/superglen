@@ -21,7 +21,7 @@ export function buildForestScenery(ctx: LevelContext): void {
     { name: 'Rock_1', height: 0.9, points: [[-8, 36], [8, 38], [-24, 35], [25, 35]] },
   ];
   for (const plan of plans) {
-    void new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${plan.name}.glb`).then(({ scene }) => {
+    void new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${plan.name}_upright.glb`).then(({ scene }) => {
       scene.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(scene);
       const scale = plan.height / Math.max(0.01, bounds.max.y - bounds.min.y);
@@ -30,7 +30,7 @@ export function buildForestScenery(ctx: LevelContext): void {
       const dummy = new THREE.Object3D();
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
-        const geometry = object.geometry;
+        const geometry = object.geometry.clone();
         geometry.applyMatrix4(object.matrixWorld);
         geometry.translate(-center.x, -bounds.min.y, -center.z);
         geometry.scale(scale, scale, scale);

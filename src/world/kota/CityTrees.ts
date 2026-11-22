@@ -15,7 +15,7 @@ export function preloadCityTrees(): Promise<void> {
     void Promise.all(['round', 'pine'].map(async (kind) => {
       const file = kind === 'round' ? 'NormalTree_1' : 'PineTree_2';
       try {
-        const { scene } = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${file}_city.glb`);
+        const { scene } = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${file}_city_upright.glb`);
         scene.updateMatrixWorld(true);
         const bounds = new THREE.Box3().setFromObject(scene);
         const size = bounds.getSize(new THREE.Vector3());
@@ -23,7 +23,7 @@ export function preloadCityTrees(): Promise<void> {
         const parts: TreePart[] = [];
         scene.traverse((object) => {
           if (!(object instanceof THREE.Mesh)) return;
-          const geometry = object.geometry;
+          const geometry = object.geometry.clone();
           geometry.applyMatrix4(object.matrixWorld);
           geometry.translate(-center.x, -bounds.min.y, -center.z);
           geometry.scale(1 / Math.max(size.x, size.z), 1 / size.y, 1 / Math.max(size.x, size.z));
