@@ -28,7 +28,10 @@ export class GorillaArena implements Level {
   private readonly perches: THREE.Vector3[] = [];
   private target!: Target;
   private alert!: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
-  private armDrop = { value: 1.05 };
+  private armDrop = { value: 1.05, forward: { value: 0 } };
+  private impact = 0;
+  private attackIndex = 0;
+  private leapDuration: number = C.leapTime;
   private visualTime = 0;
   private hud!: HTMLDivElement;
   private fire!: ForestFireEffects;
@@ -93,10 +96,11 @@ export class GorillaArena implements Level {
   private reset(): void {
     this.boss.position.copy(this.perches[1]);this.phase='wait';this.timer=C.cooldown;
     this.misses=0;this.stars=this.maxStars;this.target.enabled=false;this.alert.visible=false;
+    this.impact=0;this.attackIndex=0;
   }
   private enterBattle(): void {
     this.ctx.battle.enter({id:'gorila',name:'Gorilla Gembira',focus:()=>this.aim,
-      arena:{x:0,z:0,r:C.arenaRadius},stars:()=>({left:this.stars,max:this.maxStars}),aura:0xffb86c});
+      arena:{x:0,z:0,r:C.arenaRadius},stars:()=>({left:this.stars,max:this.maxStars}),ownBar:true,aura:0xffb86c});
   }
   private lockLanding(): void {
     let closest=this.perches[0],best=Infinity;const player=this.ctx.player.position;
@@ -123,16 +127,20 @@ export class GorillaArena implements Level {
       if(this.timer<=0){this.boss.position.copy(this.landing);this.phase='wait';this.timer=C.cooldown;}
       return;
     }
-    if(this.phase==='wait'&&this.timer<=0){this.lockLanding();this.phase='wind';this.timer=C.windup;this.alert.visible=true;}
-    else if(this.phase==='wind'&&this.timer<=0){this.from.copy(this.boss.position);this.phase='leap';this.timer=C.leapTime;}
+    if(this.phase==='wait'&&this.timer<=0){this.lockLanding();this.attackIndex++;this.phase='wind';this.timer=C.windup*(this.stars<=this.maxStars/2?C.enrageWindScale:1);this.alert.visible=true;}
+    else if(this.phase==='wind'&&this.timer<=0){this.from.copy(this.boss.position);this.phase='leap';this.leapDuration=this.attackIndex%2===0?C.fastLeapTime:C.leapTime;this.timer=this.leapDuration;}
     else if(this.phase==='leap') {
-      const t=Math.min(1,1-this.timer/C.leapTime);this.boss.position.lerpVectors(this.from,this.landing,t);this.boss.position.y+=Math.sin(t*Math.PI)*C.leapArc;
+      const t=Math.min(1,1-this.timer/this.leapDuration);this.boss.position.lerpVectors(this.from,this.landing,t);this.boss.position.y+=Math.sin(t*Math.PI)*C.leapArc*(this.attackIndex%2===0?C.slamArcScale:1);
       if(this.timer<=0){
         this.boss.position.copy(this.landing);this.alert.visible=false;
         const near=Math.hypot(this.feet.x-this.landing.x,this.feet.z-this.landing.z)<C.hitRadius&&Math.abs(this.feet.y-this.landing.y)<C.hitHeight;
         const result=near?ctx.health.hurt(this.from.x,this.from.z):'miss';
         if(result==='miss'||result==='blocked')this.misses++;else if(result==='hit')this.misses=0;
-        ctx.fx.sparkles.burst(this.landing.x,this.landing.y,this.landing.z,18,3,0xd9b879,{life:.7});
+        this.impact=C.impactTime;
+        ctx.fx.sparkles.burst(this.landing.x,this.landing.y+.1,this.landing.z,32,3,0xc9af86,{life:.8,up:.8,gravity:1.5});
+        ctx.fx.sparkles.burst(this.landing.x,this.landing.y+.3,this.landing.z,20,4,0x77a44c,{life:1,up:2,gravity:3});
+        ctx.synth.drum(0,true);
+        if(!ctx.save.data.settings.reduceShake)ctx.cameraRig.shake(.22,.3);
         this.phase='recover';this.timer=C.recover;
       }
     } else if(this.phase==='recover'&&this.timer<=0){
@@ -157,13 +165,19 @@ export class GorillaArena implements Level {
   update(dt: number): void {
     if(!this.modelReady)this.installModel();this.fire.update(dt);this.sound.update(dt,false);
     this.visualTime+=dt;
-    const drop=this.phase==='leap'||this.phase==='retreat'?.45:this.phase==='wind'?.75:1.1;
-    this.armDrop.value=THREE.MathUtils.lerp(this.armDrop.value,drop,Math.min(1,dt*8));
-    this.boss.rotation.x=this.phase==='wind'?.12:this.phase==='open'?.07:0;
+    this.impact=Math.max(0,this.impact-dt);
+    const airborne=this.phase==='leap',striking=this.impact>0;
+    const drop=airborne?1.2:this.phase==='retreat'?.65:1.1;
+    this.armDrop.value=THREE.MathUtils.lerp(this.armDrop.value,drop,Math.min(1,dt*12));
+    const forward=airborne?2.5:this.phase==='wind'?1.3:striking?.12:0;
+    this.armDrop.forward.value=THREE.MathUtils.lerp(this.armDrop.forward.value,forward,Math.min(1,dt*(striking?30:10)));
+    const squash=this.impact/C.impactTime;
+    this.boss.scale.set(1+squash*.08,1-squash*.2,1+squash*.08);
+    this.boss.rotation.x=striking?.3:this.phase==='wind'?.12:this.phase==='open'?.07:0;
     if(this.alert.visible)this.alert.material.opacity=.28+.58*(.5+.5*Math.sin(this.visualTime*16));
     this.aim.copy(this.boss.position);this.aim.y+=C.height*.6;
     this.boss.rotation.y=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
-    if(this.phase!=='done')this.hud.textContent=this.phase==='open'?'Gorilla beristirahat — sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`;
+    if(this.phase!=='done')this.hud.textContent=`Energi Gorilla: ${this.stars}/${this.maxStars} — `+(this.phase==='open'?'Sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`);
   }
   dispose(): void {}
 }

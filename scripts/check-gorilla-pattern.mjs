@@ -12,6 +12,7 @@ arena.ctx = {
   health: { exhaustions: 0, resting: false, hurt: () => result },
   game: { controlsEnabled: true, debugInfo: {} }, battle: { entering: false },
   fx: { sparkles: { burst() {} } },
+  synth: { drum() {} },save:{data:{settings:{reduceShake:true}}},
 };
 arena.perches.push(new THREE.Vector3(0,4.5,0), new THREE.Vector3(5,5,0));
 arena.alert = { visible: false, position: new THREE.Vector3() };
