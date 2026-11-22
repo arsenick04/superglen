@@ -165,9 +165,11 @@ export class Renderer {
   /** One frame: with the post chain on the high preset, else a plain render. */
   renderFrame(scene: THREE.Scene, camera: THREE.Camera): void {
     const r = this.renderer;
-    // City colour grading is shared by direct and post renders, and ends when the level unloads.
-    r.toneMapping = scene.userData.cityDaylight ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = scene.userData.cityDaylight ? 0.95 : 1;
+    // ACES keeps bright skies and warm sunlight from clipping while retaining
+    // richer mid-tone contrast on characters and buildings. It is available
+    // in the direct path too, so phones and desktop keep the same grade.
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = scene.userData.cityDaylight ? 1.08 : 1;
     r.info.autoReset = false;
     r.info.reset();
     // City daylight uses the same direct colour pipeline on desktop and touch.
@@ -211,8 +213,8 @@ export class Renderer {
    */
   prewarm(scene: THREE.Scene, camera: THREE.Camera): void {
     try {
-      this.renderer.toneMapping = scene.userData.cityDaylight ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = scene.userData.cityDaylight ? 0.95 : 1;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = scene.userData.cityDaylight ? 1.08 : 1;
       // three's compile() skips hidden objects: show them for the compile only (cars that appear later, effects, ...).
       const hidden: THREE.Object3D[] = [];
       scene.traverse((o) => {

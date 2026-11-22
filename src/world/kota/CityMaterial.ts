@@ -89,11 +89,14 @@ varying vec2 vAo;`,
   vec3 tx = textureLod(uAtlas, cr.xy + uvt * cr.zw, clamp(lod, 0.0, ${LOD_MAX.toFixed(1)})).rgb;
   tx = mix(tx, uAvg[ti], wr * smoothstep(2.0, 4.2, lod));
   diffuseColor.rgb *= tx;
-  // Contact shadow: walls, trunks and poles darken softly in the last metre above the street (grounds everything).
-  diffuseColor.rgb *= mix(1.0, mix(0.86, 1.0, smoothstep(0.0, 1.3, vAo.x)), 1.0 - smoothstep(0.4, 0.7, vAo.y));
+  // Contact shadow: walls, trunks and poles darken softly in the last metre
+  // above the street. Upward faces retain a little more sky light, which
+  // separates roofs/foliage from vertical facades without another render pass.
+  diffuseColor.rgb *= mix(0.93, 1.015, smoothstep(0.35, 0.8, vAo.y));
+  diffuseColor.rgb *= mix(1.0, mix(0.79, 1.0, smoothstep(0.0, 1.45, vAo.x)), 1.0 - smoothstep(0.4, 0.7, vAo.y));
 }`,
       );
   };
-  m.customProgramCacheKey = () => 'city-atlas-v2';
+  m.customProgramCacheKey = () => 'city-atlas-v3-depth';
   return m;
 }
