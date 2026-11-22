@@ -90,11 +90,9 @@ class ForestMap implements MapSource {
 
 export const ForestTrainingLines = {
   introAara: { id: 'forest_aara_play', speaker: 'aara', text: 'Hutannya luas sekali! Ayo bermain lompat dari pohon ke pohon!' },
-  introNino: { id: 'forest_nino_five', speaker: 'nino', text: 'Ada lima lintasan, dari mudah sampai juara. Selesaikan satu per satu, ya!' },
+  introNino: { id: 'forest_nino_three', speaker: 'nino', text: 'Ada tiga lintasan: mudah, menengah, dan sulit. Selesaikan satu per satu, ya!' },
   nextMedium: { id: 'forest_nino_medium', speaker: 'nino', text: 'Lintasan mudah selesai! Sekarang pijakannya lebih kecil dan lebih berjauhan.' },
   nextHard: { id: 'forest_aara_hard', speaker: 'aara', text: 'Berikutnya lintasan sulit! Gunakan double jump untuk mencapai dahan yang tinggi.' },
-  nextMaster: { id: 'forest_nino_master', speaker: 'nino', text: 'Tiga lintasan selesai! Sekarang tingkat mahir: jaga irama dan gunakan double jump.' },
-  nextChampion: { id: 'forest_aara_champion', speaker: 'aara', text: 'Satu lagi, Glen! Lintasan juara punya tajuk tinggi, tetapi jaraknya tetap dekat.' },
   done: { id: 'forest_nino_done', speaker: 'nino', text: 'Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.' },
 } as const;
 

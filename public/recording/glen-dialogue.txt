@@ -129,9 +129,17 @@ Sumber: src/world/kota/Bab6Data.ts
 Aku akan terbang ke Bank dan menolong mereka!
 Sumber: audio/dialog.json
 
+[forest_glen_explain]
+Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!
+Sumber: src/world/arena/GorillaArena.ts
+
 [forest_glen_flight_broken]
 Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!
 Sumber: src/world/arena/ForestRescueLevel.ts
+
+[forest_glen_help_fire]
+Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!
+Sumber: src/world/arena/GorillaArena.ts
 
 [forest_glen_monkeys_safe]
 Semua monyet sudah aman! Sekarang kita harus mencari sumber api.

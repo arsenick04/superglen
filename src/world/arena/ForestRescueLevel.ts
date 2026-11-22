@@ -110,7 +110,8 @@ export class ForestRescueLevel implements Level {
     this.busy = true;this.ctx.save.markChapterDone('forest-rescue');
     this.ctx.seq.run(async () => {
       await this.ctx.dialog.say({ id: 'forest_glen_monkeys_safe', speaker: 'glen', text: 'Semua monyet sudah aman! Sekarang kita harus mencari sumber api.' }, { lockControls: true });
-      this.busy = false;
+      this.ctx.save.setWhere('battle-gorilla');
+      await this.ctx.game.loadLevel('battle-gorilla');
     });
   }
   update(dt: number): void {

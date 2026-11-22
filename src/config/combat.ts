@@ -4,6 +4,12 @@
  * (a soft fade and a rest at the Rumah Sakit with full hearts, nothing lost).
  */
 export const Combat = {
+  gorilla: {
+    stars: 3, starsEasy: 2, height: 2.5, arenaRadius: 14,
+    windup: 1.5, leapTime: 1.15, leapArc: 7, recover: 1.3,
+    cooldown: 1.2, retreatTime: 1.1, vulnerable: 5, hitRadius: 1.65, hitHeight: 2,
+    missesToOpen: 2, targetRadius: 1.6,
+  },
   hearts: {
     max: 5,
   },

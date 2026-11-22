@@ -15,6 +15,7 @@ export const Parkour = {
     // Gentle rises (<= 1 m) with resting descents, all reachable at rhythm level 0.
     heightOffsets: [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0],
   },
+  gorillaCanopy: { spacing: 5, radius: 2.35, heights: [4.5, 5, 5.5], resetFeetHeight: 0.25 },
   // ---- Gravity and falling -------------------------------------------------------------------------------
   /** Gravity while rising (m/s^2). The player applies its own; the physics world's gravity is only for props. */
   gravityUp: 25,
