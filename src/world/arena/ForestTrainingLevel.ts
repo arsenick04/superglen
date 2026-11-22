@@ -17,7 +17,7 @@ interface TreeStep {
 }
 
 interface TreeCourse {
-  readonly name: 'mudah' | 'menengah' | 'sulit' | 'mahir' | 'juara';
+  readonly name: 'mudah' | 'menengah' | 'sulit';
   readonly start: { readonly x: number; readonly z: number };
   readonly color: number;
   readonly steps: readonly TreeStep[];
@@ -47,22 +47,6 @@ const COURSES: readonly TreeCourse[] = [
       { x: 30, z: 11, top: 1.6, radius: 1.45 }, { x: 27, z: 5, top: 4.1, radius: 1.4 },
       { x: 32, z: -1, top: 6.5, radius: 1.35 }, { x: 27, z: -7, top: 8.9, radius: 1.3 },
       { x: 32, z: -13, top: 10.3, radius: 1.3 },
-    ],
-  },
-  {
-    name: 'mahir', start: { x: -15, z: 18 }, color: 0x4dabf7,
-    steps: [
-      { x: -15, z: 11, top: 1.7, radius: 1.5 }, { x: -18, z: 5, top: 3.9, radius: 1.45 },
-      { x: -13, z: -1, top: 6.2, radius: 1.4 }, { x: -18, z: -7, top: 8.5, radius: 1.35 },
-      { x: -13, z: -13, top: 10.5, radius: 1.35 },
-    ],
-  },
-  {
-    name: 'juara', start: { x: 15, z: 18 }, color: 0xb26de0,
-    steps: [
-      { x: 15, z: 11, top: 1.8, radius: 1.45 }, { x: 18, z: 5, top: 4.4, radius: 1.4 },
-      { x: 12, z: -1, top: 7.0, radius: 1.35 }, { x: 18, z: -7, top: 9.6, radius: 1.3 },
-      { x: 12, z: -13, top: 12.0, radius: 1.25 }, { x: 16, z: -18, top: 13.2, radius: 1.25 },
     ],
   },
 ] as const;
@@ -99,7 +83,7 @@ class ForestMap implements MapSource {
       g.textAlign = 'center';
       g.fillText('Hutan Botanica', px * 0.5, px * 0.1);
       g.font = `bold ${Math.max(11, px * 0.028)}px sans-serif`;
-      g.fillText('5 lintasan lompat pohon', px * 0.5, px * 0.72);
+      g.fillText('3 lintasan lompat pohon', px * 0.5, px * 0.72);
     }
   }
 }
@@ -114,7 +98,7 @@ export const ForestTrainingLines = {
   done: { id: 'forest_nino_done', speaker: 'nino', text: 'Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.' },
 } as const;
 
-/** Chapter 8 opening: a newly unlocked forest and five tree-jumping courses with Nino and Aara. */
+/** Chapter 8 opening: three tree-jumping courses with Nino and Aara. */
 export class ForestTrainingLevel implements Level {
   readonly id = 'forest-training';
   readonly spawn = { x: -30, y: 0, z: 18, yaw: Math.PI };
@@ -312,10 +296,7 @@ export class ForestTrainingLevel implements Level {
       ctx.fx.sparkles.burst(goal.x, goal.top + 0.4, goal.z, 34, 3.6, 0xffd23f, { gravity: 1.5, life: 1, up: 1 });
       this.stage++;
       if (this.stage < COURSES.length) {
-        const line = this.stage === 1 ? ForestTrainingLines.nextMedium
-          : this.stage === 2 ? ForestTrainingLines.nextHard
-            : this.stage === 3 ? ForestTrainingLines.nextMaster
-              : ForestTrainingLines.nextChampion;
+        const line = this.stage === 1 ? ForestTrainingLines.nextMedium : ForestTrainingLines.nextHard;
         await ctx.dialog.say(line, { lockControls: true });
         ctx.game.debugInfo.forestTrainingStage = this.stage + 1;
         ctx.game.debugInfo.forestTrainingCourse = COURSES[this.stage].name;
