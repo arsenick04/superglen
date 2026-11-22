@@ -180,7 +180,9 @@ export class KotaLevel implements Level {
     const sky = 0x9fd8ff;
     scene.background = new THREE.Color(sky);
     // Physical fog distances keep the same colour on touch and desktop; draw distance can still follow the preset.
-    scene.fog = new THREE.Fog(0xc6e6fa, 140, 300);
+    // Start the atmospheric perspective before the skyline: distant blocks
+    // recede while the player and nearby NPCs remain crisp.
+    scene.fog = new THREE.Fog(0xc6e6fa, 115, 285);
     const hemi = new THREE.HemisphereLight(0xe1f3ff, 0xd3d9b5, 1.15);
     this.hemi = hemi;
     root.add(hemi);
@@ -401,6 +403,7 @@ export class KotaLevel implements Level {
     this.hemi.intensity = 0.7;
     this.sun.color.setHex(0xa8c8f2);
     this.sun.intensity = 0.7;
+    this.sunOffset.set(24, 48, 32);
   }
 
   /** Warm late-afternoon light after the forest quiz, clearly distinct from the following morning. */
@@ -437,7 +440,10 @@ export class KotaLevel implements Level {
     this.hemi.intensity = 0.72;
     this.sun.color.setHex(0xffb06f);
     this.sun.intensity = 1.65;
-    this.sun.position.set(-95, 42, 70);
+    // ShadowFollower rebuilds the light position each frame from this offset.
+    // A low side angle makes the sunset read in the actual world, not only in
+    // the background colour.
+    this.sunOffset.set(-58, 25, 42);
   }
 
   /** Story pauses that require Glen to walk home before the next morning. */
