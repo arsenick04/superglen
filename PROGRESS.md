@@ -1062,3 +1062,11 @@ Build, check:quiz dan reachability lulus. Shader diperiksa melalui render Chromi
 
 Model monyet utuh Poly by Google (CC BY 3.0 via Poly Pizza, mirror Digx7/Thrust-Pets-Offline) menggantikan figur bola setelah GLB dimuat. Memakai rig, tekstur dan klip gerak run, ditambah hop panik pada holder. Sumber/kredit ada di CREDITS.md serta public/models/rescue/CREDIT.txt. Ketinggian kanopi: 5.1, 5.9, 6.7, 6.1, 7.1, 7.9, 7.3, 8.3, 9.1, 8.5 m; selisih naik maksimal 1 m, radius dan jarak tetap ramah anak. Aturan jatuh mengulang tetap aktif. Build dan reachability lulus; gameplay/animasi akhir di iPhone belum diuji.
 
+# 22 November 2026 — tiga latihan dan pertarungan Gorilla
+
+Latihan hutan dikembalikan ke mudah/menengah/sulit (PR #112), penjelasan Nino disesuaikan menjadi tiga lintasan dengan ID suara baru.
+
+Setelah 10 monyet diselamatkan, pindah ke battle-gorilla di kanopi 3×3. Gorilla memakai model milik proyek, menuduh Glen membakar hutan. Charge: tanda ! di titik sasaran terkunci, lompat tinggi, mendarat; menghindar atau perisai menambah hitungan gagal. Dua kegagalan membuka target laser selama 5 detik; satu tembakan mengurangi satu bintang lalu target ditutup. Gorilla kembali melompat ke pohon jauh sebelum charge berikut. Tiga bintang (mudah dua), terbang terkunci, laser/perisai aktif. Jatuh mengulang pertarungan; kelelahan mereset dan mengaktifkan battle kembali setelah istirahat. Menang: Gorilla meminta maaf, Glen mengajak menolong hutan. Misi pemadaman api belum dibuat. Save resume dan preview `?chapter=8&gorilla=1` tersedia. Naskah Glen sekarang 39 entri; VO baru belum direkam.
+
+Build, check:quiz dan reachability lulus. check-gorilla-pattern.mjs menguji gate dua serangan gagal, satu laser per kesempatan dan reset hitungan ketika Glen kena. Gameplay, kamera kanopi dan FPS/touch belum diuji sesuai permintaan pemilik.
+

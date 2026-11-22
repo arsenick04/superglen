@@ -243,9 +243,21 @@
     "status": "Katalog audio — perlu konfirmasi penggunaan"
   },
   {
+    "id": "forest_glen_explain",
+    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
+    "source": "src/world/arena/GorillaArena.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
     "id": "forest_glen_flight_broken",
     "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
     "source": "src/world/arena/ForestRescueLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "forest_glen_help_fire",
+    "text": "Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!",
+    "source": "src/world/arena/GorillaArena.ts",
     "status": "Deklarasi dialog dalam kode"
   },
   {

@@ -266,6 +266,7 @@ export class SaveStore {
   readonly previewForestQuiz: boolean;
   readonly previewForestFire: boolean;
   readonly previewForestRescue: boolean;
+  readonly previewGorillaBattle: boolean;
   readonly previewLetters: boolean;
 
   constructor() {
@@ -278,6 +279,7 @@ export class SaveStore {
     this.previewForestQuiz = this.previewChapter === 8 && query.getAll('quiz').length === 1 && query.get('quiz') === '1';
     this.previewForestFire = this.previewChapter === 8 && query.getAll('fire').length === 1 && query.get('fire') === '1';
     this.previewForestRescue = this.previewChapter === 8 && query.get('rescue') === '1';
+    this.previewGorillaBattle = this.previewChapter === 8 && query.get('gorilla') === '1';
     const letters = query.getAll('letters');
     this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
     if (this.previewChapter || query.get('reset') === '1') this.reset();
