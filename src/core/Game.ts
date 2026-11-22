@@ -27,6 +27,7 @@ import { Hud } from '../ui/Hud';
 import { DialogBubble } from '../ui/DialogBubble';
 import { Fade } from '../ui/Fade';
 import { Dialog } from '../gameplay/Dialog';
+import { setNameSources } from '../gameplay/PlayerName';
 import { Health } from '../gameplay/Health';
 import { HealLines } from '../gameplay/healLines';
 import { Interactions } from '../gameplay/Interactions';
@@ -119,6 +120,8 @@ export interface DebugHandle {
   walking: boolean;
   /** Test helper: drop the player far below the world, to exercise the safe-spot respawn. */
   testFall: () => void;
+  /** Test helper: make dialog lines show as the small fight call-out (without a fight). */
+  forceCompactDialog: (on: boolean) => void;
   /** Live save store (tests round-trip it). */
   save: SaveStore;
   /** The level-control API levels get (setPlayerMode, setSkillButtons, ...), for tests. */
@@ -397,6 +400,7 @@ export class Game {
     walkTo: (x: number, z: number) => this.walker.start(x, z),
     cancelWalk: () => this.walker.stop(),
     walking: false,
+    forceCompactDialog: () => {},
     testFall: () => {
       const p = this.player.visualPosition;
       this.player.teleport(p.x, -16, p.z);
@@ -698,6 +702,7 @@ export class Game {
       this.perfPanel = new PerfOverlay(uiRoot, (out) => this.collectPerfStats(out));
     }
 
+    setNameSources(() => this.player.mode === 'superglen', (clip) => this.audio.hasFile(clip));
     const bubble = new DialogBubble(uiRoot, () => this.dialog.tap());
     bubble.faceFor = (sp) => (sp === 'glen' && this.player.mode === 'superglen' ? 'superglen' : sp);
     this.dialog = new Dialog(
@@ -712,7 +717,8 @@ export class Game {
     this.dialog.onLineStart((id, speaker, lineText) => {
       this.sfx.blip();
       if (!id) return;
-      void this.audio.playVoice(id).then((r) => {
+      const voiceId = this.dialog.currentLine?.voiceId ?? id;
+      void this.audio.playVoice(voiceId).then((r) => {
         if (this.dialog.currentLine?.id !== id) return;
         // The clip has just started: keep the bubble for its whole length (plus a tail) from now.
         if (r.played) this.dialog.setLineDuration(this.dialog.lineElapsed + r.duration + AudioConfig.tail);
@@ -736,6 +742,11 @@ export class Game {
       this.audio.setExternalVoiceActive(false);
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     });
+    let forceCompact = false;
+    this.dialog.addCompactRule(() => forceCompact);
+    this.debug.forceCompactDialog = (on) => {
+      forceCompact = on;
+    };
     wireQuizVoice(this.quiz, this.audio);
     this.interactions = new Interactions(
       uiRoot,

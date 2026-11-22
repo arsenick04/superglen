@@ -81,21 +81,21 @@ export function clampToStreets(x: number, z: number, out: { x: number; z: number
 /** Dialog lines of Chapter 3 (text only for now; the ids are stable so the voice can be added later in audio/dialog.json). */
 export const BAB3_LINES = {
   // Chapter 2 already ends with the alarm (bab2_nino_alarm, bab2_glen_siap): this is only a short nudge on arrival in the city.
-  ninoCepat: { id: 'bab3_nino_cepat', speaker: 'nino', text: 'Cepat, ke pasar, Superglen!' },
+  ninoCepat: { id: 'bab3_nino_cepat', speaker: 'nino', text: 'Cepat, ke pasar, {nama}!' },
   ninoUbah: { id: 'bab3_nino_ubah', speaker: 'nino', text: 'Ubah jadi Superglen dulu, Glen!' },
   ninoTiba: { id: 'bab3_nino_tiba', speaker: 'nino', text: 'Itu mereka! Tembak atau hentakkan, ya!' },
   glenLucu: { id: 'bab3_glen_lucu2', speaker: 'glen', text: 'Hihi, Curut Cemberutnya lucu sekali!' },
   glenSemua: { id: 'bab3_glen_semua2', speaker: 'glen', text: 'Semua Curut Cemberut sudah kabur!' },
   linaHilang: { id: 'bab3_lina_hilang', speaker: 'lina', text: 'Bakpaoku hilang 3, kue hilang 2.' },
-  linaTolong: { id: 'bab3_lina_tolong', speaker: 'lina', text: 'Tolong kumpulkan, ya, Superglen!' },
+  linaTolong: { id: 'bab3_lina_tolong', speaker: 'lina', text: 'Tolong kumpulkan, ya, {nama}!' },
   linaTotal: { id: 'bab3_lina_total', speaker: 'lina', text: 'Terima kasih! Totalnya berapa?' },
   linaHore: { id: 'bab3_lina_hore', speaker: 'lina', text: 'Hore! Semua kembali ke kios. Kamu pintar!' },
   rakusTawa: { id: 'bab3_rakus_tawa', speaker: 'rakus', text: 'Hihihi, semua makanan ini milikku!' },
   glenHei: { id: 'bab3_glen_hei', speaker: 'glen', text: 'Hei, jangan lari!' },
   rakusRaja: { id: 'bab3_rakus_raja', speaker: 'rakus', text: 'Suatu hari aku akan jadi RAJA kota ini!' },
   ninoRakus: { id: 'bab3_nino_rakus', speaker: 'nino', text: 'Itu Si Tikus Rakus! Kita pasti bertemu lagi.' },
-  ninoHebat: { id: 'bab3_nino_hebat', speaker: 'nino', text: 'Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!' },
-  linaTerima: { id: 'bab3_lina_terima', speaker: 'lina', text: 'Terima kasih, Superglen!' },
+  ninoHebat: { id: 'bab3_nino_hebat', speaker: 'nino', text: 'Kerja bagus, {nama}! Tikus Rakus kabur, tapi kamu hebat sekali!' },
+  linaTerima: { id: 'bab3_lina_terima', speaker: 'lina', text: 'Terima kasih, {nama}!' },
 } as const;
 
 export type Bab3Line = (typeof BAB3_LINES)[keyof typeof BAB3_LINES];

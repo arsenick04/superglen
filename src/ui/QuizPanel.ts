@@ -1,4 +1,5 @@
 import { ninoLine } from '../gameplay/NinoVariasi';
+import { resolveName, voiceIdFor } from '../gameplay/PlayerName';
 import '../quiz.css';
 import type { DrumSynth } from '../audio/DrumSynth';
 import type { Sfx } from '../audio/Sfx';
@@ -350,8 +351,10 @@ export class QuizPanel {
   }
 
   private ninoSays(line: QuizLine): void {
-    this.setBubble(line.text);
-    this.deps.speak(this.host === 'aara' ? `aara_${line.id}` : line.id, line.text, 'nino');
+    const text = resolveName(line.text);
+    this.setBubble(text);
+    const id = this.host === 'aara' ? `aara_${line.id}` : line.id;
+    this.deps.speak(voiceIdFor(id, line.text), text, 'nino');
   }
 
   private repeat(): void {

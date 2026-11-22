@@ -458,7 +458,7 @@ export class KotaLevel implements Level {
     if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home', 'forest_invite', 'forest_lab', 'forest_ready', 'forest_home', 'forest_fire_invite', 'forest_fire_lab', 'forest_fire_ready'].includes(state)) return;
     if (arrival === 'homeMorning') {
       this.hud.show('Keesokan pagi', 0xf2b632, true);
-      if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
+      if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, {nama}! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
     }
     if (state === 'rakus_letters') return;
     if (state === 'forest_home') {
@@ -483,7 +483,7 @@ export class KotaLevel implements Level {
         enabled: () => ctx.save.data.interlude === 'forest_invite',
         onInteract: () => ctx.seq.run(async () => {
           this.forestAara?.emote('wave');
-          await ctx.dialog.say({ id: 'forest_aara_home', speaker: 'aara', text: 'Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_home', speaker: 'aara', text: 'Pagi, {nama}! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!' }, { lockControls: true });
           ctx.save.setInterlude('forest_lab');
           if (this.forestAara) {
             this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
@@ -515,7 +515,7 @@ export class KotaLevel implements Level {
       this.setGoal({ x: d.x, z: d.z });
       ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
       if (state === 'forest_fire_invite' && arrival === 'homeMorning') ctx.seq.run(async () => {
-        await ctx.dialog.say({ id: 'forest_nino_urgent', speaker: 'nino', text: 'Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!' }, { lockControls: true });
+        await ctx.dialog.say({ id: 'forest_nino_urgent', speaker: 'nino', text: '{nama}, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!' }, { lockControls: true });
         ctx.save.setInterlude('forest_fire_lab');
       });
       return;

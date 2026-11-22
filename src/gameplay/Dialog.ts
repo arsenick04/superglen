@@ -4,6 +4,9 @@ import type { DialogBubble } from '../ui/DialogBubble';
 // Lines written by the content pipeline: [{ id, speaker, lang, text }]. Audio for line `id` will be
 // public/audio/{id}.mp3 (package B4); the game works without it.
 import dialogData from '../../audio/dialog.json';
+// Non-player lines that address the player by name: `{nama}` templates (see PlayerName.ts). Overlaid on the table.
+import nameLines from '../../audio/name-lines.json';
+import { hasNameToken, resolveName, voiceIdFor } from './PlayerName';
 
 export interface DialogLine {
   id: string;
@@ -27,7 +30,10 @@ export interface SayOptions {
 export interface LineInfo {
   id: string | undefined;
   speaker: string;
+  /** Shown text; `{nama}` is already resolved when the line has started. */
   text: string;
+  /** The clip to play (the `_g` / `_sg` variant of `id` when it exists); undefined when it is `id`. */
+  voiceId?: string;
 }
 
 export type LineStartListener = (id: string | undefined, speaker: string, text: string) => void;
@@ -48,7 +54,7 @@ const FALLBACK_TEXT = '…';
 export const COMPACT_DURATION = 2.5;
 
 interface Item {
-  info: LineInfo;
+  info: LineInfo; // `text` may hold `{nama}` until the line starts
   lock: boolean;
   auto: boolean;
   duration: number;
@@ -83,6 +89,10 @@ export class Dialog {
     private readonly onLockChange: (locked: boolean) => void,
   ) {
     this.register(dialogData as DialogLine[]);
+    for (const l of nameLines.lines) {
+      const row = this.table.get(l.id);
+      if (row) this.table.set(l.id, { ...row, text: l.template });
+    }
   }
 
   /** Speaker id of the line on screen now ('' when none): lets a character play its talking clip. */
@@ -274,6 +284,11 @@ export class Dialog {
     this.idle = 0;
     this.tapPending = false;
     this.lastLock = item.lock;
+    if (hasNameToken(item.info.text)) {
+      const id = item.info.id;
+      const voiceId = id ? voiceIdFor(id, item.info.text) : undefined;
+      item.info = { ...item.info, text: resolveName(item.info.text), voiceId: voiceId !== id ? voiceId : undefined };
+    }
     item.compact = !item.lock && this.wantsCompact();
     this.compactNow = item.compact;
     if (item.compact) {
