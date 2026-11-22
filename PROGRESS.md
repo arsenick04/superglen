@@ -1034,3 +1034,7 @@ Empat aset asli (pohon rimbun, cemara, semak, batu) dikonversi ke GLB dengan tek
 
 Pohon round/pine non-far di seluruh tata letak kota kini memakai GLB Quaternius bertekstur. Versi kota disederhanakan lewat scripts/build-city-trees.mjs, dimuat sebelum kota dibangun; kegagalan unduh mempertahankan pohon lama. Render instanced mencakup radius 85 m di sekitar Glen, diperbarui setelah bergerak 3 m. Hutan tepi jauh tetap memakai layer skyline lama. Pijakan cabang dan seluruh collider/rute berasal dari CityData, tanpa perubahan. Build, check:quiz dan reachability lulus. Pengujian browser/visual/FPS ditunda sesuai permintaan pemilik; coba jalan dari sekolah ke perumahan dan pasar, lalu memanjat pohon. Model warga impor tetap tugas terpisah.
 
+# 22 November 2026 — koreksi sumbu pohon
+
+Regresi PR #104: FBX dikonversi dengan batang sejajar sumbu Z di GLB, lalu normalisasi tinggi meratakan pohon. Pipeline kini memutar sumber ke Z-up Blender sebelum ekspor menjadi Y-up Three.js. Seluruh GLB pohon/semak/batu kota dan contoh hutan dibuat ulang. check-tree-assets.mjs memastikan empat model pohon tegak, pangkal dekat tanah dan tekstur tersedia; dijalankan otomatis setelah build-city-trees.mjs. Build, check:quiz dan reachability lulus; pemeriksaan visual iPhone tetap oleh pemilik.
+

@@ -6,6 +6,8 @@ SOURCE is the ultimate-stylized-nature/sources folder from the credited mirror.
 import bpy
 import os
 import sys
+from math import pi
+from mathutils import Matrix
 
 source, output = sys.argv[sys.argv.index('--') + 1:]
 os.makedirs(output, exist_ok=True)
@@ -13,6 +15,13 @@ for name in ['NormalTree_1', 'PineTree_2', 'Bush', 'Rock_1']:
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.object.delete(use_global=False)
     bpy.ops.import_scene.fbx(filepath=os.path.join(source, 'FBX', name + '.fbx'))
+    # These FBX files arrive with their long trunk along Blender -Y, while
+    # Blender's glTF exporter expects Z-up. Rotate once before export so the
+    # GLB trunk is +Y in Three.js (otherwise normalization flattens the tree).
+    rotation = Matrix.Rotation(-pi / 2, 4, 'X')
+    for obj in bpy.context.selected_objects:
+        if obj.parent is None:
+            obj.matrix_world = rotation @ obj.matrix_world
     for material in bpy.data.materials:
         texture_name = material.name.split('.')[0]
         if texture_name == 'Rock':
