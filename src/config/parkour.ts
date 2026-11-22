@@ -10,6 +10,7 @@ import { FIXED_DT } from '../core/Physics';
  * early/late) lowers it by ONE, standing around lowers it by one every 1.5 s. Nothing ever resets to zero.
  */
 export const Parkour = {
+  forestRescue: { canopyHeight: 4.5, landingRadius: 2.4, spacing: 5.4, resetFeetHeight: 0.25 },
   // ---- Gravity and falling -------------------------------------------------------------------------------
   /** Gravity while rising (m/s^2). The player applies its own; the physics world's gravity is only for props. */
   gravityUp: 25,
