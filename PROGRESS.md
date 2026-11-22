@@ -1058,3 +1058,7 @@ Lintasan baru berupa 11 kanopi lebar berjarak dekat, Glen mulai di atas pohon. T
 
 Build, check:quiz dan reachability lulus. Shader diperiksa melalui render Chromium lokal, tanpa error shader; favicon 404 tidak terkait. Gameplay/reset lintasan dan audio iPhone belum diuji, tetap perlu dicoba pemilik. Nino menjelaskan aturan tanah pada intro versi baru. Gorilla dan pemadaman masih tahap berikutnya.
 
+# 22 November 2026 — model monyet dan ketinggian bervariasi
+
+Model monyet utuh Poly by Google (CC BY 3.0 via Poly Pizza, mirror Digx7/Thrust-Pets-Offline) menggantikan figur bola setelah GLB dimuat. Memakai rig, tekstur dan klip gerak run, ditambah hop panik pada holder. Sumber/kredit ada di CREDITS.md serta public/models/rescue/CREDIT.txt. Ketinggian kanopi: 5.1, 5.9, 6.7, 6.1, 7.1, 7.9, 7.3, 8.3, 9.1, 8.5 m; selisih naik maksimal 1 m, radius dan jarak tetap ramah anak. Aturan jatuh mengulang tetap aktif. Build dan reachability lulus; gameplay/animasi akhir di iPhone belum diuji.
+
