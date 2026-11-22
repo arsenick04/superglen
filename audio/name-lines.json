@@ -1,0 +1,623 @@
+{
+ "note": "Voice agent: generate <id>_g (Glen) and <id>_sg (Superglen) for each entry in lines; the plain <id> clip stays as fallback. Template uses {nama}.",
+ "lines": [
+  {
+   "id": "bab3_nino_cepat",
+   "speaker": "nino",
+   "template": "Cepat, ke pasar, {nama}!",
+   "delivery": "[urgent] Cepat, ke pasar, {nama}!",
+   "file": "src/world/kota/Bab3Data.ts",
+   "clips": [
+    "bab3_nino_cepat_g",
+    "bab3_nino_cepat_sg"
+   ]
+  },
+  {
+   "id": "bab3_lina_tolong",
+   "speaker": "lina",
+   "template": "Tolong kumpulkan, ya, {nama}!",
+   "delivery": "[pleading] Tolong kumpulkan, ya, {nama}!",
+   "file": "src/world/kota/Bab3Data.ts",
+   "clips": [
+    "bab3_lina_tolong_g",
+    "bab3_lina_tolong_sg"
+   ]
+  },
+  {
+   "id": "bab3_nino_hebat",
+   "speaker": "nino",
+   "template": "Kerja bagus, {nama}! Tikus Rakus kabur, tapi kamu hebat sekali!",
+   "delivery": "[proud] Kerja bagus, {nama}! Tikus Rakus kabur, tapi kamu hebat sekali!",
+   "file": "src/world/kota/Bab3Data.ts",
+   "clips": [
+    "bab3_nino_hebat_g",
+    "bab3_nino_hebat_sg"
+   ]
+  },
+  {
+   "id": "bab3_lina_terima",
+   "speaker": "lina",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[grateful] Terima kasih, {nama}!",
+   "file": "src/world/kota/Bab3Data.ts",
+   "clips": [
+    "bab3_lina_terima_g",
+    "bab3_lina_terima_sg"
+   ]
+  },
+  {
+   "id": "bab5_nino_lapangan",
+   "speaker": "nino",
+   "template": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, {nama}!",
+   "delivery": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, {nama}!",
+   "file": "src/world/kota/Bab5Data.ts",
+   "clips": [
+    "bab5_nino_lapangan_g",
+    "bab5_nino_lapangan_sg"
+   ]
+  },
+  {
+   "id": "bab5_aara_semangat",
+   "speaker": "aara",
+   "template": "Semangat, {nama}! Kamu pasti bisa!",
+   "delivery": "[excited] Semangat, {nama}! Kamu pasti bisa!",
+   "file": "src/world/kota/Bab5Data.ts",
+   "clips": [
+    "bab5_aara_semangat_g",
+    "bab5_aara_semangat_sg"
+   ]
+  },
+  {
+   "id": "bab5_nino_hebat",
+   "speaker": "nino",
+   "template": "Keren, {nama}! Ular Melar sudah jinak.",
+   "delivery": "[proud] Keren, {nama}! Ular Melar sudah jinak.",
+   "file": "src/world/kota/Bab5Data.ts",
+   "clips": [
+    "bab5_nino_hebat_g",
+    "bab5_nino_hebat_sg"
+   ]
+  },
+  {
+   "id": "bab5_nino_panggil_lab",
+   "speaker": "nino",
+   "template": "Kembali ke Lab, {nama}! Kita rayakan kemenangan kalian bersama Aara.",
+   "delivery": "[excited] Kembali ke Lab, {nama}! Kita rayakan kemenangan kalian bersama Aara.",
+   "file": "src/world/kota/Bab5Data.ts",
+   "clips": [
+    "bab5_nino_panggil_lab_g",
+    "bab5_nino_panggil_lab_sg"
+   ]
+  },
+  {
+   "id": "bab6_nino_laporan",
+   "speaker": "nino",
+   "template": "{nama}, ada laporan! Semua makanan di Gudang Pasar hilang!",
+   "delivery": "[urgent] {nama}, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!",
+   "file": "src/world/kota/Bab6Data.ts",
+   "clips": [
+    "bab6_nino_laporan_g",
+    "bab6_nino_laporan_sg"
+   ]
+  },
+  {
+   "id": "bab6_warga_hore",
+   "speaker": "warga",
+   "template": "Hore! Makanan kota sudah kembali! Terima kasih, {nama}!",
+   "delivery": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, {nama}!",
+   "file": "src/world/kota/Bab6Data.ts",
+   "clips": [
+    "bab6_warga_hore_g",
+    "bab6_warga_hore_sg"
+   ]
+  },
+  {
+   "id": "bab6_nino_hebat",
+   "speaker": "nino",
+   "template": "Mantap, {nama}! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+   "delivery": "[proud] Mantap, {nama}! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi.",
+   "file": "src/world/kota/Bab6Data.ts",
+   "clips": [
+    "bab6_nino_hebat_g",
+    "bab6_nino_hebat_sg"
+   ]
+  },
+  {
+   "id": "rakus_nino_pulang",
+   "speaker": "nino",
+   "template": "Hari sudah malam, {nama}. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+   "delivery": "[warm] Hari sudah malam, {nama}. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+   "file": "src/world/kota/Bab6Data.ts",
+   "clips": [
+    "rakus_nino_pulang_g",
+    "rakus_nino_pulang_sg"
+   ]
+  },
+  {
+   "id": "combat_nino_semangat",
+   "speaker": "nino",
+   "template": "Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, {nama}!",
+   "delivery": "[warm] Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, {nama}!",
+   "file": "src/gameplay/healLines.ts",
+   "clips": [
+    "combat_nino_semangat_g",
+    "combat_nino_semangat_sg"
+   ]
+  },
+  {
+   "id": "rakus_morning_letters",
+   "speaker": "nino",
+   "template": "Selamat pagi, {nama}! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+   "delivery": "[cheerful] Selamat pagi, {nama}! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+   "file": "src/world/kota/KotaLevel.ts",
+   "clips": [
+    "rakus_morning_letters_g",
+    "rakus_morning_letters_sg"
+   ]
+  },
+  {
+   "id": "forest_aara_home",
+   "speaker": "aara",
+   "template": "Pagi, {nama}! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!",
+   "delivery": null,
+   "file": "src/world/kota/KotaLevel.ts",
+   "clips": [
+    "forest_aara_home_g",
+    "forest_aara_home_sg"
+   ]
+  },
+  {
+   "id": "forest_nino_urgent",
+   "speaker": "nino",
+   "template": "{nama}, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!",
+   "delivery": null,
+   "file": "src/world/kota/KotaLevel.ts",
+   "clips": [
+    "forest_nino_urgent_g",
+    "forest_nino_urgent_sg"
+   ]
+  },
+  {
+   "id": "forest_aara_quiz_ready",
+   "speaker": "aara",
+   "template": "Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}!",
+   "delivery": null,
+   "file": "src/world/bab1/Bab1Level.ts",
+   "clips": [
+    "forest_aara_quiz_ready_g",
+    "forest_aara_quiz_ready_sg"
+   ]
+  },
+  {
+   "id": "forest_aara_quiz_complete",
+   "speaker": "aara",
+   "template": "Hebat! Lima pertanyaan berhasil kamu jawab, {nama}!",
+   "delivery": null,
+   "file": "src/world/bab1/Bab1Level.ts",
+   "clips": [
+    "forest_aara_quiz_complete_g",
+    "forest_aara_quiz_complete_sg"
+   ]
+  },
+  {
+   "id": "forest_aara_sunset",
+   "speaker": "aara",
+   "template": "Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}!",
+   "delivery": null,
+   "file": "src/world/bab1/Bab1Level.ts",
+   "clips": [
+    "forest_aara_sunset_g",
+    "forest_aara_sunset_sg"
+   ]
+  },
+  {
+   "id": "forest_nino_fire",
+   "speaker": "nino",
+   "template": "{nama}, lihat layar! Ada kebakaran besar di Hutan Botanica!",
+   "delivery": null,
+   "file": "src/world/bab1/Bab1Level.ts",
+   "clips": [
+    "forest_nino_fire_g",
+    "forest_nino_fire_sg"
+   ]
+  },
+  {
+   "id": "forest_gorilla_sorry",
+   "speaker": "gorila",
+   "template": "Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami.",
+   "delivery": null,
+   "file": "src/world/arena/GorillaArena.ts",
+   "clips": [
+    "forest_gorilla_sorry_g",
+    "forest_gorilla_sorry_sg"
+   ]
+  },
+  {
+   "id": "nino_pujian_01",
+   "speaker": "nino",
+   "template": "Mantap, {nama}!",
+   "delivery": "[cheerful] Mantap, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "nino_pujian_01_g",
+    "nino_pujian_01_sg"
+   ]
+  },
+  {
+   "id": "nino_pujian_05",
+   "speaker": "nino",
+   "template": "Kamu hebat, {nama}!",
+   "delivery": "[warm] Kamu hebat, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "nino_pujian_05_g",
+    "nino_pujian_05_sg"
+   ]
+  },
+  {
+   "id": "nino_pujian_06",
+   "speaker": "nino",
+   "template": "Kamu berhasil, {nama}!",
+   "delivery": "[cheerful] Kamu berhasil, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "nino_pujian_06_g",
+    "nino_pujian_06_sg"
+   ]
+  },
+  {
+   "id": "nino_pujian_07",
+   "speaker": "nino",
+   "template": "Pintar sekali, {nama}!",
+   "delivery": "[playful] Pintar sekali, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "nino_pujian_07_g",
+    "nino_pujian_07_sg"
+   ]
+  },
+  {
+   "id": "nino_semangat_03",
+   "speaker": "nino",
+   "template": "Pelan-pelan, {nama}. Kamu bisa!",
+   "delivery": "[warm] Pelan-pelan, {nama}. Kamu bisa!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "nino_semangat_03_g",
+    "nino_semangat_03_sg"
+   ]
+  },
+  {
+   "id": "quiz_nino_hebat",
+   "speaker": "nino",
+   "template": "Hebat, {nama}!",
+   "delivery": "[proud] Hebat, {nama}!",
+   "file": "src/quiz/lines.ts",
+   "clips": [
+    "quiz_nino_hebat_g",
+    "quiz_nino_hebat_sg"
+   ]
+  },
+  {
+   "id": "kota_sari_halo",
+   "speaker": "res_sari",
+   "template": "Halo, {nama}!",
+   "delivery": "[warm] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_sari_halo_g",
+    "kota_sari_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_sari_terima",
+   "speaker": "res_sari",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[warm] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_sari_terima_g",
+    "kota_sari_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_joko_halo",
+   "speaker": "res_joko",
+   "template": "Halo, {nama}!",
+   "delivery": "[cheerful] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_joko_halo_g",
+    "kota_joko_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_joko_terima",
+   "speaker": "res_joko",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[cheerful] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_joko_terima_g",
+    "kota_joko_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_dimas_halo",
+   "speaker": "res_dimas",
+   "template": "Halo, {nama}!",
+   "delivery": "[excited] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_dimas_halo_g",
+    "kota_dimas_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_dimas_terima",
+   "speaker": "res_dimas",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[excited] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_dimas_terima_g",
+    "kota_dimas_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_guru_halo",
+   "speaker": "res_guru",
+   "template": "Halo, {nama}!",
+   "delivery": "[kind] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_guru_halo_g",
+    "kota_guru_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_guru_terima",
+   "speaker": "res_guru",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[kind] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_guru_terima_g",
+    "kota_guru_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_lala_halo",
+   "speaker": "res_lala",
+   "template": "Halo, {nama}!",
+   "delivery": "[playful] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_lala_halo_g",
+    "kota_lala_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_lala_terima",
+   "speaker": "res_lala",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[playful] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_lala_terima_g",
+    "kota_lala_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_pos_halo",
+   "speaker": "res_pos",
+   "template": "Halo, {nama}!",
+   "delivery": "[friendly] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_pos_halo_g",
+    "kota_pos_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_pos_terima",
+   "speaker": "res_pos",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[friendly] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_pos_terima_g",
+    "kota_pos_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_ani_halo",
+   "speaker": "res_ani",
+   "template": "Halo, {nama}!",
+   "delivery": "[gentle] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_ani_halo_g",
+    "kota_ani_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_ani_terima",
+   "speaker": "res_ani",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[gentle] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_ani_terima_g",
+    "kota_ani_terima_sg"
+   ]
+  },
+  {
+   "id": "kota_bima_halo",
+   "speaker": "res_bima",
+   "template": "Halo, {nama}!",
+   "delivery": "[cheerful] Halo, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_bima_halo_g",
+    "kota_bima_halo_sg"
+   ]
+  },
+  {
+   "id": "kota_bima_terima",
+   "speaker": "res_bima",
+   "template": "Terima kasih, {nama}!",
+   "delivery": "[cheerful] Terima kasih, {nama}!",
+   "file": "src/world/kota/CityPeople.ts",
+   "clips": [
+    "kota_bima_terima_g",
+    "kota_bima_terima_sg"
+   ]
+  },
+  {
+   "id": "bab2_nino_hebat",
+   "speaker": "nino",
+   "template": "Hebat, {nama}!",
+   "delivery": "[proud] Hebat, {nama}!",
+   "file": "src/world/bab2/Story.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "bab2_nino_hebat_g",
+    "bab2_nino_hebat_sg"
+   ]
+  },
+  {
+   "id": "rakus_nino_lab_invite",
+   "speaker": "nino",
+   "template": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, {nama}. Kita latihan lagi!",
+   "delivery": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, {nama}. Kita latihan lagi!",
+   "file": "src/world/kota/LetterHunt.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "rakus_nino_lab_invite_g",
+    "rakus_nino_lab_invite_sg"
+   ]
+  },
+  {
+   "id": "rakus_nino_lab_arrival",
+   "speaker": "nino",
+   "template": "Selamat datang kembali, {nama}! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+   "delivery": "[cheerful] Selamat datang kembali, {nama}! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+   "file": "src/world/bab1/Bab1Level.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "rakus_nino_lab_arrival_g",
+    "rakus_nino_lab_arrival_sg"
+   ]
+  },
+  {
+   "id": "elang_nino_alarm",
+   "speaker": "nino",
+   "template": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. {nama}, temui dia di sana!",
+   "delivery": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. {nama}, temui dia di sana!",
+   "file": "src/world/progress.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "elang_nino_alarm_g",
+    "elang_nino_alarm_sg"
+   ]
+  },
+  {
+   "id": "elang_nino_terbang",
+   "speaker": "nino",
+   "template": "Aktifkan mode terbang dulu, {nama}! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+   "delivery": "[helpful] Aktifkan mode terbang dulu, {nama}! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+   "file": "src/world/kota/EagleBoss.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "elang_nino_terbang_g",
+    "elang_nino_terbang_sg"
+   ]
+  },
+  {
+   "id": "elang_nino_menang",
+   "speaker": "nino",
+   "template": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, {nama}.",
+   "delivery": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, {nama}.",
+   "file": "src/world/kota/EagleArena.ts (text from audio/dialog.json; template overlaid by Dialog.ts)",
+   "clips": [
+    "elang_nino_menang_g",
+    "elang_nino_menang_sg"
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "id": "bab1_nino_terpilih",
+   "speaker": "nino",
+   "text": "Aku Nino. Kamu terpilih karena hatimu, Glen.",
+   "reason": "Chapter 1 first meeting in the Lab: boy mode is fixed by the scene and the name is deliberate.",
+   "file": "src/world/bab1/Story.ts"
+  },
+  {
+   "id": "bab2_nino_pagi",
+   "speaker": "nino",
+   "text": "Selamat pagi, Superglen! Ayo latihan.",
+   "reason": "Chapter 2 hangar start: the costume is fixed by the scene (training needs Superglen).",
+   "file": "src/world/bab2/Story.ts"
+  },
+  {
+   "id": "bab3_nino_ubah",
+   "speaker": "nino",
+   "text": "Ubah jadi Superglen dulu, Glen!",
+   "reason": "About the transformation itself, mentions both names.",
+   "file": "src/world/kota/Bab3Data.ts"
+  },
+  {
+   "id": "bab4_aara_halo",
+   "speaker": "aara",
+   "text": "Glen! Aku membuat alat penerjemah. Mau coba?",
+   "reason": "Aara does not know the secret until Chapter 5, she must only say Glen.",
+   "file": "src/world/kota/Bab4Data.ts"
+  },
+  {
+   "id": "bab4_aara_kulit",
+   "speaker": "aara",
+   "text": "Glen, lihat! Apa ini? Panjang sekali!",
+   "reason": "Aara does not know the secret until Chapter 5, she must only say Glen.",
+   "file": "src/world/kota/Bab4Data.ts"
+  },
+  {
+   "id": "bab5_nino_halo",
+   "speaker": "nino",
+   "text": "Selamat datang, Glen! Siapa temanmu ini?",
+   "reason": "Chapter 5 Lab visit before the reveal: boy mode fixed by the scene, deliberate.",
+   "file": "src/world/kota/Bab5Data.ts"
+  },
+  {
+   "id": "bab5_aara_super",
+   "speaker": "aara",
+   "text": "Hah? Glen itu Superglen? Hebat sekali!",
+   "reason": "The reveal itself, mentions both names.",
+   "file": "src/world/kota/Bab5Data.ts"
+  },
+  {
+   "id": "flight_nino_easy",
+   "speaker": "nino",
+   "text": "... menjaga Glen di udara ...",
+   "reason": "Third person mention inside a sentence, not a direct address.",
+   "file": "src/world/arena/FlightTrainingLevel.ts"
+  },
+  {
+   "id": "flight_nino_done",
+   "speaker": "nino",
+   "text": "Tiga level selesai! Glen sudah mahir terbang ...",
+   "reason": "Third person mention, not a direct address.",
+   "file": "src/world/arena/FlightTrainingLevel.ts"
+  },
+  {
+   "id": "(not lines)",
+   "speaker": "various",
+   "text": "Lines containing the name inside quiz content (\"Glen makan 4 permen\", \"Aara dan Glen adalah ...\", \"Sekolah Glen dan Aara\", \"Rumah Glen\")",
+   "reason": "Story-problem names and place names, not addressing the player.",
+   "file": "src/data/quiz/*.json, src/world/kota/CityData.ts"
+  },
+  {
+   "id": "player lines",
+   "speaker": "glen/superglen",
+   "text": "All lines spoken by Glen or Superglen (forest_glen_*, bab*_glen_*, kota_glen_*)",
+   "reason": "Spoken by the player; unchanged by design.",
+   "file": "src"
+  }
+ ]
+}

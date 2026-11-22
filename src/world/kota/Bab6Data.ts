@@ -18,7 +18,7 @@ export const RAKUS_GUDANG = (() => {
 
 export const BAB6_LINES = {
   // After Chapter 5: the reports.
-  ninoLaporan: { id: 'bab6_nino_laporan', speaker: 'nino', text: 'Superglen, ada laporan! Semua makanan di Gudang Pasar hilang!' },
+  ninoLaporan: { id: 'bab6_nino_laporan', speaker: 'nino', text: '{nama}, ada laporan! Semua makanan di Gudang Pasar hilang!' },
   ninoCari: { id: 'bab6_nino_cari', speaker: 'nino', text: 'Mungkin tikus besar itu pelakunya. Ayo kita cari di Gudang Pasar!' },
   glenSiap: { id: 'bab6_glen_siap', speaker: 'glen', text: 'Siap, Nino! Ayo ke gudang!' },
   // Meeting him.
@@ -40,9 +40,9 @@ export const BAB6_LINES = {
   rakusSendawa: { id: 'bab6_rakus_sendawa', speaker: 'rakus', text: 'Hik! Sendawa... Perutku sakit. Sekarang aku kecil lagi.' },
   rakusMaaf: { id: 'bab6_rakus_maaf', speaker: 'rakus', text: 'Maaf ya, aku rakus sekali. Makanannya kukembalikan.' },
   rakusBagi: { id: 'bab6_rakus_bagi', speaker: 'rakus', text: 'Aku janji, mulai sekarang makanan kita bagi bersama!' },
-  wargaHore: { id: 'bab6_warga_hore', speaker: 'warga', text: 'Hore! Makanan kota sudah kembali! Terima kasih, Superglen!' },
-  ninoHebat: { id: 'bab6_nino_hebat', speaker: 'nino', text: 'Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.' },
-  ninoPulang: { id: 'rakus_nino_pulang', speaker: 'nino', text: 'Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!' },
+  wargaHore: { id: 'bab6_warga_hore', speaker: 'warga', text: 'Hore! Makanan kota sudah kembali! Terima kasih, {nama}!' },
+  ninoHebat: { id: 'bab6_nino_hebat', speaker: 'nino', text: 'Mantap, {nama}! Tikus Rakus sudah jinak dan kota kenyang lagi.' },
+  ninoPulang: { id: 'rakus_nino_pulang', speaker: 'nino', text: 'Hari sudah malam, {nama}. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!' },
 } as const;
 
 export type Bab6Line = (typeof BAB6_LINES)[keyof typeof BAB6_LINES];

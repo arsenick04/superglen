@@ -18,7 +18,7 @@ export const QuizLines = {
   /** After two wrong picks only the right card is left. */
   tinggal: line('quiz_nino_tinggal', 'Ini dia! Ketuk yang ini ya.'),
   /** Right pick. */
-  hebat: line('quiz_nino_hebat', 'Hebat, Glen!'),
+  hebat: line('quiz_nino_hebat', 'Hebat, {nama}!'),
   /** The end screen of a challenge (coins and sticker). */
   selesai: line('quiz_nino_selesai', 'Tantangan selesai! Ini koin dan stikermu.'),
   /** A "kepingan memori ilmuwan" was won. */

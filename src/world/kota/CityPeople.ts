@@ -366,7 +366,7 @@ export class CityPeople {
     if (this.done.has(m.id) || !this.canOffer()) {
       seq.run(async () => {
         this.busy = true;
-        await this.say(r.id, this.done.has(m.id) ? 'Terima kasih, Glen!' : 'Halo, Glen!', `kota_${r.id}_${this.done.has(m.id) ? 'terima' : 'halo'}`, false);
+        await this.say(r.id, this.done.has(m.id) ? 'Terima kasih, {nama}!' : 'Halo, {nama}!', `kota_${r.id}_${this.done.has(m.id) ? 'terima' : 'halo'}`, false);
         this.busy = false;
       });
       return;

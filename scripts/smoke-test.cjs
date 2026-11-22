@@ -43,8 +43,8 @@ async function waitForServer(timeoutMs) {
 }
 
 const VARIASI = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'nino_variasi.json'), 'utf8'));
-const PRAISE = VARIASI.pujian.map((l) => l.text);
-const RETRY = VARIASI.coba_lagi.map((l) => l.text);
+const PRAISE = VARIASI.pujian.flatMap((l) => [l.text.split('{nama}').join('Glen'), l.text.split('{nama}').join('Superglen')]);
+const RETRY = VARIASI.coba_lagi.flatMap((l) => [l.text.split('{nama}').join('Glen'), l.text.split('{nama}').join('Superglen')]);
 const state = () => window.__superglen && JSON.parse(JSON.stringify(window.__superglen));
 
 async function sampleFps(page, n = 6) {
@@ -11351,7 +11351,7 @@ async function zoomScenario(page, check, touch) {
 // ---- Dialog fit: every line in the game fits the bubble (no "...", no cut text, at most 3 lines, bubble on screen): groups `dlg-fit`, `dlg-fit-touch` ----
 function allDialogTexts() {
   const texts = new Map();
-  const add = (t) => { if (t && t.length > 1) texts.set(t, true); };
+  const add = (t) => { if (t && t.length > 1) texts.set(t.split('{nama}').join('Superglen'), true); };
   for (const l of JSON.parse(fs.readFileSync(path.join(ROOT, 'audio', 'dialog.json'), 'utf8'))) add(l.text);
   const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'nino_variasi.json'), 'utf8'));
   for (const k of Object.keys(v)) for (const l of v[k]) add(l.text);
@@ -11465,6 +11465,157 @@ async function dlgFitScenario(page, check, touch) {
     return res;
   });
   check(`dlg-fit ${tag}: all 9 portrait images are served`, Object.values(imgs).every((n) => n > 1000), JSON.stringify(imgs));
+}
+
+// ---- Gorilla fight: falling keeps the energy (stars) and chain; HUD layout: group `gorilla-fall`, `gorilla-fall-touch` ----------------------
+async function gorillaFallScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vw = touch ? 844 : 1280, vh = touch ? 390 : 720;
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&gorilla=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  await sleep(900);
+  if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  // Run through the three intro lines and the battle entrance.
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 400 && (g.dialog.open || g.levelInfo.gorillaPhase === undefined); i++) { await g.advanceAsync(20, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } }
+    await g.advanceAsync(480, true);
+  });
+  await sleep(1200);
+  const info = () => page.evaluate(() => ({ stars: window.__superglen.levelInfo.gorillaStars, misses: window.__superglen.levelInfo.gorillaMisses, hearts: window.__superglen.health.hearts, ex: window.__superglen.health.exhaustions, phase: window.__superglen.levelInfo.gorillaPhase }));
+  const a = await info();
+  check(`gorilla-fall ${tag}: fight is running with full stars`, a.stars === 5 && a.hearts >= 3, JSON.stringify(a));
+  // Make the chain and the star count non-trivial: spend one star and keep one miss on the chain.
+  await page.evaluate(() => window.__superglen.save.setHearts(5));
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(5, false); });
+  await page.waitForFunction(() => { const b = document.querySelector('.battle-banner'); return b && !b.hidden && !b.classList.contains('intro') && b.getBoundingClientRect().top < 20; }, null, { timeout: 15000 });
+  // HUD layout of the fight.
+  const layout = await page.evaluate(() => {
+    const sels = { banner: '.battle-banner', bar: '.bb-bar', hint: '.gorilla-hint', hearts: '.hearts', gear: '.set-gear', zoom: '.zoom-btn', btn: '.tc-button', joy: '.tc-hint, .tc-base', fps: '.hud-fps' };
+    const boxes = [];
+    for (const [name, sel] of Object.entries(sels)) for (const e of document.querySelectorAll(sel)) {
+      const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      if (r.width < 2 || r.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity === 0) continue;
+      boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom });
+    }
+    const bad = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const x = boxes[i], y = boxes[j];
+      if (x.name === 'banner' && y.name === 'bar' || x.name === 'bar' && y.name === 'banner') continue; // the bar hangs under the banner
+      if (x.name === y.name && x.name === 'btn') continue;
+      if (x.l < y.r && y.l < x.r && x.t < y.b && y.t < x.b) bad.push(x.name + '/' + y.name);
+    }
+    const bar = boxes.find((b) => b.name === 'bar'), hint = boxes.find((b) => b.name === 'hint');
+    return { bad, names: [...new Set(boxes.map((b) => b.name))], out: boxes.filter((b) => b.l < -1 || b.t < -1 || b.r > innerWidth + 1 || b.b > innerHeight + 1).map((b) => b.name), hintBelowBar: !!(bar && hint && hint.t >= bar.b), hintText: document.querySelector('.gorilla-hint')?.textContent, rects: boxes.filter((b) => ['banner', 'bar', 'hint'].includes(b.name)).map((b) => b.name + ':' + Math.round(b.t) + '-' + Math.round(b.b)), battle: document.documentElement.className };
+  });
+  check(`gorilla-fall ${tag}: banner, star bar, hint, hearts, pause, zoom and buttons overlap nothing and stay on screen`,
+    layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('bar') && layout.names.includes('hint') && layout.names.includes('hearts') && !layout.names.includes('fps') && layout.hintBelowBar, JSON.stringify(layout));
+  check(`gorilla-fall ${tag}: hint is short and has no duplicate energy number`, !!layout.hintText && layout.hintText.length < 32 && !/Energi/.test(layout.hintText), layout.hintText);
+  const shotDir = process.env.HUD_SHOTS;
+  if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `gorilla-${touch ? 'touch' : 'desktop'}.png`) }); }
+  // Fall once: -1 heart, stars and chain kept. Wait until the boss's safe time (if any) is over, then top up.
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 20 && g.health.invulnerable; i++) await g.advanceAsync(15, false); g.health.setHearts(5); });
+  await page.evaluate(async () => { const g = window.__superglen; g.levelInfo.gorillaForceStars = 3; await g.advanceAsync(3, false); });
+  const before = await info();
+  check(`gorilla-fall ${tag}: test set the energy to 3 stars`, before.stars === 3, JSON.stringify(before));
+  await page.evaluate(async () => { const g = window.__superglen; g.teleportFeet(9, 0, 9); await g.advanceAsync(8, false); });
+  const b = await info();
+  const pos = await page.evaluate(() => { const g = window.__superglen; return g.levelInfo; });
+  check(`gorilla-fall ${tag}: one fall costs exactly one heart`, b.hearts === before.hearts - 1, JSON.stringify({ before, b }));
+  check(`gorilla-fall ${tag}: stars and the misses chain are kept after the fall`, b.stars === before.stars, JSON.stringify({ before, b }));
+  // Several frames later still one heart down (no double charge) and the player stands on a platform again.
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(30, false); });
+  const c = await info();
+  check(`gorilla-fall ${tag}: no double charge and no star reset after the respawn`, c.hearts === before.hearts - 1 && c.stars === before.stars && c.ex === before.ex, JSON.stringify(c));
+  // Misses kept: set the chain through the level via a second probe is not exposed; compare the debug value instead.
+  check(`gorilla-fall ${tag}: misses chain unchanged`, c.misses === before.misses, JSON.stringify({ before, c }));
+  // Fall at the last heart: the exhaustion path runs, stars reset only after the rest.
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 20 && g.health.invulnerable; i++) await g.advanceAsync(15, false); g.health.setHearts(1); });
+  await page.evaluate(async () => { const g = window.__superglen; g.teleportFeet(9, 0, 9); await g.advanceAsync(4, false); });
+  const d = await info();
+  check(`gorilla-fall ${tag}: a fall at the last heart brings the existing rest (hearts 0, not yet reset)`, d.hearts === 0, JSON.stringify(d));
+  // The rest fades in real time: run the live loop until the fight has restarted.
+  await page.evaluate(() => window.__superglen.pause(false));
+  for (let i = 0; i < 80; i++) {
+    await sleep(400);
+    const ok = await page.evaluate(() => { const g = window.__superglen; if (g.dialog.open) document.querySelector('.dlg-card')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return g.health.hearts === 5 && !g.dialog.open && g.controlsEnabled && g.levelInfo.gorillaStars === 5; });
+    if (ok) break;
+  }
+  await page.evaluate(() => window.__superglen.pause(true));
+  const e = await info();
+  check(`gorilla-fall ${tag}: after the rest hearts are full again and only now the energy is back to full`, e.ex === before.ex + 1 && e.hearts === 5 && e.stars === 5, JSON.stringify(e) + JSON.stringify(await page.evaluate(() => ({ ctl: window.__superglen.controlsEnabled, dlg: window.__superglen.dialog.open, txt: window.__superglen.dialog.text, lvl: window.__superglen.level, resting: window.__superglen.health.resting }))));
+}
+
+// ---- {nama} in non-player lines: group `dialog-name` ----------------------------------------------------------------------------------
+async function dialogNameScenario(page, check) {
+  await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), false);
+  await d3Adv(page, 30);
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 60 && g.dialog.open; i++) await g.advanceAsync(20, false); });
+  const sayAndRead = (line, lock = true) => page.evaluate(async ({ line, lock }) => {
+    const g = window.__superglen;
+    const before = g.audio.voicesPlayed;
+    g.say(line, { lockControls: lock });
+    await g.advanceAsync(12, false);
+    for (let i = 0; i < 30 && g.audio.voicesPlayed === before; i++) await new Promise((r) => setTimeout(r, 60));
+    const r = { text: document.querySelector('.dlg-text').textContent, shown: g.dialog.text, voice: g.audio.voicesPlayed > before ? g.audio.lastVoiceId : '', face: document.querySelector('.dlg-face img')?.getAttribute('src') || '', name: document.querySelector('.dlg-name').textContent, compact: document.querySelector('.dlg')?.classList.contains('compact') };
+    for (let i = 0; i < 60 && g.dialog.open; i++) { document.querySelector('.dlg-card')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); await g.advanceAsync(20, false); }
+    return r;
+  }, { line, lock });
+  const line = { id: 'tn_hebat', speaker: 'nino', text: 'Hebat, {nama}!' };
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen', false); });
+  const a = await sayAndRead(line);
+  check('dialog-name: {nama} is Glen in boy mode (bubble, nino portrait)', a.text === 'Hebat, Glen!' && /nino/.test(a.face) && a.name === 'Nino', JSON.stringify(a));
+  await page.evaluate(() => { window.__superglen.game.setPlayerMode('superglen', false); });
+  const b = await sayAndRead(line);
+  check('dialog-name: {nama} is Superglen after the transform', b.text === 'Hebat, Superglen!', JSON.stringify(b));
+  // Two lines of the same speaker with a mode switch in between.
+  await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('glen', false); });
+  const c1 = await sayAndRead({ id: 'tn_a', speaker: 'aara', text: 'Halo, {nama}!' });
+  await page.evaluate(() => { window.__superglen.game.setPlayerMode('superglen', false); });
+  const c2 = await sayAndRead({ id: 'tn_a', speaker: 'aara', text: 'Halo, {nama}!' });
+  check('dialog-name: the same speaker switches name with the mode between two lines', c1.text === 'Halo, Glen!' && c2.text === 'Halo, Superglen!' && /aara/.test(c1.face) && /aara/.test(c2.face), JSON.stringify([c1, c2]));
+  // Audio: _g / _sg clips when present, the plain id otherwise.
+  const unlocked = await page.evaluate(() => { const a = window.__superglen.audio; for (const id of ['tn_hebat', 'tn_hebat_g', 'tn_hebat_sg']) a.inject(id, 0.3, false); return a.unlocked; });
+  check('dialog-name: audio context is unlocked for the clip checks', unlocked, String(unlocked));
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen', false));
+  const g1 = await sayAndRead(line);
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen', false));
+  const g2 = await sayAndRead(line);
+  check('dialog-name: clip chosen is tn_hebat_g in boy mode and tn_hebat_sg in Superglen mode', g1.voice === 'tn_hebat_g' && g2.voice === 'tn_hebat_sg', JSON.stringify([g1.voice, g2.voice]));
+  await page.evaluate(() => { const a = window.__superglen.audio; a.hide('tn_hebat_g'); a.hide('tn_hebat_sg'); a.inject('tn_hebat', 0.3, false); });
+  const f1 = await sayAndRead(line);
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen', false));
+  const f2 = await sayAndRead(line);
+  check('dialog-name: without the variant clips the plain id plays', f1.voice === 'tn_hebat' && f2.voice === 'tn_hebat', JSON.stringify([f1.voice, f2.voice]));
+  await page.evaluate(() => { const a = window.__superglen.audio; a.hide('tn_hebat'); });
+  const t1 = await sayAndRead(line);
+  check('dialog-name: with no clip at all the text still shows', t1.text === 'Hebat, Glen!', JSON.stringify(t1));
+  // A line without the placeholder never gets a variant clip.
+  await page.evaluate(() => { const a = window.__superglen.audio; a.inject('tn_plain', 0.3, false); a.inject('tn_plain_g', 0.3, false); });
+  const p1 = await sayAndRead({ id: 'tn_plain', speaker: 'nino', text: 'Halo!' });
+  check('dialog-name: a line without {nama} keeps its own id', p1.voice === 'tn_plain', JSON.stringify(p1));
+  // A real source line (Bab 3 Lina) and a table-only line show no raw placeholder.
+  const real = await page.evaluate(async () => {
+    const g = window.__superglen; g.game.setPlayerMode('superglen', false);
+    g.say('bab2_nino_hebat', { lockControls: true });
+    await g.advanceAsync(12, false);
+    const t = document.querySelector('.dlg-text').textContent;
+    for (let i = 0; i < 60 && g.dialog.open; i++) { document.querySelector('.dlg-card')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); await g.advanceAsync(20, false); }
+    return t;
+  });
+  check('dialog-name: a table-only line (bab2_nino_hebat) resolves from the template', real === 'Hebat, Superglen!', real);
+  // Compact call-out (the fight bubble).
+  await page.evaluate(() => { const g = window.__superglen; g.forceCompactDialog(true); g.audio.inject('tn_c_sg', 0.3, false); g.game.setPlayerMode('superglen', false); });
+  const k1 = await sayAndRead({ id: 'tn_c', speaker: 'nino', text: 'Semangat, {nama}!' }, false);
+  check('dialog-name: the compact call-out resolves {nama} (Superglen) and picks the _sg clip', k1.compact === true && k1.text === 'Semangat, Superglen!' && k1.voice === 'tn_c_sg', JSON.stringify(k1));
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen', false));
+  const k2 = await sayAndRead({ id: 'tn_c', speaker: 'nino', text: 'Semangat, {nama}!' }, false);
+  check('dialog-name: the compact call-out says Glen in boy mode (no _g clip: falls back to the plain id)', k2.compact === true && k2.text === 'Semangat, Glen!' && k2.voice !== 'tn_c_sg', JSON.stringify(k2));
+  const raw = await page.evaluate(() => document.body.innerText.includes('{nama}'));
+  check('dialog-name: no raw {nama} on screen', !raw, String(raw));
 }
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
@@ -11711,6 +11862,9 @@ async function main() {
     results.push(await runScenario(browser, 'bab4-end-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4EndScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-flow', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FlowScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-flow-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FlowScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'dialog-name', { viewport: { width: 1280, height: 720 } }, dialogNameScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gorilla-fall', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFallScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'gorilla-fall-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => gorillaFallScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'hud-layout', { viewport: { width: 1280, height: 720 } }, (p, c) => hudLayoutScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'hud-layout-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => hudLayoutScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-fight', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FightScenario(p, c, false), '?level=kota&fps=0&reset=1'));

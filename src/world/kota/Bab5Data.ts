@@ -39,10 +39,10 @@ export const BAB5_LINES = {
   ninoUlar: { id: 'bab5_nino_ular', speaker: 'nino', text: 'Kupindai dulu... Ular Melar! Badannya bisa memanjang.' },
   glenSuper: { id: 'bab5_glen_super', speaker: 'glen', text: 'Aara, ini rahasia. Aku adalah Superglen!' },
   aaraSuper: { id: 'bab5_aara_super', speaker: 'aara', text: 'Hah? Glen itu Superglen? Hebat sekali!' },
-  ninoLapangan: { id: 'bab5_nino_lapangan', speaker: 'nino', text: 'Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!' },
+  ninoLapangan: { id: 'bab5_nino_lapangan', speaker: 'nino', text: 'Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, {nama}!' },
   // Outside again.
   aaraTunggu: { id: 'bab5_aara_tunggu', speaker: 'aara', text: 'Aku tunggu di sini. Hati-hati, ya!' },
-  aaraSemangat: { id: 'bab5_aara_semangat', speaker: 'aara', text: 'Semangat, Superglen! Kamu pasti bisa!' },
+  aaraSemangat: { id: 'bab5_aara_semangat', speaker: 'aara', text: 'Semangat, {nama}! Kamu pasti bisa!' },
   // The fight.
   ninoPola: { id: 'bab5_nino_pola', speaker: 'nino', text: 'Awas! Ular Melar akan melar lurus. Lompat ke samping atau pakai perisai!' },
   ninoGaris: { id: 'bab5_nino_garis', speaker: 'nino', text: 'Lihat garis merah di tanah. Minggir sebelum dia melar!' },
@@ -52,9 +52,9 @@ export const BAB5_LINES = {
   // Tamed.
   ularMaaf: { id: 'bab5_ular_maaf', speaker: 'ular', text: 'Sssssori ya! Aku tidak mau menakuti. Aku cuma tersesat, sss!' },
   ularPergi: { id: 'bab5_ular_pergi', speaker: 'ular', text: 'Sss... aku pulang ke hutan. Dadah, sss!' },
-  ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Keren, Superglen! Ular Melar sudah jinak.' },
+  ninoHebat: { id: 'bab5_nino_hebat', speaker: 'nino', text: 'Keren, {nama}! Ular Melar sudah jinak.' },
   ninoTikus: { id: 'bab5_nino_tikus', speaker: 'nino', text: 'Kenapa ular ini sampai ke kota? Mungkin ada tikus besar yang mengusirnya. Nanti kita cari tahu.' },
-  ninoPanggilLab: { id: 'bab5_nino_panggil_lab', speaker: 'nino', text: 'Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.' },
+  ninoPanggilLab: { id: 'bab5_nino_panggil_lab', speaker: 'nino', text: 'Kembali ke Lab, {nama}! Kita rayakan kemenangan kalian bersama Aara.' },
   glenRayakan: { id: 'bab5_glen_rayakan', speaker: 'glen', text: 'Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!' },
   aaraRayakan: { id: 'bab5_aara_rayakan', speaker: 'aara', text: 'Hore! Kita bertiga hebat sekali!' },
   ninoPulang: { id: 'bab5_nino_pulang', speaker: 'nino', text: 'Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.' },

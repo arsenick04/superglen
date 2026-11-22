@@ -200,19 +200,19 @@ export class Bab1Level implements Level {
           await ctx.seq.waitUntil(() => startGate.started);
           this.forestAara?.emote('cheer');
           await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Lima lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
-          await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}!' }, { lockControls: true });
           const result = await ctx.quiz.run({ category: 'mix', count: 5, reason: 'story', questionSet: 'forest', promptSpeaker: 'aara' });
           if (!result.completed) return;
           this.forestAara?.emote('cheer');
-          await ctx.dialog.say({ id: 'forest_aara_quiz_complete', speaker: 'aara', text: 'Hebat! Lima pertanyaan berhasil kamu jawab, Glen!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_quiz_complete', speaker: 'aara', text: 'Hebat! Lima pertanyaan berhasil kamu jawab, {nama}!' }, { lockControls: true });
           ctx.save.markChapterDone('forest-quiz');
-          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}!' }, { lockControls: true });
           ctx.save.setInterlude('forest_home');
           await travel(ctx.game, 'kota', 'hillDoor');
         });
         else if (ctx.save.data.interlude === 'forest_quiz_done') ctx.seq.run(async () => {
           await ctx.seq.waitUntil(() => startGate.started);
-          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}!' }, { lockControls: true });
           ctx.save.setInterlude('forest_home');
           await travel(ctx.game, 'kota', 'hillDoor');
         });
@@ -229,7 +229,7 @@ export class Bab1Level implements Level {
           ctx.sfx.alarm();
           await ctx.seq.wait(1.1);
           alert.remove();
-          await ctx.dialog.say({ id: 'forest_nino_fire', speaker: 'nino', text: 'Glen, lihat layar! Ada kebakaran besar di Hutan Botanica!' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_nino_fire', speaker: 'nino', text: '{nama}, lihat layar! Ada kebakaran besar di Hutan Botanica!' }, { lockControls: true });
           await ctx.game.playCinematic('forest-fire');
           await ctx.dialog.say({ id: 'forest_nino_hurry', speaker: 'nino', text: 'Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!' }, { lockControls: true });
           ctx.save.setInterlude('forest_fire_ready');

@@ -1,11 +1,11 @@
 {
   "pujian": [
-    { "id": "nino_pujian_01", "text": "Mantap, Glen!", "delivery": "[cheerful] Mantap, Glen!" },
+    { "id": "nino_pujian_01", "text": "Mantap, {nama}!", "delivery": "[cheerful] Mantap, {nama}!" },
     { "id": "nino_pujian_02", "text": "Keren sekali!", "delivery": "[proud] Keren sekali!" },
     { "id": "nino_pujian_03", "text": "Wah, tepat sasaran!", "delivery": "[excited] Wah, tepat sasaran!" },
-    { "id": "nino_pujian_05", "text": "Kamu hebat, Glen!", "delivery": "[warm] Kamu hebat, Glen!" },
-    { "id": "nino_pujian_06", "text": "Kamu berhasil, Glen!", "delivery": "[cheerful] Kamu berhasil, Glen!" },
-    { "id": "nino_pujian_07", "text": "Pintar sekali, Glen!", "delivery": "[playful] Pintar sekali, Glen!" },
+    { "id": "nino_pujian_05", "text": "Kamu hebat, {nama}!", "delivery": "[warm] Kamu hebat, {nama}!" },
+    { "id": "nino_pujian_06", "text": "Kamu berhasil, {nama}!", "delivery": "[cheerful] Kamu berhasil, {nama}!" },
+    { "id": "nino_pujian_07", "text": "Pintar sekali, {nama}!", "delivery": "[playful] Pintar sekali, {nama}!" },
     { "id": "nino_pujian_08", "text": "Hore, kita berhasil!", "delivery": "[excited] Hore, kita berhasil!" }
   ],
   "coba_lagi": [
@@ -17,7 +17,7 @@
   "semangat": [
     { "id": "nino_semangat_01", "text": "Ayo, kamu pasti bisa!", "delivery": "[cheerful] Ayo, kamu pasti bisa!" },
     { "id": "nino_semangat_02", "text": "Satu lagi, ayo semangat!", "delivery": "[excited] Satu lagi, ayo semangat!" },
-    { "id": "nino_semangat_03", "text": "Pelan-pelan, Glen. Kamu bisa!", "delivery": "[warm] Pelan-pelan, Glen. Kamu bisa!" },
+    { "id": "nino_semangat_03", "text": "Pelan-pelan, {nama}. Kamu bisa!", "delivery": "[warm] Pelan-pelan, {nama}. Kamu bisa!" },
     { "id": "nino_semangat_04", "text": "Sedikit lagi, kamu hampir sampai!", "delivery": "[playful] Sedikit lagi, kamu hampir sampai!" }
   ]
 }

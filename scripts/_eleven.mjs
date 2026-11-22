@@ -50,3 +50,8 @@ export async function getSubscription() {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const readJson = (f, fallback) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : fallback);
+
+/** multipart POST (speech-to-text). `form` is a FormData. */
+export async function apiForm(pathname, form) {
+  return fetch(API + pathname, { method: 'POST', headers: { 'xi-api-key': KEY }, body: form });
+}

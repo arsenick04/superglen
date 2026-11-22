@@ -6,3 +6,7 @@ dist
 .DS_Store
 test-results/
 .cache/
+
+# real voice imports (big originals; per-line FLACs are kept)
+audio/recorded-originals/*/_files/
+audio/.import-cache.json

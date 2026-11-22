@@ -42,6 +42,7 @@ html.battle .city-toast,
 html.battle .city-star,
 html.battle .coin-hud,
 html.battle .edge-arrow,
+html.battle .hud-fps,
 html.battle .drums {
   display: none !important;
 }
@@ -308,4 +309,26 @@ html.touch-ui .battle-banner.intro {
     animation: none;
     transition: none;
   }
+}
+
+/* Gorilla fight instruction line: one short line under the star bar (banner 58 px + bar 42 px + gaps). */
+.gorilla-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 64px);
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 4px 14px;
+  border-radius: 999px;
+  color: #513b29;
+  font: 800 17px/1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 6;
+}
+html.battle .gorilla-hint {
+  top: calc(env(safe-area-inset-top) + 132px);
+}
+.gorilla-hint:empty {
+  display: none;
 }
