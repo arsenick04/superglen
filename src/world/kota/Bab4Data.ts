@@ -62,7 +62,7 @@ export const BAB4_LINES = {
   aaraBenar2: { id: 'bab4_aara_benar2', speaker: 'aara', text: 'Betul! Alatnya makin canggih.' },
   aaraBenar3: { id: 'bab4_aara_benar3', speaker: 'aara', text: 'Wah! Alatnya sudah canggih sekali!' },
   aaraSinyal: { id: 'bab4_aara_sinyal', speaker: 'aara', text: 'Tuut tuut! Ada sinyal. Menunjuk ke taman kota!' },
-  glenTaman: { id: 'bab4_glen_taman', speaker: 'glen', text: 'Ayo ke taman, kita selidiki!' },
+  glenTaman: { id: 'bab4_glen_taman', speaker: 'glen', text: 'Ayo kita ke taman! Kita survei dikit!' },
   aaraTaman: { id: 'bab4_aara_taman', speaker: 'aara', text: 'Lihat! Ada papan petunjuk. Ayo kita baca!' },
   aaraBaca: { id: 'bab4_aara_baca', speaker: 'aara', text: 'Baca katanya! Tekan gambar pengeras suara kalau mau mendengarnya.' },
   aaraPapan: { id: 'bab4_aara_papan', speaker: 'aara', text: 'Dekati papan itu, lalu tekan tombol tangan.' },
@@ -74,7 +74,7 @@ export const BAB4_LINES = {
   aaraKulit: { id: 'bab4_aara_kulit', speaker: 'aara', text: 'Glen, lihat! Apa ini? Panjang sekali!' },
   glenKulit: { id: 'bab4_glen_kulit', speaker: 'glen', text: 'Ini kulit ular yang ganti kulit! Besar sekali!' },
   aaraBantuan: { id: 'bab4_aara_bantuan', speaker: 'aara', text: 'Ularnya pasti besar. Kita butuh bantuan.' },
-  glenKenal: { id: 'bab4_glen_kenal', speaker: 'glen', text: 'Aku kenal seseorang yang bisa membantu!' },
+  glenKenal: { id: 'bab4_glen_kenal', speaker: 'glen', text: 'Aku tahu orang yang bisa membantu!' },
 } as const;
 
 /** Aara's praise after a clue is read right, by the clue's index. */

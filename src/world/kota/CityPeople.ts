@@ -483,7 +483,7 @@ export class CityPeople {
     if (a.m.returns) {
       a.ready = true;
       this.pointToNext();
-      void this.say('glen', a.m.icon === 'cat' ? 'Ketemu! Ayo antar pulang.' : 'Sudah semua! Ayo kembali.', a.m.icon === 'cat' ? 'kota_glen_ketemu' : 'kota_glen_semua', false);
+      void this.say('glen', a.m.icon === 'cat' ? 'Wah, ketemu! Ayo bawa pulang.' : 'Sudah semua! Ayo kembali.', a.m.icon === 'cat' ? 'kota_glen_ketemu' : 'kota_glen_semua', false);
     } else this.finish(a.m);
   }
 

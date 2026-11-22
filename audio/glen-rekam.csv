@@ -6,34 +6,34 @@ No,id,Adegan,Kalimat,Nada
 5,bab1_glen_gelap,"Chapter 1: pulang sekolah, gedung tua, Lab","Gelap, ya. Nyalakan senter dulu.","gugup, ceria"
 6,bab1_glen_panel,"Chapter 1: pulang sekolah, gedung tua, Lab",Apa ini? Ada panel yang menyala.,penasaran
 7,bab1_glen_dinding,"Chapter 1: pulang sekolah, gedung tua, Lab","Wow, dindingnya terbuka!",takjub
-8,bab1_glen_lab,"Chapter 1: pulang sekolah, gedung tua, Lab","Wah, lab rahasia!",takjub
+8,bab1_glen_lab,"Chapter 1: pulang sekolah, gedung tua, Lab","Wah, laboratorium rahasia!",takjub
 9,bab1_glen_tombol,"Chapter 1: pulang sekolah, gedung tua, Lab","Ada tombol besar. Tekan, ah!",jenaka
 10,bab1_glen_siapa,"Chapter 1: pulang sekolah, gedung tua, Lab",Kamu siapa?,kaget
 11,bab1_glen_superglen,"Chapter 1: pulang sekolah, gedung tua, Lab",Aku jadi Superglen!,bersemangat
 12,bab1_glen_tertawa,"Chapter 1: pulang sekolah, gedung tua, Lab","Hahaha, geli!",tertawa
 13,bab2_glen_aduh,Chapter 2: latihan di hangar,Aduh! Kepala kena atap!,kaget
-14,bab2_glen_enak,Chapter 2: latihan di hangar,"Nyam, enak!",delighted
+14,bab2_glen_enak,Chapter 2: latihan di hangar,"Yum! Enak!",delighted
 15,bab2_glen_siap,Chapter 2: latihan di hangar,Superglen siap!,bersemangat
 16,bab3_glen_hei,Chapter 3: pasar dan Curut Cemberut,"Hei, jangan lari!",kaget
 17,bab3_glen_lucu2,Chapter 3: pasar dan Curut Cemberut,"Hihi, Curut Cemberutnya lucu sekali!",ceria
 18,bab3_glen_semua2,Chapter 3: pasar dan Curut Cemberut,Semua Curut Cemberut sudah kabur!,bersemangat
 19,bab4_glen_mau,Chapter 4: Aara dan alat penerjemah,Mau! Aku siap menjawab.,bersemangat
-20,bab4_glen_taman,Chapter 4: Aara dan alat penerjemah,"Ayo ke taman, kita selidiki!",berani
+20,bab4_glen_taman,Chapter 4: Aara dan alat penerjemah,"Ayo kita ke taman! Kita survei dikit!",berani
 21,bab4_glen_mulai,Chapter 4: Aara dan alat penerjemah,Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!,ceria
 22,bab4_glen_kulit,Chapter 4: Aara dan alat penerjemah,Ini kulit ular yang ganti kulit! Besar sekali!,takjub
-23,bab4_glen_kenal,Chapter 4: Aara dan alat penerjemah,Aku kenal seseorang yang bisa membantu!,hopeful
-24,bab5_glen_rayakan,Chapter 5: Ular Melar,"Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",bersemangat
-25,bab5_glen_ajak,Chapter 5: Ular Melar,"Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",bersemangat
-26,bab5_glen_masuk,Chapter 5: Ular Melar,"Ayo masuk, Aara. Tekan tombol tangan di pintu.",ceria
+23,bab4_glen_kenal,Chapter 4: Aara dan alat penerjemah,Aku tahu orang yang bisa membantu!,hopeful
+24,bab5_glen_rayakan,Chapter 5: Ular Melar,"Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!",bersemangat
+25,bab5_glen_ajak,Chapter 5: Ular Melar,"Aara, ikut aku ke gedung tua. Ada temanku di sana!",bersemangat
+26,bab5_glen_masuk,Chapter 5: Ular Melar,"Ayo Aara, tekan tombol itu di pintu.",ceria
 27,bab5_glen_ular,Chapter 5: Ular Melar,"Nino, lihat kulit ular ini. Besar sekali!",takjub
 28,bab5_glen_super,Chapter 5: Ular Melar,"Aara, ini rahasia. Aku adalah Superglen!",whispering
 29,bab6_glen_siap,Chapter 6: Tikus Rakus,"Siap, Nino! Ayo ke gudang!",bersemangat
 30,bab6_glen_kembali,Chapter 6: Tikus Rakus,"Hei, Tikus Rakus! Kembalikan makanan kota!","berani, firm"
-31,kota_glen_ketemu,Misi warga di kota,Ketemu! Ayo antar pulang.,bersemangat
+31,kota_glen_ketemu,Misi warga di kota,Wah, ketemu! Ayo bawa pulang.,bersemangat
 32,kota_glen_semua,Misi warga di kota,Sudah semua! Ayo kembali.,bangga
 33,elang_glen_berangkat,Chapter 7: Elang Belang,Aku akan terbang ke Bank dan menolong mereka!,bertekad
 34,elang_glen_melihat,Chapter 7: Elang Belang,Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!,kaget
-35,forest_glen_flight_broken,Chapter 8: hutan dan Gorilla,"Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!","cemas, bertekad"
-36,forest_glen_monkeys_safe,Chapter 8: hutan dan Gorilla,Semua monyet sudah aman! Sekarang kita harus mencari sumber api.,"lega, bertekad"
-37,forest_glen_explain,Chapter 8: hutan dan Gorilla,"Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!","kaget, earnest, gently"
+35,forest_glen_flight_broken,Chapter 8: hutan dan Gorilla,"Aduh, alat terbangku rusak! Aku harus menolong monyet-monyet itu!","cemas, bertekad"
+36,forest_glen_monkeys_safe,Chapter 8: hutan dan Gorilla,Monyet-monyet sudah aman! Kita harus padamkan api itu!,"lega, bertekad"
+37,forest_glen_explain,Chapter 8: hutan dan Gorilla,"Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!","kaget, earnest, gently"
 38,forest_glen_help_fire,Chapter 8: hutan dan Gorilla,"Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!","hangat, bertekad"

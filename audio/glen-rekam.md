@@ -16,7 +16,7 @@ Jumlah: 38 kalimat.
 | 5 | Gelap, ya. Nyalakan senter dulu. | gugup, ceria | `bab1_glen_gelap` |
 | 6 | Apa ini? Ada panel yang menyala. | penasaran | `bab1_glen_panel` |
 | 7 | Wow, dindingnya terbuka! | takjub | `bab1_glen_dinding` |
-| 8 | Wah, lab rahasia! | takjub | `bab1_glen_lab` |
+| 8 | Wah, laboratorium rahasia! | takjub | `bab1_glen_lab` |
 | 9 | Ada tombol besar. Tekan, ah! | jenaka | `bab1_glen_tombol` |
 | 10 | Kamu siapa? | kaget | `bab1_glen_siapa` |
 | 11 | Aku jadi Superglen! | bersemangat | `bab1_glen_superglen` |
@@ -27,7 +27,7 @@ Jumlah: 38 kalimat.
 | No | Kalimat | Nada | id |
 |---|---|---|---|
 | 13 | Aduh! Kepala kena atap! | kaget | `bab2_glen_aduh` |
-| 14 | Nyam, enak! | delighted | `bab2_glen_enak` |
+| 14 | Yum! Enak! | delighted | `bab2_glen_enak` |
 | 15 | Superglen siap! | bersemangat | `bab2_glen_siap` |
 
 ## Chapter 3: pasar dan Curut Cemberut
@@ -43,18 +43,18 @@ Jumlah: 38 kalimat.
 | No | Kalimat | Nada | id |
 |---|---|---|---|
 | 19 | Mau! Aku siap menjawab. | bersemangat | `bab4_glen_mau` |
-| 20 | Ayo ke taman, kita selidiki! | berani | `bab4_glen_taman` |
+| 20 | Ayo kita ke taman! Kita survei dikit! | berani | `bab4_glen_taman` |
 | 21 | Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan! | ceria | `bab4_glen_mulai` |
 | 22 | Ini kulit ular yang ganti kulit! Besar sekali! | takjub | `bab4_glen_kulit` |
-| 23 | Aku kenal seseorang yang bisa membantu! | hopeful | `bab4_glen_kenal` |
+| 23 | Aku tahu orang yang bisa membantu! | hopeful | `bab4_glen_kenal` |
 
 ## Chapter 5: Ular Melar
 
 | No | Kalimat | Nada | id |
 |---|---|---|---|
-| 24 | Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara! | bersemangat | `bab5_glen_rayakan` |
-| 25 | Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana! | bersemangat | `bab5_glen_ajak` |
-| 26 | Ayo masuk, Aara. Tekan tombol tangan di pintu. | ceria | `bab5_glen_masuk` |
+| 24 | Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara! | bersemangat | `bab5_glen_rayakan` |
+| 25 | Aara, ikut aku ke gedung tua. Ada temanku di sana! | bersemangat | `bab5_glen_ajak` |
+| 26 | Ayo Aara, tekan tombol itu di pintu. | ceria | `bab5_glen_masuk` |
 | 27 | Nino, lihat kulit ular ini. Besar sekali! | takjub | `bab5_glen_ular` |
 | 28 | Aara, ini rahasia. Aku adalah Superglen! | whispering | `bab5_glen_super` |
 
@@ -69,7 +69,7 @@ Jumlah: 38 kalimat.
 
 | No | Kalimat | Nada | id |
 |---|---|---|---|
-| 31 | Ketemu! Ayo antar pulang. | bersemangat | `kota_glen_ketemu` |
+| 31 | Wah, ketemu! Ayo bawa pulang. | bersemangat | `kota_glen_ketemu` |
 | 32 | Sudah semua! Ayo kembali. | bangga | `kota_glen_semua` |
 
 ## Chapter 7: Elang Belang
@@ -83,7 +83,7 @@ Jumlah: 38 kalimat.
 
 | No | Kalimat | Nada | id |
 |---|---|---|---|
-| 35 | Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu! | cemas, bertekad | `forest_glen_flight_broken` |
-| 36 | Semua monyet sudah aman! Sekarang kita harus mencari sumber api. | lega, bertekad | `forest_glen_monkeys_safe` |
-| 37 | Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla! | kaget, earnest, gently | `forest_glen_explain` |
+| 35 | Aduh, alat terbangku rusak! Aku harus menolong monyet-monyet itu! | cemas, bertekad | `forest_glen_flight_broken` |
+| 36 | Monyet-monyet sudah aman! Kita harus padamkan api itu! | lega, bertekad | `forest_glen_monkeys_safe` |
+| 37 | Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla! | kaget, earnest, gently | `forest_glen_explain` |
 | 38 | Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama! | hangat, bertekad | `forest_glen_help_fire` |
