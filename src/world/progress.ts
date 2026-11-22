@@ -93,6 +93,7 @@ export interface StartPlan {
 }
 
 export function startPlanFor(save: SaveStore): StartPlan {
+  if (save.data.where === 'forest-rescue' && save.data.interlude === 'forest_fire_ready') return { level: 'forest-rescue' };
   if (save.previewBattle) return { level: 'battle-curut' };
   if (save.previewChapter === 2) return { level: 'bab2' };
   if (save.previewFlightTraining) return { level: 'flight-training' };
