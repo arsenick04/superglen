@@ -194,7 +194,8 @@ export class KotaLevel implements Level {
       this.sun.color.setHex(0xfff1d8);
       (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
-    if (!sandbox && this.isWalkingHome()) this.setNight();
+    if (!sandbox && ctx.save.data.interlude === 'forest_home') this.setSunset();
+    else if (!sandbox && this.isWalkingHome()) this.setNight();
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
@@ -402,17 +403,41 @@ export class KotaLevel implements Level {
     this.sun.intensity = 0.7;
   }
 
+  /** Warm late-afternoon light after the forest quiz, clearly distinct from the following morning. */
+  private setSunset(): void {
+    const { scene } = this.ctx;
+    scene.background = new THREE.Color(0xf08a62);
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(0xd98b72);
+    scene.environmentIntensity = 0.48;
+    this.hemi.color.setHex(0xffc28f);
+    this.hemi.groundColor.setHex(0x786b68);
+    this.hemi.intensity = 1.05;
+    this.sun.color.setHex(0xff9b62);
+    this.sun.intensity = 1.15;
+  }
+
   /** Story pauses that require Glen to walk home before the next morning. */
   private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
     const { ctx } = this;
     const state = ctx.save.data.interlude;
     if (arrival === 'homeMorning' && state === '') this.hud.show('Keesokan pagi', 0xf2b632, true);
-    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home', 'forest_invite', 'forest_lab', 'forest_ready'].includes(state)) return;
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home', 'forest_invite', 'forest_lab', 'forest_ready', 'forest_home', 'forest_fire_invite', 'forest_fire_lab', 'forest_fire_ready'].includes(state)) return;
     if (arrival === 'homeMorning') {
       this.hud.show('Keesokan pagi', 0xf2b632, true);
       if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
     }
     if (state === 'rakus_letters') return;
+    if (state === 'forest_home') {
+      this.forestAara = new AaraActor(this.lit, ctx.dialog);
+      this.forestAara.place(HILL_DOOR_SPOT.x + 1.8, HILL_DOOR_SPOT.z + 0.6, HILL_DOOR_SPOT.yaw ?? Math.PI);
+      this.forestAara.setLevel(3);
+      ctx.root.add(this.forestAara.group);
+      ctx.onDispose(() => this.forestAara?.dispose());
+      this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
+      this.forestAaraFollower.reset();
+      void ctx.dialog.say({ id: 'forest_aara_walk_home', speaker: 'aara', text: 'Langit sudah jingga. Aku temani kamu berjalan pulang, Glen!' });
+      this.hud.show('Senja — pulang ke rumah', 0xffa35c, true);
+    }
     if (state === 'forest_invite') {
       const home = this.glenHomeSpot();
       this.forestAara = new AaraActor(this.lit, ctx.dialog);
@@ -458,7 +483,17 @@ export class KotaLevel implements Level {
       ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
       return;
     }
-    if (state === 'forest_ready') {
+    if (state === 'forest_fire_invite' || state === 'forest_fire_lab') {
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      if (state === 'forest_fire_invite' && arrival === 'homeMorning') ctx.seq.run(async () => {
+        await ctx.dialog.say({ id: 'forest_nino_urgent', speaker: 'nino', text: 'Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!' }, { lockControls: true });
+        ctx.save.setInterlude('forest_fire_lab');
+      });
+      return;
+    }
+    if (state === 'forest_ready' || state === 'forest_fire_ready') {
       const b = CITY_LAYOUT.buildings.find((x) => x.id === CITY_LAYOUT.lab.building);
       if (!b) return;
       // The forest path starts behind the old building (opposite its south-facing front door).
@@ -467,12 +502,12 @@ export class KotaLevel implements Level {
       ctx.objectives.set(new THREE.Vector3(access.x, access.y, access.z));
       const marker = new THREE.Mesh(
         new THREE.TorusGeometry(1.1, 0.1, 8, 24),
-        new THREE.MeshBasicMaterial({ color: 0x8fe36c, transparent: true, opacity: 0.8, toneMapped: false }),
+        new THREE.MeshBasicMaterial({ color: state === 'forest_fire_ready' ? 0xff6b45 : 0x8fe36c, transparent: true, opacity: 0.8, toneMapped: false }),
       );
       marker.rotation.x = Math.PI / 2;
       marker.position.set(access.x, access.y + 0.08, access.z);
       ctx.root.add(marker);
-      ctx.interactions.add({
+      if (state === 'forest_ready') ctx.interactions.add({
         position: new THREE.Vector3(access.x, access.y, access.z),
         radius: 2.5,
         icon: 'hand',
@@ -483,7 +518,7 @@ export class KotaLevel implements Level {
           void ctx.game.loadLevel('forest-training');
         },
       });
-      this.hud.show('Jalur menuju Hutan Botanica', 0x77c95a, true);
+      this.hud.show(state === 'forest_fire_ready' ? 'Darurat — menuju kebakaran hutan' : 'Jalur menuju Hutan Botanica', state === 'forest_fire_ready' ? 0xff6b45 : 0x77c95a, true);
       return;
     }
     if (state === 'costume_return' || state === 'snake_return' || state === 'rakus_lab') {
@@ -500,9 +535,9 @@ export class KotaLevel implements Level {
       radius: 3,
       icon: 'hand',
       promptHeight: 1.7,
-      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home',
+      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home' || ctx.save.data.interlude === 'forest_home',
       onInteract: () => {
-        const next = ctx.save.data.interlude === 'elang_home' ? 'forest_invite' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        const next = ctx.save.data.interlude === 'forest_home' ? 'forest_fire_invite' : ctx.save.data.interlude === 'elang_home' ? 'forest_invite' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
         if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
         ctx.save.setInterlude(next);
         setArrival('kota', 'homeMorning');

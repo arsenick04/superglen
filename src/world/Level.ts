@@ -62,8 +62,8 @@ export interface LevelGame {
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
   /** Play a one-shot cinematic overlay, if its asset is available. */
-  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet'): Promise<void>;
-  preloadCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet'): void;
+  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire'): Promise<void>;
+  preloadCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire'): void;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
   setPlayerMode(mode: PlayerMode, persist?: boolean): void;
   /**
