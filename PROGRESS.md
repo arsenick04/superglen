@@ -1022,3 +1022,7 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 - User-agent PlayStation 4/5 otomatis memakai preset konsol: pixel ratio maksimum 1, tanpa MSAA dan post-processing, shadow map 1024, target 30 fps. `?compat=1` menyediakan mode yang sama untuk diagnosis browser lain.
 - Rapier WebAssembly kini selesai diinisialisasi sebelum aset GLB/HDR opsional dimuat. Pada konsol, pustaka lingkungan, musuh, kota, dan langit dimuat berurutan untuk menurunkan lonjakan memori; model karakter menyusul setelah game berhasil dibuat dan memakai figur prosedural sementara.
 - Pesan gagal boot kini menjelaskan apakah WebGL 2 atau WebAssembly tidak tersedia, atau kemungkinan memori/komponen 3D gagal. Build, check:reach, check:quiz, dan diff check lulus. Pengujian perangkat PS5 dilakukan pemilik.
+# 22 November 2026 — pengendara kota
+
+Pengendara sepeda/motor memakai bentuk membulat dan roda motor bulat; warna kulit, wajah, helm dan ban dipisahkan dari warna cat. Warga/kendaraan menerima bayangan lingkungan. Build, check:quiz dan reachability lulus. Pengujian browser diserahkan kepada pemilik sesuai permintaan. Coba jalan kota pada link normal dan perhatikan pengendara yang lewat; model mobil dan vegetasi Quaternius belum diganti dalam perubahan ini.
+
