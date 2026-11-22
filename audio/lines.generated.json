@@ -66,8 +66,8 @@
     "id": "bab1_glen_lab",
     "speaker": "glen",
     "lang": "id",
-    "text": "Wah, lab rahasia!",
-    "tts": "[amazed] Wah, lab rahasia!",
+    "text": "Wah, laboratorium rahasia!",
+    "tts": "[amazed] Wah, laboratorium rahasia!",
     "source": "audio/dialog.json",
     "category": "bab1"
   },
@@ -183,8 +183,8 @@
     "id": "bab5_glen_rayakan",
     "speaker": "glen",
     "lang": "id",
-    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
-    "tts": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "text": "Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!",
+    "tts": "[excited] Kita berhasil mengalahkan Ular Melar! Makasih Nino dan Aara!",
     "source": "audio/dialog.json",
     "category": "bab5"
   },
@@ -345,8 +345,8 @@
     "id": "bab2_glen_enak",
     "speaker": "glen",
     "lang": "id",
-    "text": "Nyam, enak!",
-    "tts": "[delighted] Nyam, enak!",
+    "text": "Yum! Enak!",
+    "tts": "[delighted] Yum! Enak!",
     "source": "audio/dialog.json",
     "category": "bab2"
   },
@@ -822,8 +822,8 @@
     "id": "kota_glen_ketemu",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ketemu! Ayo antar pulang.",
-    "tts": "[excited] Ketemu! Ayo antar pulang.",
+    "text": "Wah, ketemu! Ayo bawa pulang.",
+    "tts": "[excited] Wah, ketemu! Ayo bawa pulang.",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1002,8 +1002,8 @@
     "id": "bab4_glen_taman",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ayo ke taman, kita selidiki!",
-    "tts": "[brave] Ayo ke taman, kita selidiki!",
+    "text": "Ayo kita ke taman! Kita survei dikit!",
+    "tts": "[brave] Ayo kita ke taman! Kita survei dikit!",
     "source": "audio/dialog.json",
     "category": "bab4"
   },
@@ -1308,8 +1308,8 @@
     "id": "bab4_glen_kenal",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aku kenal seseorang yang bisa membantu!",
-    "tts": "[hopeful] Aku kenal seseorang yang bisa membantu!",
+    "text": "Aku tahu orang yang bisa membantu!",
+    "tts": "[hopeful] Aku tahu orang yang bisa membantu!",
     "source": "audio/dialog.json",
     "category": "bab4"
   },
@@ -1380,8 +1380,8 @@
     "id": "bab5_glen_ajak",
     "speaker": "glen",
     "lang": "id",
-    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
-    "tts": "[excited] Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "text": "Aara, ikut aku ke gedung tua. Ada temanku di sana!",
+    "tts": "[excited] Aara, ikut aku ke gedung tua. Ada temanku di sana!",
     "source": "audio/dialog.json",
     "category": "bab5"
   },
@@ -1407,8 +1407,8 @@
     "id": "bab5_glen_masuk",
     "speaker": "glen",
     "lang": "id",
-    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
-    "tts": "[cheerful] Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "text": "Ayo Aara, tekan tombol itu di pintu.",
+    "tts": "[cheerful] Ayo Aara, tekan tombol itu di pintu.",
     "source": "audio/dialog.json",
     "category": "bab5"
   },
@@ -1920,8 +1920,8 @@
     "id": "forest_glen_flight_broken",
     "speaker": "glen",
     "lang": "id",
-    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
-    "tts": "[worried] Oh tidak, alat terbangku rusak! [determined] Aku harus melompat untuk menolong monyet-monyet itu!",
+    "text": "Aduh, alat terbangku rusak! Aku harus menolong monyet-monyet itu!",
+    "tts": "[worried] Aduh, alat terbangku rusak! [determined] Aku harus menolong monyet-monyet itu!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -1938,8 +1938,8 @@
     "id": "forest_glen_monkeys_safe",
     "speaker": "glen",
     "lang": "id",
-    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
-    "tts": "[relieved] Semua monyet sudah aman! [determined] Sekarang kita harus mencari sumber api.",
+    "text": "Monyet-monyet sudah aman! Kita harus padamkan api itu!",
+    "tts": "[relieved] Monyet-monyet sudah aman! [determined] Kita harus padamkan api itu!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -2001,8 +2001,8 @@
     "id": "forest_glen_explain",
     "speaker": "glen",
     "lang": "id",
-    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
-    "tts": "[surprised] Bukan aku! [earnest] Kami datang menolong monyet-monyet. [gently] Tenang dulu, Gorilla!",
+    "text": "Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!",
+    "tts": "[surprised] Bukan! [earnest] Kami datang untuk menolong. [gently] Tenang dulu, Gorilla!",
     "source": "audio/dialog.json",
     "category": "lainnya"
   },
@@ -5920,5 +5920,887 @@
     "tts": "Kalimat mana yang ditulis dengan benar?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_aara"
+  },
+  {
+    "id": "bab3_nino_cepat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Cepat, ke pasar, Glen!",
+    "tts": "[urgent] Cepat, ke pasar, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_nino_cepat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Cepat, ke pasar, Superglen!",
+    "tts": "[urgent] Cepat, ke pasar, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_lina_tolong_g",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Tolong kumpulkan, ya, Glen!",
+    "tts": "[pleading] Tolong kumpulkan, ya, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_lina_tolong_sg",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Tolong kumpulkan, ya, Superglen!",
+    "tts": "[pleading] Tolong kumpulkan, ya, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_nino_hebat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "tts": "[proud] Kerja bagus, Glen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_nino_hebat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kerja bagus, Superglen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "tts": "[proud] Kerja bagus, Superglen! Tikus Rakus kabur, tapi kamu hebat sekali!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_lina_terima_g",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[grateful] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab3_lina_terima_sg",
+    "speaker": "lina",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[grateful] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_lapangan_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Glen!",
+    "tts": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_lapangan_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "tts": "[worried] Ularnya di lapangan sekolah. Semua orang takut lewat. Tolong, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_aara_semangat_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Semangat, Glen! Kamu pasti bisa!",
+    "tts": "[excited] Semangat, Glen! Kamu pasti bisa!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_aara_semangat_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Semangat, Superglen! Kamu pasti bisa!",
+    "tts": "[excited] Semangat, Superglen! Kamu pasti bisa!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_hebat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Keren, Glen! Ular Melar sudah jinak.",
+    "tts": "[proud] Keren, Glen! Ular Melar sudah jinak.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_hebat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Keren, Superglen! Ular Melar sudah jinak.",
+    "tts": "[proud] Keren, Superglen! Ular Melar sudah jinak.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_panggil_lab_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "tts": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab5_nino_panggil_lab_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kembali ke Lab, Superglen! Kita rayakan kemenangan kalian bersama Aara.",
+    "tts": "[excited] Kembali ke Lab, Superglen! Kita rayakan kemenangan kalian bersama Aara.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_nino_laporan_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen, ada laporan! Semua makanan di Gudang Pasar hilang!",
+    "tts": "[urgent] Glen, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_nino_laporan_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, ada laporan! Semua makanan di Gudang Pasar hilang!",
+    "tts": "[urgent] Superglen, ada laporan! [worried] Semua makanan di Gudang Pasar hilang!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_warga_hore_g",
+    "speaker": "warga",
+    "lang": "id",
+    "text": "Hore! Makanan kota sudah kembali! Terima kasih, Glen!",
+    "tts": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_warga_hore_sg",
+    "speaker": "warga",
+    "lang": "id",
+    "text": "Hore! Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "tts": "[cheering] Hore! [joyful] Makanan kota sudah kembali! Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_nino_hebat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mantap, Glen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "tts": "[proud] Mantap, Glen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab6_nino_hebat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "tts": "[proud] Mantap, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_pulang_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "tts": "[warm] Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_pulang_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Superglen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "tts": "[warm] Hari sudah malam, Superglen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "combat_nino_semangat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!",
+    "tts": "[warm] Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "combat_nino_semangat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Superglen!",
+    "tts": "[warm] Kamu kelelahan, ya. Istirahat dulu. Hatimu sudah penuh lagi. Semangat, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_morning_letters_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "tts": "[cheerful] Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_morning_letters_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Superglen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "tts": "[cheerful] Selamat pagi, Superglen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_home_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!",
+    "tts": "Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_home_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pagi, Superglen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!",
+    "tts": "Pagi, Superglen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_nino_urgent_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!",
+    "tts": "Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_nino_urgent_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!",
+    "tts": "Superglen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_quiz_ready_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!",
+    "tts": "Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_quiz_ready_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Sambil istirahat, ayo bermain tebak-tebakan lagi, Superglen!",
+    "tts": "Sambil istirahat, ayo bermain tebak-tebakan lagi, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_quiz_complete_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hebat! Lima pertanyaan berhasil kamu jawab, Glen!",
+    "tts": "Hebat! Lima pertanyaan berhasil kamu jawab, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_quiz_complete_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hebat! Lima pertanyaan berhasil kamu jawab, Superglen!",
+    "tts": "Hebat! Lima pertanyaan berhasil kamu jawab, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_sunset_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!",
+    "tts": "Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_aara_sunset_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Matahari mulai terbenam. Ayo kita keluar dan pulang, Superglen!",
+    "tts": "Matahari mulai terbenam. Ayo kita keluar dan pulang, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_nino_fire_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen, lihat layar! Ada kebakaran besar di Hutan Botanica!",
+    "tts": "Glen, lihat layar! Ada kebakaran besar di Hutan Botanica!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_nino_fire_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Superglen, lihat layar! Ada kebakaran besar di Hutan Botanica!",
+    "tts": "Superglen, lihat layar! Ada kebakaran besar di Hutan Botanica!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_gorilla_sorry_g",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Maaf, Glen. Aku salah paham. Ternyata kamu datang untuk menolong kami.",
+    "tts": "Maaf, Glen. Aku salah paham. Ternyata kamu datang untuk menolong kami.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "forest_gorilla_sorry_sg",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Maaf, Superglen. Aku salah paham. Ternyata kamu datang untuk menolong kami.",
+    "tts": "Maaf, Superglen. Aku salah paham. Ternyata kamu datang untuk menolong kami.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_01_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mantap, Glen!",
+    "tts": "[cheerful] Mantap, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_01_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mantap, Superglen!",
+    "tts": "[cheerful] Mantap, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_05_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu hebat, Glen!",
+    "tts": "[warm] Kamu hebat, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_05_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu hebat, Superglen!",
+    "tts": "[warm] Kamu hebat, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_06_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu berhasil, Glen!",
+    "tts": "[cheerful] Kamu berhasil, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_06_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kamu berhasil, Superglen!",
+    "tts": "[cheerful] Kamu berhasil, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_07_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pintar sekali, Glen!",
+    "tts": "[playful] Pintar sekali, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_pujian_07_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pintar sekali, Superglen!",
+    "tts": "[playful] Pintar sekali, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_semangat_03_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pelan-pelan, Glen. Kamu bisa!",
+    "tts": "[warm] Pelan-pelan, Glen. Kamu bisa!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "nino_semangat_03_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pelan-pelan, Superglen. Kamu bisa!",
+    "tts": "[warm] Pelan-pelan, Superglen. Kamu bisa!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "quiz_nino_hebat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!",
+    "tts": "[proud] Hebat, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "quiz_nino_hebat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen!",
+    "tts": "[proud] Hebat, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_sari_halo_g",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[warm] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_sari_halo_sg",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[warm] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_sari_terima_g",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[warm] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_sari_terima_sg",
+    "speaker": "res_sari",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[warm] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_joko_halo_g",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[cheerful] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_joko_halo_sg",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[cheerful] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_joko_terima_g",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[cheerful] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_joko_terima_sg",
+    "speaker": "res_joko",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[cheerful] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_dimas_halo_g",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[excited] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_dimas_halo_sg",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[excited] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_dimas_terima_g",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[excited] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_dimas_terima_sg",
+    "speaker": "res_dimas",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[excited] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_guru_halo_g",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[kind] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_guru_halo_sg",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[kind] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_guru_terima_g",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[kind] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_guru_terima_sg",
+    "speaker": "res_guru",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[kind] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_lala_halo_g",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[playful] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_lala_halo_sg",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[playful] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_lala_terima_g",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[playful] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_lala_terima_sg",
+    "speaker": "res_lala",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[playful] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_pos_halo_g",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[friendly] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_pos_halo_sg",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[friendly] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_pos_terima_g",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[friendly] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_pos_terima_sg",
+    "speaker": "res_pos",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[friendly] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_ani_halo_g",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[gentle] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_ani_halo_sg",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[gentle] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_ani_terima_g",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[gentle] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_ani_terima_sg",
+    "speaker": "res_ani",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[gentle] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_bima_halo_g",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Halo, Glen!",
+    "tts": "[cheerful] Halo, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_bima_halo_sg",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Halo, Superglen!",
+    "tts": "[cheerful] Halo, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_bima_terima_g",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Terima kasih, Glen!",
+    "tts": "[cheerful] Terima kasih, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "kota_bima_terima_sg",
+    "speaker": "res_bima",
+    "lang": "id",
+    "text": "Terima kasih, Superglen!",
+    "tts": "[cheerful] Terima kasih, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab2_nino_hebat_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Glen!",
+    "tts": "[proud] Hebat, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "bab2_nino_hebat_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, Superglen!",
+    "tts": "[proud] Hebat, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_lab_invite_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "tts": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_lab_invite_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Superglen. Kita latihan lagi!",
+    "tts": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Superglen. Kita latihan lagi!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_lab_arrival_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang kembali, Glen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "tts": "[cheerful] Selamat datang kembali, Glen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "rakus_nino_lab_arrival_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "tts": "[cheerful] Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_alarm_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Glen, temui dia di sana!",
+    "tts": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Glen, temui dia di sana!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_alarm_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "tts": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_terbang_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "tts": "[helpful] Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_terbang_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aktifkan mode terbang dulu, Superglen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "tts": "[helpful] Aktifkan mode terbang dulu, Superglen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_menang_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "tts": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "elang_nino_menang_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Superglen.",
+    "tts": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Superglen.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
   }
 ]

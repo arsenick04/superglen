@@ -69,6 +69,14 @@ function collect() {
       }
     }
   }
+  // Name variants: audio/name-lines.json -> <id>_g (Glen) and <id>_sg (Superglen), same speaker voice.
+  const nl = readJson(path.join(AUDIO_DIR, 'name-lines.json'), { lines: [] });
+  for (const l of nl.lines) {
+    for (const [suffix, nama] of [['_g', 'Glen'], ['_sg', 'Superglen']]) {
+      const fill = (t) => t.replaceAll('{nama}', nama);
+      add({ id: l.id + suffix, speaker: l.speaker, lang: 'id', text: fill(l.template), delivery: l.delivery ? fill(l.delivery) : undefined, source: 'audio/name-lines.json', category: 'nama', recorded: false });
+    }
+  }
   return [...jobs.values()];
 }
 
