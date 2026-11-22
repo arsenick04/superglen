@@ -35,7 +35,10 @@ export class AaraFollower {
     const f = this.player.facing;
     this.trail.length = 0;
     this.haveLast = false;
-    this.aara.group.position.set(p.x - Math.sin(f) * 2, p.y - FEET, p.z - Math.cos(f) * 2);
+    // `reset` can be called while Superglen is already airborne. Aara is a
+    // pedestrian: keep her current floor height instead of copying his Y.
+    const floorY = this.player.grounded ? p.y - FEET : this.aara.group.position.y;
+    this.aara.group.position.set(p.x - Math.sin(f) * 2, floorY, p.z - Math.cos(f) * 2);
     this.aara.group.rotation.y = f;
   }
 
@@ -54,9 +57,12 @@ export class AaraFollower {
     }
     const dp = Math.hypot(p.x - g.position.x, p.z - g.position.z);
     this.distance = dp;
-    if (dp > FOLLOW.teleportDist || Math.abs(g.position.y - fy) > 14) {
+    if (dp > FOLLOW.teleportDist) {
       // Left far behind: she is at the child's last ground spot.
-      const c = this.trail.length > 0 ? this.trail[this.trail.length - 1] : { x: p.x, y: fy, z: p.z };
+      // Never fall back to the player's current point: it may be high in the
+      // air. With no ground crumb yet, Aara simply stays where she is.
+      const c = this.trail.length > 0 ? this.trail[this.trail.length - 1] : null;
+      if (!c) return;
       g.position.set(c.x, c.y, c.z);
       this.trail.length = 0;
       this.teleports++;
