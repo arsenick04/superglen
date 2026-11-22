@@ -1,0 +1,6 @@
+## Catatan proses (2026-11-22, diisi manual)
+- Dibuat: 85 klip (30 prioritas 1: Bab 1/5, Elang, latihan terbang, hutan dan Gorilla; 55 prioritas 2: soal 061..065 semua kategori, versi Nino dan Aara, kata Mandarin). Semua lolos cek Scribe (Indonesia) kecuali dua kata Mandarin satu aksara.
+- Ditunda (menunggu varian nama `<id>_g` / `<id>_sg`): 15 kalimat sapaan yang belum punya klip: bab5_nino_panggil_lab, elang_nino_alarm, elang_nino_menang, elang_nino_terbang, rakus_morning_letters, rakus_nino_lab_arrival, rakus_nino_lab_invite, rakus_nino_pulang (ada di dialog.json), dan forest_aara_home, forest_aara_quiz_complete, forest_aara_quiz_ready, forest_aara_sunset, forest_gorilla_sorry, forest_nino_fire, forest_nino_urgent (belum ada di dialog.json; teks ada di kode). Sapaan yang sudah punya klip (kota_*_halo, kota_*_terima, nino_pujian_*, dst.) tidak disentuh.
+- Ragu, perlu didengar manusia: quiz_mandarin_061_kata (树, Scribe: "shoe"), quiz_mandarin_064_kata (跳, Scribe: "tell"; satu suku kata, nada belum dicek penutur asli). Semua klip baru: ekspresi (tidak datar) hanya bisa dinilai telinga; terutama suara Gorilla (`forest_gorilla_accuse`, Bagas -2 semiton).
+- `demo_halo` dan teks DemoLevel hanya untuk level uji, sengaja tidak disuarakan.
+- Tidak dibuat: suara Elang Belang dan hewan hutan (tidak ada kalimat bicara mereka di kode; monyet tidak berbicara).

@@ -216,6 +216,8 @@ out.push('## Pembicara tanpa suara di audio/voices.json', '');
 out.push(voiceMissing.size ? [...voiceMissing].map(([s, ids]) => `- ${s}: ${ids.length} kalimat (${ids.slice(0, 6).join(', ')}${ids.length > 6 ? ', ...' : ''})`).join('\n') : '(semua ada)', '');
 const okRows = rows.filter((r) => r.status === 'ok');
 out.push(`## ok (${okRows.length})`, '', 'Tidak dirinci; jalankan audit untuk daftar penuh dengan --json=file.', '');
+const notes = path.join(ROOT, 'audio/missing-report.notes.md');
+if (fs.existsSync(notes)) out.push(fs.readFileSync(notes, 'utf8'));
 fs.writeFileSync(path.join(ROOT, 'audio/missing-report.md'), out.join('\n'));
 if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ rows, noId, voiceMissing: [...voiceMissing] }, null, 2));
 
