@@ -26,7 +26,7 @@ export const TouchConfig = {
   buttonReleaseMargin: 14,
 } as const;
 
-const ACTION_KEYS: readonly Action[] = ['jump', 'laser', 'shield', 'interact', 'transform'];
+const ACTION_KEYS: readonly Action[] = ['jump', 'flight', 'laser', 'shield', 'interact', 'transform'];
 
 interface Held {
   kind: 'stick' | 'look' | 'button';
@@ -43,7 +43,7 @@ export class TouchSource implements InputSource {
 
   private readonly held = new Map<number, Held>();
   /** How many fingers rest on each button (isDown runs every frame: no iterating the map there). */
-  private readonly buttonCount: Record<Action, number> = { jump: 0, laser: 0, shield: 0, interact: 0, transform: 0 };
+  private readonly buttonCount: Record<Action, number> = { jump: 0, flight: 0, laser: 0, shield: 0, interact: 0, transform: 0 };
   private readonly latch = new Set<Action>();
   /** The stick picture is redrawn once per frame at most (pointermove can arrive faster than frames). */
   private stickDirty = false;

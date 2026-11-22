@@ -3,10 +3,9 @@ import type { LevelContext } from '../Level';
 import { startGate } from '../../core/StartGate';
 import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
-import { Combat, CombatRng } from '../../config/combat';
+import { CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
 import { Celebration } from '../Celebration';
-import { Easings } from '../../gameplay/Sequence';
 
 const BUN_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="25" ry="20" fill="#fff" stroke="#d9c7a8" stroke-width="3"/><circle cx="32" cy="17" r="5" fill="#f3e6d2" stroke="#d9c7a8" stroke-width="2"/></svg>';
 const CAKE_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="30" width="52" height="24" rx="8" fill="#ffa6c9" stroke="#e0709b" stroke-width="3"/><path d="M6 36 Q14 28 22 36 Q30 44 38 36 Q46 28 58 36" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="22" r="7" fill="#e53935"/></svg>';
@@ -107,6 +106,8 @@ export class Chapter3 {
       },
       ctx.save.data.bab3.tamed,
     );
+    // City rats stage the chase; the actual combat belongs to the separate encounter.
+    this.rats.setCombatEnabled(false);
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
       const w = window as unknown as { __ch3?: unknown };
       w.__ch3 = {
@@ -130,6 +131,7 @@ export class Chapter3 {
         // real city -> encounter transition.
         setArenaEnabled: (on: boolean) => {
           this.arenaEnabled = on;
+          this.rats.setCombatEnabled(!on);
         },
         collect: () => this.rats.collectAll(),
         counts: () => ({ quizRuns: this.quizRuns, countsDone: this.countsDone, ...this.rats.collected, tamed: this.rats.tamedCount, stomps: this.rats.stomps, lasers: this.rats.lasers, dropped: this.rats.dropped }),
@@ -148,6 +150,8 @@ export class Chapter3 {
   /** Called once the level is built. */
   start(): void {
     const { ctx } = this;
+    if (this.step === '' || this.step === 'chase') ctx.game.preloadCinematic('curut');
+    ctx.game.preloadCinematic('rakus-appears');
     this.hooks.dropMission();
     this.hooks.setGoal({ x: MARKET.hub.x, z: MARKET.hub.z });
     // The last tame is saved before its delayed victory sequence runs. A
@@ -271,7 +275,7 @@ export class Chapter3 {
     if (this.scene) return;
     this.scene = true;
     const { ctx } = this;
-    const { seq, dialog, game, cameraRig } = ctx;
+    const { seq, game } = ctx;
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
       const info = game.debugInfo;
@@ -279,43 +283,11 @@ export class Chapter3 {
       game.setControlsEnabled(false);
       ctx.objectives.clear();
       this.hooks.setGoal(null);
-      const hub = MARKET.hub;
       if (!skipRakus) {
-        // The scene needs the child at the crossing (a clear view of the street, not behind pines or on the plaza).
-        this.stage(MARKET.stage.rakus, 14);
-        cameraRig.setFraming(this.tmp.set(hub.x, 1.2, hub.z), { weight: 0.6, distance: 5 });
-        const mesh = this.rats.makeRakus();
-        mesh.position.set(hub.x, 0, hub.z);
-        mesh.visible = true;
         info.ch3Scene = 'rakus';
-        mesh.scale.setScalar(0.01);
-        ctx.sfx.bling();
-        ctx.fx.sparkles.burst(hub.x, 0.8, hub.z, 30, 4, 0xffe6a8, { gravity: 2, life: 0.9, up: 0.8 });
-        ctx.fx.flashes.spawn(hub.x, 1.0, hub.z, 3, 0.7, 0xffffff);
-        await seq.tween(0.5, (t) => mesh.scale.setScalar(0.01 + 3.2 * t), Easings.easeOutBack);
-        mesh.rotation.y = 0;
-        await dialog.say(L.rakusTawa, { lockControls: true });
-        await dialog.say(L.glenHei, { lockControls: true });
-        // He runs down the street to the north drain, laughing; the line is said while he runs.
-        const d = MARKET.drains[MARKET.rakus.drain];
-        const x0 = mesh.position.x;
-        const z0 = mesh.position.z;
-        mesh.rotation.order = 'YXZ';
-        mesh.rotation.y = Math.atan2(d.x - x0, d.z - z0);
-        void dialog.say(L.rakusRaja, { lockControls: true });
-        const dur = Math.hypot(d.x - x0, d.z - z0) / 8;
-        await seq.tween(dur, (t) => {
-          mesh.position.set(x0 + (d.x - x0) * t, Math.abs(Math.sin(t * dur * 7)) * 0.22, z0 + (d.z - z0) * t);
-          // Waddling run (the model is static): rocks side to side and leans forward, with a squash on every hop.
-          mesh.rotation.z = Math.sin(t * dur * 7) * 0.1;
-          mesh.rotation.x = 0.16;
-          mesh.scale.set(3.2 * (1 + Math.sin(t * dur * 14) * 0.03), 3.2 * (1 - Math.sin(t * dur * 14) * 0.04), 3.2);
-          cameraRig.setFraming(this.tmp.set(mesh.position.x, 1.2, mesh.position.z), { weight: 0.6, distance: 5 });
-        });
-        ctx.fx.sparkles.burst(d.x, 0.4, d.z, 18, 3, 0xdfe6f2, { gravity: 1.5, life: 0.7, up: 0.7 });
-        ctx.sfx.pop();
-        mesh.visible = false;
-        await dialog.say(L.ninoRakus, { lockControls: true });
+        await game.playCinematic('rakus-appears');
+        if (this.disposed) return;
+        game.setControlsEnabled(false);
         this.setStep('closing');
       }
       info.ch3Scene = 'closing';
@@ -340,12 +312,6 @@ export class Chapter3 {
     this.hooks.afterParty();
   }
 
-  /** Put the child at a stage spot (street, clear view) when he is further than `maxDist` from it. */
-  private stage(spot: { x: number; z: number; yaw: number }, maxDist: number): void {
-    const p = this.ctx.player.position;
-    if (Math.hypot(p.x - spot.x, p.z - spot.z) > maxDist) this.hooks.placePlayer(spot.x, spot.z, spot.yaw);
-  }
-
   private foodBeam(): void {
     if (this.step !== 'count' || !this.counting || this.gotAll) return;
     if (++this.beamTick % 15 !== 0) return;
@@ -358,26 +324,35 @@ export class Chapter3 {
     this.ctx.objectives.set(this.tmp.set(MARKET.hub.x, 0, MARKET.hub.z));
   }
 
-  // ---- battle mode: the rats fight back once the child is close to one ----
+  // ---- enter at the market boundary, before city combat or this step's player attacks ----
   private arenaLoading = false;
   private arenaEnabled = true;
-  private readonly ratAt = { x: 0, y: 0.9, z: 0 };
-
-  private battleCheck(): void {
+  private battleCheck(): boolean {
     const { ctx } = this;
     const p = ctx.player.position;
-    const near = this.step === 'chase' && this.arrived && !ctx.health.resting && this.rats.nearestPos(p.x, p.z, this.ratAt);
-    const d = near ? Math.hypot(this.ratAt.x - p.x, this.ratAt.z - p.z) : Infinity;
-    if (this.arenaEnabled && !this.arenaLoading && d < Combat.rat.aggroRadius && startGate.started && ctx.game.controlsEnabled) {
+    if (this.arenaLoading) return true;
+    // Reaching the actual market encounter starts the cinematic. Merely
+    // leaving the Barongsai building (or entering the broad Pasar district)
+    // must never teleport Glen into battle.
+    const inArea = Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius;
+    if (this.arenaEnabled && this.step === 'chase' && inArea && !ctx.health.resting && startGate.started && ctx.game.controlsEnabled) {
       this.arenaLoading = true;
-      void ctx.game.loadLevel('battle-curut');
+      ctx.game.setControlsEnabled(false);
+      ctx.seq.run(async () => {
+        await ctx.game.playCinematic('curut');
+        if (this.disposed) return;
+        ctx.game.setControlsEnabled(false);
+        await ctx.game.loadLevel('battle-curut');
+      });
+      return true;
     }
+    return false;
   }
 
   fixedUpdate(dt = 1 / 60): void {
     if (this.over || this.disposed) return;
+    if (this.battleCheck()) return;
     this.rats.fixedUpdate(dt);
-    this.battleCheck();
     this.foodBeam();
     const p = this.ctx.player.position;
     if (!this.arrived && Math.hypot(p.x - MARKET.hub.x, p.z - MARKET.hub.z) < MARKET.arriveRadius) {

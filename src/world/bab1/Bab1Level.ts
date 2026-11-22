@@ -20,6 +20,8 @@ import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
 import { flow, takeArrival, travel, LAB_EXIT_TARGET } from '../progress';
 import { DOOR_HALF } from './Layout';
+import { startGate } from '../../core/StartGate';
+import { AaraActor } from '../kota/Aara';
 
 /** Where Nino's quiz terminal stands in the lab (left of the entrance path). */
 export const TERMINAL_LAB = { x: -2.8, z: -64.6 } as const;
@@ -64,6 +66,8 @@ export class Bab1Level implements Level {
   private terminal!: NinoTerminal;
   /** Chapter 5: Aara meets Nino here (null otherwise). */
   private visit: LabVisit | null = null;
+  /** Chapter 8 invitation: Aara waits beside Nino before the walk to the forest entrance. */
+  private forestAara: AaraActor | null = null;
   private done = false;
   /** Sample points of every walkable roof / top (published to the smoke test only). */
   private readonly roofs = new RoofList();
@@ -156,7 +160,12 @@ export class Bab1Level implements Level {
     });
 
     if (this.done) {
-      if (arrival === 'labEntrance') {
+      if (ctx.save.data.interlude === 'snake_lab' || (lab && (ctx.save.data.interlude === 'rakus_lab' || ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz' || ctx.save.data.interlude === 'forest_quiz_done' || ctx.save.data.interlude === 'forest_fire_lab'))) {
+        // Story returns begin beside Nino, not in the front-door corridor.
+        this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
+        this.atmosphere.snap(2);
+        ctx.game.setPlayerMode('superglen', false);
+      } else if (arrival === 'labEntrance') {
         this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
         this.atmosphere.snap(1);
       } else {
@@ -164,8 +173,95 @@ export class Bab1Level implements Level {
         this.atmosphere.snap(2);
       }
       this.story.setupReturning(arrival === 'labFromHangar');
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'rakus_lab') {
+        ctx.game.setPlayerMode('superglen', false);
+        // Show the welcome only when Glen enters from the city, not on every refresh in the Lab.
+        if (arrival === 'labEntrance') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          await ctx.dialog.say('rakus_nino_lab_arrival', { lockControls: true });
+        });
+      }
+      if (lab && !flow.sandbox && (ctx.save.data.interlude === 'forest_lab' || ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_quiz' || ctx.save.data.interlude === 'forest_quiz_done')) {
+        this.forestAara = new AaraActor(mats.lit, ctx.dialog);
+        this.forestAara.place(this.spawn.x + 1.55, this.spawn.z + 0.35, Math.PI);
+        this.forestAara.group.position.y = LAB_FLOOR;
+        this.forestAara.setLevel(3);
+        ctx.root.add(this.forestAara.group);
+        ctx.onDispose(() => this.forestAara?.dispose());
+        if (ctx.save.data.interlude === 'forest_lab') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          this.forestAara?.emote('wave');
+          await ctx.dialog.say({ id: 'forest_aara_lab', speaker: 'aara', text: 'Kami sudah datang, Nino. Latihan apa hari ini?' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_nino_lab', speaker: 'nino', text: 'Kita akan berlatih lompat pohon di Hutan Botanica! Keluar dan cari jalur di belakang gedung ini.' }, { lockControls: true });
+          ctx.save.setInterlude('forest_ready');
+          ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
+        });
+        else if (ctx.save.data.interlude === 'forest_quiz') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          this.forestAara?.emote('cheer');
+          await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Lima lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, Glen!' }, { lockControls: true });
+          const result = await ctx.quiz.run({ category: 'mix', count: 5, reason: 'story', questionSet: 'forest', promptSpeaker: 'aara' });
+          if (!result.completed) return;
+          this.forestAara?.emote('cheer');
+          await ctx.dialog.say({ id: 'forest_aara_quiz_complete', speaker: 'aara', text: 'Hebat! Lima pertanyaan berhasil kamu jawab, Glen!' }, { lockControls: true });
+          ctx.save.markChapterDone('forest-quiz');
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_home');
+          await travel(ctx.game, 'kota', 'hillDoor');
+        });
+        else if (ctx.save.data.interlude === 'forest_quiz_done') ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          await ctx.dialog.say({ id: 'forest_aara_sunset', speaker: 'aara', text: 'Matahari mulai terbenam. Ayo kita keluar dan pulang, Glen!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_home');
+          await travel(ctx.game, 'kota', 'hillDoor');
+        });
+      }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'forest_fire_lab') {
+        ctx.game.preloadCinematic('forest-fire');
+        ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          const alert = document.createElement('div');
+          alert.className = 'story-alarm';
+          alert.textContent = '⚠ KEBAKARAN HUTAN';
+          ctx.ui.appendChild(alert);
+          ctx.onDispose(() => alert.remove());
+          ctx.sfx.alarm();
+          await ctx.seq.wait(1.1);
+          alert.remove();
+          await ctx.dialog.say({ id: 'forest_nino_fire', speaker: 'nino', text: 'Glen, lihat layar! Ada kebakaran besar di Hutan Botanica!' }, { lockControls: true });
+          await ctx.game.playCinematic('forest-fire');
+          await ctx.dialog.say({ id: 'forest_nino_hurry', speaker: 'nino', text: 'Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_fire_ready');
+          ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
+        });
+      }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'forest_fire_ready') {
+        ctx.objectives.set(new THREE.Vector3(0, 0, Z.facade + 0.8));
+      }
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'elang_bank' && arrival === 'labFromHangar') {
+        ctx.game.preloadCinematic('elang-chaos');
+        ctx.seq.run(async () => {
+          await ctx.seq.waitUntil(() => startGate.started);
+          ctx.game.setControlsEnabled(false);
+          const alert = document.createElement('div');
+          alert.className = 'story-alarm';
+          alert.textContent = '⚠ ALARM KOTA';
+          ctx.ui.appendChild(alert);
+          ctx.onDispose(() => alert.remove());
+          ctx.sfx.alarm();
+          await ctx.seq.wait(1.1);
+          alert.remove();
+          await ctx.game.playCinematic('elang-chaos');
+          ctx.game.setControlsEnabled(false);
+          await ctx.dialog.say('elang_glen_berangkat', { lockControls: true });
+        });
+      }
       const b5 = ctx.save.data.bab5.step;
-      if (lab && !flow.sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5') && (b5 === 'lab' || b5 === 'walk')) {
+      if (lab && !flow.sandbox && ctx.save.data.interlude === 'snake_lab') {
+        this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 }, 'snakeCelebration');
+        this.visit.start();
+      } else if (lab && !flow.sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5') && (b5 === 'lab' || b5 === 'walk')) {
         this.visit = new LabVisit(ctx, this.lab, mats.lit, { x: 0, z: Z.facade + 0.8 });
         this.visit.start();
       }
@@ -223,6 +319,7 @@ export class Bab1Level implements Level {
     this.streetFx?.update(dt);
     this.terminal.update(dt);
     this.visit?.update(dt);
+    this.forestAara?.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;

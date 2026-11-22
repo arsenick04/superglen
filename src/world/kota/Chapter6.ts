@@ -13,18 +13,18 @@ export interface Chapter6Hooks {
   setGoal(goal: { x: number; z: number } | null): void;
   /** A resident's mission may not run during the chapter: drop the running one. */
   dropMission(): void;
+  /** Place Glen in the isolated battle staging point before the intro starts. */
+  placePlayer(x: number, z: number, yaw: number): void;
   /** City life (cars, people) is not drawn inside this circle while the fight is on (null: everywhere again). */
   clearZone(zone: { x: number; z: number; r: number } | null): void;
+  /** Turn the city to evening before Nino sends Glen home. */
+  nightFalls(): void;
   /** Chapter 6 is over (the city is free again, the residents offer missions). */
   onDone(): void;
 }
 
 /** Chapter 6 steps. '' = not started; over when 'bab6' is in `chaptersDone`. */
 export type Ch6Step = '' | 'city' | 'fight';
-
-/** The big rat is met when the child is this close to the arena (m); farther than `LOSE` the fight pauses. */
-const MEET = 32;
-const LOSE = 50;
 
 /**
  * CHAPTER 6 "Tikus Rakus" (enemy 3). Built by KotaLevel when Chapter 5 is done and Chapter 6 is not.
@@ -123,6 +123,8 @@ export class Chapter6 {
   /** Called once the level is built. */
   start(): void {
     const { ctx } = this;
+    ctx.game.preloadCinematic('rakus-warehouse');
+    ctx.game.preloadCinematic('rakus-defeat');
     this.hooks.dropMission();
     if (this.step === 'city' || this.step === 'fight') this.buildBoss();
     this.applyStep();
@@ -137,7 +139,6 @@ export class Chapter6 {
         await ctx.dialog.say(L.glenSiap);
         this.buildBoss();
         this.setStep('city');
-        this.arenaGoal();
       }
     });
   }
@@ -230,12 +231,14 @@ export class Chapter6 {
   private engage(): void {
     const { ctx } = this;
     if (!this.boss) return;
+    // The warehouse cinematic hands control back with Glen already inside the battle arena.
+    this.hooks.placePlayer(RAKUS_ARENA.x, RAKUS_ARENA.z + Combat.rakus.entryOffset, Math.PI);
     this.engaged = true;
     if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
-    this.boss.setEnabled(true);
+    this.boss.setEnabled(false);
     this.boss.showHud(true);
-    if (this.helpers) this.helpers.enabled = true;
+    if (this.helpers) this.helpers.enabled = false;
     ctx.objectives.clear();
     const b = this.boss;
     ctx.battle.enter({
@@ -243,6 +246,7 @@ export class Chapter6 {
       name: 'Tikus Rakus',
       focus: () => ({ x: b.x, y: b.headAt.y * 0.7, z: b.z }),
       arena: { x: RAKUS_ARENA.x, z: RAKUS_ARENA.z, r: Combat.rakus.arenaRadius + 3.5 },
+      isolated: true,
       stars: () => ({ left: b.stars, max: b.maxStars }),
     });
     ctx.game.debugInfo.ch6Engaged = true;
@@ -252,6 +256,7 @@ export class Chapter6 {
     this.engaged = false;
     this.boss?.setEnabled(false);
     this.boss?.showHud(false);
+    if (this.helpers) this.helpers.enabled = false;
     this.helpers?.clear();
     this.ctx.battle.exit();
     this.ctx.game.setTransformAllowed(true);
@@ -263,24 +268,22 @@ export class Chapter6 {
     if (this.introScene) return;
     this.introScene = true;
     const { ctx } = this;
-    const { seq, dialog, cameraRig } = ctx;
+    const { seq } = ctx;
+    ctx.game.setControlsEnabled(false);
     seq.run(async () => {
       await seq.waitUntil(() => startGate.started);
-      const b = this.boss as RakusBoss;
       ctx.game.debugInfo.ch6Scene = 'intro';
       this.introSeen = true;
       ctx.game.setControlsEnabled(false);
       ctx.objectives.clear();
       if (ctx.player.mode !== 'superglen') ctx.game.setPlayerMode('superglen', false);
-      cameraRig.setFraming(this.tmp.set(b.x, 1.4, b.z), { weight: 0.5, distance: 9 });
-      await dialog.say(L.rakusMakan, { lockControls: true });
-      await dialog.say(L.glenKembali, { lockControls: true });
-      await dialog.say(L.rakusRaja, { lockControls: true });
-      await dialog.say(L.ninoPola, { lockControls: true });
-      cameraRig.setFraming(null);
+      await ctx.game.playCinematic('rakus-warehouse');
+      if (this.disposed) return;
+      ctx.game.setControlsEnabled(false);
       this.setStep('fight');
-      ctx.game.setControlsEnabled(true);
       this.engage();
+      this.introScene = false;
+      ctx.game.setControlsEnabled(true);
       ctx.game.debugInfo.ch6Scene = 'fight';
     });
   }
@@ -300,21 +303,20 @@ export class Chapter6 {
       this.helpers?.clear();
       this.engaged = false;
       ctx.battle.exit(true);
-      cameraRig.setFraming(b.headAt, { weight: 0.55, distance: 9 });
-      await b.tameLook();
-      await dialog.say(L.rakusSendawa, { lockControls: true });
-      const food = b.returnFood();
-      await dialog.say(L.rakusMaaf, { lockControls: true });
-      await dialog.say(L.rakusBagi, { lockControls: true });
-      await food;
+      await ctx.game.playCinematic('rakus-defeat');
+      if (this.disposed) return;
+      // CinematicPlayer releases its control lock when the video ends.
+      ctx.game.setControlsEnabled(false);
+      b.finishAfterCinematic();
       ctx.synth.cheer();
       await dialog.say(L.wargaHore, { lockControls: true });
-      const home = b.trotHome();
       await dialog.say(L.ninoHebat, { lockControls: true });
-      await home;
+      this.hooks.nightFalls();
+      await dialog.say(L.ninoPulang, { lockControls: true });
       cameraRig.setFraming(null);
       this.over = true;
       ctx.save.markChapterDone('bab6');
+      ctx.save.setInterlude('rakus_home');
       ctx.save.setBab6('');
       ctx.save.finishCityMission('bab6', 15);
       ctx.quiz.coinsChanged();
@@ -361,12 +363,15 @@ export class Chapter6 {
       const b = this.boss;
       if (b && !this.tamedScene) {
         const d = Math.hypot(p.x - b.cx, p.z - b.cz);
-        if (!this.engaged && d < MEET && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
+        if (!this.engaged && d <= Combat.rakus.areaEntryRadius && !ctx.health.resting && ctx.game.controlsEnabled && startGate.started) {
           if (this.step === 'city') this.runIntro();
           else this.engage();
-        } else if (this.engaged && d > LOSE) {
+        } else if (this.engaged && d > Combat.rakus.areaExitRadius) {
           this.disengage();
         }
+        const ready = this.engaged && !this.introScene && !ctx.battle.entering;
+        b.setEnabled(ready);
+        if (this.helpers) this.helpers.enabled = ready;
         // The beam: far away it leads to the arena, near it would stand in the fight.
         if (++this.beamTick % 20 === 0 && !this.introScene) {
           if (d < 40 && ctx.objectives.active) ctx.objectives.clear();

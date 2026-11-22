@@ -1,0 +1,293 @@
+[
+  {
+    "id": "bab1_glen_dinding",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wow, dindingnya terbuka!",
+    "delivery": "[amazed] Wow, dindingnya terbuka!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_gedung",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, gedung Barongsai tua di atas bukit! Ada cahaya di dalam.",
+    "delivery": "[amazed] Wah, gedung Barongsai tua di atas bukit! [curious] Ada cahaya di dalam.",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_gelap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Gelap, ya. Nyalakan senter dulu.",
+    "delivery": "[nervous] Gelap, ya. [cheerful] Nyalakan senter dulu.",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_lab",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Wah, lab rahasia!",
+    "delivery": "[amazed] Wah, lab rahasia!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_lompat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ayo, kita lompat!",
+    "delivery": "[excited] Ayo, kita lompat!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_pagar",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada celah di pagar. Aku bisa masuk!",
+    "delivery": "[curious] Ada celah di pagar. [excited] Aku bisa masuk!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_panel",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Apa ini? Ada panel yang menyala.",
+    "delivery": "[curious] Apa ini? Ada panel yang menyala.",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_pulang",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hore, pulang sekolah! Eh, ada cahaya di atas bukit?",
+    "delivery": "[excited] Hore, pulang sekolah! [curious] Eh, ada cahaya di atas bukit?",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_siapa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kamu siapa?",
+    "delivery": "[surprised] Kamu siapa?",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_superglen",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku jadi Superglen!",
+    "delivery": "[excited] Aku jadi Superglen!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_tertawa",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Hahaha, geli!",
+    "delivery": "[laughs] Hahaha, geli! Hihi!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab1_glen_tombol",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ada tombol besar. Tekan, ah!",
+    "delivery": "[playful] Ada tombol besar. Tekan, ah!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab2_glen_aduh",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aduh! Kepala kena atap!",
+    "delivery": "[surprised] Aduh! Kepala kena atap!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab2_glen_enak",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Nyam, enak!",
+    "delivery": "[delighted] Nyam, enak!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab2_glen_siap",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Superglen siap!",
+    "delivery": "[excited] Superglen siap!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "bab3_glen_hei",
+    "text": "Hei, jangan lari!",
+    "source": "src/world/kota/Bab3Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab3_glen_lucu2",
+    "text": "Hihi, Curut Cemberutnya lucu sekali!",
+    "source": "src/world/kota/Bab3Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab3_glen_semua2",
+    "text": "Semua Curut Cemberut sudah kabur!",
+    "source": "src/world/kota/Bab3Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab4_glen_kenal",
+    "text": "Aku kenal seseorang yang bisa membantu!",
+    "source": "src/world/kota/Bab4Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab4_glen_kulit",
+    "text": "Ini kulit ular yang ganti kulit! Besar sekali!",
+    "source": "src/world/kota/Bab4Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab4_glen_mau",
+    "text": "Mau! Aku siap menjawab.",
+    "source": "src/world/kota/Bab4Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab4_glen_mulai",
+    "text": "Di sekolah ada anak yang pintar membuat alat. Ayo kita kenalan!",
+    "source": "src/world/kota/Bab4Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab4_glen_taman",
+    "text": "Ayo ke taman, kita selidiki!",
+    "source": "src/world/kota/Bab4Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab5_glen_ajak",
+    "text": "Aara, ikut aku ke gedung tua di bukit. Temanku ada di sana!",
+    "source": "src/world/kota/Bab5Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab5_glen_masuk",
+    "text": "Ayo masuk, Aara. Tekan tombol tangan di pintu.",
+    "source": "src/world/kota/Bab5Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab5_glen_rayakan",
+    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "source": "src/world/kota/Bab5Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab5_glen_super",
+    "text": "Aara, ini rahasia. Aku adalah Superglen!",
+    "source": "src/world/kota/Bab5Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab5_glen_ular",
+    "text": "Nino, lihat kulit ular ini. Besar sekali!",
+    "source": "src/world/kota/Bab5Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab6_glen_kembali",
+    "text": "Hei, Tikus Rakus! Kembalikan makanan kota!",
+    "source": "src/world/kota/Bab6Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "bab6_glen_siap",
+    "text": "Siap, Nino! Ayo ke gudang!",
+    "source": "src/world/kota/Bab6Data.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "elang_glen_berangkat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku akan terbang ke Bank dan menolong mereka!",
+    "delivery": "[determined] Aku akan terbang ke Bank dan menolong mereka!",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "elang_glen_melihat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "delivery": "[surprised] Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "source": "audio/dialog.json",
+    "status": "Katalog audio — perlu konfirmasi penggunaan"
+  },
+  {
+    "id": "forest_glen_explain",
+    "text": "Bukan aku! Kami datang menolong monyet-monyet. Tenang dulu, Gorilla!",
+    "source": "src/world/arena/GorillaArena.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "forest_glen_flight_broken",
+    "text": "Oh tidak, alat terbangku rusak! Aku harus melompat untuk menolong monyet-monyet itu!",
+    "source": "src/world/arena/ForestRescueLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "forest_glen_help_fire",
+    "text": "Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!",
+    "source": "src/world/arena/GorillaArena.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "forest_glen_monkeys_safe",
+    "text": "Semua monyet sudah aman! Sekarang kita harus mencari sumber api.",
+    "source": "src/world/arena/ForestRescueLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  },
+  {
+    "id": "kota_glen_ketemu",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Ketemu! Ayo antar pulang.",
+    "delivery": "[excited] Ketemu! Ayo antar pulang.",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "kota_glen_semua",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Sudah semua! Ayo kembali.",
+    "delivery": "[proud] Sudah semua! Ayo kembali.",
+    "source": "audio/dialog.json",
+    "status": "Dirujuk kode"
+  },
+  {
+    "id": "src/world/DemoLevel.ts:81",
+    "text": "Ayo kita main lagi!",
+    "source": "src/world/DemoLevel.ts",
+    "status": "Deklarasi dialog dalam kode"
+  }
+]

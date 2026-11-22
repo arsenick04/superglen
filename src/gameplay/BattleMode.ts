@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import '../battle.css';
 import type { AudioManager } from '../audio/AudioManager';
 import type { Sfx } from '../audio/Sfx';
-import type { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
+import { CameraConfig, type ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import type { SaveStore } from '../core/Save';
 import type { GroundRings } from '../fx/GroundRings';
 import type { Player } from '../player/Player';
@@ -12,7 +12,7 @@ import type { Health } from './Health';
 
 /** Every number of the battle mode in one place. */
 export const BattleConfig = {
-  /** Entrance shot: seconds the camera sweeps onto the enemy and shows its name (skippable by any tap or key). */
+  /** Entrance shot: seconds the camera orbits Glen and shows the enemy name (skippable). */
   introTime: 2,
   /** The player cannot be hurt during the entrance shot plus this much (s). */
   introGrace: 0.4,
@@ -27,8 +27,8 @@ export const BattleConfig = {
   shakeSlam: { amp: 0.22, time: 0.4 },
   shakeLunge: { amp: 0.1, time: 0.25 },
   shakeStar: { amp: 0.2, time: 0.45 },
-  /** The glowing arena ring: height of its curtain (m), the soft edge (m) and how hard the edge pushes back (m/s). */
-  ringHeight: 3.2,
+  /** A low glowing boundary on the ground; the player boundary is logical, not a tall visual curtain. */
+  ringHeight: 0.12,
   edgeMargin: 3.2,
   edgePush: 7,
   /** City people: run away from this far (m) from the fight's centre, stand `watch` m away, cars stop `stop` m away. */
@@ -51,6 +51,8 @@ export interface BattleSpec {
   focus: () => { x: number; y: number; z: number } | null;
   /** The round arena (ring + soft wall); omit for a free-roaming fight (the market rats). */
   arena?: { x: number; z: number; r: number };
+  /** Enclose the boss fight in a simple dedicated stage that visually blocks the city. */
+  isolated?: boolean;
   /** Centre and radius of what the city people react to (default: the arena, or the enemy's place). */
   city?: { x: number; z: number; r: number };
   /** Stars left of the enemy (the fight owns its own bar when `ownBar` is false). Used to notice a broken star. */
@@ -123,6 +125,9 @@ export class BattleMode {
   private portraitId = '';
   private ring: THREE.Mesh | null = null;
   private ringMat: THREE.ShaderMaterial | null = null;
+  private arenaStage: THREE.Group | null = null;
+  private arenaStageMats: THREE.MeshStandardMaterial[] = [];
+  private arenaStageAlpha = 0;
   private readonly focusPos = new THREE.Vector3();
   private life: CityLife | null = null;
   private prevClear: { x: number; z: number; r: number } | null = null;
@@ -181,6 +186,11 @@ export class BattleMode {
     return this.spec !== null;
   }
 
+  /** Combat waits until the entrance sweep has finished or the child skipped it. */
+  get entering(): boolean {
+    return this.introLeft > 0;
+  }
+
   get id(): string {
     return this.spec?.id ?? '';
   }
@@ -226,6 +236,7 @@ export class BattleMode {
     this.updateFocus();
     deps.cameraRig.setBattle(this.focusPos);
     if (spec.arena) this.buildRing(spec.arena);
+    if (spec.arena && spec.isolated) this.buildArenaStage(spec.arena);
     this.startCity();
     this.introStage = 0;
     if (spec.intro !== false) {
@@ -263,6 +274,7 @@ export class BattleMode {
     deps.player.flight.arena = null;
     this.armed = false;
     this.removeRing();
+    this.removeArenaStage();
     this.endCity();
     this.hitFlash = 0;
     this.fx.classList.remove('hit');
@@ -332,8 +344,12 @@ export class BattleMode {
     if (!spec) return;
     const { deps } = this;
     this.updateFocus();
+    if (this.arenaStageMats.length) {
+      this.arenaStageAlpha = Math.min(1, this.arenaStageAlpha + dt * 1.8);
+      for (const mat of this.arenaStageMats) mat.opacity = this.arenaStageAlpha * (mat.userData.targetOpacity as number);
+    }
 
-    // Entrance shot: a sweep over the enemy, then back to the lock-on.
+    // Entrance shot: a sweep around Glen, then back to the lock-on.
     if (this.introLeft > 0) {
       this.introLeft -= dt;
       const k = 1 - this.introLeft / BattleConfig.introTime;
@@ -405,7 +421,9 @@ export class BattleMode {
     // The yaw of "behind Glen on the line to the enemy", then swung to one side and back.
     const base = Math.atan2(p.x - f.x, p.z - f.z);
     const yaw = base + (stage === 0 ? 0.95 : -0.35);
-    cameraRig.setFraming(this.tmp.set(f.x, f.y + 0.6, f.z), { weight: stage === 0 ? 0.9 : 0.75, yaw, distance: stage === 0 ? 2.5 : 3.5, pitch: 0.2 });
+    // Keep Glen at the center even during the entrance sweep. The enemy
+    // supplies only the orbit direction; framing adds distance and pitch.
+    cameraRig.setFraming(this.tmp.copy(p), { weight: 0, yaw, distance: stage === 0 ? 2.5 : 3.5, pitch: 0.2 });
   }
 
   private endIntro(): void {
@@ -495,6 +513,9 @@ export class BattleMode {
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      // Both faces still render. Additive blending is order-independent and the ring writes no depth,
+      // so a single two-sided draw preserves its glow without Three's separate back/front passes.
+      forceSinglePass: true,
       blending: THREE.AdditiveBlending,
       fog: false,
       toneMapped: false,
@@ -518,6 +539,40 @@ export class BattleMode {
     }
     this.ring = null;
     this.ringMat = null;
+  }
+
+  /** A cheap isolated boss room: solid floor plus a high inward-facing wall that fades in during the entrance. */
+  private buildArenaStage(a: { x: number; z: number; r: number }): void {
+    this.removeArenaStage();
+    const feet = this.deps.player.position.y - 0.55;
+    const group = new THREE.Group();
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x82768f, roughness: 0.82, transparent: true, opacity: 0 });
+    floorMat.userData.targetOpacity = 0.92;
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x746886, roughness: 0.78, transparent: true, opacity: 0, side: THREE.BackSide });
+    wallMat.userData.targetOpacity = 0.74;
+    const floor = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.2, a.r + 1.2, 0.16, 64), floorMat);
+    floor.position.set(a.x, feet - 0.06, a.z);
+    floor.receiveShadow = true;
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.15, a.r + 1.15, 6.5, 64, 1, true), wallMat);
+    wall.position.set(a.x, feet + 3.2, a.z);
+    const warm = new THREE.PointLight(0xffe0b0, 1.6, a.r * 2.2, 2);
+    warm.position.set(a.x, feet + 4.8, a.z);
+    group.add(floor, wall, warm);
+    this.deps.scene.add(group);
+    this.arenaStage = group;
+    this.arenaStageMats = [floorMat, wallMat];
+    this.arenaStageAlpha = 0;
+  }
+
+  private removeArenaStage(): void {
+    if (this.arenaStage) {
+      this.deps.scene.remove(this.arenaStage);
+      this.arenaStage.traverse((obj) => { if (obj instanceof THREE.Mesh) obj.geometry.dispose(); });
+      for (const mat of this.arenaStageMats) mat.dispose();
+    }
+    this.arenaStage = null;
+    this.arenaStageMats = [];
+    this.arenaStageAlpha = 0;
   }
 
   private startCity(): void {
@@ -628,25 +683,17 @@ export class BattleMode {
       get shouts() {
         return self.shoutEls.filter((e) => e.t > 0).length;
       },
-      /** The enemy's projected position: NDC x, y and whether it is in front of the camera. */
-      get focusNdc() {
-        self.deps.cameraRig.camera.updateMatrixWorld();
-        const v = new THREE.Vector3(self.focusPos.x, self.focusPos.y, self.focusPos.z).project(self.deps.cameraRig.camera);
+      /** Glen's look target must stay at the center throughout battle. */
+      get glenNdc() {
+        const v = self.deps.player.visualPosition.clone();
+        v.y += CameraConfig.targetHeight;
+        v.project(self.deps.cameraRig.camera);
         return { x: v.x, y: v.y, z: v.z };
       },
-      /** Glen's head, feet and center projected (NDC) with the camera as it is right now. */
-      get playerNdc() {
-        const cam = self.deps.cameraRig.camera;
-        cam.updateMatrixWorld();
-        const p = self.deps.player.visualPosition;
-        const pr = (dy: number) => {
-          const v = new THREE.Vector3(p.x, p.y + dy, p.z).project(cam);
-          return { x: v.x, y: v.y, z: v.z };
-        };
-        return { head: pr(0.55), feet: pr(-0.55), mid: pr(0) };
-      },
-      get camDist() {
-        return self.deps.cameraRig.shownDistance;
+      /** The enemy's projected position: NDC x, y and whether it is in front of the camera. */
+      get focusNdc() {
+        const v = new THREE.Vector3(self.focusPos.x, self.focusPos.y, self.focusPos.z).project(self.deps.cameraRig.camera);
+        return { x: v.x, y: v.y, z: v.z };
       },
       get focus() {
         return { x: self.focusPos.x, y: self.focusPos.y, z: self.focusPos.z };

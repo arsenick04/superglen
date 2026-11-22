@@ -10,6 +10,12 @@ import { FIXED_DT } from '../core/Physics';
  * early/late) lowers it by ONE, standing around lowers it by one every 1.5 s. Nothing ever resets to zero.
  */
 export const Parkour = {
+  forestRescue: {
+    canopyHeight: 4.5, landingRadius: 2.4, spacing: 5.4, resetFeetHeight: 0.25,
+    // Gentle rises (<= 1 m) with resting descents, all reachable at rhythm level 0.
+    heightOffsets: [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0],
+  },
+  gorillaCanopy: { spacing: 5, radius: 2.35, heights: [4.5, 5, 5.5], resetFeetHeight: 0.25 },
   // ---- Gravity and falling -------------------------------------------------------------------------------
   /** Gravity while rising (m/s^2). The player applies its own; the physics world's gravity is only for props. */
   gravityUp: 25,
@@ -54,6 +60,8 @@ export const Parkour = {
   spinTime: 0.45,
   /** Cosmetic hop of Player.smallHop() (m/s launch speed, about 0.25 m). */
   smallHopSpeed: 3.4,
+  /** Automatic rebound after landing on an ordinary enemy's head (no rhythm increase). */
+  headBounceApex: 1.2,
 
   // ---- Landing ---------------------------------------------------------------------------------------------
   /** Landing faster than this (m/s) squashes a little. */
@@ -278,6 +286,7 @@ export const MAX_LEVEL = Parkour.levels.length - 1;
 export const LaunchSpeeds = {
   glen: launchSpeed(Parkour.glenApex),
   double: launchSpeed(Parkour.doubleJumpApex),
+  headBounce: launchSpeed(Parkour.headBounceApex),
   kick: launchSpeed(Parkour.wallKick.apex),
   levels: Parkour.levels.map((l) => launchSpeed(l.apex)) as readonly number[],
 };

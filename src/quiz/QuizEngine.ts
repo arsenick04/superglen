@@ -91,12 +91,22 @@ export class QuizEngine {
   /** Test handle state. */
   lastResult: QuizResult | null = null;
   picked = '';
+  private readonly previewRecent = new Set<string>();
 
   constructor(private readonly deps: QuizDeps) {
     this.bank = loadBank();
     const q = new URLSearchParams(window.location.search).get('quizseed');
     const seed = q !== null && q !== '' && Number.isFinite(Number(q)) ? Number(q) : (Date.now() ^ Math.floor(Math.random() * 4294967296)) >>> 0;
     this.rng = makeRng(seed);
+    // Direct chapter links intentionally start with a fresh story save on
+    // every refresh. Preserve only their quiz rotation in this browser tab so
+    // testers do not see the same five questions over and over.
+    if (deps.save.previewChapter) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('superglen.previewQuizRecent') ?? '[]') as unknown;
+        if (Array.isArray(saved)) for (const id of saved) if (typeof id === 'string') this.previewRecent.add(id);
+      } catch { /* storage can be unavailable in private browsing */ }
+    }
     this.panel = new QuizPanel(deps.ui, {
       synth: deps.synth,
       sfx: deps.sfx,
@@ -209,14 +219,14 @@ export class QuizEngine {
       for (let i = 0; i < count; i++) cats.push(opts.category);
     }
     const taken = new Set<string>();
-    this.panel.openChallenge(reason, reason === 'terminal');
+    this.panel.openChallenge(reason, reason === 'terminal', opts.promptSpeaker ?? 'nino');
     // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
     this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
     for (let i = 0; i < count; i++) {
-      const q = this.choose(cats[i], taken);
+      const q = this.choose(cats[i], taken, opts.questionSet);
       taken.add(q.id);
       this.deps.audio.preload(this.audioIds(q));
-      const prep = this.prepare(q);
+      const prep = this.prepare(q, opts.promptSpeaker);
       const out = await this.panel.ask(prep, i, count, (wrong) => {
         const rec = this.record(q, wrong);
         result.answers.push(rec.answer);
@@ -254,10 +264,12 @@ export class QuizEngine {
   // ---------------------------------------------------------------------------------------------------------------
 
   /** A question for `cat` at the child's current level, avoiding the recently asked ones and the ones already in this challenge. */
-  choose(cat: Category, taken: ReadonlySet<string>): Question {
-    const pool = this.bank.byCategory[cat];
+  choose(cat: Category, taken: ReadonlySet<string>, questionSet?: string): Question {
+    const all = this.bank.byCategory[cat];
+    const pool = questionSet ? all.filter((q) => q.set === questionSet) : all;
+    if (pool.length === 0) throw new Error(`Quiz: no questions for ${cat} in set ${questionSet}`);
     const level = this.data.cats[cat].level;
-    const recent = new Set(this.data.recent);
+    const recent = new Set([...this.data.recent, ...this.previewRecent]);
     const fresh = pool.filter((q) => !taken.has(q.id));
     const tiers: Question[][] = [];
     tiers.push(fresh.filter((q) => q.level === level && !recent.has(q.id)));
@@ -280,7 +292,8 @@ export class QuizEngine {
   }
 
   /** Shuffle the on-screen order of the three choices (the answer is tracked by position). */
-  prepare(q: Question): PreparedQuestion {
+  prepare(q: Question, promptSpeaker: 'nino' | 'aara' = 'nino'): PreparedQuestion {
+    if (promptSpeaker === 'aara') q = { ...q, audio_id: `aara_${q.audio_id}` };
     const order = this.shuffle([...q.choices]) as [Choice, Choice, Choice];
     const correctIndex = order.findIndex((c) => c.id === q.answer) as 0 | 1 | 2;
     return { q, order, correctIndex };
@@ -315,6 +328,12 @@ export class QuizEngine {
     this.adapt(s, firstTry);
     d.recent.push(q.id);
     if (d.recent.length > QuizConfig.recentMax) d.recent.splice(0, d.recent.length - QuizConfig.recentMax);
+    if (this.deps.save.previewChapter) {
+      this.previewRecent.add(q.id);
+      try {
+        sessionStorage.setItem('superglen.previewQuizRecent', JSON.stringify([...this.previewRecent].slice(-QuizConfig.recentMax)));
+      } catch { /* keep the in-memory rotation */ }
+    }
     const coins = QuizConfig.coinPerQuestion + (firstTry ? QuizConfig.coinFirstTryBonus : 0);
     d.coins += coins;
     this.deps.save.persist();

@@ -7455,7 +7455,7 @@ async function kotaPerfScenario(page, check) {
   report('heap crossing chunk borders (walking 100 m)', `${Math.round(cross.bpf)} bytes per frame, worst frame (no render) ${cross.worst.toFixed(1)} ms`);
 }
 
-/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen, nothing blocks him, perf holds. */
+/** D6 L14: the living city (pedestrians, children, traffic): they exist and move, cars stop for Glen and provide solid, walkable surfaces. */
 async function kotaLifeScenario(page, check, touch) {
   const tag = touch ? 'touch' : 'desktop';
   const dir = process.env.UI_SHOTS || OUT;
@@ -7512,9 +7512,29 @@ async function kotaLifeScenario(page, check, touch) {
     return { gap, minGap, vStop, vGo: window.__life.agent(info.index).v };
   });
   check(`kota-life ${tag}: a car stops 2.5-5 m before Glen in its lane, never closer, and drives on when he steps aside`, !!stop && stop.vStop < 0.3 && stop.gap > 2.5 && stop.gap < 5 && stop.minGap > 2.5 && stop.vGo > 2, JSON.stringify(stop));
-  // Nothing blocks the player: walk across the avenue and along the road through the traffic.
-  const w = await kotaTravel(page, 50, -20, 900);
-  check(`kota-life ${tag}: Glen walks 70 m through the busy avenue crossing to the goal`, Math.hypot(w.x - 50, w.z + 20) < 2, JSON.stringify({ x: w.x.toFixed(1), z: w.z.toFixed(1) }));
+  const collision = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(52.5, 20);
+    g.advance(20, false);
+    const info = window.__life.carOnLane('z', 52.5, 20, 16);
+    if (!info) return null;
+    g.advance(360, false);
+    const car = window.__life.agent(info.index);
+    g.teleportFeet(car.x - 1.9, 0.12, car.z);
+    g.advance(3, false);
+    g.walkTo(car.x + 3, car.z);
+    g.advance(40, false);
+    const sideGap = car.x - g.player.x;
+    g.cancelWalk();
+
+    const parked = window.__life.agent(info.index);
+    g.teleportFeet(parked.x, 2.25, parked.z);
+    g.advance(70, false);
+    return { sideGap, feet: g.feetY, grounded: g.grounded };
+  });
+  check(`kota-life ${tag}: the car blocks Glen from the side and supports him on top`,
+    !!collision && collision.sideGap > 0.6 && collision.sideGap < 1.85
+      && collision.grounded && collision.feet > 1 && collision.feet < 2.1, JSON.stringify(collision));
   // Perf at the busiest spot and one screenshot of the busy city.
   const busy = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7735,47 +7755,49 @@ async function settingsScenario(page, check, touch) {
 async function minimapScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
   await menuBoot(page, touch);
+  const intro = page.locator('.cinematic-skip:visible');
+  if (await intro.count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => window.__superglen.map.visible && !document.querySelector('.cinematic-layer:not([hidden])'));
   const m = await page.evaluate(() => {
     const e = document.querySelector('.minimap');
     const r = e.getBoundingClientRect();
     const cs = getComputedStyle(e);
     return { w: r.width, h: r.height, op: parseFloat(cs.opacity), pe: cs.pointerEvents, hidden: e.hidden, canvases: e.querySelectorAll('canvas').length, d: window.__superglen.map };
   });
-  check(`minimap ${tag}: visible in the city, opacity < 1, ignores touches`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'none', JSON.stringify({ op: m.op, pe: m.pe }));
-  check(`minimap ${tag}: size ${touch ? '110-140' : '~180'} px, two canvases (static + marker)`, m.canvases === 2 && (touch ? m.w >= 110 && m.w <= 140 : m.w >= 170 && m.w <= 190), JSON.stringify({ w: m.w, h: m.h }));
+  check(`minimap ${tag}: visible and accepts clicks or taps`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'auto', JSON.stringify({ op: m.op, pe: m.pe }));
+  check(`minimap ${tag}: two canvases and correct display size`, m.canvases === 2 && (touch ? m.w === 80 : m.w === 180), JSON.stringify({ w: m.w, h: m.h }));
   await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}`);
-  // The marker follows the player; the static layer is not redrawn per frame.
-  const mk = () => page.evaluate(() => { const d = window.__superglen.map; const g = window.__superglen; return { x: d.markerX, y: d.markerY, size: d.size, half: d.half, st: d.staticDraws, md: d.markerDraws, px: g.player.x, pz: g.player.z }; });
+  const mk = () => page.evaluate(() => {
+    const d = window.__superglen.map;
+    return { x: d.markerX, y: d.markerY, cx: d.centerX, cz: d.centerZ, size: d.size, span: d.span, st: d.staticDraws, md: d.markerDraws, secret: d.secret };
+  });
   const a = await mk();
-  await page.evaluate(() => window.__superglen.placePlayer(-60, -70));
-  await sleep(1200);
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    game.placePlayer(-60, -70);
+    game.advance(1, false);
+  });
   const b = await mk();
-  const k = b.size / (b.half * 2);
-  check(`minimap ${tag}: the marker moves with the player and sits at the projected position`, Math.hypot(b.x - a.x, b.y - a.y) > 20 && Math.abs(b.x - (b.px + b.half) * k) <= 4 && Math.abs(b.y - (b.pz + b.half) * k) <= 4, JSON.stringify({ a, b }));
+  check(`minimap ${tag}: 72 m view follows Glen with a fixed centre marker`, b.span === 72 && Math.hypot(b.cx - a.cx, b.cz - a.cz) > 20 && b.x === b.size / 2 && b.y === b.size / 2, JSON.stringify({ a, b }));
   await sleep(800);
   const c = await mk();
-  check(`minimap ${tag}: the marker is not redrawn while standing still and the static layer stays as drawn`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
-  // Hidden building: not on the map until found.
-  const px0 = await page.evaluate(() => {
-    const g = window.__superglen;
-    const lx = g.levelInfo.labX, lz = g.levelInfo.labZ;
-    const d = g.map;
-    const k = d.size / (d.half * 2);
-    const cv = document.querySelector('.minimap-base');
-    const ctx = cv.getContext('2d');
-    const cx = Math.round((102 + d.half) * k), cy = Math.round((-104.5 + d.half) * k);
-    window.__labPx = [cx, cy];
-    const grab = () => Array.from(ctx.getImageData(cx - 3, cy - 3, 7, 7).data).join(',');
-    window.__grab = grab;
-    return { secret: d.secret, sig: grab(), lab: [lx, lz] };
+  check(`minimap ${tag}: idle frames reuse the cached map and marker`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
+  check(`minimap ${tag}: the old Barongsai building starts hidden`, c.secret === null, JSON.stringify(c.secret));
+  await page.evaluate(() => {
+    const game = window.__superglen;
+    const { labX, labY, labZ } = game.levelInfo;
+    game.teleportFeet(labX, labY + 0.2, labZ + 1.2);
+    game.advance(8, false);
   });
-  check(`minimap ${tag}: the old Barongsai building is not on the map before it is found (no marker, nothing drawn at its spot)`, px0.secret === null, JSON.stringify(px0.secret));
-  await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 2, z + 1.2); }, [100.5, 6, -100.4]);
-  await sleep(1500);
-  const px1 = await page.evaluate(() => ({ secret: window.__superglen.map.secret, sig: window.__grab(), found: window.__superglen.levelInfo.labFound, saved: JSON.parse(localStorage.getItem('superglen.save.v1')).discovered }));
-  check(`minimap ${tag}: after reaching its door the building is on the map (picture at its spot changed, discovery saved)`, px1.found === true && px1.secret !== null && px1.sig !== px0.sig && px1.saved.lab === true, JSON.stringify({ found: px1.found, secret: px1.secret, same: px1.sig === px0.sig, saved: px1.saved }));
+  const d = await mk();
+  check(`minimap ${tag}: discovering the building refreshes the map layer`, d.secret !== null && d.st > c.st, JSON.stringify(d));
   await page.evaluate(() => window.__superglen.placePlayer(0, 26));
   await sleep(900);
+
+  await menuHit(page, '.minimap', touch);
+  check(`minimap ${tag}: direct open pauses the game`, await page.evaluate(() => window.__superglen.map.fullOpen && window.__superglen.settings.frozen));
+  await menuHit(page, '.fullmap-close', touch);
+  check(`minimap ${tag}: direct close resumes exploration`, await page.evaluate(() => !window.__superglen.map.fullOpen && !window.__superglen.settings.frozen));
 
   // No overlap with the HUD and the touch controls (Superglen mode: laser, shield and the drum icons are up too).
   await page.evaluate(() => window.__superglen.game.setPlayerMode('superglen'));
@@ -8477,13 +8499,22 @@ async function kotaD3Scenario(page, check, touch) {
 
   // ---- Map icons (mini map and full map) ----
   // Count the pixels of a colour in a window around a world spot (icons may overlap a landmark glyph a little).
-  const pix = (sel, x, z, kind) => page.evaluate(([sel, x, z, kind]) => {
+  const pix = (sel, x, z, kind) => page.evaluate(async ([sel, x, z, kind]) => {
     const cv = document.querySelector(sel);
-    const k = cv.width / 300;
+    const game = window.__superglen;
+    const map = game.map;
+    const mini = sel === '.minimap-base';
+    if (mini) {
+      game.teleportFeet(x + 7, 2, z);
+      await game.advanceAsync(4, false);
+    }
+    const k = (mini ? map.cacheSize : cv.width) / (2 * map.half);
+    const dx = mini ? cv.width / 2 - map.centerX : 0;
+    const dz = mini ? cv.height / 2 - map.centerZ : 0;
     const g = cv.getContext('2d');
     const w = Math.round(cv.width * 0.03);
-    const px = Math.round((x + 150) * k) - w;
-    const py = Math.round((z + 150) * k) - w;
+    const px = Math.round((x + map.half) * k + dx) - w;
+    const py = Math.round((z + map.half) * k + dz) - w;
     const d = g.getImageData(Math.max(0, px), Math.max(0, py), 2 * w + 1, 2 * w + 1).data;
     let n = 0;
     for (let i = 0; i < d.length; i += 4) {
@@ -9514,32 +9545,45 @@ async function curutArenaScenario(page, check, touch) {
     arena: window.__superglen.levelInfo.arena,
     controls: window.__superglen.controlsEnabled,
     rats: window.__arena.rats().length,
+    active: window.__arena.rats().filter((r) => r.active).length,
+    queued: window.__arena.rats().filter((r) => r.queued).length,
     camera: { ...window.__superglen.camera },
     cls: document.documentElement.classList.contains('curut-arena'),
     zoom: getComputedStyle(document.querySelector('.zoom-col')).visibility,
     exit: document.querySelector('.arena-return')?.getBoundingClientRect().toJSON(),
   }));
   check(`curut-arena ${tag}: approaching a Curut enters a separate seven-rat encounter`, entered.level === 'battle-curut' && entered.arena === 'curut' && entered.controls && entered.rats === 7 && entered.cls, JSON.stringify(entered));
-  check(`curut-arena ${tag}: free-camera zoom is hidden and the return button remains on screen`, entered.zoom === 'hidden' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
+  check(`curut-arena ${tag}: only the first Curut is active; six wait hidden for their turns`, entered.active === 1 && entered.queued === 6, JSON.stringify(entered));
+  check(`curut-arena ${tag}: follow-camera zoom is available and the return button remains on screen`, entered.zoom === 'visible' && entered.exit && entered.exit.x >= 0 && entered.exit.y >= 0 && entered.exit.right <= (touch ? 844 : 1280) && entered.exit.bottom <= (touch ? 390 : 720), JSON.stringify(entered));
   await page.evaluate(() => {
     window.__superglen.setCameraYaw(Math.PI * 0.75);
     window.__superglen.placePlayer(130, 30);
-    window.__superglen.advance(12, true);
+    window.__arena.mute(true);
+    window.__superglen.advance(180, true);
   });
   const stable = await page.evaluate(() => ({ camera: { ...window.__superglen.camera }, player: { ...window.__superglen.player }, cameraYaw: window.__superglen.cameraYaw, steeringYaw: window.__superglen.steeringYaw }));
   const cameraShift = Math.hypot(stable.camera.x - entered.camera.x, stable.camera.y - entered.camera.y, stable.camera.z - entered.camera.z);
   const playerRadius = Math.hypot(stable.player.x - 93, stable.player.z);
-  check(`curut-arena ${tag}: battle camera and movement heading stay fixed after look input, and Glen stays inside`, cameraShift < 0.02 && Math.abs(stable.cameraYaw) < 0.001 && Math.abs(stable.steeringYaw) < 0.001 && playerRadius < 5.2, JSON.stringify({ cameraShift, playerRadius, entered: entered.camera, stable }));
-  const envelope = await page.evaluate(() => {
-    const a = window.__arena;
-    return [[-5, 0], [5, 0], [0, -5], [0, 5]].flatMap(([x, z]) => [0, 9].map((y) => a.project(93 + x, y, z)));
-  });
-  check(`curut-arena ${tag}: the full ground-to-max-jump envelope stays inside the fixed camera`, envelope.every((p) => p.z < 1 && Math.abs(p.x) < 0.98 && Math.abs(p.y) < 0.98), JSON.stringify(envelope));
+  const centered = await page.evaluate(() => window.__superglen.battle.glenNdc);
+  check(`curut-arena ${tag}: camera follows Glen after relocation and keeps him centered inside the arena`, cameraShift > 1 && playerRadius < 5.2 && centered.z < 1 && Math.abs(centered.x) < 0.02 && Math.abs(centered.y) < 0.02, JSON.stringify({ cameraShift, playerRadius, centered }));
+  const arenaDistances = [];
+  for (const zoom of [0.6, 1, 2]) {
+    await page.evaluate((z) => { window.__superglen.zoom.set(z, true); window.__superglen.advance(180, true); }, zoom);
+    arenaDistances.push(await page.evaluate(() => { const g = window.__superglen; return Math.hypot(g.camera.x - g.player.x, g.camera.y - g.player.y, g.camera.z - g.player.z); }));
+  }
+  check(`curut-arena ${tag}: zoom changes the following battle camera distance`, arenaDistances[0] < arenaDistances[1] && arenaDistances[1] < arenaDistances[2], JSON.stringify(arenaDistances));
+  await page.evaluate(() => { window.__superglen.zoom.reset(); window.__superglen.advance(120, true); });
   await shot(page, `curut-arena-${touch ? 'touch' : 'desktop'}`);
   await page.evaluate(() => {
     const g = window.__superglen;
     g.save.setSlot({ level: 'battle-curut', x: g.player.x, y: g.player.y, z: g.player.z, yaw: 0, mode: 'superglen', t: Date.now() });
-    for (let i = 0; i < 7; i++) window.__arena.tame(i);
+    for (let i = 0; i < 7; i++) {
+      const active = window.__arena.rats().filter((r) => r.active);
+      if (active.length !== 1 || active[0].i !== i) throw new Error('Curut turn must reveal exactly the next untamed identity');
+      window.__arena.tame(i);
+      if (window.__arena.rats().some((r) => r.active)) throw new Error('Curut handoff must allow a respite');
+      g.advance(Math.ceil(window.__arena.handoffDelay * 60) + 2, false);
+    }
     g.advance(120, false);
   });
   await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
@@ -10255,17 +10299,17 @@ async function bab6FightScenario(page, check, touch) {
   // ---- Helpers ----
   await ch6Stand(page, ...FAR6);
   await page.evaluate(() => window.__ch6.muteHelpers(true));
-  await page.evaluate(() => window.__ch6.endRound()); // round 1: two Curut Cemberut join
+  await page.evaluate(() => window.__ch6.endRound()); // round 1: one Curut Cemberut joins
   await d3Adv(page, 10);
   let hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: after round 1 two Curut Cemberut join the fight (5 hit points each), Nino says so`, hs.counts.alive === 2 && hs.counts.spawned === 2 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 5), JSON.stringify(hs));
+  check(`bab6-fight ${tag}: after round 1 one Curut Cemberut joins the fight (5 hit points), Nino says so`, hs.counts.alive === 1 && hs.counts.spawned === 1 && hs.list.filter((x) => x.state !== 0).every((x) => x.hp === 5), JSON.stringify(hs));
   let sawCurut = false;
   for (let i = 0; i < 80 && !sawCurut; i++) { sawCurut = /Curut Cemberut datang/.test((await ch6Info(page)).line); await d3Adv(page, 10); }
   check(`bab6-fight ${tag}: Nino: "Curut Cemberut datang membantu!"`, sawCurut, '');
   await page.evaluate(() => window.__ch6.endRound()); // round 2: no new wave
-  await page.evaluate(() => window.__ch6.endRound()); // round 3: tops up to 4 at most
+  await page.evaluate(() => window.__ch6.endRound()); // round 3: the existing Curut keeps its turn
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: there are never more than 4 helpers at once`, hs.counts.alive === 4 && hs.counts.spawned === 4, JSON.stringify(hs.counts));
+  check(`bab6-fight ${tag}: later rounds cannot add a second Curut while the first is active`, hs.counts.alive === 1 && hs.counts.spawned === 1, JSON.stringify(hs.counts));
   await ch6Shot(page, sn('helpers'));
   // A charge hits Glen standing in its line.
   await page.evaluate(() => window.__superglen.health.fill());
@@ -10288,7 +10332,7 @@ async function bab6FightScenario(page, check, touch) {
   await page.evaluate((i) => window.__ch6.helperHit(i), h0.i);
   await d3Adv(page, 160);
   hs = await ch6Hel(page);
-  check(`bab6-fight ${tag}: the fifth hit tames it: it runs away and is gone (3 left), nobody hurt`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 3, JSON.stringify([hs.counts, hs.list[h0.i]]));
+  check(`bab6-fight ${tag}: the fifth hit tames the only Curut: it runs away and none remain`, hs.counts.tamed === 1 && hs.list[h0.i].state === 0 && hs.counts.alive === 0, JSON.stringify([hs.counts, hs.list[h0.i]]));
   await page.evaluate(() => window.__ch6.helpers && 0);
   // ---- Perf: ring up, helpers around ----
   await page.evaluate(() => { window.__ch6.spawnHelpers(1); window.__ch6.setLevel(3); window.__ch6.slam(); });
@@ -11035,11 +11079,30 @@ async function battleScenario(page, check, touch) {
     if (boss === 'ch5') await ch5Stand(page, A.x + 30, A.z);
     else if (boss === 'ch6') await ch6Stand(page, A.x, A.z + 30);
     else {
-      await d3Go(page, 93, 12, 30);
-      await d3Adv(page, 400);
-      const r0 = (await ch3Rats(page))[0];
-      await page.evaluate(([x, z]) => { window.__ch3.setArenaEnabled(true); window.__superglen.placePlayer(x, z); }, [r0.x, r0.z]);
-      await d3Adv(page, 4);
+      // Finish incidental arrival lines before testing the transition, with city attacks muted.
+      // A fixed 400-frame combat prelude can leave Glen resting; it is not a transition prerequisite.
+      await page.evaluate(() => window.__ch3.mute(true));
+      await d3Go(page, 93, 12, 2);
+      for (let i = 0; i < 4 && await page.evaluate(() => window.__superglen.dialog.open); i++) {
+        await d3Adv(page, 22); // the dialog's 0.35 s tap guard
+        await d3Press(page, 'e');
+        await d3Adv(page, 12); // let the bubble's idle hide finish
+      }
+      const ready = await page.evaluate(() => {
+        const g = window.__superglen;
+        const ch3 = window.__ch3;
+        const state = { step: ch3.step(), arrived: ch3.arrived(), controls: g.controlsEnabled, resting: g.health.resting, loading: g.loading, dialog: g.dialog.open };
+        if (state.step !== 'chase' || !state.arrived || !state.controls || state.resting || state.loading || state.dialog) return { ...state, requested: false };
+        const rat = ch3.rats().find((r) => r.hp > 0 && Math.hypot(r.x - 93, r.z) < 22);
+        if (!rat) throw new Error('battle rats: no active rat near the market crossing');
+        ch3.setArenaEnabled(true);
+        g.placePlayer(rat.x, rat.z);
+        g.advance(4, false);
+        return { ...state, requested: g.loading || g.level === 'battle-curut', target: rat, player: { ...g.player } };
+      });
+      if (!ready.requested) {
+        throw new Error('battle rats: transition not requested after four fixed steps: ' + JSON.stringify(ready));
+      }
       await page.waitForFunction(() => window.__superglen.level === 'battle-curut' && !window.__superglen.loading && !!window.__arena, null, { timeout: 30000 });
       await page.evaluate(() => { window.__arena.mute(true); window.__superglen.advance(20, true); });
     }
@@ -11059,6 +11122,8 @@ async function battleScenario(page, check, touch) {
     // Skip the intro by a tap / key.
     if (boss !== 'ch3') {
       await d3Adv(page, 20);
+      const introCenter = await page.evaluate(() => window.__superglen.battle.glenNdc);
+      check(`${L}: entrance sweep keeps Glen centered`, introCenter.z < 1 && Math.abs(introCenter.x) < 0.03 && Math.abs(introCenter.y) < 0.03, JSON.stringify(introCenter));
       await page.evaluate(() => window.__superglen.battle.skip());
       await d3Adv(page, 5);
       bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
@@ -11069,6 +11134,13 @@ async function battleScenario(page, check, touch) {
     h = await hudState();
     const ov = await overlaps();
     check(`${L}: the battle HUD overlaps nothing and stays on screen (${ov.n} boxes)`, ov.bad.length === 0 && ov.out.length === 0 && h.bar, JSON.stringify([ov, h.bar]));
+    if (boss !== 'ch3') {
+      const stars = await page.evaluate(() => {
+        const r = document.querySelector('.ch5-stars.show').getBoundingClientRect();
+        return { center: r.left + r.width / 2, screen: innerWidth / 2 };
+      });
+      check(`${L}: boss stars stay centered under the banner, clear of the call-out column`, Math.abs(stars.center - stars.screen) < 1, JSON.stringify(stars));
+    }
     if (boss !== 'ch3') {
       // The ring: exists, and the wall arms once Glen is inside.
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [A.x + 6, A.z]);
@@ -11086,6 +11158,7 @@ async function battleScenario(page, check, touch) {
     }
     // ---- camera keeps the enemy in frame while Glen moves around ----
     const frames = [];
+    const glenFrames = [];
     for (let i = 0; i < 8; i++) {
       const ang = (i / 8) * Math.PI * 2;
       const fx = await page.evaluate(() => window.__superglen.battle.focus);
@@ -11094,8 +11167,10 @@ async function battleScenario(page, check, touch) {
       await page.evaluate(([x, z]) => window.__superglen.placePlayer(x, z), [px, pz]);
       await d3Adv(page, 150);
       frames.push(await ndc());
+      glenFrames.push(await page.evaluate(() => window.__superglen.battle.glenNdc));
     }
     check(`${L}: the camera keeps the enemy on screen from every side (|x|,|y| < 0.9)`, frames.every(inFrame), JSON.stringify(frames.map((f) => [+f.x.toFixed(2), +f.y.toFixed(2)])));
+    check(`${L}: Glen stays centered from every side`, glenFrames.every((p) => p.z < 1 && Math.abs(p.x) < 0.03 && Math.abs(p.y) < 0.03), JSON.stringify(glenFrames));
     await bshot(`${nm}-2-fight`);
     const pc = await calls();
     console.log(`   [${L}] battle view: ${pc.calls} draw calls, ${pc.tris} triangles`);
@@ -11113,7 +11188,11 @@ async function battleScenario(page, check, touch) {
     } else if (boss === 'ch6') {
       await page.evaluate(() => window.__ch6.takeStar && window.__ch6.takeStar());
     } else {
-      await page.evaluate(() => window.__arena.tame(0));
+      await page.evaluate(() => {
+        const active = window.__arena.rats().filter((r) => r.active);
+        if (active.length !== 1) throw new Error('Exactly one Curut must own the current turn');
+        window.__arena.tame(active[0].i);
+      });
     }
     await d3Adv(page, 3);
     bs = await page.evaluate(() => ({ ...window.__superglen.battle }));
@@ -11164,6 +11243,8 @@ async function zoomScenario(page, check, touch) {
   await page.evaluate(() => window.__superglen.zoom.reset());
   await settle();
   const base = await dist();
+  const defaultDistance = await page.evaluate(() => { const g = window.__superglen; return Math.hypot(g.camera.x - g.player.x, g.camera.y - g.player.y - 0.85, g.camera.z - g.player.z); });
+  check(`zoom ${tag}: default distance from Glen's look target is 2.5 m`, Math.abs(defaultDistance - 2.5) < 0.05, String(defaultDistance));
   let z = await zv();
   check(`zoom ${tag}: default multiplier is 1`, Math.abs(z.v - 1) < 0.02, JSON.stringify(z));
   if (!touch) {
@@ -11172,7 +11253,7 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     const far = await dist();
-    check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base + 1, JSON.stringify(z));
+    check(`zoom ${tag}: wheel down zooms out (camera farther: ${base.toFixed(1)} -> ${far.toFixed(1)} m)`, z.t > 1.2 && far > base * 1.25, JSON.stringify(z));
     // Wheel input intentionally caps one event to three notches. Send several
     // real events to exercise the clamp instead of assuming one huge delta is
     // applied without the production safety cap.
@@ -11180,7 +11261,7 @@ async function zoomScenario(page, check, touch) {
     await settle();
     z = await zv();
     const near = await dist();
-    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.61 && near < base - 1.5, JSON.stringify([z, near]));
+    check(`zoom ${tag}: wheel up zooms in, clamped at the close shoulder view (${z.t.toFixed(2)})`, z.t <= 0.61 && near < base * 0.8, JSON.stringify([z, near]));
     await page.keyboard.press('Equal');
     await page.keyboard.press('Minus');
     await page.keyboard.press('Minus');
@@ -11239,17 +11320,6 @@ async function zoomScenario(page, check, touch) {
   await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
   z = await zv();
   check(`zoom ${tag}: after a reload the zoom is back (${z.v.toFixed(2)})`, Math.abs(z.v - 0.8) < 0.02, JSON.stringify(z));
-  // Default distance and migration of zoom values chosen against the old 5 m default.
-  check(`zoom ${tag}: the default camera distance is 4.2 m (was 5)`, Math.abs((await page.evaluate(() => window.__superglen.zoom.baseDistance)) - 4.2) < 1e-6, '');
-  for (const [old, want] of [[1.5, 1.5 * 5 / 4.2], [1, 1]]) {
-    await page.evaluate((o) => { const d = JSON.parse(localStorage.getItem('superglen.save.v1')); d.settings.zoom = o; delete d.settings.zoomBase; localStorage.setItem('superglen.save.v1', JSON.stringify(d)); }, old);
-    await page.goto(URL + '?level=kota&fps=0');
-    await page.waitForFunction(() => !!window.__superglen && window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
-    z = await zv();
-    check(`zoom ${tag}: an old saved zoom ${old} is migrated to ${want.toFixed(3)}`, Math.abs(z.t - want) < 0.01, JSON.stringify(z));
-  }
-  await page.evaluate(() => window.__superglen.zoom.set(0.8, true));
-  await d3Adv(page, 90);
   // Reset in the settings panel.
   await sleep(600);
   if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
@@ -11275,71 +11345,6 @@ async function zoomScenario(page, check, touch) {
     res[zz] = { d: await dist(), view: await inView() };
   }
   check(`zoom ${tag}: in battle the camera distance grows with the zoom (${JSON.stringify(res)}) and the boss stays in view`, res[0.6].d < res[1].d && res[1].d < res[2].d && Object.values(res).every((r) => r.view), JSON.stringify(res));
-  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
-  await battleCamProbe(page, check, touch, 'zoom');
-  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
-}
-
-// ---- Battle camera lock: a scripted ~10 s fight (walk, two jumps, knock-back) must not snap the camera and must keep Glen and the enemy framed ----
-async function battleCamProbe(page, check, touch, group) {
-  const tag = touch ? 'touch 844x390' : 'desktop';
-  const vh = touch ? 390 : 720;
-  await ch3Open(page, ch5Save({ bab5: { step: 'fight' } }), touch);
-  await ch5Stand(page, -72.5 + 30, -72.5);
-  await d3Adv(page, 60);
-  await page.evaluate(() => window.__superglen.placePlayer(-72.5 + 7, -72.5));
-  await d3Adv(page, 30);
-  await page.evaluate(() => window.__superglen.battle.active && window.__superglen.battle.skip());
-  await d3Adv(page, 120);
-  await page.evaluate(() => window.__superglen.health.fill());
-  const samples = [];
-  const take = async (key) => {
-    const r = await page.evaluate(() => {
-      const g = window.__superglen;
-      const n = g.battle.playerNdc;
-      return { c: [g.camera.x, g.camera.y, g.camera.z], p: n, e: g.battle.focusNdc, pl: [g.player.x, g.player.y, g.player.z], cd: g.battle.camDist, yaw: g.cameraYaw, w: g.battle.camWeight, act: g.battle.active, air: g.airHeight };
-    });
-    samples.push({ ...r, key });
-  };
-  const hold = async (k, f) => { await page.keyboard.down(k); for (let i = 0; i < f; i++) { await d3Adv(page, 1); await take(); } await page.keyboard.up(k); };
-  const wait = async (f, mid) => { for (let i = 0; i < f; i++) { await d3Adv(page, 1); await take(); if (mid && i % 60 === 0) await page.evaluate(() => window.__superglen.health.fill()); } };
-  await take();
-  await wait(40);
-  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space');
-  await wait(70);
-  await hold('KeyD', 60);
-  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space');
-  await wait(14);
-  await page.keyboard.down('Space'); await wait(3); await page.keyboard.up('Space'); // double jump
-  await wait(60);
-  await hold('KeyA', 60);
-  await hold('KeyW', 50);
-  await hold('KeyS', 22);
-  await wait(120, true);
-  const hs = []; let maxStep = 0, maxAt = 0, maxAir = 0, worstGlen = 0, enemyOut = 0, headOut = 0, minH = 1e9, maxH = 0;
-  for (let i = 1; i < samples.length; i++) {
-    const a = samples[i - 1].c, b = samples[i].c;
-    const d = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-    if (d > maxStep) { maxStep = d; maxAt = i; }
-  }
-  for (const s of samples) {
-    if (s.air > maxAir) maxAir = s.air;
-    const m = Math.max(Math.abs(s.p.mid.x), Math.abs(s.p.mid.y));
-    worstGlen = Math.max(worstGlen, m);
-    if (Math.abs(s.p.head.y) > 0.98 || Math.abs(s.p.feet.y) > 0.98 || Math.abs(s.p.head.x) > 0.98 || s.p.head.z > 1) headOut++;
-    if (!(s.e.z < 1 && Math.abs(s.e.x) < 0.98 && Math.abs(s.e.y) < 0.98)) enemyOut++;
-    const hpx = (s.p.head.y - s.p.feet.y) * vh / 2;
-    minH = Math.min(minH, hpx); maxH = Math.max(maxH, hpx); hs.push(hpx);
-  }
-  if (process.env.CAMDUMP) for (let i = maxAt - 5; i < maxAt + 4; i++) console.log('   step', i, 'cam', samples[i].c.map((v) => v.toFixed(2)).join(','), 'glen', samples[i].pl.map((v) => v.toFixed(2)).join(','), 'dist', samples[i].cd.toFixed(3), 'yaw', samples[i].yaw.toFixed(4));
-  if (process.env.CAMDUMP) { let wi = 0; samples.forEach((s, i) => { if (Math.abs(s.p.mid.y) > Math.abs(samples[wi].p.mid.y)) wi = i; }); for (let i = Math.max(1, wi - 40); i < Math.min(samples.length, wi + 4); i += 4) console.log('   dump', i, 'cam', samples[i].c.map((v) => v.toFixed(2)).join(','), 'glen', samples[i].pl.map((v) => v.toFixed(2)).join(','), 'air', samples[i].air.toFixed(2), 'ndc', samples[i].p.mid.x.toFixed(2), samples[i].p.mid.y.toFixed(2)); }
-  const first = samples[10];
-  const gh = hs.slice().sort((a, b) => a - b)[hs.length >> 1];
-  console.log(`   [${group} ${tag}] camera step max ${maxStep.toFixed(4)} m at sample ${maxAt}/${samples.length}, Glen median height ${gh.toFixed(1)} css px (min ${minH.toFixed(1)}, max ${maxH.toFixed(1)}), worst |mid ndc| ${worstGlen.toFixed(3)}, peak air ${maxAir.toFixed(2)}, enemy off-screen ${enemyOut}, glen clipped ${headOut}`);
-  check(`${group} ${tag}: scripted fight (${samples.length} frames, jumps + knock-back): the lock-on stays engaged`, samples.every((s) => s.act) && samples.slice(5).every((s) => s.w > 0.9), JSON.stringify(samples.filter((s) => !s.act || s.w <= 0.9).slice(0, 2)));
-  check(`${group} ${tag}: battle camera never snaps (largest step ${maxStep.toFixed(4)} m per fixed step <= 0.14)`, maxStep <= 0.14, `${maxStep} at ${maxAt}`);
-  check(`${group} ${tag}: Glen stays in the central 80% of the view (worst ${worstGlen.toFixed(2)} <= 0.8), head and feet on screen during ${maxAir.toFixed(1)} m of jumps`, worstGlen <= 0.8 && headOut === 0 && maxAir > 0.6, `${worstGlen} ${headOut} air ${maxAir}`);
-  check(`${group} ${tag}: the enemy stays on screen through the whole scripted fight`, enemyOut === 0, String(enemyOut));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
@@ -11576,6 +11581,7 @@ async function main() {
   try {
     await waitForServer(30000);
     browser = await chromium.launch({
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
       args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info', '--js-flags=--expose-gc'],
     });
 

@@ -8,6 +8,7 @@ import type { HitInfo } from '../../gameplay/Targets';
 import { personGeo } from './CityPeople';
 import { enemyModels } from './EnemyModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { headContactTime, type FeetPoint } from '../../player/HeadStomp';
 
 /** Numbers of the little rats in one place (all gentle: slow, and they never come at the child). */
 export const RatConfig = {
@@ -47,6 +48,7 @@ const ST_STUN = 5; // hit but not tamed yet: dizzy for a moment
 const ST_DIZZY = 6; // tamed: spin, stars, drop the food
 const ST_RUN = 7;
 const ST_GONE = 8;
+const ST_QUEUED = 9; // sequential encounter: invisible, untargetable, cannot attack or take a hit
 const K_CHARGE = 0;
 const K_CRUMB = 1;
 
@@ -170,8 +172,10 @@ export class MarketRats {
   private readonly squash = new Float32Array(this.n);
   private readonly puff = new Float32Array(this.n);
   private gap = 0;
+  private nextIn = -1;
   /** Test: no rat starts an attack by itself. */
   muted = false;
+  private combatEnabled = true;
   private readonly hpMax: number;
   private readonly easy: boolean;
   /** A second rat that joins the attack of the first one (index, seconds until it starts); -1 none. */
@@ -183,6 +187,8 @@ export class MarketRats {
   private readonly pipMesh: THREE.InstancedMesh;
   /** True when the rats are the Curut Cemberut model (code animation: lean, waddle, shake), false for the procedural bun rat. */
   private readonly ratModel: boolean;
+  private readonly headY: number;
+  private headCandidate = -1;
   private readonly arrowMesh: THREE.InstancedMesh;
   // Foods (index = the rat that carried it).
   private readonly fs = new Uint8Array(this.n);
@@ -217,6 +223,7 @@ export class MarketRats {
   /** Counters for tests. */
   tamedCount = 0;
   stomps = 0;
+  headStomps = 0;
   lasers = 0;
   /** Fight counters for tests. */
   hitsTaken = 0; // rat hits that did not tame
@@ -239,6 +246,7 @@ export class MarketRats {
     tamed: readonly number[],
     private readonly specs: readonly RatSpec[] = RATS,
     private readonly scenery = true,
+    private readonly sequential = false,
   ) {
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
@@ -246,6 +254,7 @@ export class MarketRats {
     const procRat = ratGeo();
     procRat.computeBoundingBox();
     const ratH = (procRat.boundingBox as THREE.Box3).max.y;
+    this.headY = GROUND + ratH * Combat.rat.scale * Combat.rat.headStomp.heightShare;
     const modelRat = enemyModels.geometry('curut_cemberut_lo', ratH);
     const rg = modelRat ?? procRat;
     if (modelRat) procRat.dispose();
@@ -302,6 +311,10 @@ export class MarketRats {
       this.fs[i] = F_CARRIED;
       this.hp[i] = this.hpMax;
       this.cool[i] = 1 + (i % 3) * 0.7;
+      if (sequential) {
+        this.st[i] = ST_QUEUED;
+        this.targets[i].enabled = false;
+      }
       if (done.has(i)) {
         // Tamed in an earlier session: the rat is gone, its bakpao / kue lie where its loop is.
         this.st[i] = ST_GONE;
@@ -316,9 +329,10 @@ export class MarketRats {
         }
       }
     }
+    if (sequential) this.revealNext();
     // Landing stomps tame a rat inside the stomp radius (Superglen).
     ctx.player.onStomp((e) => {
-      if (this.disposed) return;
+      if (this.disposed || !this.combatEnabled) return;
       for (let i = 0; i < this.n; i++) {
         if (this.st[i] >= ST_DIZZY) continue;
         if (Math.hypot(this.rx[i] - e.x, this.rz[i] - e.z) < e.radius + 0.4 && Math.abs(e.y - GROUND) < 3) {
@@ -327,8 +341,17 @@ export class MarketRats {
         }
       }
     });
+    const removeHeadStomp = ctx.player.registerHeadStomp({
+      contactTime: (from, to) => this.headContact(from, to),
+      stomp: () => {
+        this.headStomps++;
+        this.stomps++;
+        this.hit(this.headCandidate);
+      },
+    });
     ctx.onDispose(() => {
       this.disposed = true;
+      removeHeadStomp();
       for (const g of this.geos) g.dispose();
       for (const m of this.mats) m.dispose();
       this.ratMesh.dispose();
@@ -339,9 +362,25 @@ export class MarketRats {
     this.writeMatrices();
   }
 
+  private headContact(from: FeetPoint, to: FeetPoint): number {
+    this.headCandidate = -1;
+    const { ctx } = this;
+    if (this.disposed || !this.combatEnabled || !this.shown || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting) return Infinity;
+    let first = Infinity;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] >= ST_DIZZY || this.hp[i] === 0) continue;
+      const t = headContactTime(from, to, this.rx[i], this.headY, this.rz[i], Combat.rat.headStomp.radius);
+      if (t < first) {
+        first = t;
+        this.headCandidate = i;
+      }
+    }
+    return first;
+  }
+
   /** Test helper: `{ i, state, x, z, food, fstate }`. */
-  list(): { i: number; state: number; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number; hp: number; kind: number }[] {
-    return this.specs.map((r, i) => ({ i, state: this.st[i], x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
+  list(): { i: number; state: number; active: boolean; queued: boolean; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number; hp: number; kind: number }[] {
+    return this.specs.map((r, i) => ({ i, state: this.st[i], active: this.st[i] < ST_DIZZY, queued: this.st[i] === ST_QUEUED, x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
   }
 
   /** Rats not yet tamed. */
@@ -352,6 +391,19 @@ export class MarketRats {
   /** All seven are tamed (the chase is won). */
   get allTamed(): boolean {
     return this.tamedCount >= this.n;
+  }
+
+  /** City staging stays harmless; the test-only city-mechanics path can explicitly enable it. */
+  setCombatEnabled(on: boolean): void {
+    this.combatEnabled = on;
+    if (!on) this.assistIdx = -1;
+    for (let i = 0; i < this.n; i++) {
+      this.targets[i].enabled = on && this.st[i] < ST_DIZZY;
+      if (!on) {
+        this.ctx.projectiles.clearFrom(this.aim[i]);
+        if (this.st[i] === ST_WIND || this.st[i] === ST_CHARGE || this.st[i] === ST_RECOVER || this.st[i] === ST_STUN) this.st[i] = ST_BACK;
+      }
+    }
   }
 
   /** Horizontal distance from (x, z) to the nearest rat that is still around (Infinity: none). */
@@ -458,11 +510,15 @@ export class MarketRats {
 
   /** Tame rat i (laser or stomp): dizzy stars, boing, the food falls, then it runs down the drain. */
   tame(i: number): void {
-    if (this.st[i] >= ST_DIZZY) return;
+    if (!this.combatEnabled || this.st[i] >= ST_DIZZY) return;
     const { ctx } = this;
     this.st[i] = ST_DIZZY;
     this.timer[i] = 0;
     this.targets[i].enabled = false;
+    if (this.sequential) {
+      ctx.projectiles.clearFrom(this.aim[i]);
+      this.nextIn = Combat.rat.nextDelay;
+    }
     this.tamedCount++;
     ctx.synth.boing();
     ctx.sfx.pop();
@@ -508,11 +564,12 @@ export class MarketRats {
 
   /** Test helper: fight counters. */
   combatCounts(): Record<string, number> {
-    return { hitsTaken: this.hitsTaken, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, dodges: this.dodges, blocked: this.blocked, hurtGlen: this.hurtGlen };
+    return { hitsTaken: this.hitsTaken, headStomps: this.headStomps, attacks: this.attacks, charges: this.charges, crumbs: this.crumbs, dodges: this.dodges, blocked: this.blocked, hurtGlen: this.hurtGlen };
   }
 
   /** A laser shot reached rat i. Far away it may hop aside (the shot misses); otherwise it is one hit. */
   private laserHit(i: number, h: HitInfo): void {
+    if (!this.combatEnabled) return;
     this.lasers++;
     const s = this.st[i];
     if (s >= ST_DIZZY) return;
@@ -536,7 +593,7 @@ export class MarketRats {
 
   /** One hit (laser, stomp or a crumb sent back): the last one tames it, the others only make it dizzy for a moment. */
   hit(i: number): void {
-    if (this.st[i] >= ST_DIZZY) return;
+    if (!this.combatEnabled || this.st[i] >= ST_DIZZY) return;
     if (this.hp[i] > 1) {
       this.hp[i]--;
       this.hitsTaken++;
@@ -559,6 +616,7 @@ export class MarketRats {
 
   /** Start an attack: a charge when the child is near, crumbs from farther away. Every attack has a visible wind-up first. */
   private beginAttack(i: number, dp: number): void {
+    if (!this.combatEnabled) return;
     const pl = this.ctx.player.position;
     this.attacks++;
     this.gap = Combat.rat.globalGap;
@@ -570,7 +628,7 @@ export class MarketRats {
     this.dirX[i] = (pl.x - this.rx[i]) / d;
     this.dirZ[i] = (pl.z - this.rz[i]) / d;
     this.ctx.sfx.blip();
-    if (!this.easy && !this.assisting) this.pickAssist(i);
+    if (!this.sequential && !this.easy && !this.assisting) this.pickAssist(i);
   }
 
   /** Rats help each other: the nearest other rat that loops near the child joins in a moment (it attacks in turn, not at once). */
@@ -619,6 +677,7 @@ export class MarketRats {
 
   /** The child is touched (charge) or hit (crumb): `Health` decides between a hit, a shield block and the safe seconds. */
   private hurtGlenAt(x: number, z: number, i: number): 'hit' | 'blocked' | 'ignored' {
+    if (!this.combatEnabled) return 'ignored';
     const r = this.ctx.health.hurt(x, z);
     if (r === 'hit') this.hurtGlen++;
     else if (r === 'blocked') {
@@ -635,13 +694,21 @@ export class MarketRats {
   }
 
   fixedUpdate(dt: number): void {
+    if (this.disposed) return;
     this.t += dt;
     const { ctx } = this;
     const pl = ctx.player.position;
     const C = Combat.rat;
     this.gap = Math.max(0, this.gap - dt);
-    const calm = this.muted || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
+    const calm = !this.combatEnabled || this.muted || !ctx.game.controlsEnabled || ctx.dialog.blocking || ctx.health.resting;
     const feet = pl.y - 0.55;
+    if (this.nextIn >= 0) {
+      this.nextIn -= dt;
+      if (this.nextIn <= 0) {
+        this.nextIn = -1;
+        this.revealNext();
+      }
+    }
     if (this.assistIdx >= 0) {
       this.assistT -= dt;
       if (this.assistT <= 0) {
@@ -657,7 +724,7 @@ export class MarketRats {
     }
     for (let i = 0; i < this.n; i++) {
       const s = this.st[i];
-      if (s === ST_GONE) continue;
+      if (s === ST_GONE || s === ST_QUEUED) continue;
       const r = this.specs[i];
       const dx = this.rx[i] - pl.x;
       const dz = this.rz[i] - pl.z;
@@ -784,6 +851,19 @@ export class MarketRats {
     this.foods(dt);
   }
 
+  /** A tame gets its celebration, then leaves before the next hostile rat appears; no long city-drain walk. */
+  private revealNext(): void {
+    let next = -1;
+    for (let i = 0; i < this.n; i++) {
+      if (this.st[i] >= ST_DIZZY && this.st[i] < ST_GONE) this.st[i] = ST_GONE;
+      if (next < 0 && this.st[i] === ST_QUEUED) next = i;
+    }
+    if (next < 0) return;
+    this.st[next] = ST_LOOP;
+    this.cool[next] = Combat.rat.entryCooldown;
+    this.targets[next].enabled = this.combatEnabled;
+  }
+
   private turn(from: number, to: number, dt: number): number {
     let d = (to - from) % (Math.PI * 2);
     if (d > Math.PI) d -= Math.PI * 2;
@@ -862,7 +942,7 @@ export class MarketRats {
       // ---- rat ----
       const SC = Combat.rat.scale;
       let arrow = 0;
-      if (s === ST_GONE) {
+      if (s === ST_GONE || s === ST_QUEUED) {
         this.m4.makeScale(0, 0, 0);
       } else {
         let y = 0;
@@ -961,7 +1041,7 @@ export class MarketRats {
       let k = 1;
       if (fs === F_CARRIED) {
         // On the rat's back, bouncing with it.
-        if (s === ST_GONE) k = 0;
+        if (s === ST_GONE || s === ST_QUEUED) k = 0;
         px = this.rx[i];
         py = 0.62 * Combat.rat.scale + (s === ST_LOOP || s === ST_BACK ? Math.abs(Math.sin(t * 9 + i)) * 0.05 : 0);
         pz = this.rz[i];

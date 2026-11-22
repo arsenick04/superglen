@@ -71,6 +71,7 @@ export interface FlightInput {
   can: boolean;
   jumpDown: boolean;
   jumpPressed: boolean;
+  flightPressed: boolean;
   grounded: boolean;
   /** Feet height (world Y) and the ground height below (NaN when there is none). */
   feetY: number;
@@ -124,7 +125,10 @@ export class Flight {
    */
   arena: { x: number; z: number; r: number; margin: number; push: number } | null = null;
   /** Filled by the Player every fixed step. */
-  readonly inp: FlightInput = { can: false, jumpDown: false, jumpPressed: false, grounded: false, feetY: 0, groundY: NaN, ceilGap: Infinity, vy: 0 };
+  readonly inp: FlightInput = { can: false, jumpDown: false, jumpPressed: false, flightPressed: false, grounded: false, feetY: 0, groundY: NaN, ceilGap: Infinity, vy: 0 };
+  /** Extra one-tap mode unlocked by advanced training; hold-jump remains available. */
+  toggleEnabled = false;
+  private latched = false;
   /** Vertical velocity the flight wants this step (the Player applies it). */
   vy = 0;
   /** Smoothed lean of the body (rad), applied by the Player to its spin group. */
@@ -201,6 +205,7 @@ export class Flight {
     this.bounds = null;
     this.groundBounds = null;
     this.arena = null;
+    this.toggleEnabled = false;
   }
 
   /**
@@ -245,6 +250,19 @@ export class Flight {
     if (this.grace > 0) this.grace -= dt;
     if (!Number.isNaN(i.groundY)) this.lastGroundY = i.groundY;
 
+    if (this.toggleEnabled && i.flightPressed && i.can && !this.forceHold) {
+      if (this.latched) {
+        this.justReleased = true;
+        this._afterFlight = !i.grounded;
+        this.end();
+        return;
+      }
+      this.latched = true;
+      this.scripted = false;
+      this.grace = 0.25;
+      this.ignite(i.vy);
+    }
+
     if (i.grounded && this.grace <= 0) this._afterFlight = false;
     if (this.state === OFF) {
       if (!i.can) this._afterFlight = false;
@@ -284,7 +302,7 @@ export class Flight {
       }
     }
 
-    const hold = i.jumpDown || this.forceHold;
+    const hold = i.jumpDown || (this.toggleEnabled && this.latched) || this.forceHold;
     if (hold && this.state === GLIDE) {
       if (i.jumpDown) this.scripted = false; // the child took over
       this.ignite(i.vy);
@@ -467,6 +485,7 @@ export class Flight {
   }
 
   private end(): void {
+    this.latched = false;
     this.scripted = false;
     if (this.state === OFF) return;
     const jets = this.state === JETS;

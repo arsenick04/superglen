@@ -2,6 +2,18 @@
 
 ## Laporan Codex
 
+### Pembuka Chapter 8 — Hutan Botanica (21 November 2026): siap diuji
+
+- Setelah Elang Belang dijinakkan dan Glen pulang untuk berganti hari, pagi berikutnya membuka area baru `forest-training`: Hutan Botanica.
+- Glen bermain bersama Nino dan Aara, lalu melompat antar-pohon dalam tiga tingkat: mudah (dahan besar), menengah (lebih kecil dan berjauhan), dan sulit (dahan tinggi yang membutuhkan double jump).
+- Jatuh ke tanah setelah mulai melompat mengulang tingkat yang sedang dimainkan, bukan seluruh latihan. Minimap dan full map khusus hutan tersedia.
+- Link langsung: `?chapter=8`. Setelah tiga tingkat selesai, progres `forest-training` tersimpan dan Glen kembali ke kota.
+- Lulus: `npm run build`, reachability melalui `node --import tsx scripts/reachability.ts` (0 error/warning), `npm run check:quiz`, dan `git diff --check`. Browser/smoke diserahkan kepada pemilik sesuai permintaan pengujian manual.
+- Revisi dari tes iPhone: puncak visual daun kini tepat menyentuh collider sehingga Superglen berdiri di atas tajuk, bukan tenggelam; pijakan menengah/sulit diperlebar, kecepatan berjalan latihan diturunkan menjadi 76%, dan ketukan kedua di udara selalu menjadi double jump. Video kiriman baru disambung sesudah video Elang dikalahkan dalam satu pemutaran 27 detik agar tidak ada jeda musik/VO di antaranya.
+- Revisi alur: pagi hari Aara menunggu di depan rumah dan mengajak Glen berjalan ke Lab. Di dalam Lab Nino mengajak keduanya berlatih di hutan; setelah keluar, jalur hutan hanya dapat dibuka lewat tombol aksi di belakang gedung Barongsai tua. Preview `?chapter=8` memulai alur lengkap, sedangkan `?chapter=8&training=1` langsung masuk latihan.
+- Revisi kesulitan: jarak level 2 dan 3 dipendekkan menjadi sekitar 5–7 m, kenaikan penting level 3 tetap 2,4–2,5 m sehingga memerlukan double jump. Cakram kuning dihapus dan collider pijakan dibuat tak terlihat tepat di bawah tajuk daun. Pohon latar ditambah dari 52 menjadi 96 supaya hutan terasa lebih padat tanpa menambah rute wajib.
+- Latihan diperpanjang menjadi lima lintasan: mudah, menengah, sulit, mahir, dan juara. Dua lintasan baru memakai tajuk lebar serta celah pendek, sementara kenaikan vertikal melatih irama dan double jump. Sesudah lintasan kelima, Glen, Aara, dan Nino kembali ke Lab; save berhenti di checkpoint `forest_quiz` untuk PR kuis berikutnya.
+
 ### Arena Curut Cemberut (17 November 2026): checkpoint siap uji
 
 - Pertarungan Curut sekarang berpindah dari kota ke arena real-time khusus. Kamera tetap tidak lagi terputar/ter-zoom saat bertarung, Glen dibatasi di dalam arena, dan framing touch dibuat lebih dekat agar Glen serta tujuh Curut tetap terlihat.
@@ -770,3 +782,295 @@ Setelah PR di-merge dan deploy selesai. Buka alamat biasa https://arsenick04.git
 1. **Chapter 3**: dengan save yang sudah menamatkan latihan, keluar dari Lab. Nino harus berseru "Cepat, ke pasar!" dan tikus ada di pasar.
 2. **Chapter 4**: temui Aara di sekolah, jawab 3 soal bahasa Inggris, baca papan di taman.
 3. **Akhir Chapter 4**: Sosok Misterius dan penutup di Lab.
+
+## Perbaikan kamera — 18 November 2026
+
+- `src/camera/ThirdPersonCamera.ts`: jarak default 5 → 2,5 m; `battleLook: 0` menjaga pusat pandang pada Glen, musuh menentukan arah orbit dan jarak mundur.
+- `src/gameplay/BattleMode.ts`: intro tetap mengorbit Glen, tidak mengalihkan pusat pandang ke musuh; tambah proyeksi Glen untuk tes.
+- `src/world/kota/CurutArena.ts`, `src/styles.css`: hapus pemasangan kamera tetap Curut, aktifkan kembali kontrol zoom touch.
+- `scripts/smoke-test.cjs`: uji jarak default 2,5 m, pusat Glen pada intro/delapan arah, kamera arena mengikuti perpindahan Glen dan zoom. Batas selisih meter zoom lama diganti rasio jarak karena default diperkecil 50%; clamp multiplier tetap 0,6–2. Tes komposisi tetap diganti tes follow sesuai instruksi pemilik proyek.
+- Build, check:reach, check:quiz lulus. Zoom desktop 10/10, zoom touch 12/12; Curut desktop 6/6, Curut touch 6/6 lulus. Semua pemeriksaan pusat Glen pada intro dan delapan arah lulus (tiga battle di touch; Ular/Rakus desktop dan Curut desktop diuji terpisah).
+- Suite battle lengkap belum hijau: desktop 44/46 (Tikus Rakus 61 draw call >60; timeout transisi Curut 30 s pada run gabungan, sementara grup Curut terpisah lulus). Touch 64/65 (HUD bintang bertumpuk dengan bubble Ular Melar). Batas performa/HUD tidak dilonggarkan. Pembanding terisolasi commit main `34ea93d` pada posisi Rakus yang sama mencatat 54 draw call/486.719 segitiga; kamera baru 61/667.732. Framing baru melihat lebih banyak geometri, masih di bawah batas segitiga 1.200.000. Pada touch Rakus 59 draw call. Dua catatan ini belum diperbaiki dalam tugas kamera.
+- Bukti visual: `test-results/battle-snake-2-fight.png`, `test-results/battle-rakus-2-fight.png`, `test-results/battle-touch.png`. Screenshot arena pada titik tertentu timeout di software renderer; assertion follow/zoom dan keluar arena tetap lulus. FPS perangkat nyata belum diukur (skenario headless menggunakan fps=0).
+- Chromium sistem digunakan melalui `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`; tanpa dependensi npm baru.
+
+Untuk dicoba: buka game di PC dan HP, reset zoom di pengaturan, lalu coba masuk arena Curut, berjalan, mengatur zoom, dan kembali ke kota.
+
+
+## Stabilisasi battle setelah kamera — 18 November 2026
+
+- HUD bintang Ular/Rakus kini di tengah di bawah banner, terpisah dari kolom seruan ringkas. Aturan battle lebih spesifik dari posisi kiri HUD jelajah touch.
+- Cincin arena memakai satu pass DoubleSide. Shader additive tidak bergantung pada urutan sisi dan tidak menulis depth, sehingga tidak membutuhkan pass depan/belakang terpisah. Menghapus satu submission tambahan secara struktural; jumlah draw call dan FPS sesudah perubahan belum diukur.
+- Setup smoke transisi Curut tidak lagi melewati 400 frame pertarungan kota insidental: serangan dimute, dialog diselesaikan, status kontrol/cerita/target diperiksa, lalu perpindahan level asli dipicu. Batas 30 detik serta asersi lama dipertahankan; tambah asersi pusat HUD bintang. Penyebab timeout sebelumnya belum dibuktikan saat runtime.
+- Pemeriksaan pembuat: typecheck, syntax smoke, build, check:reach (0 error/warning), check:quiz lulus. Review independen silang dari agen fitur injak dan review agen utama: tidak ada temuan penghalang.
+- Atas instruksi pemilik, tidak menjalankan browser/Playwright, screenshot baru, atau pengukuran FPS. Pengujian browser total menunggu game selesai. Pemilik menguji bermain sekarang.
+
+Untuk dicoba sendiri: di HP landscape masuk battle Ular/Rakus, pastikan bintang tidak menumpuk dengan seruan; masuk/keluar arena Curut dari kota dan ulangi setelah istirahat di rumah sakit.
+
+
+## Injak-pantul musuh non-bos — 18 November 2026
+
+- Superglen yang sedang turun dan mendarat tepat pada kepala Curut memberi satu hit biasa, lalu memantul otomatis (tinggi pantul 1,2 m di parkour.ts). Berlaku pada Curut pasar/arena serta Curut pendamping Rakus; SnakeBoss/RakusBoss tidak didaftarkan sebagai permukaan injak dan mekanik bos tidak berubah. Glen biasa, terbang, kontrol terkunci, kontak dari samping/naik tidak memicu fitur ini.
+- Player memeriksa lintasan kaki sesudah gerakan diselesaikan controller, memilih kontak paling awal satu musuh, lalu menghentikan gerakan pada kepala sebelum memulai pantulan di langkah berikutnya. Tidak mengirim event mendarat/hentakan tanah pada kontak kepala itu; tidak menaikkan irama atau mereset jatah double jump. Hentakan area saat mendarat di tanah tetap bekerja.
+- Kontak memakai bidang kepala gameplay yang stabil (85% tinggi model, radius ramah 0,5 m di combat.ts); tidak mengejar bob/squash kosmetik. Posisi kontak visual serta rasa gerak perlu dicoba sendiri. Callback dilepas saat level dibuang; pending pantul dibersihkan pada teleport/respawn/pergantian mode. Tidak ada alokasi objek baru per langkah pada jalur kontak.
+- File: src/player/{Player,HeadStomp}.ts, src/world/kota/{MarketRats,RakusHelpers}.ts, src/config/{parkour,combat}.ts, scripts/head-stomp-probe.ts. Tidak ada dependensi/dialog/audio baru.
+- Pemeriksaan: typecheck, build, check:reach (0 error/warning), check:quiz, diff check lulus; `node_modules/.bin/tsx scripts/head-stomp-probe.ts` 8/8 (turun cepat, naik/samping, sudah di bawah kepala, posisi horizontal saat tumbukan, dekat tetapi meleset, batas radius). Probe ini memeriksa geometri kontak, bukan simulasi game penuh. Review independen oleh agen stabilisasi serta review agen utama: tidak ada temuan penghalang.
+- Tidak menjalankan pengujian browser otomatis sesuai keputusan pemilik; integrasi fisika dan tampilan belum diverifikasi saat bermain.
+
+Untuk dicoba sendiri:
+1. Di arena Curut, lompat lalu arahkan kaki ke kepala: satu hit dan pantul otomatis; lewat samping/naik tidak memantul. Ulangi untuk menjinakkan tanpa laser.
+2. Coba Curut kecil pendamping Rakus; tubuh Rakus dan Ular tidak menerima serangan injak baru. Hentakan di tanah dekat Curut tetap berfungsi.
+3. Setelah memantul, keluar/masuk arena atau pulihkan hati di rumah sakit: tidak ada pantulan tertinggal atau hit ganda.
+
+
+## Link uji langsung per Chapter — 18 November 2026
+
+- `?chapter=1` sampai `?chapter=6` memulai cerita Chapter yang dipilih dengan semua prasyarat chapter sebelumnya. Chapter 2 langsung di hangar; Chapter 3–6 tetap menjalankan alur cerita masing-masing, bukan jelajah bebas. `?chapter=3&battle=1` langsung ke arena Curut.
+- Save uji hanya di memori: seluruh jalur read/write/reset/reload/resetProgress tidak mengakses localStorage utama. Muat ulang memulai ulang Chapter uji; alamat biasa kembali ke save utama. Parameter chapter valid didahulukan dari level/free/reset. Nilai invalid/duplikat tetap memakai perilaku biasa.
+- Probe non-browser memeriksa enam seed, isolasi storage termasuk reset/reload, prasyarat/skills, rute hangar/arena, dan nilai invalid. Review silang + agen utama; boundary newline pada parser diperketat dan ditambahkan ke probe. Typecheck, build dan probe lulus; tidak menjalankan browser sesuai instruksi pemilik.
+- Daftar link: docs/chapter-test-links.md. Chapter 7–8 belum tersedia. Tidak ada perubahan audio/dialog/dependensi.
+
+
+## Curut muncul satu per satu — 18 November 2026
+
+- Masukan pemilik: tujuh Curut sekaligus terlalu sulit. Arena kini menampilkan tepat satu Curut aktif; sisanya antre tersembunyi, target dinonaktifkan, tidak bisa menyerang atau terkena laser, injak kepala maupun hentakan tanah.
+- Setelah Curut aktif jinak, lemparannya dibersihkan berdasarkan identitas pemilik (lemparan pihak lain tidak disentuh). Jeda 1,2 detik di Combat.rat.nextDelay, lalu Curut lama hilang dan satu Curut berikutnya muncul dengan cooldown awal 1 detik. Mode serangan bantuan antar-Curut dimatikan untuk arena antrean.
+- Tujuh identitas, makanan, hit biasa/injak-pantul, hitungan kemenangan dan save tamed dipertahankan. Saat melanjutkan save sebagian, yang muncul adalah identitas pertama yang belum jinak. Staging Curut di kota tidak diubah; pertarungan satu per satu berlaku di arena terpisah.
+- Curut pendamping Rakus: kapasitas/gelombang masing-masing satu. Slot yang masih dipakai animasi keluar tidak bisa diisi Curut baru. Serangan tubuh bos tetap sama.
+- Pemeriksaan: typecheck/build, check:reach, check:quiz, syntax smoke dan diff check lulus. Probe non-browser `node_modules/.bin/tsx scripts/curut-queue-probe.ts` lulus, memakai MarketRats/Targets asli dengan efek audiovisual stub: save tak berurutan, satu target aktif, tubuh/makanan antrean tersembunyi, damage exclusion, pergantian giliran, semua jinak, pembatalan lemparan milik Curut itu saja.
+- Review silang oleh agen stabilisasi dan review agen utama: tidak ada temuan penghalang. Sumber smoke menambah asersi 1 aktif/6 antre, jeda tanpa musuh aktif, pergantian tujuh giliran dan ekspektasi pendamping satu; seluruh asersi progres/kemenangan lama dipertahankan. Browser tidak dijalankan sesuai instruksi pemilik.
+
+Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak, tunggu pergantian, lalu ulangi. Jangan ada Curut kedua yang menyerang selama giliran pertama atau lemparan tertinggal setelah ia jinak.
+
+## Dialog tembus pandang dan label lokasi setelah mulai — 18 November 2026
+
+- Permintaan pemilik mencakup seluruh nama jalan/daerah/lokasi. Semuanya memakai CityHud/.city-toast, sehingga latar bersama kini alpha 0,80; latar kartu dialog reguler/compact/battle alpha 0,82. Teks dan ikon tetap opak agar terbaca; tidak memakai opacity pada seluruh elemen.
+- .city-toast disembunyikan sebelum .game-started. CityHud tidak menghitung mundur durasi label sebelum StartGate dimulai dan getter teks kosong sebelum mulai; judul kota tetap mendapat durasi normal setelah ketukan pertama.
+- Typecheck, build dan diff check lulus. Review independen agen stabilisasi dan pemeriksaan agen utama menyetujui patch tanpa temuan penghalang. Pengujian browser/screenshot ditunda sesuai keputusan pemilik; tampilan akhir dicoba pemilik sendiri.
+- Audisi suara Glen dikerjakan terpisah melalui ElevenLabs Creative Studio: Chinyaku ditolak pemilik karena pengucapan Indonesia kurang alami; satu sampel honeypie (wanita Indonesia, youthful) sedang menunggu pilihan pemilik. Tidak mengganti suara produksi atau membuat ulang seluruh klip sebelum kandidat dipilih. Biaya dua audisi tercatat 95 + 126 = 221 kredit.
+
+
+## Transisi battle langsung saat memasuki area — 18 November 2026
+
+- Chapter 3 memicu perpindahan ke arena begitu Glen memasuki distrik Pasar, sebelum Curut staging, laser, atau fase pemain sempat berjalan. Curut kota tidak dapat ditarget, menyerang, atau menerima hit selama staging.
+- Setelah arena selesai, Glen kembali di jalan barat di luar batas Pasar; langkah cerita yang sudah menang kembali ke pusat tanpa memicu pertarungan lagi.
+- Chapter 5 dan 6 langsung menampilkan mode battle saat Glen memasuki area Ular/Rakus. Bos dan pendamping tetap nonaktif selama dialog, intro masuk, serta intro ulang setelah kembali ke arena.
+- Probe non-browser memeriksa batas distrik jauh dari posisi Curut, staging tanpa damage, urutan transisi sebelum tick combat, titik kembali, aktivasi intro/reentry, dan pembersihan proyektil milik musuh. Typecheck, build, check:reach dan check:quiz lulus; dua review independen tidak menemukan penghalang.
+- Pengujian browser tidak dijalankan sesuai keputusan pemilik. Coba manual Chapter 3 melalui `?chapter=3`: saat menginjak distrik Pasar harus langsung berpindah ke battle sebelum sempat menembak Curut.
+
+
+## Kostum → pulang → latihan besok — 18 November 2026
+
+- Sesudah Chapter 1 dan kostum diterima, pintu hanggar latihan tetap terkunci. Nino tetap mengingatkan bahwa latihan berlangsung besok; penanda mengarahkan Glen keluar dari Lab lalu ke depan Rumah Glen.
+- Interaksi di Rumah Glen menyimpan checkpoint dan memuat ulang kota dengan label “Keesokan pagi”. Dari rumah, penanda mengarahkan Glen kembali ke gedung tua; berbicara dengan Nino baru membuka Chapter 2.
+- Misi warga dinonaktifkan sementara agar tidak mengganti tujuan wajib. Save lama tanpa checkpoint baru tidak dipaksa mundur, reload pada tiap sisi pergantian hari tetap aman, dan `?chapter=2` tetap langsung masuk latihan untuk pengujian.
+- Build dan probe non-browser `scripts/costume-day-probe.ts` lulus. Browser tidak dijalankan sesuai keputusan pemilik.
+- Berikutnya, PR terpisah akan menambahkan jeda setelah Ular dan latihan lompat Barongsai tiga tingkat sebelum Tikus Rakus.
+
+
+## Ular → Lab → pulang — 18 November 2026
+
+- Setelah Ular Melar jinak, hadiah dan status Chapter 5 disimpan sekali, tetapi Chapter 6 tidak langsung dibuat. Glen mendapat transisi kembali ke Lab melalui checkpoint `snake_lab`.
+- Di Lab, Nino, Glen, dan Aara merayakan kemenangan bersama. Nino lalu menyuruh Glen pulang; checkpoint `snake_home` mengarahkan ke Rumah Glen, dan interaksi rumah memuat pagi berikutnya sebagai `snake_return`.
+- Tikus Rakus ditahan selama seluruh interlude. Save/reload mengutamakan Lab atau rumah sesuai checkpoint; slot lama tidak dapat melompati jeda. Tautan preview chapter tetap langsung.
+- Build, check:quiz, probe state/reload, dan diff check lulus. Browser tidak dijalankan.
+- Setelah ini: PR terpisah membuka latihan Lompat Barongsai tiga tingkat; baru sesudah latihan itu gerbang Tikus Rakus dibuka.
+
+
+## Transisi battle langsung dan arena lebih jelas — 18 November 2026
+
+- Chapter 3 langsung memuat arena Curut ketika fase chase dimulai/resume; Glen tidak perlu berjalan menyeberangi Pasar.
+- Chapter 5 dan Chapter 6 menempatkan Glen langsung di titik arena lalu memulai intro battle. Lingkaran visual diturunkan menjadi garis batas tipis di tanah; batas logis tetap aktif dan vignette battle diperkuat agar kota tidak mendominasi pandangan.
+- Saat scene perayaan Ular dimuat, Glen langsung spawn di area Lab bersama Nino, bukan di pintu depan; Aara diposisikan pada ketinggian lantai Lab (`LAB_FLOOR`) agar tidak mengambang.
+- Logo Superglen sudah tersedia di layar awal (`public/img/logo.webp`) dengan fallback teks; tidak perlu perubahan kode tambahan.
+- Dua video cinematic belum ada sebagai file di workspace, sehingga integrasi video + letterbox menunggu attachment yang dapat diakses. Browser tidak dijalankan.
+
+
+## Cinematic pembuka dan bukit — 18 November 2026
+
+- Dua video Drive dikonversi ke MP4 H.264 browser-friendly 1920×1080: `public/cinematics/cin_open.mp4` (12,54 dtk) dan `public/cinematics/cin_hill.mp4` (12,43 dtk), dengan urutan aset disesuaikan setelah verifikasi materi.
+- `cin_open` berjalan setelah ketukan/klik Start pertama; `cin_hill` berjalan ketika Glen mencapai area Gedung Barongsai sebelum pintu dibuka. Keduanya memakai overlay hitam 16:9, tombol Lewati, dan fallback aman bila video gagal diputar.
+- Kontrol pemain dikunci selama video dan dipulihkan setelah selesai. Browser tidak dijalankan; verifikasi yang dilakukan: ffprobe metadata, build, dan diff check.
+
+
+## Pulang berjalan kaki setelah Ular — 19 November 2026
+
+- Setelah video kekalahan Ular, Nino mengajak Glen dan Aara kembali ke Lab. Glen tetap di lapangan dan harus berjalan ke pintu gedung Barongsai; Aara mengikuti jejaknya. Masuk Lab tetap melalui interaksi pintu. Reload saat perjalanan kembali di lapangan, bukan langsung ke Lab.
+- Empat dialog setelah Ular belum mempunyai MP3 produksi. Suara cadangan Bahasa Indonesia dari perangkat dipakai khusus untuk empat baris itu, dengan pengaturan bunyi dan penghentian saat dialog selesai. Ajakan Nino tidak diulang lagi ketika sudah tiba di Lab. MP3 karakter masih perlu dipasang saat asetnya dapat diunduh.
+- Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; uji manual dari Chapter 5: kalahkan Ular, dengarkan ajakan Nino, ikuti penanda ke Lab bersama Aara, lalu dengarkan tiga dialog perayaan.
+
+
+## Tampilan Nino setelah latihan pertama — 20 November 2026
+
+- Lab dan hanggar masing-masing membuat satu aktor Nino. Terminal kuis di ruangan yang sama sebelumnya juga menampilkan wajah Nino, sehingga terlihat seperti Nino kedua. Layar terminal kini menampilkan ikon buku kuis; fungsi kuis tetap sama.
+- Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 2 setelah alarm dan perjalanan melalui Lab menuju Pasar.
+
+
+## Tikus Rakus → pulang — 20 November 2026
+
+- Setelah Tikus Rakus jinak, Glen tetap di kota. Penanda peta dan tujuan menuntunnya berjalan dari gudang ke pintu rumah; interaksi di rumah mengaktifkan pagi berikutnya. Refresh saat perjalanan memulai lagi di area gudang, atau di titik kota yang disimpan manual setelah kemenangan.
+- Checkpoint `rakus_letters` menandai pagi setelah pulang. Permainan mengumpulkan huruf SUPERGLEN akan ditambahkan pada PR berikutnya; tahap ini hanya mengunci urutan pulang dan reload.
+- Build, check:reach, check:quiz, probe alur simpan, dan diff check lulus. Pengujian browser ditunda sesuai permintaan pemilik; coba Chapter 6 hingga menang, ikuti penanda ke rumah, lalu muat ulang halaman.
+
+
+## Berburu huruf SUPERGLEN — 20 November 2026
+
+- Pagi setelah pulang dari pertarungan Tikus Rakus, sembilan huruf SUPERGLEN muncul di lima titik jalan/taman dan empat atap di beberapa distrik. Semuanya memakai titik koin yang sudah terbukti bisa dicapai; koin biasa tetap dapat diambil. Huruf boleh dikumpulkan dalam urutan apa pun, sedangkan bintang peta dan panah menuntun ke huruf berikutnya yang belum didapat.
+- Baris huruf di HUD terisi saat huruf diambil. Progres tiap posisi disimpan (dua E berbeda), tetap ada setelah refresh; setelah sembilan lengkap, checkpoint `rakus_lab` dan penanda mengarah ke Lab. Undangan Nino dan latihan terbang menyusul dalam PR berikutnya.
+- Build, check:reach, check:quiz, probe huruf dan checkpoint, serta diff check lulus. Browser tetap dicoba pemilik sendiri.
+
+## Masuk arena setelah sinematik — 20 November 2026
+
+- Curut mulai di tengah arena khusus setelah video pasar. Ular dan Tikus Rakus menempatkan Glen di dalam arena saat battle dimulai; saat kembali bertarung setelah istirahat, titik masuk yang sama dipakai.
+- Build, check:reach (melalui `node --import tsx` karena CLI tsx ditolak sandbox), check:quiz, dan diff check lulus. Browser tetap dicoba pemilik sendiri dari Chapter 3, 5, dan 6.
+- Berikutnya: penanda malam/pagi dan dialog setelah Tikus Rakus; audit VO dialog yang belum mempunyai berkas suara.
+
+## Malam sebelum pulang, pagi setelah istirahat — 20 November 2026
+
+- Tiga perjalanan pulang kini berlangsung malam: sesudah Glen menerima kostum, sesudah perayaan Ular di Lab, dan sesudah Tikus Rakus jinak. Saat Glen masuk rumah, kota dimuat ulang dengan cahaya pagi. Status malam bertahan setelah refresh selama perjalanan pulang.
+- Sesudah Tikus Rakus, Nino meminta Glen pulang dan beristirahat. Esok pagi Nino menjelaskan pencarian huruf SUPERGLEN serta tujuan kembali ke Lab. Dua dialog baru memakai suara cadangan perangkat selama MP3 karakter belum tersedia.
+- Build, pemeriksaan rute kota, kuis, dan diff check lulus. Browser tidak diuji sesuai permintaan pemilik. Berikutnya: audit dan lengkapi VO dialog yang belum bersuara.
+
+## Dialog tanpa MP3 tetap terdengar — 20 November 2026
+
+- Audit dialog cerita menemukan delapan ID tanpa MP3: satu Bab 1, lima Bab 5, dan dua dialog baru setelah Tikus Rakus. Saat klip tidak tersedia atau gagal diputar, dialog sekarang memakai suara bahasa Indonesia dari perangkat dan musik merendah selama baris berlangsung. Dua dialog baru dicatat di `audio/dialog.json` agar pipeline audio bisa membuat MP3-nya kelak.
+- Satu contoh suara Nino berhasil dibuat melalui ElevenLabs (84 kredit), tetapi unduhan aset dari lingkungan kerja ditolak HTTP 403; tidak ada MP3 baru yang dipasang dan tidak ada generasi tambahan. Suara perangkat adalah pengganti sementara, bukan suara karakter yang sudah disetujui.
+- Build, check:reach, check:quiz, JSON, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Huruf lengkap → kembali ke Lab — 20 November 2026
+
+- Setelah huruf SUPERGLEN terakhir diambil, Nino mengundang Glen kembali ke Lab dan penanda menuju pintu gedung Barongsai. Masuk gedung menempatkan Superglen langsung di dalam Lab dekat Nino; Nino menjelaskan latihan berikutnya adalah terbang sambil menembak dan memakai perisai. Refresh di Lab tidak mengulang dialog kedatangan. Interaksi dengan Nino tetap dapat mengulang instruksinya.
+- Dua dialog baru masuk daftar audio. MP3 karakter belum tersedia karena unduhan ElevenLabs diblokir proxy; suara cadangan perangkat tetap digunakan.
+- Build, check:reach, check:quiz, dan diff check lulus. Browser ditunda sesuai permintaan pemilik. Berikutnya: latihan terbang interaktif di hanggar.
+
+## Tautan langsung berburu huruf — 20 November 2026
+
+- `?chapter=6&letters=1` membuka sesi pratinjau pagi setelah Tikus Rakus: Glen di depan rumah, sembilan huruf SUPERGLEN belum diambil, dan penanda menuju huruf pertama. Progres pratinjau hanya di memori; save permainan normal tidak disentuh. Refresh tautan memulai kembali sembilan huruf dari awal.
+- Build, check:reach, check:quiz, probe checkpoint dan isolasi save, serta diff check lulus. Browser tetap dicoba pemilik sendiri.
+
+## Latihan terbang setelah huruf — 20 November 2026
+
+- Percakapan Nino setelah huruf SUPERGLEN membawa Glen ke sesi baru dalam hanggar. Glen melewati tiga cincin terbang, menembak sasaran, lalu menangkis bola latihan di udara. Setelah selesai, Glen kembali ke lab.
+- Mode terbang sekarang dinyalakan atau dimatikan dengan satu ketukan: tombol roket pada layar sentuh, F pada keyboard, atau R1 pada gamepad. Lompat tetap terpisah. Tutorial awal Bab 2 mempertahankan kontrol tahan lompatnya.
+- Build, pemeriksaan rute dan kuis, serta probe logika tombol terbang lulus. Pengujian browser ditunda sesuai permintaan pemilik.
+
+## Pembuka Elang Belang pada malam hari — 20 November 2026
+
+- Selesai latihan terbang, Nino membunyikan alarm di Lab. Glen diminta menuju Bank; ketika keluar, kota sudah malam dan penanda mengarah ke atap Bank. Elang Belang terlihat melayang di sana, dengan sayap biru dan merah, lalu Glen bereaksi ketika mendekat di udara.
+- Progres alarm dan pertemuan Elang tersimpan setelah refresh. `?chapter=7` memulai pratinjau aman dari Lab setelah latihan; save utama tidak disentuh. Pertarungan terbang menyusul dalam PR berikutnya dan tetap berlangsung malam.
+- Build, pemeriksaan rute, kuis, probe pratinjau, dan pemeriksaan diff lulus. Browser ditunda sesuai keputusan pemilik. Dialog baru memakai suara perangkat sampai MP3 karakter tersedia.
+
+## Battle terbang Elang Belang — 20 November 2026
+
+- Saat Glen mendekati Elang di atas Bank, dialog pertemuan diikuti transisi langsung ke arena langit malam yang terpisah dari kota. Glen muncul di dalam arena sebagai Superglen dengan tombol terbang, laser, dan perisai aktif.
+- Elang bergantian menandai serangan sayap biru (bulu es) dan merah (bulu api), lalu meluncurkan tiga bulu ke posisi Glen. Bulu dapat dihindari atau ditangkis. Selama jeda setelah serangan, laser dari udara mengurangi bintang Elang. Kelelahan mengulang pertarungan dengan hati penuh.
+- Setelah Elang tenang, Glen kembali ke dekat Bank pada malam hari dan diarahkan pulang. Masuk rumah mengganti kota ke pagi. Progres menang dan tahap malam bertahan setelah refresh. Tautan `?chapter=7&battle=1` langsung ke arena dengan save sementara.
+- Build, check:reach, check:quiz, probe pratinjau, probe fase battle, dan diff check lulus. Browser masih diuji sendiri oleh pemilik. Dialog baru memakai suara cadangan perangkat sampai MP3 tersedia.
+
+## Video pembuka battle Elang — 21 November 2026
+
+- Video pemilik (10 detik, H.264/AAC, 1280×720) dipasang sebagai `cin_elang.mp4` sebelum battle Elang Belang. Klip diremux dengan indeks MP4 di awal agar bisa mulai lebih cepat saat di-stream.
+- Jalur normal dari Bank memutar video otomatis setelah Glen bertemu Elang, lalu langsung memuat arena malam. Tautan langsung ke arena dan refresh saat pertarungan tertunda juga memutar video sebelum battle aktif. Tombol Lewati, bilah hitam 16:9, dan peredaman musik game memakai pemutar sinematik yang sudah ada.
+- Build, pemeriksaan media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Video kemenangan Tikus Rakus — 21 November 2026
+
+- Video pemilik tentang Tikus Rakus yang mengembalikan makanan dipasang segera sesudah bintang terakhirnya habis dan battle ditutup. Adegan permintaan maaf serta pengembalian makanan di game tidak diulang sesudah video; progres, sorak warga, dan pesan Nino untuk pulang pada malam hari tetap berjalan.
+- Klip 10 detik, H.264/AAC, 1280×720 diremux dengan metadata MP4 di awal. Pemutaran otomatis, bilah hitam, tombol Lewati, dan audio game yang meredup memakai pemutar sinematik yang sama.
+- Build, validasi media, check:reach, check:quiz, dan diff check lulus. Browser tetap diuji pemilik sendiri.
+
+## Revisi Elang Belang dan latihan terbang — 21 November 2026
+
+- Chapter 7 preview dimulai di jalan menuju Bank pada malam hari. Glen harus mendekati Elang di atas Bank untuk memicu video dan arena. Tautan `?chapter=7&battle=1` kini mengikuti alur yang sama.
+- Tahan Lompat kembali mengaktifkan terbang setelah skill terbuka; tombol mode terbang baru terbuka saat latihan lanjutan. Latihan terdiri dari tiga ronde lingkaran, sasaran, dan tangkisan yang makin sulit.
+- Elang terbang mengitari arena dengan gerakan sayap dan serangan es/api beruntun yang meningkat. Arena memakai atap Bank dan siluet kota malam. Angka tantangan ada di `src/config/combat.ts`.
+- Build, check:reach, check:quiz, dan probe preview lulus. Browser diuji pemilik. MP3 dialog baru masih perlu diisi; fallback suara perangkat tersedia. Probe `battle-entry-probe` lama gagal pada assert Curut yang tidak terkait revisi Elang.
+
+## Elang: hindari es dan api sebelum membalas — 21 November 2026
+
+- Elang bergerak lebih cepat dan berpindah mendatar dengan pola berlapis, sekaligus mengikuti tinggi terbang Glen. Saat ia kelelahan, geraknya melambat agar tembakan balasan tetap terbaca.
+- Setiap rangkaian memuat serangan es dan api. Kesempatan menembak baru muncul setelah semua proyektil selesai dan Glen berhasil menghindari atau menangkis tanpa kehilangan hati; bila terkena, Elang mengulang rangkaian.
+- Proyektil es/api diperbesar dengan warna terang dan selubung cahaya. Cincin bidik dihilangkan; tanda seru dekat Glen muncul sesaat sebelum lontaran dan saat proyektil mendekat.
+- Build, check:reach, check:quiz, dan diff check lulus. Pengujian browser tetap oleh pemilik.
+
+## Perisai gelembung dan Elang ramah anak — 21 November 2026
+
+- Sekali tekan mengaktifkan perisai hologram biru bulat selama tiga detik. Perisai melindungi dari seluruh arah, termasuk proyektil latihan dan serangan bos; tahan tombol tidak memperpanjang durasi.
+- Elang berpindah tempat hanya sebelum menyerang. Ia diam saat memberi tanda, melontarkan es/api, dan ketika terbuka untuk tembakan Glen. Bintang dan jumlah proyektil dikurangi, jeda menghindar dan membalas diperpanjang.
+- Build, check:reach, check:quiz, diff check lulus. Browser diuji pemilik. VO baru tertahan karena konektor ElevenLabs dapat membuat klip tetapi URL aset tidak dapat diunduh ke workspace (HTTP 403); tidak ada kredit tambahan dipakai untuk klip yang belum bisa dipasang.
+
+## Video kemenangan Elang dan tampilan sinematik penuh — 21 November 2026
+
+- Video pemilik dari Drive dipasang sesudah bintang terakhir Elang habis, sebelum dialog kemenangan Nino dan perjalanan pulang. Video diubah dari HEVC MOV 25 MB menjadi H.264/AAC MP4 7,4 MB, 1280×720, 17,1 detik dengan indeks MP4 di depan untuk Safari.
+- Seluruh video sinematik kini mengisi layar dengan `object-fit: cover`; bilah hitam atas/bawah pada pemutar dihapus. Tombol Lewati dan peredaman audio game tetap memakai pemutar yang sama.
+- Build, check:reach, check:quiz, ffprobe, dan diff check lulus. Browser tetap diuji pemilik.
+
+## Video alarm Elang dan pertemuan Aara — 21 November 2026
+
+- Sesudah latihan terbang lanjutan dan kembali ke Lab, alarm kota tampil dengan bunyi baru, kemudian video Elang mengacau kota diputar sebelum Glen berangkat ke Bank. Dialog Nino yang mengulang kabar Elang dihapus dari urutan itu. Klip Elang dipotong dari bilah hitam yang tertanam pada sumber, menjadi MP4 H.264/AAC 1280×648 (5 MB).
+- Saat Glen pertama kali mendekati Aara di depan sekolah, video pertemuan diputar sebelum kuis bahasa Inggris. Dialog salam Glen/Aara yang sama dengan isi video tidak diulang. Klip diremux H.264/AAC 1280×720 (3,2 MB).
+- Alarm pertama di hanggar sebelum Curut juga mendapat bunyi alarm. Game audio dibisukan sejak pemutar mulai memuat video, sehingga musik/VO tidak bocor saat video mulai; dipulihkan ketika video selesai atau dilewati.
+- Build, check:reach, check:quiz, ffprobe media, dan diff check lulus. Browser tetap diuji pemilik.
+
+## Tautan uji alarm Elang — 21 November 2026
+
+- `?chapter=7&training=1` memulai latihan terbang lanjutan dengan save pratinjau di memori; setelah selesai, Glen kembali ke Lab sehingga alarm dan video Elang dapat diuji tanpa mengulang Chapter sebelumnya. Tautan `?chapter=7` tetap mulai mendekati Bank.
+- Build, probe isolasi save pratinjau, dan diff check lulus.
+
+## Mode kompatibilitas browser PS5 — 21 November 2026
+
+- User-agent PlayStation 4/5 otomatis memakai preset konsol: pixel ratio maksimum 1, tanpa MSAA dan post-processing, shadow map 1024, target 30 fps. `?compat=1` menyediakan mode yang sama untuk diagnosis browser lain.
+- Rapier WebAssembly kini selesai diinisialisasi sebelum aset GLB/HDR opsional dimuat. Pada konsol, pustaka lingkungan, musuh, kota, dan langit dimuat berurutan untuk menurunkan lonjakan memori; model karakter menyusul setelah game berhasil dibuat dan memakai figur prosedural sementara.
+- Pesan gagal boot kini menjelaskan apakah WebGL 2 atau WebAssembly tidak tersedia, atau kemungkinan memori/komponen 3D gagal. Build, check:reach, check:quiz, dan diff check lulus. Pengujian perangkat PS5 dilakukan pemilik.
+# 22 November 2026 — pengendara kota
+
+Pengendara sepeda/motor memakai bentuk membulat dan roda motor bulat; warna kulit, wajah, helm dan ban dipisahkan dari warna cat. Warga/kendaraan menerima bayangan lingkungan. Build, check:quiz dan reachability lulus. Pengujian browser diserahkan kepada pemilik sesuai permintaan. Coba jalan kota pada link normal dan perhatikan pengendara yang lewat; model mobil dan vegetasi Quaternius belum diganti dalam perubahan ini.
+
+# 22 November 2026 — contoh hutan Quaternius
+
+Empat aset asli (pohon rimbun, cemara, semak, batu) dikonversi ke GLB dengan tekstur WebP 512 px, total sekitar 1 MB. Grove contoh ada di belakang tempat berkumpul di latihan hutan, bisa dibuka dengan `?chapter=8&training=1`. Menggunakan instancing dan batang ber-collision; lintasan latihan tetap sama. Build, check:quiz dan reachability lulus. Browser/visual/performa belum diuji sesuai permintaan pemilik; perlu mencoba tekstur daun dan bayangan di iPhone. Warga belum memakai paket karakter manusia impor.
+
+# 22 November 2026 — pohon Quaternius di seluruh kota
+
+Pohon round/pine non-far di seluruh tata letak kota kini memakai GLB Quaternius bertekstur. Versi kota disederhanakan lewat scripts/build-city-trees.mjs, dimuat sebelum kota dibangun; kegagalan unduh mempertahankan pohon lama. Render instanced mencakup radius 85 m di sekitar Glen, diperbarui setelah bergerak 3 m. Hutan tepi jauh tetap memakai layer skyline lama. Pijakan cabang dan seluruh collider/rute berasal dari CityData, tanpa perubahan. Build, check:quiz dan reachability lulus. Pengujian browser/visual/FPS ditunda sesuai permintaan pemilik; coba jalan dari sekolah ke perumahan dan pasar, lalu memanjat pohon. Model warga impor tetap tugas terpisah.
+
+# 22 November 2026 — koreksi sumbu pohon
+
+Regresi PR #104: FBX dikonversi dengan batang sejajar sumbu Z di GLB, lalu normalisasi tinggi meratakan pohon. Pipeline kini memutar sumber ke Z-up Blender sebelum ekspor menjadi Y-up Three.js. Seluruh GLB pohon/semak/batu kota dan contoh hutan dibuat ulang. check-tree-assets.mjs memastikan empat model pohon tegak, pangkal dekat tanah dan tekstur tersedia; dijalankan otomatis setelah build-city-trees.mjs. Build, check:quiz dan reachability lulus; pemeriksaan visual iPhone tetap oleh pemilik.
+
+# 22 November 2026 — orientasi verteks pohon
+
+Rekaman pemilik setelah koreksi sumbu masih menunjukkan batang mendatar. Aset kini dibake ke koordinat Y-up langsung pada verteks dan matriks node identitas; memakai nama *_upright.glb agar referensi build berbeda dari aset lama. Loader menyalin geometri sebelum normalisasi sehingga tidak memutasi buffer sumber bersama. Pemeriksaan tambahan memvalidasi batang sendiri dalam koordinat lokal, bukan hanya bounding box scene. Build dan validasi aset lulus; tampilan serta FPS iPhone belum terverifikasi.
+
+# 22 November 2026 — material daun dan render dua sudut
+
+Daun kota/hutan memakai MeshStandardMaterial baru: opaque cutout alphaTest 0.15, DoubleSide dan shadowSide DoubleSide, anisotropy 4; batang opaque. Mengganti material Physical hasil impor BLEND dan alphaTest lama 0.5. Probe scripts/tree-render-probe.html memakai loader/instancing CityTrees dan shadow map; render Chromium lokal dari atas dan bawah memperlihatkan kanopi. Build dan pemeriksaan aset lulus. Kasus hilangnya daun pada Safari belum direproduksi di Chromium; hasil iPhone masih perlu konfirmasi. Probe tidak menguji seluruh alur game.
+
+# 22 November 2026 — cemara, naskah Glen, penyelamatan monyet
+
+PR cemara: pohon flag far kini ikut memakai Quaternius dalam radius renderer kota. Naskah public/recording/glen-dialogue.txt/json memuat inventaris deklarasi Glen plus katalog audio lama terpisah; dibuat ulang lewat scripts/export-glen-dialogue.mjs.
+
+Tahap hutan berikut: akses belakang gedung setelah alarm membuka forest-rescue. Sepuluh monyet menunggu pada pijakan bertingkat; dekati dan tekan tangan untuk menolong. Penghitung, panah tujuan dan progres tiap monyet disimpan (flag forest-monkey-0..9); refresh jalur normal kembali ke misi. Terbang dikunci dan dialog Glen menjelaskan kerusakannya. Setelah 10/10 ada penutup singkat; Gorilla Gembira dan pemadaman api belum termasuk tahap ini. Api dekoratif, belum menjadi mekanik bahaya. Model monyet sementara berupa bentuk membulat. Build, check:quiz dan reachability lulus; gameplay/touch diuji pemilik. Link tes langsung: ?level=forest-rescue (mode debug, gunakan link normal untuk menguji resume cerita). VO baru belum direkam.
+
+# 22 November 2026 — penyelamatan kanopi saat kebakaran
+
+Lintasan baru berupa 11 kanopi lebar berjarak dekat, Glen mulai di atas pohon. Tanah mengulang misi ke awal dan menghapus 0–10 progres monyet selama misi belum selesai. Konfigurasi pijakan ada di Parkour.forestRescue. Hutan ditambah 72 pohon Quaternius di sekeliling rute; model city, instancing, tanpa tambahan shadow pass untuk latar rapat. Monyet meloncat, menoleh dan melambaikan lengan. Kebakaran memakai tiga layer shader instanced (nyala berlapis, asap naik, bara) serta point light. Musik menggunakan trek pertarungan yang tersedia. Audio derak api dan panggilan monyet dibuat sintetis lewat Web Audio, mengikuti mute/volume, mengecil saat dialog dan berhenti saat keluar level. Bukan sampel monyet asli. Link preview baru `?chapter=8&rescue=1` tidak menimpa save utama.
+
+Build, check:quiz dan reachability lulus. Shader diperiksa melalui render Chromium lokal, tanpa error shader; favicon 404 tidak terkait. Gameplay/reset lintasan dan audio iPhone belum diuji, tetap perlu dicoba pemilik. Nino menjelaskan aturan tanah pada intro versi baru. Gorilla dan pemadaman masih tahap berikutnya.
+
+# 22 November 2026 — model monyet dan ketinggian bervariasi
+
+Model monyet utuh Poly by Google (CC BY 3.0 via Poly Pizza, mirror Digx7/Thrust-Pets-Offline) menggantikan figur bola setelah GLB dimuat. Memakai rig, tekstur dan klip gerak run, ditambah hop panik pada holder. Sumber/kredit ada di CREDITS.md serta public/models/rescue/CREDIT.txt. Ketinggian kanopi: 5.1, 5.9, 6.7, 6.1, 7.1, 7.9, 7.3, 8.3, 9.1, 8.5 m; selisih naik maksimal 1 m, radius dan jarak tetap ramah anak. Aturan jatuh mengulang tetap aktif. Build dan reachability lulus; gameplay/animasi akhir di iPhone belum diuji.
+
+# 22 November 2026 — tiga latihan dan pertarungan Gorilla
+
+Latihan hutan dikembalikan ke mudah/menengah/sulit (PR #112), penjelasan Nino disesuaikan menjadi tiga lintasan dengan ID suara baru.
+
+Setelah 10 monyet diselamatkan, pindah ke battle-gorilla di kanopi 3×3. Gorilla memakai model milik proyek, menuduh Glen membakar hutan. Charge: tanda ! di titik sasaran terkunci, lompat tinggi, mendarat; menghindar atau perisai menambah hitungan gagal. Dua kegagalan membuka target laser selama 5 detik; satu tembakan mengurangi satu bintang lalu target ditutup. Gorilla kembali melompat ke pohon jauh sebelum charge berikut. Tiga bintang (mudah dua), terbang terkunci, laser/perisai aktif. Jatuh mengulang pertarungan; kelelahan mereset dan mengaktifkan battle kembali setelah istirahat. Menang: Gorilla meminta maaf, Glen mengajak menolong hutan. Misi pemadaman api belum dibuat. Save resume dan preview `?chapter=8&gorilla=1` tersedia. Naskah Glen sekarang 39 entri; VO baru belum direkam.
+
+Build, check:quiz dan reachability lulus. check-gorilla-pattern.mjs menguji gate dua serangan gagal, satu laser per kesempatan dan reset hitungan ketika Glen kena. Gameplay, kamera kanopi dan FPS/touch belum diuji sesuai permintaan pemilik.
+
+# 22 November 2026 — pose Gorilla dan area sasaran
+
+Lengan model statis T-pose sekarang diberi bobot bahu halus melalui vertex shader: turun saat diam/istirahat dan terangkat sedikit ketika melompat, transisi halus; badan condong ketika bersiap. Peringatan ! diganti bidang merah penuh berkedip di kanopi (radius sama dengan hitRadius), tetap terkunci di sasaran dari windup sampai mendarat. Build dan pemeriksaan pola lulus, termasuk tes penanda tidak mengejar Glen. Render Chromium lokal pose diam/melompat diperiksa; gameplay iPhone belum diuji.
+

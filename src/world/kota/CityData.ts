@@ -193,6 +193,20 @@ export interface CityTree {
   far?: boolean;
 }
 
+/** Horizontal branches and the crown landing pad share their bounds with the streamed colliders. */
+export function treePlatforms(t: CityTree): { center: [number, number, number]; size: [number, number, number] }[] {
+  if (!t.solid || t.kind !== 'round' || t.far) return [];
+  const step = Parkour.glenApex * 0.7;
+  const r = 0.78 * t.s;
+  return [
+    { center: [t.x + r, t.base + step - 0.1, t.z], size: [1.55 * t.s, 0.2, 0.56 * t.s] },
+    { center: [t.x, t.base + step * 2 - 0.1, t.z + r], size: [0.56 * t.s, 0.2, 1.55 * t.s] },
+    { center: [t.x - r, t.base + step * 3 - 0.1, t.z], size: [1.55 * t.s, 0.2, 0.56 * t.s] },
+    { center: [t.x, t.base + step * 4 - 0.1, t.z - 0.9 * t.s], size: [0.56 * t.s, 0.2, 1.79 * t.s] },
+    { center: [t.x, t.base + step * 5 - 0.1, t.z], size: [0.78 * t.s, 0.2, 0.78 * t.s] },
+  ];
+}
+
 export interface CityLamp {
   x: number;
   z: number;
@@ -698,8 +712,13 @@ class Gen {
       const t = L.trees[i];
       if (!t.solid) continue;
       const r = 0.2 * t.s;
-      const h = 1.5 * t.s;
+      const platforms = treePlatforms(t);
+      const h = platforms.length ? platforms[4].center[1] + platforms[4].size[1] / 2 - t.base - 0.35 : 1.5 * t.s;
       this.solid({ id: `tree${i}`, shape: 'cyl', c: [t.x, t.base + h / 2, t.z], s: [r * 2, h, r * 2], foothold: { id: `tree${i}`, kind: 'tree', center: [t.x, t.base + h / 2, t.z], size: [r * 2, h, r * 2], round: true } }, t.x, t.z);
+      platforms.forEach(({ center, size }, j) => {
+        const id = `tree${i}-branch${j}`;
+        this.solid({ id, shape: 'box', c: center, s: size, foothold: { id, kind: 'tree', center, size, glen: true } }, t.x, t.z);
+      });
     }
     for (let i = 0; i < L.lamps.length; i++) {
       const l = L.lamps[i];

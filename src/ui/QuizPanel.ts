@@ -104,6 +104,7 @@ export class QuizPanel {
   private albumReturn: PanelView | null = null;
   private albumTab: Category = 'berhitung';
   private bubble = '';
+  private host: 'nino' | 'aara' = 'nino';
   private readonly dev: boolean;
 
   constructor(
@@ -226,7 +227,9 @@ export class QuizPanel {
   // ---------------------------------------------------------------------------------------------------------------
 
   /** Open the overlay for a challenge (or keep it open when the picker just ran). */
-  openChallenge(reason: QuizReason, closable: boolean): void {
+  openChallenge(reason: QuizReason, closable: boolean, host: 'nino' | 'aara' = 'nino'): void {
+    this.host = host;
+    this.face.innerHTML = faceSvg(host);
     this.element.dataset.reason = reason;
     this.element.classList.toggle('closable', closable);
     this.show();
@@ -348,7 +351,7 @@ export class QuizPanel {
 
   private ninoSays(line: QuizLine): void {
     this.setBubble(line.text);
-    this.deps.speak(line.id, line.text, 'nino');
+    this.deps.speak(this.host === 'aara' ? `aara_${line.id}` : line.id, line.text, 'nino');
   }
 
   private repeat(): void {
@@ -458,7 +461,7 @@ export class QuizPanel {
     const coins = this.onSolved ? this.onSolved(this.wrongs) : 0;
     this.coinsEl.textContent = String(this.deps.save.data.quiz.coins);
     if (coins > 0) this.floatPlus(coins);
-    this.ninoSays(ninoLine('pujian'));
+    this.ninoSays(ninoLine('pujian_kuis'));
     this.deps.synth.drum(Math.min(4, 1 + this.idx), true);
     this.deps.sfx.quizRight();
     this.after(0.18, () => this.deps.synth.drum(Math.min(4, 2 + this.idx), true));

@@ -134,24 +134,14 @@
   "bab1_glen_pulang": {
     "id": "bab1_glen_pulang",
     "speaker": "glen",
-    "voice_id": "zmTMXWr9TzPTCLvo0Uqr",
-    "voice": "Finn - Expressive & Ads Indonesian",
-    "model": "eleven_v4",
-    "settings": {
-      "stability": 0.3,
-      "similarity_boost": 0.8
-    },
-    "pitchSemitones": 2,
+    "source": "recorded",
+    "sample": "audio/voice-tests/glen_ceria_pulang_m2.mp3",
+    "voice": "Kak Ceria - Cute Kids Storyteller",
+    "pitchSemitones": -2,
     "lang": "id",
-    "hash": "3dab863f8dc8fd0a",
-    "tts": "[excited] Hore, pulang sekolah! [curious] Eh, ada cahaya di atas bukit?",
-    "chars": 71,
-    "bytes": 51140,
-    "duration": 4.23,
-    "lufs": -16.5,
-    "peak_dbtp": -1.9,
-    "generated_at": "2026-11-16T04:38:47.940Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+    "text": "Hore, pulang sekolah! Eh, ada cahaya di atas bukit?",
+    "bytes": 27943,
+    "duration": 2.3
   },
   "bab1_glen_lompat": {
     "id": "bab1_glen_lompat",
@@ -222,24 +212,14 @@
   "bab1_glen_gelap": {
     "id": "bab1_glen_gelap",
     "speaker": "glen",
-    "voice_id": "zmTMXWr9TzPTCLvo0Uqr",
-    "voice": "Finn - Expressive & Ads Indonesian",
-    "model": "eleven_v4",
-    "settings": {
-      "stability": 0.3,
-      "similarity_boost": 0.8
-    },
-    "pitchSemitones": 2,
+    "source": "recorded",
+    "sample": "audio/voice-tests/glen_ceria_gelap_m2.mp3",
+    "voice": "Kak Ceria - Cute Kids Storyteller",
+    "pitchSemitones": -2,
     "lang": "id",
-    "hash": "3152974dc1943629",
-    "tts": "[nervous] Gelap, ya. [cheerful] Nyalakan senter dulu.",
-    "chars": 53,
-    "bytes": 34526,
-    "duration": 2.85,
-    "lufs": -16.5,
-    "peak_dbtp": -2.4,
-    "generated_at": "2026-11-14T07:10:47.455Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+    "text": "Gelap, ya. Nyalakan senter dulu.",
+    "bytes": 34840,
+    "duration": 2.87
   },
   "bab1_glen_panel": {
     "id": "bab1_glen_panel",
@@ -5761,28 +5741,6 @@
     "lufs": -16.5,
     "peak_dbtp": -3.1,
     "generated_at": "2026-11-15T07:50:35.255Z",
-    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
-  },
-  "nino_pujian_04": {
-    "id": "nino_pujian_04",
-    "speaker": "nino",
-    "voice_id": "q8qwd1jY2jS3AWOBeq25",
-    "voice": "Pratama - Clear, Confident and Warm",
-    "model": "eleven_v4",
-    "settings": {
-      "stability": 0.35,
-      "similarity_boost": 0.8
-    },
-    "pitchSemitones": 2,
-    "lang": "id",
-    "hash": "b885b75f85a6ab60",
-    "tts": "[proud] Lompatanmu tinggi sekali!",
-    "chars": 33,
-    "bytes": 23241,
-    "duration": 1.91,
-    "lufs": -16.5,
-    "peak_dbtp": -3,
-    "generated_at": "2026-11-15T07:50:37.026Z",
     "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
   },
   "nino_pujian_05": {

@@ -126,6 +126,48 @@
     "delivery": "[cheerful] Besok pagi kita latihan, ya!"
   },
   {
+    "id": "bab1_nino_pulang_dulu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "delivery": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!"
+  },
+  {
+    "id": "bab5_nino_panggil_lab",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "delivery": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara."
+  },
+  {
+    "id": "bab5_glen_rayakan",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "delivery": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!"
+  },
+  {
+    "id": "bab5_aara_rayakan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hore! Kita bertiga hebat sekali!",
+    "delivery": "[happy] Hore! Kita bertiga hebat sekali!"
+  },
+  {
+    "id": "bab5_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "delivery": "[warm] Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai."
+  },
+  {
+    "id": "bab5_nino_latihan_besok",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi! Siap latihan Lompat Barongsai?",
+    "delivery": "[excited] Selamat pagi! Siap latihan Lompat Barongsai?"
+  },
+  {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",
@@ -840,13 +882,6 @@
     "delivery": "[excited] Wah, tepat sasaran!"
   },
   {
-    "id": "nino_pujian_04",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Lompatanmu tinggi sekali!",
-    "delivery": "[proud] Lompatanmu tinggi sekali!"
-  },
-  {
     "id": "nino_pujian_05",
     "speaker": "nino",
     "lang": "id",
@@ -1342,5 +1377,111 @@
     "lang": "id",
     "text": "Mantap, Superglen! Tikus Rakus sudah jinak dan kota kenyang lagi.",
     "delivery": "[proud] Mantap, Superglen! [happy] Tikus Rakus sudah jinak dan kota kenyang lagi."
+  },
+  {
+    "id": "rakus_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "delivery": "[warm] Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!"
+  },
+  {
+    "id": "rakus_morning_letters",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "delivery": "[cheerful] Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!"
+  },
+  {
+    "id": "rakus_nino_lab_invite",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "delivery": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!"
+  },
+  {
+    "id": "rakus_nino_lab_arrival",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "delivery": "[cheerful] Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai."
+  },
+  {
+    "id": "elang_nino_alarm",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "delivery": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!"
+  },
+  {
+    "id": "elang_glen_berangkat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku akan terbang ke Bank dan menolong mereka!",
+    "delivery": "[determined] Aku akan terbang ke Bank dan menolong mereka!"
+  },
+  {
+    "id": "elang_glen_melihat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "delivery": "[surprised] Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!"
+  },
+  {
+    "id": "elang_nino_lawan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang menyerang dengan es dan api. Hindari atau tangkis keduanya, lalu tembak saat ia kelelahan!",
+    "delivery": "[encouraging] Elang menyerang dengan es dan api. Hindari atau tangkis keduanya, lalu tembak saat ia kelelahan!"
+  },
+  {
+    "id": "elang_nino_terbang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "delivery": "[helpful] Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun."
+  },
+  {
+    "id": "elang_nino_menang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "delivery": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen."
+  },
+  {
+    "id": "flight_nino_easy",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!"
+  },
+  {
+    "id": "flight_nino_medium",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola."
+  },
+  {
+    "id": "flight_nino_hard",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!"
+  },
+  {
+    "id": "flight_nino_laser",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian."
+  },
+  {
+    "id": "flight_nino_shield",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai."
+  },
+  {
+    "id": "flight_nino_done",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!"
   }
 ]

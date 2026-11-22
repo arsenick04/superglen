@@ -87,7 +87,7 @@ export class LabDoor {
       radius: 2.2,
       icon: 'hand',
       promptHeight: 1.5,
-      enabled: () => this.on,
+      enabled: () => this.on && ctx.save.data.interlude === '',
       onInteract: () => void ctx.game.loadLevel(LAB_DOOR_TARGET),
     });
   }

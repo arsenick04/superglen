@@ -6,7 +6,8 @@ import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
 import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
-import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
+import { hasCityTree } from './CityTrees';
+import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
  * Turns the city data (CityData.ts) into geometry recipes and collider lists:
@@ -734,12 +735,44 @@ function drawProps(B: Builder, L: CityLayout): void {
     const s = t.s;
     const hv = hsh(t.x, t.z, 2);
     const yaw = hv * 6.283;
+    const platforms = treePlatforms(t);
+    if (hasCityTree(t)) {
+      // Imported tree supplies trunk and foliage; keep the climbable branch
+      // steps explicit so their visuals remain aligned with the shared physics.
+      for (const { center, size } of platforms.slice(0, -1)) ch.lit.add(Sh.Body, center, size, 0x946140);
+      continue;
+    }
+    if (platforms.length) {
+      const crown = platforms[4];
+      const top = crown.center[1] + crown.size[1] / 2;
+      const trunk = top - t.base - 0.35;
+      const k = Math.floor(hv * LEAF.length) % LEAF.length;
+      const color = hv > 0.91 ? 0xf3a0c4 : LEAF[k];
+      const shade = hv > 0.91 ? 0xd978a3 : LEAF_DARK[k];
+      ch.lit.trunk(0.23 * s, trunk, [t.x, t.base + trunk / 2, t.z], 0x946140);
+      for (const { center, size } of platforms.slice(0, -1)) {
+        ch.lit.add(Sh.Body, center, size, 0x946140);
+        ch.deco.ball(0.14 * s, [center[0] * 2 - t.x, center[1], center[2] * 2 - t.z], color);
+      }
+      // The forgiving flat collider stays hidden inside a layered crown. Five
+      // uneven lobes produce a natural silhouette and a darker underside,
+      // rather than the old mushroom/flat-platform look.
+      ch.lit.add(Sh.Sph1, [t.x, top - 0.53, t.z], [0.92 * s, 0.55, 0.88 * s], shade);
+      ch.lit.add(Sh.Sph1, [t.x - 0.12 * s, top - 0.30, t.z + 0.06 * s], [0.78 * s, 0.46, 0.76 * s], color);
+      ch.deco.add(Sh.Sph0, [t.x + 0.62 * s, top - 0.55, t.z - 0.06 * s], [0.54 * s, 0.38, 0.50 * s], color);
+      ch.deco.add(Sh.Sph0, [t.x - 0.58 * s, top - 0.52, t.z + 0.18 * s], [0.56 * s, 0.40, 0.58 * s], shade);
+      ch.deco.add(Sh.Sph0, [t.x + 0.12 * s, top - 0.48, t.z + 0.62 * s], [0.50 * s, 0.36, 0.52 * s], color);
+      continue;
+    }
     const kl = t.kind === 'pine' ? PINES : ROUND;
     if (kl.length) {
       const [id, h] = kl[Math.floor(hv * 997) % kl.length];
       const r = t.far ? B.far : ch.lit;
       const k = (t.kind === 'pine' ? 4.25 : 4.0) * s / h * (0.9 + hsh(t.x, t.z, 5) * 0.2);
-      r.add(id as Sh, [t.x, t.base, t.z], [k, k, k], 0xffffff, [0, yaw, 0]);
+      const tint = t.kind === 'pine'
+        ? [0xd9f0df, 0xcce9d5, 0xe1f2dc][Math.floor(hv * 3) % 3]
+        : [0xe3f3d6, 0xd5edcf, 0xeff0c7, 0xf3d9df][Math.floor(hv * 4) % 4];
+      r.add(id as Sh, [t.x, t.base, t.z], [k * (0.94 + hv * 0.12), k, k * (1.04 - hv * 0.1)], tint, [0, yaw, 0]);
       continue;
     }
     if (t.kind === 'pine' && E.pine >= 0) {

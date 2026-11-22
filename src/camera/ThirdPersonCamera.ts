@@ -14,9 +14,8 @@ export const CameraConfig = {
   /** Radians of rotation per pixel of mouse movement (pointer locked). */
   mouseSensitivity: 0.0025,
   /** Default distance from the look target (m). */
-  // Owner review: Glen was too small on the phone. 4.2 m (was 5 m) makes him ~19% larger on screen
-  // at zoom 1. Save.ts migrates zoom values chosen against the old 5 m.
-  distance: 4.2,
+  // Close default framing; the saved manual zoom remains a multiplier.
+  distance: 2.5,
   /** Closest the camera may get when pulled in by walls (m). */
   minDistance: 1.2,
   /** Look target height above the capsule center (capsule center ~0.55 m, head top ~1.1 m). */
@@ -74,10 +73,10 @@ export const CameraConfig = {
 
   // --- Battle camera (BattleMode): lock-on that keeps the enemy in view ---
   /** How far the look target moves from Glen toward the enemy (0..1). */
-  battleLook: 0.42,
+  battleLook: 0,
   /** Extra pull-back (m): a base plus a share of the Glen-enemy distance, capped. */
-  battleBack: 1.4,
-  battleBackPerM: 0.4,
+  battleBack: 1.8,
+  battleBackPerM: 0.5,
   battleBackMax: 8,
   /** Lower, more dramatic pitch while fighting (rad). */
   battlePitch: 11 * DEG,
@@ -86,34 +85,6 @@ export const CameraConfig = {
   battleManualHold: 1.4,
   /** Sharpness of blending in and out of the battle camera (1/s). */
   battleBlendSharpness: 2.2,
-  /**
-   * Battle lock stability: everything below is critically damped (no overshoot) with a dead zone,
-   * so the framing stays calm while the enemy lunges and Glen jumps, flies or is knocked back.
-   */
-  /** Look target: dead zone (m) around the target and smoothing time (s) on the ground plane / vertically. */
-  battleTargetDeadXZ: 0.45,
-  battleTargetDeadY: 0.35,
-  battleTargetTimeXZ: 0.28,
-  battleTargetTimeY: 0.3,
-  /** Yaw: dead zone (rad), smoothing time (s) and the fastest turn (rad/s). */
-  battleYawDead: 14 * DEG,
-  battleYawTime: 0.6,
-  battleYawMaxRate: 0.7,
-  /** Pitch: smoothing time (s) and the fastest change (rad/s). */
-  battlePitchTime: 0.8,
-  battlePitchMaxRate: 0.3,
-  /** Distance: Glen-enemy separation dead zone (m), smoothing time (s) and fastest change (m/s). */
-  battleSepDead: 1,
-  battleDistTime: 0.6,
-  battleDistMaxRate: 2.5,
-  /** Fastest the wall-avoidance pull-in may move the camera during a fight (m/s). */
-  battlePullInRate: 6,
-  /** Share of the jump height the look target follows, and how much of the air lift is cut during a fight (0..1). */
-  battleAirFollow: 0.5,
-  battleAirCut: 0.7,
-
-  /** Largest camera shake (m): a per-frame step is about this size, so it stays a gentle rumble, not a jolt. */
-  shakeMax: 0.07,
 
   // --- Landing bump (stomp) ---
   bumpDuration: 0.1,
@@ -130,29 +101,6 @@ export interface CameraSubject {
   readonly flying?: boolean;
   /** Rhythm level 0..4 (the camera backs off a little more in the air at higher levels). */
   readonly rhythmLevel?: number;
-}
-
-/** Critically damped smoothing toward `to` (no overshoot). `v` holds the velocity between calls. */
-function smoothDamp(from: number, to: number, v: { v: number }, smoothTime: number, maxRate: number, dt: number): number {
-  const omega = 2 / Math.max(1e-4, smoothTime);
-  const x = omega * dt;
-  const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
-  const maxChange = maxRate * smoothTime;
-  const change = THREE.MathUtils.clamp(from - to, -maxChange, maxChange);
-  const target = from - change;
-  const temp = (v.v + omega * change) * dt;
-  v.v = (v.v - omega * temp) * exp;
-  let out = target + (change + temp) * exp;
-  if (to - from > 0 === out > to) {
-    out = to;
-    v.v = 0;
-  }
-  return out;
-}
-
-/** Shrink a delta by a dead zone: zero inside, the excess outside. */
-function deadZone(d: number, dead: number): number {
-  return Math.abs(d) <= dead ? 0 : d - Math.sign(d) * dead;
 }
 
 function angleDelta(from: number, to: number): number {
@@ -224,14 +172,6 @@ export class ThirdPersonCamera {
   private battleBlend = 0;
   private battleExtra = 0;
   private battleHold = 0;
-  private readonly bvx = { v: 0 };
-  private readonly bvy = { v: 0 };
-  private readonly bvz = { v: 0 };
-  private readonly bvYaw = { v: 0 };
-  private readonly bvPitch = { v: 0 };
-  private readonly bvSep = { v: 0 };
-  private readonly bvExtra = { v: 0 };
-  private battleSep = 0;
   private shakeAmp = 0;
   private shakeTime = 0;
   private shakeLen = 0;
@@ -247,11 +187,6 @@ export class ThirdPersonCamera {
   /** 0..1: how much of the battle camera is in effect (tests, UI). */
   get battleWeight(): number {
     return this.battleBlend;
-  }
-
-  /** Distance (m) from the look target to the camera after wall avoidance (tests). */
-  get shownDistance(): number {
-    return this.currentDistance;
   }
 
   // ---- Manual zoom ----
@@ -341,8 +276,8 @@ export class ThirdPersonCamera {
   }
 
   /**
-   * Lock-on: frame the enemy at `focus` (a live vector the caller keeps updating) together with the player: the camera orbits to stay
-   * behind Glen on the line to the enemy, a little further back and lower. `null` returns to the normal follow camera.
+   * Lock-on: keep Glen centered while the enemy at `focus` (a live vector)
+   * determines the orbit direction and pull-back. `null` restores normal follow.
    */
   setBattle(focus: THREE.Vector3 | null): void {
     this.battleFocus = focus;
@@ -352,7 +287,6 @@ export class ThirdPersonCamera {
   /** A short shake (m at the camera, seconds). Callers pass 0 when the parents chose "kurangi guncangan". */
   shake(amount: number, seconds: number): void {
     if (this.reducedMotion || amount <= 0) return;
-    amount = Math.min(amount, CameraConfig.shakeMax);
     if (amount >= this.shakeAmp * this.shakeLeft()) {
       this.shakeAmp = amount;
       this.shakeLen = this.shakeTime = seconds;
@@ -423,7 +357,7 @@ export class ThirdPersonCamera {
     }
     const c = CameraConfig;
     if (subject) {
-      if (this.battleFocus === null && this.battleBlend < 0.05) this.autoFollow(dt, subject);
+      this.autoFollow(dt, subject);
       const want = THREE.MathUtils.clamp(
         (subject.airHeight - c.airStartHeight) / (c.airFullHeight - c.airStartHeight),
         0,
@@ -433,16 +367,9 @@ export class ThirdPersonCamera {
       this.flyLift += ((subject.flying ? 1 : 0) - this.flyLift) * (1 - Math.exp(-c.flySharpness * dt));
       this.rhythmEase += ((subject.rhythmLevel ?? 0) - this.rhythmEase) * (1 - Math.exp(-Parkour.camera.sharpness * dt));
     }
-    // In a fight the air lift is mostly off: the vertical follow below keeps Glen framed through jumps instead.
-    const lift = this.airLift * (1 - c.battleAirCut * this.battleBlend);
+    const lift = this.airLift;
     const fly = this.flyLift;
     this.desiredTarget.set(focus.x, focus.y + c.targetHeight, focus.z);
-    if (subject && this.battleBlend > 0.01) {
-      // Follow only part of a jump: the target rides between the ground and Glen, so he neither leaves the
-      // top of the frame going up nor lands far below the target coming down.
-      const air = Math.max(0, subject.airHeight);
-      this.desiredTarget.y -= air * (1 - c.battleAirFollow) * this.battleBlend;
-    }
     const fk = 1 - Math.exp(-2.2 * dt);
     this.frameBlend += ((this.frameOn ? 1 : 0) - this.frameBlend) * fk;
     if (this.frameBlend > 0.001) {
@@ -451,32 +378,27 @@ export class ThirdPersonCamera {
         this.yaw += angleDelta(this.yaw, this.frameYaw) * (1 - Math.exp(-1.8 * dt));
       }
     }
-    // Battle lock-on: look partway toward the enemy, back off with the distance, orbit behind Glen on the line to it, lower pitch.
+    // Battle lock-on: keep the look target on Glen, back off with enemy distance,
+    // orbit behind Glen on the line to the enemy, and lower the pitch.
     const bf = this.battleFocus;
     this.battleBlend += ((bf ? 1 : 0) - this.battleBlend) * (1 - Math.exp(-c.battleBlendSharpness * dt));
     if (this.battleHold > 0) this.battleHold -= dt;
     let extraWant = 0;
     if (bf) {
-      const sepNow = Math.hypot(focus.x - bf.x, focus.z - bf.z);
-      if (this.battleBlend < 0.05) this.battleSep = sepNow;
-      // Dead zone + damping on the separation: lunges and knock-back do not pump the distance.
-      this.battleSep = smoothDamp(this.battleSep, this.battleSep + deadZone(sepNow - this.battleSep, c.battleSepDead), this.bvSep, 0.5, 4, dt);
-      extraWant = Math.min(c.battleBackMax, c.battleBack + this.battleSep * c.battleBackPerM);
+      const sep = Math.hypot(focus.x - bf.x, focus.z - bf.z);
+      extraWant = Math.min(c.battleBackMax, c.battleBack + sep * c.battleBackPerM);
       const w = c.battleLook * this.battleBlend;
       this.desiredTarget.x += (bf.x - this.desiredTarget.x) * w;
       this.desiredTarget.z += (bf.z - this.desiredTarget.z) * w;
       this.desiredTarget.y += (Math.max(bf.y, focus.y + 0.3) - this.desiredTarget.y) * w * 0.6;
-      if (!this.frameOn && this.battleHold <= 0 && sepNow > 0.8) {
-        const err = deadZone(angleDelta(this.yaw, Math.atan2(focus.x - bf.x, focus.z - bf.z)), c.battleYawDead);
-        this.yaw += smoothDamp(0, err, this.bvYaw, c.battleYawTime, c.battleYawMaxRate, dt) * this.battleBlend;
-        this.pitch = smoothDamp(this.pitch, c.battlePitch, this.bvPitch, c.battlePitchTime, c.battlePitchMaxRate, dt);
+      if (!this.frameOn && this.battleHold <= 0 && sep > 0.8) {
+        const want = Math.atan2(focus.x - bf.x, focus.z - bf.z);
+        this.yaw += angleDelta(this.yaw, want) * (1 - Math.exp(-c.battleYawSharpness * dt)) * this.battleBlend;
+        this.pitch += (c.battlePitch - this.pitch) * (1 - Math.exp(-1.6 * dt)) * this.battleBlend;
         this.pitchRestore = null;
-      } else {
-        this.bvYaw.v = 0;
-        this.bvPitch.v = 0;
       }
     }
-    this.battleExtra = smoothDamp(this.battleExtra, extraWant, this.bvExtra, c.battleDistTime, c.battleDistMaxRate, dt);
+    this.battleExtra += (extraWant - this.battleExtra) * (1 - Math.exp(-2 * dt));
     if (this.frameOn && this.framePitch !== null) {
       this.pitch += (this.framePitch - this.pitch) * (1 - Math.exp(-2 * dt));
     } else if (this.pitchRestore !== null) {
@@ -488,22 +410,11 @@ export class ThirdPersonCamera {
       this.target.copy(this.desiredTarget);
       this.initialized = true;
     } else {
-      if (this.battleBlend > 0.01) {
-        // Battle: dead zone + critically damped follow, so the view neither snaps nor oscillates.
-        const dx = deadZone(this.desiredTarget.x - this.target.x, c.battleTargetDeadXZ);
-        const dz = deadZone(this.desiredTarget.z - this.target.z, c.battleTargetDeadXZ);
-        const dy = deadZone(this.desiredTarget.y - this.target.y, c.battleTargetDeadY);
-        this.target.x = smoothDamp(this.target.x, this.target.x + dx, this.bvx, c.battleTargetTimeXZ, 6.5, dt);
-        this.target.z = smoothDamp(this.target.z, this.target.z + dz, this.bvz, c.battleTargetTimeXZ, 6.5, dt);
-        this.target.y = smoothDamp(this.target.y, this.target.y + dy, this.bvy, c.battleTargetTimeY, 6, dt);
-      } else {
-        this.bvx.v = this.bvy.v = this.bvz.v = 0;
-        const kxz = 1 - Math.exp(-c.followSharpnessXZ * dt);
-        const ky = 1 - Math.exp(-c.followSharpnessY * dt);
-        this.target.x += (this.desiredTarget.x - this.target.x) * kxz;
-        this.target.z += (this.desiredTarget.z - this.target.z) * kxz;
-        this.target.y += (this.desiredTarget.y - this.target.y) * ky;
-      }
+      const kxz = 1 - Math.exp(-c.followSharpnessXZ * dt);
+      const ky = 1 - Math.exp(-c.followSharpnessY * dt);
+      this.target.x += (this.desiredTarget.x - this.target.x) * kxz;
+      this.target.z += (this.desiredTarget.z - this.target.z) * kxz;
+      this.target.y += (this.desiredTarget.y - this.target.y) * ky;
     }
 
     // Direction from target to camera.
@@ -545,9 +456,7 @@ export class ThirdPersonCamera {
     }
 
     if (allowed < this.currentDistance) {
-      // Pull in immediately: never show the inside of a wall. In a fight the pull-in is rate-limited so a prop
-      // passing behind Glen cannot snap the view (the wall padding absorbs the short lag).
-      this.currentDistance = this.battleBlend > 0.05 ? Math.max(allowed, this.currentDistance - c.battlePullInRate * dt) : allowed;
+      this.currentDistance = allowed; // pull in immediately: never show the inside of a wall
     } else {
       this.currentDistance += (allowed - this.currentDistance) * (1 - Math.exp(-c.zoomOutSharpness * dt));
     }

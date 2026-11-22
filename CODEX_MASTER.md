@@ -2,6 +2,16 @@
 
 Claude tidak aktif lagi untuk sementara (jatah habis). Kamu (Codex) bekerja sendiri sebagai pengembang **dan** pemeriksa. Baca `AGENTS.md` lebih dulu, lalu file ini. Pemilik proyek yang meng-merge PR (atau kamu, bila akunmu diizinkan).
 
+## Keputusan pemilik — 18 November 2026
+
+- Pengujian browser otomatis/Playwright ditunda sampai seluruh game selesai; pengujian bermain saat pengembangan dilakukan pemilik sendiri. Jangan menjalankan browser suite sekarang. Tetap jalankan build/typecheck, check:reach, check:quiz dan probe logika kecil yang relevan. Catat bahwa hasil browser, FPS, dan angka performa aktual belum diverifikasi; jangan menyatakan suite hijau tanpa menjalankannya.
+- Serangan injak-pantul hanya untuk Curut dan musuh non-bos (termasuk Curut pendamping Rakus). Bos tetap menggunakan mekanik pertarungan yang ada.
+- Masukan pemilik saat bermain: Curut di arena harus muncul dan menyerang satu per satu. Curut berikutnya muncul setelah giliran sebelumnya jinak dan jeda singkat; Curut pendamping Rakus juga maksimal satu pada satu waktu.
+- Area pertarungan wajib memulai transisi ke mode battle segera ketika Glen memasuki distrik/area chapter, sebelum musuh kota dapat ditarget atau menyerang. Musuh baru aktif setelah dialog dan intro battle selesai; titik kembali harus berada di luar batas pemicu agar tidak langsung masuk lagi.
+- Jeda antarhari wajib: setelah menerima kostum, Glen pulang ke Rumah Glen dan baru kembali ke Lab untuk latihan pada pagi berikutnya. Setelah Ular, Nino memanggil Glen kembali ke Lab untuk merayakan bersama Aara, lalu Glen pulang; latihan hari berikutnya adalah rangkaian lompat Barongsai tiga tingkat sebelum Tikus Rakus terbuka.
+- Arena Curut/Ular/Rakus harus terasa sebagai arena pertarungan khusus yang lapang. Tirai cincin battle tidak boleh menghalangi pandangan; Curut pendamping tidak dipakai pada pertarungan Tikus Rakus. Injak Curut harus menahan kontak di kepala, memantulkan Glen, serta memberi umpan balik visual/suara yang jelas.
+- Untuk menghemat limit, gunakan paling banyak dua agen pekerja dengan tugas terpisah dan review silang, lalu pemeriksaan akhir oleh agen utama.
+
 ## Aturan kerja
 
 1. Kerjakan tugas **berurutan** (T0, T1, …). Satu tugas = satu cabang `codex/<tugas>` dan satu PR ke `main`. Jangan menumpuk tugas dalam satu PR. Setelah tiap PR di-merge (atau bila tugas berikutnya tidak bergantung padanya), lanjut ke tugas berikutnya dari `main` terbaru.

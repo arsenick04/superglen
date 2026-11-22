@@ -1,49 +1,42 @@
 import * as THREE from 'three';
 import type { Input } from '../../input/Input';
-import type { Projectiles } from '../../gameplay/Projectiles';
 import type { Player } from '../Player';
 
 export const ShieldConfig = {
-  /** A quick tap by a small child still blocks: the dome stays up at least this long (s). */
-  minUp: 0.6,
+  /** One press gives a child time to move through an entire attack pattern. */
+  duration: 3,
   /** Walking/flying speed while the dome is up. */
   speedScale: 0.6,
   /** Shell radius (m) and how far in front of the capsule centre the dome is centred. */
   radius: 1.25,
-  forward: 0.15,
-  /** Shield assist: with no stick input the body turns toward a ball coming from this far (m). */
-  assistRange: 12,
-  /** ...if the ball is outside this many degrees of the facing. */
-  assistArcDeg: 50,
+  forward: 0,
   popIn: 0.2,
   popOut: 0.12,
 } as const;
 
-/** Golden half-dome shell: vertex alpha is strongest at the rim and softly see-through in the middle. */
+/** Full translucent sphere, brightest along its silhouette. */
 function buildDomeGeometry(): THREE.BufferGeometry {
-  // Front half of a sphere (phi 0..PI covers +Z), full height.
-  const geo = new THREE.SphereGeometry(1, 28, 16, 0, Math.PI, 0.12, Math.PI - 0.12);
+  const geo = new THREE.SphereGeometry(1, 28, 16);
   const pos = geo.attributes.position;
   const col = new Float32Array(pos.count * 4);
   for (let i = 0; i < pos.count; i++) {
-    const z = pos.getZ(i); // 0 at the rim, 1 at the centre of the bulge
+    const z = pos.getZ(i);
     const rim = Math.pow(1 - Math.abs(z), 1.6);
     const y = pos.getY(i);
     const sheen = Math.max(0, y) * 0.12;
     const a = 0.3 + 0.55 * rim + sheen;
-    col[i * 4] = 1.0;
-    col[i * 4 + 1] = 0.62 + 0.25 * rim;
-    col[i * 4 + 2] = 0.05 + 0.3 * rim;
-    col[i * 4 + 3] = Math.min(0.92, a);
+    col[i * 4] = 0.12 + 0.12 * rim;
+    col[i * 4 + 1] = 0.52 + 0.25 * rim;
+    col[i * 4 + 2] = 1;
+    col[i * 4 + 3] = Math.min(0.72, a * 0.7);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 4));
   return geo;
 }
 
 /**
- * Perisai cahaya: hold the shield button to raise a golden dome in front of Superglen (K / right click / the shield
- * button). While raised: 60% speed, no laser, and projectiles that meet the front arc bounce back (see Projectiles).
- * A tap keeps it up for at least 0.6 s. No cooldown, no energy.
+ * Perisai cahaya: one press raises a blue sphere around Superglen for three seconds.
+ * While raised: 60% speed, no laser, and incoming projectiles bounce back from every direction.
  *
  * Events: player.skills 'shieldUp' / 'shieldDown' / 'shieldBlock'. State: player.skills.shield.up.
  */
@@ -58,13 +51,11 @@ export class Shield {
   private t = 0;
   private warming = false;
   private lastBlocks = 0;
-  private readonly reflectCos = Math.cos((ShieldConfig.assistArcDeg * Math.PI) / 180);
 
   constructor(
     scene: THREE.Scene,
     private readonly player: Player,
     private readonly input: Input,
-    private readonly projectiles: () => Projectiles | null,
   ) {
     this.mat = new THREE.MeshBasicMaterial({
       vertexColors: true,
@@ -97,7 +88,7 @@ export class Shield {
     const hub = this.player.skills;
     const st = hub.shield;
     const can = this.canRaise();
-    const want = can && (this.input.isDown('shield') || this.input.wasPressed('shield'));
+    const want = can && this.input.wasPressed('shield');
     if (!st.up) {
       if (want) {
         st.up = true;
@@ -106,7 +97,7 @@ export class Shield {
       }
     } else {
       this.upTime += dt;
-      if (!can || (!want && this.upTime >= ShieldConfig.minUp)) {
+      if (!can || this.upTime >= ShieldConfig.duration) {
         st.up = false;
         hub.emit('shieldDown', undefined);
       }
@@ -121,19 +112,6 @@ export class Shield {
     st.y = p.y;
     st.z = p.z + Math.cos(yaw) * ShieldConfig.forward;
 
-    // Assist: standing still with the dome up, turn toward the ball that is coming.
-    if (st.up) {
-      const input = this.input.move;
-      if (input.x * input.x + input.y * input.y < 0.01) {
-        const ball = this.projectiles()?.nearestIncoming(p.x, p.z, ShieldConfig.assistRange);
-        if (ball) {
-          const dx = ball.pos.x - p.x;
-          const dz = ball.pos.z - p.z;
-          const d = Math.hypot(dx, dz);
-          if (d > 0.1 && (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / d < this.reflectCos) this.player.turnTo(Math.atan2(dx, dz));
-        }
-      }
-    }
   }
 
   /** Per rendered frame: follow the interpolated body, pop-in/out animation, shimmer. */

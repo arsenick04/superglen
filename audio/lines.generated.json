@@ -162,6 +162,60 @@
     "category": "bab1"
   },
   {
+    "id": "bab1_nino_pulang_dulu",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "tts": "[warm] Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!",
+    "source": "audio/dialog.json",
+    "category": "bab1"
+  },
+  {
+    "id": "bab5_nino_panggil_lab",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "tts": "[excited] Kembali ke Lab, Glen! Kita rayakan kemenangan kalian bersama Aara.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_glen_rayakan",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "tts": "[excited] Kita berhasil menjinakkan Ular Melar! Terima kasih, Nino dan Aara!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_aara_rayakan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hore! Kita bertiga hebat sekali!",
+    "tts": "[happy] Hore! Kita bertiga hebat sekali!",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "tts": "[warm] Sekarang pulang dulu. Besok kita mulai latihan Lompat Barongsai.",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
+    "id": "bab5_nino_latihan_besok",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi! Siap latihan Lompat Barongsai?",
+    "tts": "[excited] Selamat pagi! Siap latihan Lompat Barongsai?",
+    "source": "audio/dialog.json",
+    "category": "bab5"
+  },
+  {
     "id": "bab2_nino_pagi",
     "speaker": "nino",
     "lang": "id",
@@ -1080,15 +1134,6 @@
     "category": "lainnya"
   },
   {
-    "id": "nino_pujian_04",
-    "speaker": "nino",
-    "lang": "id",
-    "text": "Lompatanmu tinggi sekali!",
-    "tts": "[proud] Lompatanmu tinggi sekali!",
-    "source": "audio/dialog.json",
-    "category": "lainnya"
-  },
-  {
     "id": "nino_pujian_05",
     "speaker": "nino",
     "lang": "id",
@@ -1728,6 +1773,150 @@
     "category": "bab6"
   },
   {
+    "id": "rakus_nino_pulang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "tts": "[warm] Hari sudah malam, Glen. Pulang dan istirahat dulu, ya. Besok ada tantangan baru!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "rakus_morning_letters",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "tts": "[cheerful] Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "rakus_nino_lab_invite",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "tts": "[excited] Hebat, semua huruf SUPERGLEN sudah terkumpul! Sekarang datang ke Lab, Glen. Kita latihan lagi!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "rakus_nino_lab_arrival",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "tts": "[cheerful] Selamat datang kembali, Superglen! Latihan berikutnya adalah terbang sambil menembak dan memakai perisai.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_nino_alarm",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "tts": "[urgent] Alarm berbunyi! Elang Belang terbang di atas Bank dan mengganggu warga. Hari mulai malam. Superglen, temui dia di sana!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_glen_berangkat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Aku akan terbang ke Bank dan menolong mereka!",
+    "tts": "[determined] Aku akan terbang ke Bank dan menolong mereka!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_glen_melihat",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "tts": "[surprised] Itu Elang Belang! Sayapnya biru dan merah. Aku harus berhati-hati!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_nino_lawan",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang menyerang dengan es dan api. Hindari atau tangkis keduanya, lalu tembak saat ia kelelahan!",
+    "tts": "[encouraging] Elang menyerang dengan es dan api. Hindari atau tangkis keduanya, lalu tembak saat ia kelelahan!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_nino_terbang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "tts": "[helpful] Aktifkan mode terbang dulu, Glen! Dekati Elang dari udara lalu tembak saat sayapnya turun.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "elang_nino_menang",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "tts": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Glen.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_easy",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!",
+    "tts": "Level satu! Tahan lompat tetap bisa untuk terbang. Sekarang tombol roket juga bisa menjaga Glen di udara. Lewati empat lingkaran besar!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_medium",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
+    "tts": "Level dua! Ikuti lima lingkaran yang lebih kecil, lalu bidik sasaran bergerak dan tangkis tiga bola.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_hard",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!",
+    "tts": "Level tiga! Lewati enam lingkaran sempit. Sasaran dan bola makin cepat. Tetap tenang dan gunakan perisai!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_laser",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
+    "tts": "Lintasan selesai! Tetap terbang dan tembak semua sasaran yang muncul bergantian.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_shield",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
+    "tts": "Sekarang hadapi mesin bola. Tetap di udara dan tangkis bolanya dengan perisai sampai latihan level ini selesai.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "flight_nino_done",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!",
+    "tts": "Tiga level selesai! Glen sudah mahir terbang, membidik, dan bertahan di udara. Ayo kembali ke Lab!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
@@ -2266,6 +2455,96 @@
     "tts": "[playful] Nino punya 8 stiker. Beri 3 ke Aara. Sisa?",
     "source": "src/data/quiz/berhitung.json",
     "category": "quiz_hitung"
+  },
+  {
+    "id": "quiz_hitung_061",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "tts": "[curious] Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "aara_quiz_hitung_061",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "tts": "Ada 3 monyet, lalu datang 2 lagi. Jadi berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hitung_062",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mana angka yang paling besar?",
+    "tts": "[curious] Mana angka yang paling besar?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "aara_quiz_hitung_062",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Mana angka yang paling besar?",
+    "tts": "Mana angka yang paling besar?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hitung_063",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "tts": "[cheerful] Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "aara_quiz_hitung_063",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "tts": "Ada 9 pisang. Dimakan 3. Sisanya berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hitung_064",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Empat ditambah empat sama dengan?",
+    "tts": "[curious] Empat ditambah empat sama dengan?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "aara_quiz_hitung_064",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Empat ditambah empat sama dengan?",
+    "tts": "Empat ditambah empat sama dengan?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hitung_065",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "tts": "[playful] Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_hitung"
+  },
+  {
+    "id": "aara_quiz_hitung_065",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "tts": "Glen melompati 5 pohon, lalu 3 pohon. Semuanya berapa?",
+    "source": "src/data/quiz/berhitung.json",
+    "category": "quiz_aara"
   },
   {
     "id": "quiz_inggris_001",
@@ -2932,6 +3211,96 @@
     "tts": "[curious] Apa bahasa Inggrisnya lima?",
     "source": "src/data/quiz/inggris.json",
     "category": "quiz_inggris"
+  },
+  {
+    "id": "quiz_inggris_061",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya pohon?",
+    "tts": "[cheerful] Apa bahasa Inggrisnya pohon?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "aara_quiz_inggris_061",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya pohon?",
+    "tts": "Apa bahasa Inggrisnya pohon?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_inggris_062",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya teman?",
+    "tts": "[cheerful] Apa bahasa Inggrisnya teman?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "aara_quiz_inggris_062",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya teman?",
+    "tts": "Apa bahasa Inggrisnya teman?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_inggris_063",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kata mana yang berarti hutan?",
+    "tts": "[curious] Kata mana yang berarti hutan?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "aara_quiz_inggris_063",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kata mana yang berarti hutan?",
+    "tts": "Kata mana yang berarti hutan?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_inggris_064",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya melompat?",
+    "tts": "[curious] Apa bahasa Inggrisnya melompat?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "aara_quiz_inggris_064",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Apa bahasa Inggrisnya melompat?",
+    "tts": "Apa bahasa Inggrisnya melompat?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_inggris_065",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kalimat mana yang berarti ayo bermain?",
+    "tts": "[cheerful] Kalimat mana yang berarti ayo bermain?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_inggris"
+  },
+  {
+    "id": "aara_quiz_inggris_065",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kalimat mana yang berarti ayo bermain?",
+    "tts": "Kalimat mana yang berarti ayo bermain?",
+    "source": "src/data/quiz/inggris.json",
+    "category": "quiz_aara"
   },
   {
     "id": "quiz_mandarin_001",
@@ -4014,6 +4383,141 @@
     "category": "speak_zh"
   },
   {
+    "id": "quiz_mandarin_061",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "[cheerful] Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "aara_quiz_mandarin_061",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_mandarin_061_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "树",
+    "tts": "[cheerful] 树",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_062",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "[cheerful] Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "aara_quiz_mandarin_062",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_mandarin_062_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "朋友",
+    "tts": "[cheerful] 朋友",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_063",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "[cheerful] Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "aara_quiz_mandarin_063",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_mandarin_063_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "森林",
+    "tts": "[cheerful] 森林",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_064",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "[curious] Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "aara_quiz_mandarin_064",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_mandarin_064_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "跳",
+    "tts": "[cheerful] 跳",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
+    "id": "quiz_mandarin_065",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "[curious] Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_mandarin"
+  },
+  {
+    "id": "aara_quiz_mandarin_065",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Artinya apa, ya?",
+    "tts": "Artinya apa, ya?",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_mandarin_065_kata",
+    "speaker": "mandarin",
+    "lang": "zh",
+    "text": "一起玩",
+    "tts": "[cheerful] 一起玩",
+    "source": "src/data/quiz/mandarin.json",
+    "category": "speak_zh"
+  },
+  {
     "id": "quiz_hewan_001",
     "speaker": "nino",
     "lang": "id",
@@ -4554,6 +5058,96 @@
     "category": "quiz_hewan"
   },
   {
+    "id": "quiz_hewan_061",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hewan mana yang suka bergelantungan di pohon?",
+    "tts": "[curious] Hewan mana yang suka bergelantungan di pohon?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "aara_quiz_hewan_061",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hewan mana yang suka bergelantungan di pohon?",
+    "tts": "Hewan mana yang suka bergelantungan di pohon?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hewan_062",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hewan mana yang hidup di air?",
+    "tts": "[playful] Hewan mana yang hidup di air?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "aara_quiz_hewan_062",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hewan mana yang hidup di air?",
+    "tts": "Hewan mana yang hidup di air?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hewan_063",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hewan mana yang punya belalai?",
+    "tts": "[curious] Hewan mana yang punya belalai?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "aara_quiz_hewan_063",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hewan mana yang punya belalai?",
+    "tts": "Hewan mana yang punya belalai?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hewan_064",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hewan mana yang punya pelindung keras di punggung?",
+    "tts": "[playful] Hewan mana yang punya pelindung keras di punggung?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "aara_quiz_hewan_064",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hewan mana yang punya pelindung keras di punggung?",
+    "tts": "Hewan mana yang punya pelindung keras di punggung?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_hewan_065",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Hewan mana yang biasanya aktif pada malam hari?",
+    "tts": "[playful] Hewan mana yang biasanya aktif pada malam hari?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_hewan"
+  },
+  {
+    "id": "aara_quiz_hewan_065",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hewan mana yang biasanya aktif pada malam hari?",
+    "tts": "Hewan mana yang biasanya aktif pada malam hari?",
+    "source": "src/data/quiz/hewan.json",
+    "category": "quiz_aara"
+  },
+  {
     "id": "quiz_baca_001",
     "speaker": "nino",
     "lang": "id",
@@ -5092,5 +5686,95 @@
     "tts": "[curious] Huruf pertama kata ini apa?",
     "source": "src/data/quiz/membaca.json",
     "category": "quiz_baca"
+  },
+  {
+    "id": "quiz_baca_061",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Huruf pertama kata ini apa?",
+    "tts": "[curious] Huruf pertama kata ini apa?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "aara_quiz_baca_061",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Huruf pertama kata ini apa?",
+    "tts": "Huruf pertama kata ini apa?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_baca_062",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kata mana yang cocok?",
+    "tts": "[curious] Kata mana yang cocok?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "aara_quiz_baca_062",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kata mana yang cocok?",
+    "tts": "Kata mana yang cocok?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_baca_063",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Suku kata mana yang melengkapi kata ini?",
+    "tts": "[curious] Suku kata mana yang melengkapi kata ini?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "aara_quiz_baca_063",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Suku kata mana yang melengkapi kata ini?",
+    "tts": "Suku kata mana yang melengkapi kata ini?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_baca_064",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kata mana yang berarti bergerak ke atas dari tanah?",
+    "tts": "[cheerful] Kata mana yang berarti bergerak ke atas dari tanah?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "aara_quiz_baca_064",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kata mana yang berarti bergerak ke atas dari tanah?",
+    "tts": "Kata mana yang berarti bergerak ke atas dari tanah?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_aara"
+  },
+  {
+    "id": "quiz_baca_065",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kalimat mana yang ditulis dengan benar?",
+    "tts": "[curious] Kalimat mana yang ditulis dengan benar?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_baca"
+  },
+  {
+    "id": "aara_quiz_baca_065",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kalimat mana yang ditulis dengan benar?",
+    "tts": "Kalimat mana yang ditulis dengan benar?",
+    "source": "src/data/quiz/membaca.json",
+    "category": "quiz_aara"
   }
 ]

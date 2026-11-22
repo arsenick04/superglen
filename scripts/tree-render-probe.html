@@ -1,0 +1,15 @@
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/":"/node_modules/three/"}}</script>
+<script type="module">
+import * as T from 'three';
+import {preloadCityTrees,CityTrees} from '/src/world/kota/CityTrees.ts';
+await preloadCityTrees();
+const scene=new T.Scene();scene.background=new T.Color(0x9fd8ff);
+scene.add(new T.HemisphereLight(0xffffff,0x777777,2));const sun=new T.DirectionalLight(0xffffff,3);sun.position.set(5,10,6);scene.add(sun);
+const trees=new CityTrees({root:scene,onDispose(){}});trees.update(-90,-90);
+const renderer=new T.WebGLRenderer({preserveDrawingBuffer:true});renderer.setSize(900,600);document.body.append(renderer.domElement);
+renderer.shadowMap.enabled=true;sun.castShadow=true;
+const camera=new T.PerspectiveCamera(50,1.5,0.1,300);
+const focus=scene.children.find(o=>o.isInstancedMesh&&o.material.name==='NormalTree_Leaves');const matrix=new T.Matrix4();focus.getMatrixAt(0,matrix);const point=new T.Vector3().setFromMatrixPosition(matrix);
+window.renderProbe=(above=true)=>{camera.position.copy(point).add(new T.Vector3(7,above?10:1,10));camera.lookAt(point.x,3,point.z);renderer.render(scene,camera);};
+window.treeScene=scene;window.renderProbe();window.ready=true;
+</script>

@@ -4,7 +4,7 @@
  */
 import data from '../../content/nino_variasi.json';
 
-export type VariasiKind = 'pujian' | 'coba_lagi' | 'semangat';
+export type VariasiKind = 'pujian' | 'pujian_kuis' | 'coba_lagi' | 'semangat';
 
 export interface VariasiLine {
   id: string;
@@ -12,8 +12,12 @@ export interface VariasiLine {
   text: string;
 }
 
+const praise = data.pujian.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text }));
+const cheers = data.semangat.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text }));
 const pools: Record<VariasiKind, VariasiLine[]> = {
-  pujian: data.pujian.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
+  // Successful attempts receive a natural mix of acknowledgement and encouragement—not praise every time.
+  pujian: [...praise, ...cheers],
+  pujian_kuis: [...praise.filter((l) => !/sasaran/i.test(l.text)), ...cheers],
   coba_lagi: data.coba_lagi.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
   semangat: data.semangat.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
 };
@@ -30,5 +34,5 @@ export function ninoLine(kind: VariasiKind, rnd: () => number = Math.random): Va
 
 /** Every clip id (to preload the voices). */
 export function ninoVariasiIds(): string[] {
-  return [...pools.pujian, ...pools.coba_lagi, ...pools.semangat].map((l) => l.id);
+  return [...new Set([...pools.pujian, ...pools.coba_lagi, ...pools.semangat].map((l) => l.id))];
 }

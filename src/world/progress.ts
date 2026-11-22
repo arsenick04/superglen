@@ -2,6 +2,8 @@ import type { SaveStore, SlotSave } from '../core/Save';
 import type { LevelGame } from './Level';
 import { CITY_LAYOUT } from './kota/CityData';
 import { Z } from './bab1/Layout';
+import { Combat } from '../config/combat';
+import { MARKET } from './kota/Bab3Data';
 
 /**
  * The chapter flow in one place (single source of truth for "where does the game start", "where does a door lead" and
@@ -22,6 +24,12 @@ import { Z } from './bab1/Layout';
 /** Where a level should put the player when it was entered through a door (consumed by the level's build). */
 export type Arrival =
   | 'marketBattle'
+  | 'snakeVictory'
+  | 'rakusVictory'
+  | 'elangVictory'
+  | 'bankApproach'
+  /** City: outside Glen's house on the next morning. */
+  | 'homeMorning'
   /** City: in front of the old building's door on the hill, facing away from it. */
   | 'hillDoor'
   /** Lab: just inside the old building's front door. */
@@ -72,6 +80,11 @@ export function travel(game: LevelGame, level: string, arrival: Arrival): Promis
 /** Feet spot in the city in front of the old building's door (outside the door's walk-in zone), facing south (+z). */
 export const HILL_DOOR_SPOT = { x: CITY_LAYOUT.lab.door.x, y: CITY_LAYOUT.lab.door.y, z: CITY_LAYOUT.lab.door.z + 4.6, yaw: 0 } as const;
 
+/** Retreat outside Pasar while combat is pending; after victory return inside for the counting story. */
+export function marketBattleSpawn(step: string): { x: number; y: number; z: number; yaw: number } {
+  return step === 'chase' ? { ...Combat.rat.arena.returnSpot } : { x: MARKET.hub.x, y: 0, z: 12, yaw: Math.PI };
+}
+
 /** What the game loads on start. `slot`: teleport there after loading `level`. */
 export interface StartPlan {
   level: string;
@@ -80,9 +93,45 @@ export interface StartPlan {
 }
 
 export function startPlanFor(save: SaveStore): StartPlan {
+  if(save.previewGorillaBattle||save.data.where==='battle-gorilla'||(save.data.where==='forest-rescue'&&save.isChapterDone('forest-rescue'))) return {level:'battle-gorilla'};
+  if (save.previewForestRescue) return { level: 'forest-rescue' };
+  if (save.data.where === 'forest-rescue' && save.data.interlude === 'forest_fire_ready') return { level: 'forest-rescue' };
+  if (save.previewBattle) return { level: 'battle-curut' };
+  if (save.previewChapter === 2) return { level: 'bab2' };
+  if (save.previewFlightTraining) return { level: 'flight-training' };
+  if (save.previewChapter === 7) return { level: 'kota', arrival: 'bankApproach' };
+  if (save.previewForestTraining || save.data.interlude === 'forest_training') return { level: 'forest-training' };
+  if (save.previewChapter === 8 && !save.previewForestQuiz && !save.previewForestFire) return { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'elang_met') return { level: 'battle-elang' };
+  if (save.data.interlude === 'elang_home') return { level: 'kota', arrival: 'elangVictory' };
+  if (save.data.interlude === 'forest_invite') return { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'forest_lab') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'homeMorning' };
+  if (save.data.interlude === 'forest_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
+  if (save.data.interlude === 'forest_quiz' || save.data.interlude === 'forest_quiz_done') return { level: 'lab', arrival: 'labEntrance' };
+  if (save.data.interlude === 'forest_home') return { level: 'kota', arrival: 'hillDoor' };
+  if (save.data.interlude === 'forest_fire_invite') return { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'forest_fire_lab') return { level: 'lab', arrival: 'labEntrance' };
+  if (save.data.interlude === 'forest_fire_ready') return { level: save.data.where === 'lab' ? 'lab' : 'kota', arrival: save.data.where === 'lab' ? undefined : 'hillDoor' };
   const where = save.data.where;
   if (!save.isChapterDone('bab1')) return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { level: where === 'lab' ? 'lab' : 'kota' };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
   if (!save.isChapterDone('bab2')) return where === 'kota' ? { level: 'kota', arrival: 'hillDoor' } : { level: 'lab' };
+  if (save.data.interlude === 'snake_lab') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'snakeVictory' };
+  if (save.data.interlude === 'snake_home') return where === 'lab' ? { level: 'lab' } : { level: 'kota' };
+  if (save.data.interlude === 'snake_return') return where === 'lab' ? { level: 'lab' } : { level: 'kota', arrival: 'homeMorning' };
+  if (save.data.interlude === 'rakus_home' || save.data.interlude === 'rakus_letters' || save.data.interlude === 'rakus_lab') {
+    const slot = save.data.slot;
+    if (save.data.interlude === 'rakus_lab' && where === 'lab') return { level: 'lab' };
+    if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
+    return { level: 'kota', arrival: save.data.interlude === 'rakus_home' ? 'rakusVictory' : 'homeMorning' };
+  }
+  if (save.data.interlude === 'elang_bank') {
+    if (where === 'lab') return { level: 'lab' };
+    const slot = save.data.slot;
+    if (slot?.level === 'kota' && slot.t >= (save.data.doneAt.bab6 ?? Infinity)) return { level: 'kota', slot: { ...slot } };
+    return { level: 'kota', arrival: 'hillDoor' };
+  }
   const slot = save.data.slot;
   // An encounter slot is valid only while that encounter's story step is
   // still active. This also protects old saves made just before a delayed
@@ -126,7 +175,12 @@ export function migrateSave(save: SaveStore): boolean {
 }
 
 /** What talking to Nino in the lab does: the line to say and the level to fade to afterwards (null = stay). */
-export function labNinoTalk(save: SaveStore): { line: string; next: string | null } {
+export function labNinoTalk(save: SaveStore): { line: string | null; next: string | null; clearInterlude?: boolean } {
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_home') return { line: 'bab1_nino_pulang_dulu', next: null };
+  if (!save.isChapterDone('bab2') && save.data.interlude === 'costume_return') return { line: null, next: 'bab2', clearInterlude: true };
+  if (save.data.interlude === 'snake_return') return { line: 'bab5_nino_latihan_besok', next: 'jump-training' };
+  if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: 'flight-training' };
+  if (save.data.interlude === 'elang_bank' || save.data.interlude === 'elang_met') return { line: 'elang_nino_alarm', next: null };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
   return { line: 'bab2_nino_hebat', next: null };
 }

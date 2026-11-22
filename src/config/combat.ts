@@ -4,6 +4,13 @@
  * (a soft fade and a rest at the Rumah Sakit with full hearts, nothing lost).
  */
 export const Combat = {
+  gorilla: {
+    stars: 5, starsEasy: 3, height: 2.5, arenaRadius: 14,
+    windup: 1.5, leapTime: 1.15, leapArc: 7, recover: 1.3,
+    cooldown: 1, retreatTime: 1.1, vulnerable: 3.5, hitRadius: 1.65, hitHeight: 2,
+    fastLeapTime: .85, enrageWindScale: .8, impactTime: .55, slamArcScale: .75,
+    missesToOpen: 2, targetRadius: 1.6,
+  },
   hearts: {
     max: 5,
   },
@@ -25,6 +32,8 @@ export const Combat = {
   rat: {
     /** Visual size multiplier of the old 0.6 m rat: about knee-to-waist of Glen. */
     scale: 1.5,
+    /** Head contact: crown below the ear tips, as a share of the normalized model height; feet + head allowance (m). */
+    headStomp: { heightShare: 0.85, radius: 0.5 },
     /** Hits to tame (stomp and laser each count 1). */
     hp: 5,
     hpEasy: 3,
@@ -58,9 +67,15 @@ export const Combat = {
     stun: 0.7,
     /** Minimum time between two attacks starting anywhere in the market (s): never a swarm at once. */
     globalGap: 0.5,
-    /** Dedicated real-time Curut arena and fixed camera composition. */
+    /** Sequential Curut encounter: celebrate the tame, then reveal the next rat with a short attack rest (s). */
+    nextDelay: 1.2,
+    entryCooldown: 1,
+    /** Dedicated real-time Curut arena; the camera follows Glen. */
     arena: {
+      /** Retreat onto the west road outside the visible Pasar district, so returning cannot immediately reenter. */
+      returnSpot: { x: 48, y: 0, z: 0, yaw: Math.PI / 2 },
       radius: 5.2,
+      entryZ: 0,
       returnInset: 0.2,
       victoryDelay: 1.5,
       ratRingX: 3,
@@ -75,6 +90,11 @@ export const Combat = {
   },
   /** Ular Melar (Chapter 5 mini-boss): 5 stars of 2 laser hits each; the head glows when dizzy and only then does the laser count. */
   snake: {
+    /** Glen appears inside the isolated field when battle starts (m south of the coil). */
+    entryOffset: 10,
+    /** Start the battle entrance at the field boundary; leaving farther away pauses the encounter. */
+    areaEntryRadius: 34,
+    areaExitRadius: 52,
     /** Stars (health). `hitsPerStar` successful laser hits in ONE dizzy window take one (a half-hit is forgotten when the window closes). */
     stars: 5,
     starsEasy: 3,
@@ -133,6 +153,11 @@ export const Combat = {
    * Curut Cemberut helpers join between rounds. Everything is silly, nobody is hurt.
    */
   rakus: {
+    /** Glen appears inside the isolated warehouse arena after the cinematic (m south of its centre). */
+    entryOffset: 9,
+    /** Start the battle entrance at the warehouse boundary; leaving farther away pauses the encounter. */
+    areaEntryRadius: 32,
+    areaExitRadius: 50,
     /** Stars (health); `hitsPerStar` laser hits in ONE out-of-breath window take one. */
     stars: 5,
     starsEasy: 3,
@@ -201,8 +226,8 @@ export const Combat = {
     hintGap: 25,
     /** Curut Cemberut helpers (the small rats of Chapter 3, 3 hits each) join after round 1, 3, 5 ... */
     helpers: {
-      max: 4,
-      perWave: 2,
+      max: 1,
+      perWave: 1,
       /** Walking speed while chasing (m/s). */
       speed: 2.6,
       /** Seconds between any two helper attacks starting. */
@@ -213,6 +238,49 @@ export const Combat = {
       /** Helper attacks never start while the boss slam ring is up; a boss slam waits at most this long for a helper wind-up (s). */
       bossWait: 1.5,
     },
+  },
+  /** Elang Belang: alternating ice and fire feather volleys in the separate night sky arena. */
+  eagle: {
+    stars: 5,
+    starsEasy: 3,
+    hitsPerStar: 1,
+    hitsPerStarEasy: 1,
+    arenaRadius: 17,
+    flyHeight: 12,
+    hoverY: 7.5,
+    hoverZ: -5,
+    hoverSweepX: 9,
+    hoverSweepZ: 5,
+    hoverSweepY: 1.8,
+    orbitSpeed: 1.15,
+    recoveryMotion: 0.08,
+    heightFollow: 2.8,
+    heightOffset: 0.4,
+    minHoverY: 3,
+    alertSeconds: 0.48,
+    entryZ: 9,
+    cooldown: 1.2,
+    cooldownEasy: 2,
+    warning: 1.45,
+    warningEasy: 1.65,
+    recover: 4,
+    recoverEasy: 4.2,
+    burstShots: [2, 2, 2],
+    burstShotsEasy: 2,
+    featherCount: 3,
+    featherCountEasy: 3,
+    featherPool: 30,
+    featherSpread: 1.35,
+    featherSpeed: 10,
+    featherSpeedEasy: 7,
+    featherSpeedPerStage: 1.5,
+    featherRadius: 0.7,
+    featherLife: 4,
+    wingOffset: 1.1,
+    lockShare: 0.45,
+    playerHitRadius: 0.45,
+    aimRadius: 1.55,
+    assist: { range: 18, near: 10, nearConeDeg: 55, farConeDeg: 28 },
   },
   /** Laser assist: a small cone, generous up close, narrow far away. */
   laser: {
@@ -235,3 +303,10 @@ export const Combat = {
 
 /** Random source of the fight (tests replace it for determinism). */
 export const CombatRng = { next: (): number => Math.random() };
+
+/** Harmless advanced-flight practice: more targets and faster balls each round. */
+export const FlightTrainingCombat = [
+  { targets: 2, blocks: 2, interval: 3.5, speed: 6, targetSpeed: 0, targetRadius: 1.1 },
+  { targets: 3, blocks: 3, interval: 2.8, speed: 7, targetSpeed: 1.2, targetRadius: 0.9 },
+  { targets: 4, blocks: 4, interval: 2.1, speed: 8, targetSpeed: 2, targetRadius: 0.75 },
+] as const;

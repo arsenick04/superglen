@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CityDressing } from './CityDressing';
+import { CityTrees } from './CityTrees';
 import { applySky } from './Sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
@@ -13,16 +14,22 @@ import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
 import { Chapter1Walk } from './Chapter1Walk';
-import { sandboxActive, HILL_DOOR_SPOT, takeArrival, travel } from '../progress';
+import { sandboxActive, HILL_DOOR_SPOT, marketBattleSpawn, setArrival, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { CityLife } from './CityLife';
 import { Chapter3 } from './Chapter3';
 import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
 import { Chapter5 } from './Chapter5';
+import { SNAKE_FIELD } from './Bab5Data';
 import { Chapter6 } from './Chapter6';
+import { RAKUS_ARENA } from './Bab6Data';
+import { LetterHunt } from './LetterHunt';
+import { Chapter7Intro } from './Chapter7Intro';
 import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
+import { AaraActor } from './Aara';
+import { AaraFollower } from './AaraFollower';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -75,6 +82,10 @@ export class KotaLevel implements Level {
   ch5: Chapter5 | null = null;
   /** Chapter 6 (Gudang Pasar, Tikus Rakus) while it is on: Chapter 5 done, Chapter 6 not (null otherwise). */
   ch6: Chapter6 | null = null;
+  private letters: LetterHunt | null = null;
+  private elangIntro: Chapter7Intro | null = null;
+  private forestAara: AaraActor | null = null;
+  private forestAaraFollower: AaraFollower | null = null;
 
   private ctx!: LevelContext;
   /** The city's shared lit material (small story models use it: no new shader). */
@@ -83,13 +94,16 @@ export class KotaLevel implements Level {
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
+  private hemi!: THREE.HemisphereLight;
   private dressing!: CityDressing;
+  private trees!: CityTrees;
   private follower: ShadowFollower | null = null;
   private readonly sunOffset = new THREE.Vector3(30, 45, 18);
   private glimmer!: THREE.Mesh;
   private glimmerMat!: THREE.MeshBasicMaterial;
   private t = 0;
   private labFound = false;
+  private hillIntroStarted = false;
   private lastHud = '';
   private lastDistrict = '';
 
@@ -134,7 +148,22 @@ export class KotaLevel implements Level {
       game.setPlayerMode('glen', false);
     }
     if (arrival === 'marketBattle') {
-      this.spawn = { x: MARKET.hub.x, y: 0, z: ctx.save.data.bab3.step === 'chase' ? 48 : 12, yaw: Math.PI };
+      this.spawn = marketBattleSpawn(ctx.save.data.bab3.step);
+    } else if (arrival === 'snakeVictory') {
+      this.spawn = { x: SNAKE_FIELD.x, y: 0, z: SNAKE_FIELD.z + 9, yaw: Math.PI };
+    } else if (arrival === 'rakusVictory') {
+      this.spawn = { x: RAKUS_ARENA.x, y: 0, z: RAKUS_ARENA.z, yaw: Math.PI };
+    } else if (arrival === 'elangVictory' || arrival === 'bankApproach') {
+      const bank = CITY_LAYOUT.buildings.find((b) => b.kind === 'bank');
+      if (bank) {
+        const [fx, fz] = FACE_VEC[bank.face];
+        const half = bank.face < 2 ? bank.d / 2 : bank.w / 2;
+        // Preview starts outside the encounter so the player approaches the Bank naturally.
+        const distance = arrival === 'bankApproach' ? half + 20 : half + 5;
+        this.spawn = { x: bank.x + fx * distance, y: bank.base, z: bank.z + fz * distance, yaw: Math.atan2(-fx, -fz) };
+      }
+    } else if (arrival === 'homeMorning') {
+      this.spawn = this.glenHomeSpot();
     } else if (arrival === 'hillDoor') {
       // Out of the old building: it is known now (the map shows it).
       this.spawn = { ...HILL_DOOR_SPOT };
@@ -153,8 +182,11 @@ export class KotaLevel implements Level {
     const sky = 0x9fd8ff;
     scene.background = new THREE.Color(sky);
     // Physical fog distances keep the same colour on touch and desktop; draw distance can still follow the preset.
-    scene.fog = new THREE.Fog(0xc6e6fa, 140, 300);
+    // Start the atmospheric perspective before the skyline: distant blocks
+    // recede while the player and nearby NPCs remain crisp.
+    scene.fog = new THREE.Fog(0xc6e6fa, 115, 285);
     const hemi = new THREE.HemisphereLight(0xe1f3ff, 0xd3d9b5, 1.15);
+    this.hemi = hemi;
     root.add(hemi);
     this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
     // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
@@ -166,6 +198,8 @@ export class KotaLevel implements Level {
       this.sun.color.setHex(0xfff1d8);
       (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
+    if (!sandbox && ctx.save.data.interlude === 'forest_home') this.setSunset();
+    else if (!sandbox && this.isWalkingHome()) this.setNight();
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
@@ -192,6 +226,8 @@ export class KotaLevel implements Level {
     this.dressing = new CityDressing(CITY_LAYOUT, root);
     ctx.onDispose(() => this.dressing.dispose());
     this.dressing.update(this.spawn.x, this.spawn.z, true);
+    this.trees = new CityTrees(ctx);
+    this.trees.update(this.spawn.x, this.spawn.z);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);
@@ -224,7 +260,14 @@ export class KotaLevel implements Level {
         }
         this.hud.show('Gedung Barongsai Tua', 0xc9a46f, true);
         ctx.game.debugInfo.labFound = true;
-        this.onLabEntrance?.();
+        if (!sandbox && !bab1 && !this.hillIntroStarted) {
+          this.hillIntroStarted = true;
+          // The hill film is the doorway into the story building: when it ends,
+          // carry Glen straight inside instead of leaving him outside at the door.
+          void ctx.game.playCinematic('hill').then(() => this.enterLab());
+        } else {
+          this.onLabEntrance?.();
+        }
       },
     });
     // Going in: press at the door (hand icon). Works whenever the building is known (it is, once the zone above was reached).
@@ -238,7 +281,7 @@ export class KotaLevel implements Level {
     });
 
     // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
-    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
+    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => ctx.save.data.interlude === '' && !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
 
     this.life = new CityLife(ctx);
     ctx.battle.setCity(this.life);
@@ -247,6 +290,24 @@ export class KotaLevel implements Level {
     ctx.onDispose(() => this.hud.dispose());
     this.hud.prime(sp.x, sp.z);
     this.hud.show('Kota Botanica', 0xf2b632, true);
+    this.setupHomeInterlude(arrival);
+    if (!sandbox && (ctx.save.data.interlude === 'elang_bank' || ctx.save.data.interlude === 'elang_met')) {
+      ctx.game.preloadCinematic('elang');
+      this.elangIntro = new Chapter7Intro(ctx, () => {
+        this.hud.show('Elang Belang di atas Bank', 0x8bbdff, true);
+        ctx.seq.run(async () => {
+          await ctx.game.playCinematic('elang');
+          await ctx.game.loadLevel('battle-elang');
+        });
+      });
+      this.hud.show('Malam hari — menuju Bank', 0x8bbdff, true);
+    }
+    if (!sandbox && ctx.save.isChapterDone('bab6') && ctx.save.data.interlude === 'rakus_letters') {
+      this.letters = new LetterHunt(ctx, (goal) => this.setGoal(goal), () => {
+        this.hud.show('SUPERGLEN lengkap! Nino menunggu di Lab', 0xffd23f, true);
+        this.setupHomeInterlude(null);
+      });
+    }
 
     if (!sandbox && !bab1) {
       // Chapter 1: guided walk from the school to the hill; the light in the old building shows from far away.
@@ -257,7 +318,7 @@ export class KotaLevel implements Level {
       const d = CITY_LAYOUT.lab.door;
       this.goalOverride = { x: d.x, z: d.z };
       ctx.onDispose(() => this.story?.dispose());
-    } else if (!sandbox && arrival === 'hillDoor' && !ctx.save.isChapterDone('bab2')) {
+    } else if (!sandbox && arrival === 'hillDoor' && !ctx.save.isChapterDone('bab2') && ctx.save.data.interlude === '') {
       // Out of the lab between the chapters: the beam shows the way back in (Nino waits with Chapter 2), once the player
       // has walked a bit away (right at the door the camera would stand inside the beam).
       this.doorBeam = true;
@@ -290,7 +351,8 @@ export class KotaLevel implements Level {
     } else if (!sandbox && ctx.save.isChapterDone('bab4') && !ctx.save.isChapterDone('bab5')) {
       this.startCh5();
     } else if (!sandbox && ctx.save.isChapterDone('bab5') && !ctx.save.isChapterDone('bab6')) {
-      this.startCh6();
+      if (ctx.save.data.interlude === 'snake_lab') this.startCh5();
+      else if (ctx.save.data.interlude === '') this.startCh6();
     }
 
     const info = game.debugInfo;
@@ -320,6 +382,202 @@ export class KotaLevel implements Level {
     }
   }
 
+  /** Outside Glen's front door, clear of the house collider. */
+  private glenHomeSpot(): { x: number; y: number; z: number; yaw: number } {
+    const b = CITY_LAYOUT.buildings.find((x) => x.glen);
+    if (!b) return { ...CITY_LAYOUT.spawn };
+    const [fx, fz] = FACE_VEC[b.face];
+    const half = b.face < 2 ? b.d / 2 : b.w / 2;
+    return { x: b.x + fx * (half + 2.8), y: b.base, z: b.z + fz * (half + 2.8), yaw: Math.atan2(-fx, -fz) };
+  }
+
+  /** Story pauses that require Glen to walk home before the next morning. */
+  private isWalkingHome(): boolean {
+    return ['costume_home', 'snake_home', 'rakus_home', 'elang_bank', 'elang_met', 'elang_home'].includes(this.ctx.save.data.interlude);
+  }
+
+  /** Evening lasts until Glen enters his house; a fresh city scene restores daylight in the morning. */
+  private setNight(): void {
+    const { scene } = this.ctx;
+    scene.background = new THREE.Color(0x172748);
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(0x263957);
+    scene.environmentIntensity = 0.12;
+    this.hemi.color.setHex(0x8da8d5);
+    this.hemi.groundColor.setHex(0x617a84);
+    this.hemi.intensity = 0.7;
+    this.sun.color.setHex(0xa8c8f2);
+    this.sun.intensity = 0.7;
+    this.sunOffset.set(24, 48, 32);
+  }
+
+  /** Warm late-afternoon light after the forest quiz, clearly distinct from the following morning. */
+  private setSunset(): void {
+    const { scene } = this.ctx;
+    // A vertical sky gradient keeps the horizon warm without flattening every
+    // object into the same orange colour. CanvasTexture is tiny and works on
+    // the same older browsers as the rest of the city renderer.
+    const canvas = document.createElement('canvas');
+    canvas.width = 2;
+    canvas.height = 256;
+    const paint = canvas.getContext('2d');
+    if (paint) {
+      const gradient = paint.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#405a9d');
+      gradient.addColorStop(0.52, '#9e78a0');
+      gradient.addColorStop(0.78, '#f19a6b');
+      gradient.addColorStop(1, '#ffd29a');
+      paint.fillStyle = gradient;
+      paint.fillRect(0, 0, canvas.width, canvas.height);
+      const sky = new THREE.CanvasTexture(canvas);
+      sky.colorSpace = THREE.SRGBColorSpace;
+      scene.background = sky;
+      this.ctx.onDispose(() => sky.dispose());
+    } else scene.background = new THREE.Color(0xb27688);
+    if (scene.fog instanceof THREE.Fog) {
+      scene.fog.color.setHex(0xb88991);
+      scene.fog.near *= 1.18;
+      scene.fog.far *= 1.08;
+    }
+    scene.environmentIntensity = 0.62;
+    this.hemi.color.setHex(0x92a7d8);
+    this.hemi.groundColor.setHex(0x6d504b);
+    this.hemi.intensity = 0.72;
+    this.sun.color.setHex(0xffb06f);
+    this.sun.intensity = 1.65;
+    // ShadowFollower rebuilds the light position each frame from this offset.
+    // A low side angle makes the sunset read in the actual world, not only in
+    // the background colour.
+    this.sunOffset.set(-58, 25, 42);
+  }
+
+  /** Story pauses that require Glen to walk home before the next morning. */
+  private setupHomeInterlude(arrival: ReturnType<typeof takeArrival>): void {
+    const { ctx } = this;
+    const state = ctx.save.data.interlude;
+    if (arrival === 'homeMorning' && state === '') this.hud.show('Keesokan pagi', 0xf2b632, true);
+    if (!['costume_home', 'costume_return', 'snake_home', 'snake_return', 'rakus_home', 'rakus_letters', 'rakus_lab', 'elang_home', 'forest_invite', 'forest_lab', 'forest_ready', 'forest_home', 'forest_fire_invite', 'forest_fire_lab', 'forest_fire_ready'].includes(state)) return;
+    if (arrival === 'homeMorning') {
+      this.hud.show('Keesokan pagi', 0xf2b632, true);
+      if (state === 'rakus_letters') void ctx.dialog.say({ id: 'rakus_morning_letters', speaker: 'nino', text: 'Selamat pagi, Glen! Cari huruf SUPERGLEN yang tersebar di kota. Setelah lengkap, datang ke Lab, ya!' });
+    }
+    if (state === 'rakus_letters') return;
+    if (state === 'forest_home') {
+      // Aara stays in the Lab after hosting the quiz. Glen walks home alone.
+      this.hud.show('Senja — pulang ke rumah', 0xffa35c, true);
+    }
+    if (state === 'forest_invite') {
+      const home = this.glenHomeSpot();
+      this.forestAara = new AaraActor(this.lit, ctx.dialog);
+      // Face Glen's front door while waiting, rather than looking out toward the road.
+      this.forestAara.place(home.x + 2.2, home.z + 1.2, home.yaw);
+      this.forestAara.setLevel(3);
+      ctx.root.add(this.forestAara.group);
+      ctx.onDispose(() => this.forestAara?.dispose());
+      this.setGoal({ x: home.x + 2.2, z: home.z + 1.2 });
+      ctx.objectives.set(new THREE.Vector3(home.x + 2.2, home.y, home.z + 1.2));
+      ctx.interactions.add({
+        position: new THREE.Vector3(home.x + 2.2, home.y, home.z + 1.2),
+        radius: 2.6,
+        icon: 'talk',
+        promptHeight: 1.8,
+        enabled: () => ctx.save.data.interlude === 'forest_invite',
+        onInteract: () => ctx.seq.run(async () => {
+          this.forestAara?.emote('wave');
+          await ctx.dialog.say({ id: 'forest_aara_home', speaker: 'aara', text: 'Pagi, Glen! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru!' }, { lockControls: true });
+          ctx.save.setInterlude('forest_lab');
+          if (this.forestAara) {
+            this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
+            this.forestAaraFollower.reset();
+          }
+          const d = CITY_LAYOUT.lab.door;
+          this.setGoal({ x: d.x, z: d.z });
+          ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+        }),
+      });
+      return;
+    }
+    if (state === 'forest_lab') {
+      if (!this.forestAara) {
+        this.forestAara = new AaraActor(this.lit, ctx.dialog);
+        this.forestAara.setLevel(3);
+        ctx.root.add(this.forestAara.group);
+        ctx.onDispose(() => this.forestAara?.dispose());
+        this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
+        this.forestAaraFollower.reset();
+      }
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      return;
+    }
+    if (state === 'forest_fire_invite' || state === 'forest_fire_lab') {
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      if (state === 'forest_fire_invite' && arrival === 'homeMorning') ctx.seq.run(async () => {
+        await ctx.dialog.say({ id: 'forest_nino_urgent', speaker: 'nino', text: 'Glen, segera datang ke Lab! Ada keadaan genting di Hutan Botanica!' }, { lockControls: true });
+        ctx.save.setInterlude('forest_fire_lab');
+      });
+      return;
+    }
+    if (state === 'forest_ready' || state === 'forest_fire_ready') {
+      const b = CITY_LAYOUT.buildings.find((x) => x.id === CITY_LAYOUT.lab.building);
+      if (!b) return;
+      // The forest path starts behind the old building (opposite its south-facing front door).
+      const access = { x: b.x, y: b.base, z: b.z - b.d / 2 - 2.2 };
+      this.setGoal({ x: access.x, z: access.z });
+      ctx.objectives.set(new THREE.Vector3(access.x, access.y, access.z));
+      const marker = new THREE.Mesh(
+        new THREE.TorusGeometry(1.1, 0.1, 8, 24),
+        new THREE.MeshBasicMaterial({ color: state === 'forest_fire_ready' ? 0xff6b45 : 0x8fe36c, transparent: true, opacity: 0.8, toneMapped: false }),
+      );
+      marker.rotation.x = Math.PI / 2;
+      marker.position.set(access.x, access.y + 0.08, access.z);
+      ctx.root.add(marker);
+      ctx.interactions.add({
+        position: new THREE.Vector3(access.x, access.y, access.z),
+        radius: 2.5,
+        icon: 'hand',
+        promptHeight: 1.8,
+        enabled: () => ctx.save.data.interlude === 'forest_ready' || ctx.save.data.interlude === 'forest_fire_ready',
+        onInteract: () => {
+          if (ctx.save.data.interlude === 'forest_fire_ready') {
+            ctx.save.setWhere('forest-rescue');
+            void ctx.game.loadLevel('forest-rescue');
+            return;
+          }
+          ctx.save.setInterlude('forest_training');
+          void ctx.game.loadLevel('forest-training');
+        },
+      });
+      this.hud.show(state === 'forest_fire_ready' ? 'Darurat — menuju kebakaran hutan' : 'Jalur menuju Hutan Botanica', state === 'forest_fire_ready' ? 0xff6b45 : 0x77c95a, true);
+      return;
+    }
+    if (state === 'costume_return' || state === 'snake_return' || state === 'rakus_lab') {
+      const d = CITY_LAYOUT.lab.door;
+      this.setGoal({ x: d.x, z: d.z });
+      ctx.objectives.set(new THREE.Vector3(d.x, d.y, d.z + 0.9));
+      return;
+    }
+    const home = this.glenHomeSpot();
+    this.setGoal({ x: home.x, z: home.z });
+    ctx.objectives.set(new THREE.Vector3(home.x, home.y, home.z));
+    ctx.interactions.add({
+      position: new THREE.Vector3(home.x, home.y + 0.8, home.z),
+      radius: 3,
+      icon: 'hand',
+      promptHeight: 1.7,
+      enabled: () => ctx.save.data.interlude === 'costume_home' || ctx.save.data.interlude === 'snake_home' || ctx.save.data.interlude === 'rakus_home' || ctx.save.data.interlude === 'elang_home' || ctx.save.data.interlude === 'forest_home',
+      onInteract: () => {
+        const next = ctx.save.data.interlude === 'forest_home' ? 'forest_fire_invite' : ctx.save.data.interlude === 'elang_home' ? 'forest_invite' : ctx.save.data.interlude === 'snake_home' ? 'snake_return' : ctx.save.data.interlude === 'rakus_home' ? 'rakus_letters' : 'costume_return';
+        if (next === 'rakus_letters') ctx.save.setSlot(null); // an old slot from the walk must not replace the new morning
+        ctx.save.setInterlude(next);
+        setArrival('kota', 'homeMorning');
+        void ctx.game.loadLevel('kota');
+      },
+    });
+  }
+
   /** D5: Chapter 4 follows Chapter 3 (also when it was finished in an earlier session). */
   private startCh4(): void {
     if (this.ch4 || this.ctx.save.isChapterDone('bab4')) return;
@@ -337,10 +595,11 @@ export class KotaLevel implements Level {
 
   /** L11b: Chapter 5 follows Chapter 4 (also when it was finished in an earlier session). */
   private startCh5(): void {
-    if (this.ch5 || this.ctx.save.isChapterDone('bab5')) return;
+    if (this.ch5 || (this.ctx.save.isChapterDone('bab5') && this.ctx.save.data.interlude !== 'snake_lab')) return;
     this.ch5 = new Chapter5(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
+      placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
       onDone: () => {
         this.setGoal(null);
         this.d3?.people.onChange?.();
@@ -356,11 +615,14 @@ export class KotaLevel implements Level {
     this.ch6 = new Chapter6(this.ctx, {
       setGoal: (g) => this.setGoal(g),
       dropMission: () => this.d3?.people.drop(),
+      placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
       clearZone: (z) => {
         if (this.life) this.life.clearZone = z;
       },
+      nightFalls: () => this.setNight(),
       onDone: () => {
         this.setGoal(null);
+        this.setupHomeInterlude(null);
         this.d3?.people.onChange?.();
       },
     });
@@ -398,7 +660,11 @@ export class KotaLevel implements Level {
     this.ch4?.fixedUpdate(dt);
     this.ch5?.fixedUpdate(dt);
     this.ch6?.fixedUpdate(dt);
+    this.letters?.fixedUpdate();
+    this.elangIntro?.fixedUpdate();
+    this.forestAaraFollower?.fixedUpdate(dt);
     this.d3?.fixedUpdate(dt);
+    this.life?.fixedUpdate(dt);
     const p = this.ctx.player.position;
     if (this.doorBeam) {
       const d = CITY_LAYOUT.lab.door;
@@ -415,6 +681,7 @@ export class KotaLevel implements Level {
     this.t += dt;
     this.streamer.update(p.x, p.z);
     this.dressing.update(p.x, p.z);
+    this.trees.update(p.x, p.z);
     if (this.follower) this.follower.follow(p);
     else {
       this.sun.position.copy(p).add(this.sunOffset);
@@ -422,11 +689,14 @@ export class KotaLevel implements Level {
     }
     this.hud.update(dt, p.x, p.z);
     this.d3?.update(dt);
-    this.life?.update(dt);
+    this.life?.update();
     this.ch3?.update(dt);
     this.ch4?.update(dt);
     this.ch5?.update(dt);
     this.ch6?.update(dt);
+    this.letters?.update(dt);
+    this.elangIntro?.update(dt);
+    this.forestAara?.update(dt);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;

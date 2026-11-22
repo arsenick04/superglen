@@ -55,6 +55,7 @@ import { SettingsMenu } from '../ui/SettingsMenu';
 import { MapView } from '../ui/MapView';
 import { BattleMode } from '../gameplay/BattleMode';
 import { ZoomButtons } from '../ui/ZoomButtons';
+import { CinematicPlayer } from '../ui/CinematicPlayer';
 import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -298,6 +299,8 @@ export class Game {
   readonly levels: LevelManager;
   private readonly touch: TouchSource | null = null;
   private readonly hud: Hud | null = null;
+  private readonly cinematics: CinematicPlayer;
+  private openingPending = false;
   private readonly walker: WalkSource;
   private readonly padSource: GamepadSource;
   private readonly padUi: PadUi;
@@ -337,7 +340,7 @@ export class Game {
   private levelControls = true;
   private fading = false;
   private dialogLocked = false;
-  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false, bike: false };
+  private readonly profile: ControlProfile = { legacyTest: false, transform: false, laser: false, shield: false, flight: false, bike: false };
   /** The level lets the child switch Glen <-> Superglen (the star button / Q); the button also needs live controls. */
   private transformAllowed = false;
   private readonly modeCtl: ModeController;
@@ -485,6 +488,15 @@ export class Game {
     this.input.addSource(this.walker);
     this.save = new SaveStore();
     if (migrateSave(this.save)) this.save.persist();
+    // The opening is a one-time introduction, not a loading animation for every refresh.
+    // A reset query deliberately clears the marker so the introduction can be replayed.
+    try {
+      const key = 'superglen.opening-seen.v1';
+      if (new URLSearchParams(window.location.search).get('reset') === '1') localStorage.removeItem(key);
+      this.openingPending = !this.save.previewChapter && localStorage.getItem(key) !== '1';
+    } catch {
+      this.openingPending = !this.save.previewChapter;
+    }
     this.debug.save = this.save;
 
     this.player = new Player(this.physics, this.input, this.scene);
@@ -535,7 +547,7 @@ export class Game {
       flashes: this.flashes,
       stars: this.stars,
     });
-    this.shield = new Shield(this.scene, this.player, this.input, () => this.projectiles);
+    this.shield = new Shield(this.scene, this.player, this.input);
     this.laser = new Laser(this.scene, this.player, this.input, this.physics, this.cameraRig, this.targets, {
       sparkles: this.sparkles,
       flashes: this.flashes,
@@ -543,6 +555,24 @@ export class Game {
     this.debug.skills = this.makeSkillsDebug();
 
     const uiRoot = ui ?? document.body;
+    this.cinematics = new CinematicPlayer(uiRoot, (locked) => {
+      this.levelControls = !locked;
+      this.updateControls();
+    }, (playing) => {
+      this.audio.setCinematicMuted(playing);
+      this.synth.setCinematicMuted(playing);
+      if (!playing) {
+        // iOS may suspend Web Audio while an HTML video owns the audio session.
+        this.synth.unlock();
+        this.audio.unlock();
+      }
+    });
+    window.addEventListener('pointerdown', () => {
+      if (this.synth.audioContext?.state === 'suspended') {
+        this.synth.unlock();
+        this.audio.unlock();
+      }
+    }, { capture: true, passive: true });
     if (ui) this.hud = new Hud(ui, this.renderer.canvas);
     this.quiz = new QuizEngine({
       save: this.save,
@@ -584,7 +614,19 @@ export class Game {
         }
       },
     });
-    if (this.hud) this.hud.onParents = () => this.parents.show();
+    if (this.hud) {
+      this.hud.onParents = () => this.parents.show();
+      this.hud.onBeforeStart = () => {
+        // Unlock audio while still inside the user's gesture. The cinematic itself is
+        // asynchronous, so waiting until it ends would be rejected by mobile Safari.
+        this.synth.unlock();
+        this.audio.unlock();
+        if (!this.openingPending) return Promise.resolve();
+        this.openingPending = false;
+        try { localStorage.setItem('superglen.opening-seen.v1', '1'); } catch { /* storage may be blocked */ }
+        return this.cinematics.play('open');
+      };
+    }
     this.debug.quiz = this.quiz.debugHandle();
     const parentsPage = this.parents;
     this.debug.parents = {
@@ -595,6 +637,7 @@ export class Game {
       close: () => parentsPage.close(),
     };
     this.maps = new MapView(uiRoot);
+    this.maps.onMiniOpen = () => this.settings.toggleMap();
     this.maps.onFullClose = () => this.settings.mapClosed();
     this.settings = new SettingsMenu({
       ui: uiRoot,
@@ -666,15 +709,33 @@ export class Game {
       },
     );
     // Voice lines: the clip starts with the line and the bubble waits for it; advancing a line stops it.
-    this.dialog.onLineStart((id) => {
+    this.dialog.onLineStart((id, speaker, lineText) => {
       this.sfx.blip();
       if (!id) return;
       void this.audio.playVoice(id).then((r) => {
+        if (this.dialog.currentLine?.id !== id) return;
         // The clip has just started: keep the bubble for its whole length (plus a tail) from now.
         if (r.played) this.dialog.setLineDuration(this.dialog.lineElapsed + r.duration + AudioConfig.tail);
+        else if (!this.muteUrl && this.save.data.settings.sound && !document.hidden && 'speechSynthesis' in window) {
+          // Keep every story line audible when its packaged MP3 is missing or cannot play.
+          window.speechSynthesis.cancel();
+          const spoken = new SpeechSynthesisUtterance(lineText);
+          spoken.lang = 'id-ID';
+          spoken.rate = 0.95;
+          spoken.pitch = speaker === 'glen' ? 1.25 : speaker === 'aara' ? 1.12 : 1;
+          const indonesian = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('id'));
+          if (indonesian) spoken.voice = indonesian;
+          this.dialog.setLineDuration(this.dialog.lineElapsed + Math.max(3, lineText.length / 12));
+          this.audio.setExternalVoiceActive(true);
+          window.speechSynthesis.speak(spoken);
+        }
       });
     });
-    this.dialog.onLineEnd(() => this.audio.stopVoice());
+    this.dialog.onLineEnd(() => {
+      this.audio.stopVoice();
+      this.audio.setExternalVoiceActive(false);
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    });
     wireQuizVoice(this.quiz, this.audio);
     this.interactions = new Interactions(
       uiRoot,
@@ -705,7 +766,6 @@ export class Game {
       get value() { return self0.cameraRig.zoomNow; },
       get target() { return self0.cameraRig.zoomTarget; },
       get saved() { return self0.save.data.settings.zoom; },
-      get baseDistance() { return CameraConfig.distance; },
       set: (z: number, instant = true) => self0.cameraRig.setZoom(z, instant),
       reset: () => self0.resetZoom(),
     };
@@ -722,6 +782,8 @@ export class Game {
         this.levelControls = on;
         this.updateControls();
       },
+      playCinematic: (id) => this.cinematics.play(id),
+      preloadCinematic: (id) => this.cinematics.preload(id),
       get controlsEnabled() {
         return self.controlsEnabled;
       },
@@ -784,12 +846,17 @@ export class Game {
         this.player.ride = null;
         this.player.rideLift = 0;
         this.player.flight.resetLevelSettings();
+        this.player.flight.toggleEnabled = this.save.isChapterDone('flight-training-unlocked')
+          || ['elang_bank', 'elang_met', 'elang_home'].includes(this.save.data.interlude)
+          || this.save.isChapterDone('bab7');
         this.player.rhythm.cap = MAX_LEVEL;
         this.player.rhythm.reset();
         this.player.skills.shield.up = false;
         this.player.speedScale = 1;
+        this.player.levelSpeedScale = 1;
+        this.player.preferAirJump = false;
         this.setSkills({ ...this.save.data.skills });
-        for (const a of ['jump', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
+        for (const a of ['jump', 'flight', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];
         this.player.setMode('glen');
         this.updateControls();
@@ -828,7 +895,9 @@ export class Game {
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
-    const wanted = new URLSearchParams(window.location.search).get('level');
+    const wanted = this.save.previewChapter ? null : new URLSearchParams(window.location.search).get('level');
+    flow.sandbox = false;
+    flow.free = false;
     if (wanted && this.levels.has(wanted)) {
       // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
       flow.sandbox = true;
@@ -1064,7 +1133,8 @@ export class Game {
     }
     this.profile.laser = u.laser;
     this.profile.shield = u.shield;
-    this.hud?.setSkillHelp(u);
+    this.profile.flight = u.fly && this.player.flight.toggleEnabled;
+    this.hud?.setSkillHelp(u, this.player.flight.toggleEnabled);
     this.applyLayout();
   }
 
@@ -1084,6 +1154,10 @@ export class Game {
     this.save.setSound(on);
     this.audio.refresh();
     this.sfx.refresh();
+    if (!on) {
+      this.audio.setExternalVoiceActive(false);
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
   }
 
   /** Parents' page hook: background music on/off (saved). */

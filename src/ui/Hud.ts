@@ -28,6 +28,9 @@ export class Hud {
   private dismissed = false;
   /** The parents' page (set by the game). Opened by the logo long-press and the small gear on the PC help card. */
   onParents: (() => void) | null = null;
+  /** Runs the opening cinematic before the start gate unlocks story/audio. */
+  onBeforeStart: (() => Promise<void>) | null = null;
+  private starting = false;
   private holdTimer = 0;
   private holdStart = 0;
   private suppressTap = false;
@@ -72,7 +75,7 @@ export class Hud {
       const dismiss = (): void => {
         this.dismissed = true;
         this.syncCard();
-        if (!touchMode.active) startGate.start();
+        if (!touchMode.active) this.beginStart();
       };
       window.addEventListener('mousedown', dismiss, { once: true });
       window.addEventListener('keydown', dismiss, { once: true });
@@ -103,9 +106,10 @@ export class Hud {
   }
 
   /** Extra key lines for the skills the story has unlocked so far. */
-  setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }): void {
+  setSkillHelp(sk: { laser: boolean; shield: boolean; fly: boolean }, flightToggle = true): void {
     const lines: string[] = [];
     if (sk.fly) lines.push('Tahan Spasi: terbang');
+    if (sk.fly && flightToggle) lines.push('F: mode terbang (tekan lagi untuk turun)');
     if (sk.laser) lines.push('J atau klik kiri: laser');
     if (sk.shield) lines.push('K atau klik kanan: perisai');
     if (lines.join() === this.skillLines.join()) return;
@@ -200,7 +204,9 @@ export class Hud {
     this.root.appendChild(o);
     startGate.onStart(() => {
       o.classList.add('leaving');
-      window.setTimeout(() => o.remove(), 300);
+      // Remove immediately: the opening cinematic is already covering the page, and
+      // leaving the start screen mounted can flash it again on the final video frame.
+      o.remove();
       this.syncCard();
     });
   }
@@ -212,12 +218,24 @@ export class Hud {
     } catch {
       // iPhone Safari has no fullscreen API; ignore.
     }
-    startGate.start();
+    this.beginStart();
   };
 
   private readonly onLockChange = (): void => {
-    if (document.pointerLockElement === this.canvas && !touchMode.active) startGate.start();
+    if (document.pointerLockElement === this.canvas && !touchMode.active) this.beginStart();
     this.syncCard();
+  };
+
+  private readonly beginStart = (): void => {
+    if (this.starting || startGate.started) return;
+    this.starting = true;
+    void (async () => {
+      try {
+        await this.onBeforeStart?.();
+      } finally {
+        startGate.start();
+      }
+    })();
   };
 
   private syncCard(): void {

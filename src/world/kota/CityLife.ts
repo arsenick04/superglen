@@ -1,3 +1,5 @@
+import RAPIER from '@dimforge/rapier3d-compat';
+import { PlayerConfig } from '../../player/PlayerConfig';
 import { envModels } from './EnvModels';
 import { cityModels, paintMaterial } from './CityModels';
 import * as THREE from 'three';
@@ -10,8 +12,7 @@ import { box, cyl, merge, sph, type Part } from './ColorMesh';
  * playing in the parks and school fields (chasing, kicking a ball, hopping), bicycles, motorbikes and cars in the lanes of the road
  * network of `CITY_LAYOUT.roads`.
  *
- *  - Nothing has a collider and nothing ever pushes the player: vehicles and walkers only brake and wait (a car stops about 3 m
- *    before Glen when he stands in its lane, e.g. while crossing the street).
+ *  - Nearby agents have kinematic colliders. Traffic and pedestrians brake and wait for Glen.
  *  - Cheap: ONE InstancedMesh per kind (5 draw calls in all, no shadow casting), per-instance colour, walkers posed in the vertex
  *    shader. Only agents within `simRadius` of the player are simulated (at most `maxSim`), the rest stay frozen where they are;
  *    only those within `showRadius` and inside the camera frustum are written to the instance buffers.
@@ -65,6 +66,8 @@ interface Lane {
 interface Agent {
   /** 0 car, 1 moto, 2 bike, 3 walker, 4 kid. */
   kind: number;
+  body?: RAPIER.RigidBody;
+  placed?: boolean;
   lane: Lane | null;
   /** Position along the lane axis (vehicles, walkers). */
   s: number;
@@ -159,6 +162,21 @@ const W = 0xffffff;
 const DARK = 0x2b2a33;
 const SKIN = 0xf1c9a0;
 
+/** Rounded seated rider shared by bicycles and motorbikes. */
+function riderParts(helmet: boolean): Part[] {
+  return [
+    { g: new THREE.CapsuleGeometry(0.14, 0.20, 2, 8), c: W, p: [0, 1.02, -0.16], r: [0.16, 0, 0], s: [1, 1, 0.8] },
+    { g: sph(0.16, 10, 6), c: SKIN, p: [0, 1.36, -0.10] },
+    { g: new THREE.SphereGeometry(0.17, 10, 5, 0, Math.PI * 2, 0, 1.55), c: helmet ? 0xffc652 : 0x49372f, p: [0, 1.38, -0.11] },
+    ...[-1, 1].flatMap((side): Part[] => [
+      { g: new THREE.CapsuleGeometry(0.045, 0.31, 2, 6), c: SKIN, p: [side * 0.18, 0.97, 0.08], r: [-0.9, 0, side * 0.12] },
+      { g: new THREE.CapsuleGeometry(0.065, 0.26, 2, 6), c: 0x435879, p: [side * 0.13, 0.64, -0.08], r: [-0.45, 0, 0] },
+      { g: sph(0.075, 6, 4), c: 0xf1e8d5, p: [side * 0.14, 0.43, 0.04], s: [1, 0.65, 1.5] },
+      { g: sph(0.018, 5, 3), c: DARK, p: [side * 0.055, 1.38, 0.044] },
+    ]),
+  ];
+}
+
 /** Round toy-like pedestrian. Every vertex has a pivot/part id; one instanced draw still animates the entire crowd. */
 function walkerGeo(): THREE.BufferGeometry {
   const tag = (parts: Part[], id: number, px: number, py: number): THREE.BufferGeometry => {
@@ -179,8 +197,9 @@ function walkerGeo(): THREE.BufferGeometry {
   const body = tag(
     [
       { g: new THREE.CapsuleGeometry(0.19, 0.21, 1, 8), c: W, p: [0, 0.73, 0], s: [1, 1, 0.76] },
-      { g: sph(0.2, 8, 5), c: SKIN, p: [0, 1.12, 0] },
-      { g: new THREE.SphereGeometry(0.21, 8, 3, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
+      { g: sph(0.2, 12, 8), c: SKIN, p: [0, 1.12, 0] },
+      { g: new THREE.SphereGeometry(0.21, 12, 5, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
+      { g: sph(0.033, 6, 4), c: SKIN, p: [0, 1.105, 0.192], s: [0.92, 0.86, 1.15] },
       ...[-1, 1].flatMap((s): Part[] => [
         { g: sph(0.045, 6, 3), c: SKIN, p: [s * 0.196, 1.105, 0] },
         { g: sph(0.036, 6, 3), c: 0xfffdf6, p: [s * 0.073, 1.14, 0.179], s: [1, 1.2, 0.45] },
@@ -272,15 +291,13 @@ function carGeo(): THREE.BufferGeometry {
 /** Motorbike with a rider (the rider's shirt is tinted). About 90 triangles. */
 function motoGeo(): THREE.BufferGeometry {
   return merge([
-    { g: box(0.16, 0.56, 0.56), c: DARK, p: [0, 0.28, 0.6] },
-    { g: box(0.16, 0.56, 0.56), c: DARK, p: [0, 0.28, -0.6] },
-    { g: box(0.3, 0.3, 1.2), c: W, p: [0, 0.6, 0.0] },
+    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, 0.6], r: [0, 0, Math.PI / 2] },
+    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, -0.6], r: [0, 0, Math.PI / 2] },
+    { g: sph(0.4, 10, 6), c: W, p: [0, 0.6, 0.05], s: [0.55, 0.65, 1.45] },
     { g: box(0.34, 0.1, 0.5), c: DARK, p: [0, 0.82, -0.25] },
     { g: box(0.5, 0.06, 0.06), c: DARK, p: [0, 1.02, 0.5] },
-    { g: box(0.3, 0.42, 0.22), c: W, p: [0, 1.1, -0.2] },
-    { g: box(0.22, 0.22, 0.22), c: 0xf2b632, p: [0, 1.48, -0.18] },
-    { g: box(0.16, 0.14, 0.4), c: 0x3d4a7a, p: [0.12, 0.85, 0.05] },
-    { g: box(0.16, 0.14, 0.4), c: 0x3d4a7a, p: [-0.12, 0.85, 0.05] },
+    { g: sph(0.075, 8, 5), c: 0xfff2cb, p: [0, 0.78, 0.58] },
+    ...riderParts(true),
   ]);
 }
 
@@ -293,12 +310,27 @@ function bikeGeo(): THREE.BufferGeometry {
     { g: box(0.05, 0.5, 0.05), c: W, p: [0, 0.55, 0.5] },
     { g: box(0.4, 0.04, 0.05), c: DARK, p: [0, 0.85, 0.5] },
     { g: box(0.14, 0.04, 0.26), c: DARK, p: [0, 0.78, -0.35] },
-    { g: box(0.26, 0.34, 0.18), c: W, p: [0, 1.0, -0.2], r: [0.25, 0, 0] },
-    { g: box(0.2, 0.2, 0.2), c: SKIN, p: [0, 1.3, -0.1] },
-    { g: box(0.22, 0.08, 0.22), c: DARK, p: [0, 1.42, -0.12] },
-    { g: box(0.12, 0.4, 0.12), c: 0x3d4a7a, p: [0.1, 0.6, -0.1], r: [-0.4, 0, 0] },
-    { g: box(0.12, 0.4, 0.12), c: 0x3d4a7a, p: [-0.1, 0.6, -0.1], r: [-0.4, 0, 0] },
+    ...riderParts(false),
   ]);
+}
+
+/** Keep the rider's skin, helmet, tyres and face independent of vehicle paint. */
+function riderMaterial(geometry: THREE.BufferGeometry): THREE.MeshStandardMaterial {
+  const colors = geometry.getAttribute('color');
+  const tint = new Float32Array(colors.count);
+  for (let i = 0; i < colors.count; i++) tint[i] = colors.getX(i) > 0.99 && colors.getY(i) > 0.99 && colors.getZ(i) > 0.99 ? 1 : 0;
+  geometry.setAttribute('aPaint', new THREE.BufferAttribute(tint, 1));
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 });
+  material.customProgramCacheKey = () => 'city-rider-paint';
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPaint;')
+      .replace('#include <color_vertex>', `vColor = vec4(color, 1.0);
+#ifdef USE_INSTANCING_COLOR
+if (aPaint > 0.5) vColor.rgb *= instanceColor;
+#endif`);
+  };
+  return material;
 }
 
 // ---- Walker material: limbs swing in the vertex shader (per-instance phase and amplitude) ----------------------------------------
@@ -549,7 +581,7 @@ export class CityLife {
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, mat, max);
       m.castShadow = false;
-      m.receiveShadow = false;
+      m.receiveShadow = true;
       m.frustumCulled = false;
       m.count = 0;
       m.visible = false;
@@ -562,16 +594,18 @@ export class CityLife {
     this.anim.setUsage(THREE.DynamicDrawUsage);
     pedGeo.setAttribute('aAnim', this.anim);
     this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
-    // Soft rounded car from the env models (scripts/build-env-assets.mjs); the box car is the fallback.
+    // Prefer the rounded toy car from the local env library.
     const envCar = envModels.geometry('car');
-    // L18: Kenney sedan (car kit, CC0) when loaded: only its paint takes the per-car colour (aMask), glass / tyres / lights keep theirs.
-    const kCar = cityModels.carGeometry();
-    this.cars = kCar ? mk(kCar, paintMaterial(), 70) : mk(envCar ? envCar.clone() : carGeo(), carMat, 70);
-    this.motos = mk(motoGeo(), carMat, 40);
-    this.bikes = mk(bikeGeo(), carMat, 40);
+    const kCar = envCar ? null : cityModels.carGeometry();
+    this.cars = envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
+    const moto = motoGeo();
+    const bike = bikeGeo();
+    this.motos = mk(moto, riderMaterial(moto), 40);
+    this.bikes = mk(bike, riderMaterial(bike), 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
+    for (const m of this.meshes) m.geometry.computeBoundingBox();
     ctx.onDispose(() => {
       for (const m of this.meshes) {
         m.geometry.dispose();
@@ -628,22 +662,15 @@ export class CityLife {
     }
   }
 
-  update(dt: number): void {
-    const d = Math.min(dt, 0.05);
+  fixedUpdate(d: number): void {
     this.t += d;
-    const p = this.ctx.player.visualPosition;
+    const p = this.ctx.player.position;
     const onGround = p.y < 2.3;
     const sim2 = LifeConfig.simRadius * LifeConfig.simRadius;
     this.cheerLeft = Math.max(0, this.cheerLeft - d);
     this.shoutGap = Math.max(0, this.shoutGap - d);
     this.fleeing = 0;
     this.watching = 0;
-    const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
-    const cam = this.ctx.cameraRig.camera;
-    this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const n = [0, 0, 0, 0, 0];
-    const ped = this.peds.instanceMatrix.array as Float32Array;
-    const marr = [this.cars.instanceMatrix.array as Float32Array, this.motos.instanceMatrix.array as Float32Array, this.bikes.instanceMatrix.array as Float32Array, ped];
     let sim = 0;
     let stopped = 0;
     const ag = this.agents;
@@ -654,7 +681,15 @@ export class CityLife {
       const dx = (ln ? (ln.ax === 'x' ? a.s : ln.c) : a.cx) - p.x;
       const dz = (ln ? (ln.ax === 'x' ? ln.c : a.s) : a.cz) - p.z;
       const d2 = dx * dx + dz * dz;
-      if (d2 > sim2 + 400 || sim >= LifeConfig.maxSim) continue;
+      if ((d2 > sim2 + 400 || sim >= LifeConfig.maxSim) && !a.body) {
+        a.placed = false;
+        continue;
+      }
+      const wasPlaced = a.placed === true;
+      const oldX = a.x;
+      const oldY = a.y;
+      const oldZ = a.z;
+      const oldS = a.s;
       sim++;
       if (a.kind < 3) this.vehicle(a, d, p.x, p.z, onGround);
       else if (a.kind === 3) {
@@ -662,8 +697,87 @@ export class CityLife {
         else this.walker(a, d, p.x, p.z, onGround);
       } else this.kid(a);
       if (a.kind >= 3) this.react(a, d, p.x, p.z);
+      this.syncCollider(a, p, wasPlaced, oldX, oldY, oldZ, oldS);
+      a.placed = true;
       if (a.v < 0.15 && a.kind < 4) stopped++;
       if (a.kind === 4 && a.mode === 1 && a.a0 === 0 && a.ball >= 0) this.ballStep(a);
+    }
+    this.simulated = sim;
+    this.stopped = stopped;
+  }
+
+  private readonly colliderPosition = { x: 0, y: 0, z: 0 };
+  private readonly colliderRotation = { x: 0, y: 0, z: 0, w: 1 };
+
+  private syncCollider(a: Agent, p: THREE.Vector3, placed: boolean, oldX: number, oldY: number, oldZ: number, oldS: number): void {
+    const limit = a.body ? 18 : 14;
+    if ((a.x - p.x) ** 2 + (a.z - p.z) ** 2 > limit ** 2) {
+      if (a.body) this.ctx.physics.removeBody(a.body);
+      a.body = undefined;
+      return;
+    }
+    const scale = this.meshes[Math.min(3, a.kind)].geometry.boundingBox!;
+    const halfX = (scale.max.x - scale.min.x) * a.sx / 2;
+    const halfZ = (scale.max.z - scale.min.z) * a.sz / 2;
+    const halfY = scale.max.y * a.sy / 2;
+    const sin = Math.sin(a.yaw);
+    const cos = Math.cos(a.yaw);
+    const dx = p.x - a.x;
+    const dz = p.z - a.z;
+    const feet = p.y - PlayerConfig.height / 2;
+    const radius = PlayerConfig.radius;
+    const overlaps = Math.abs(dx * cos - dz * sin) < halfX + radius
+      && Math.abs(dx * sin + dz * cos) < halfZ + radius
+      && feet < a.y + halfY * 2 - 0.04 && p.y + PlayerConfig.height / 2 > a.y;
+    if (overlaps && placed && a.body) {
+      a.x = oldX;
+      a.y = oldY;
+      a.z = oldZ;
+      a.s = oldS;
+      a.v = a.amp = 0;
+    }
+
+    const zone = this.clearZone;
+    const hidden = zone && (a.x - zone.x) ** 2 + (a.z - zone.z) ** 2 < zone.r ** 2;
+    if (hidden) {
+      if (a.body) this.ctx.physics.removeBody(a.body);
+      a.body = undefined;
+      return;
+    }
+
+    // A teleport or lane wrap can place the player inside the footprint. Wait until clear before adding a body.
+    if (!a.body && overlaps) return;
+    const position = this.colliderPosition;
+    position.x = a.x;
+    position.y = a.y + halfY;
+    position.z = a.z;
+    const rotation = this.colliderRotation;
+    rotation.y = Math.sin(a.yaw / 2);
+    rotation.w = Math.cos(a.yaw / 2);
+    if (a.body) {
+      a.body.setNextKinematicTranslation(position);
+      a.body.setNextKinematicRotation(rotation);
+    } else {
+      a.body = this.ctx.physics.world.createRigidBody(
+        RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(position.x, position.y, position.z).setRotation(rotation),
+      );
+      this.ctx.physics.track(a.body);
+      const desc = a.kind < 3 ? RAPIER.ColliderDesc.cuboid(halfX, halfY, halfZ) : RAPIER.ColliderDesc.cylinder(halfY, Math.max(halfX, halfZ));
+      this.ctx.physics.world.createCollider(desc, a.body);
+    }
+  }
+
+  update(): void {
+    const p = this.ctx.player.visualPosition;
+    const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
+    const cam = this.ctx.cameraRig.camera;
+    this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const n = this.counts;
+    n.fill(0);
+
+    const ag = this.agents;
+    for (const a of ag) {
+      if (!a.placed) continue;
       // Draw: near and in view.
       const ex = a.x - p.x;
       const ez = a.z - p.z;
@@ -680,7 +794,7 @@ export class CityLife {
       const c = Math.cos(a.yaw);
       const s = Math.sin(a.yaw);
       const o = idx * 16;
-      const m = marr[k];
+      const m = this.meshes[k].instanceMatrix.array as Float32Array;
       m[o] = a.sx * c;
       m[o + 1] = 0;
       m[o + 2] = -a.sx * s;
@@ -726,21 +840,18 @@ export class CityLife {
       const mesh = this.meshes[k];
       mesh.count = n[k];
       mesh.visible = n[k] > 0;
-      this.counts[k] = n[k];
       if (n[k] > 0) {
         mesh.instanceMatrix.needsUpdate = true;
         if (mesh.instanceColor && k < 4) mesh.instanceColor.needsUpdate = true;
       }
     }
     if (n[3] > 0) this.anim.needsUpdate = true;
-    this.simulated = sim;
     this.shown = n[0] + n[1] + n[2] + n[3] + n[4];
-    this.stopped = stopped;
     const info = this.ctx.game.debugInfo;
     info.lifeAgents = ag.length;
-    info.lifeSim = sim;
+    info.lifeSim = this.simulated;
     info.lifeShown = this.shown;
-    info.lifeStopped = stopped;
+    info.lifeStopped = this.stopped;
   }
 
   /** Vehicle: cruise along the lane, brake for the vehicle ahead and for Glen standing (or crossing) in the lane. Never moves into Glen. */

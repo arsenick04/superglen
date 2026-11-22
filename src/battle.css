@@ -1,3 +1,12 @@
+/* Cinematics fill the screen on desktop and phones. */
+.cinematic-layer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #000; }
+.cinematic-layer[hidden] { display: none; }
+.cinematic-video { width: 100vw; height: 100vh; object-fit: cover; display: block; background: #000; }
+.cinematic-skip { position: absolute; z-index: 2; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); min-width: 88px; min-height: 44px; border: 2px solid rgba(255,255,255,.8); border-radius: 999px; color: #fff; background: rgba(0,0,0,.62); font: 800 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.cinematic-start { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%,-50%); min-width: 168px; min-height: 54px; padding: 10px 20px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: rgba(194,35,35,.9); box-shadow: 0 5px 20px rgba(0,0,0,.45); font: 800 18px system-ui,sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.cinematic-start[hidden] { display: none; }
+.story-alarm { position: fixed; z-index: 90; top: max(12%, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 10px 24px; border: 2px solid #ffdf83; border-radius: 14px; background: rgba(143, 18, 18, .9); color: #fff; font: 900 clamp(20px, 4vw, 32px) system-ui, sans-serif; letter-spacing: .08em; text-shadow: 0 2px 5px #530000; pointer-events: none; }
+
 /* ---- BATTLE MODE (src/gameplay/BattleMode.ts): `html.battle` is on while a fight runs. The doubled class beats the older
    `html.touch-ui ...` rules of styles.css without caring about the order of the style sheets. ---- */
 
@@ -10,8 +19,8 @@
   opacity: 0;
   transition: opacity 0.6s ease;
   background:
-    radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 42%, rgba(120, 12, 20, 0.3) 70%, rgba(60, 2, 12, 0.62) 100%),
-    linear-gradient(rgba(255, 120, 50, 0.07), rgba(255, 120, 50, 0.07));
+    radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 34%, rgba(80, 8, 20, 0.48) 68%, rgba(25, 2, 12, 0.82) 100%),
+    linear-gradient(rgba(255, 120, 50, 0.09), rgba(255, 120, 50, 0.09));
 }
 html.battle .battle-fx {
   opacity: 1;
@@ -170,6 +179,9 @@ html.battle.battle .hearts {
 /* The fights' own star bars (Ular Melar, Tikus Rakus) sit under the banner in battle colours. */
 html.battle.battle .ch5-stars {
   top: calc(env(safe-area-inset-top) + 88px);
+  /* Override the touch exploration bar's left alignment: the compact call-out owns that column. */
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(60, 10, 14, 0.6);
   border: 2px solid rgba(255, 210, 63, 0.8);
   box-shadow: 0 0 10px rgba(255, 90, 60, 0.35);

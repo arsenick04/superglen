@@ -39,3 +39,24 @@ Build, `check:reach`, `check:quiz` lulus. Smoke `kota` lulus. Semua pekerjaan be
 - **Musuh model pemilik (L19)** `src/world/kota/EnemyModels.ts`: grup `combat`, `bab3`, `bab5-fight`, `bab6-fight` belum lulus bersih; cek "tames it, in order" di bab5/bab6 gagal (kemungkinan karena teks dialog yang diubah).
 - **Kota Kenney (L18)** `CityModels.ts`, `CityDressing.ts`, `scripts/env-kenney.mjs`: pijakan panjat menonjol dari gedung pemilik, atap gedung pemilik lebih tinggi dari collider, pintu gedung Barongsai belum lurus, lubang di wajah singa, ubin jalan Kenney dan alas menara belum, tanah dan bukit jauh masih polos.
 - `hud-layout`, `hud-layout-touch`, `dlg-compact`: hasil terakhir tidak bisa dipercaya (dijalankan sebelum tombol zoom ada, sebagian crash).
+
+
+## Pembaruan 18 November 2026
+
+- T0 dan C2 sudah pernah di-merge; sebagian status antrean/serah terima 16 November di atas merupakan catatan lama.
+- Kamera PR #25 sudah di main: default 2,5 m, battleLook 0, Curut mengikuti Glen.
+- Paket stabilisasi setelah kamera: pusatkan HUD bintang battle agar tidak berbagi kolom dengan bubble; cincin arena additive DoubleSide memakai forceSinglePass (menghindari satu submission ekstra secara struktural); setup tes transisi Curut mematikan serangan kota insidental, menyelesaikan dialog dan memeriksa prasyarat tanpa memperpanjang timeout.
+- Build, typecheck, check:reach, check:quiz, syntax smoke, dan review silang lulus. Browser/FPS/draw call aktual tidak diuji atas permintaan pemilik; belum diklaim bahwa kegagalan suite sebelumnya sudah hijau. Optimasi kota menyeluruh T2 masih antre.
+- Fitur injak-pantul non-bos selesai di cabang `codex/nonboss-head-hop` (PR terpisah): Curut pasar/arena dan pendamping Rakus, satu hit saat turun ke kepala lalu otomatis memantul. Bos tidak berlangganan fitur ini. Probe kontak 8/8, typecheck/build/reach/quiz dan review silang lulus; rasa bermain/posisi kepala belum diuji browser, pemilik menguji manual. Tidak ada dialog/audio baru.
+
+- Koreksi kesulitan Curut dari uji pemilik: arena memakai satu giliran aktif, enam menunggu tersembunyi; jeda 1,2 detik setelah jinak. Curut pendamping Rakus juga maksimal satu. Build/check/probe antrean/review lulus; pengujian browser tetap ditunda. Lihat PROGRESS.md bagian "Curut muncul satu per satu".
+- Transisi battle berbasis area selesai di cabang `codex/battle-area-entry`: Pasar memindahkan Glen sebelum Curut kota sempat menyerang; Ular/Rakus masuk mode battle saat area terpicu dan musuh menunggu dialog + intro. Titik kembali Pasar berada di luar batas distrik. Probe non-browser/build/reach/quiz lulus; browser tidak dijalankan atas keputusan pemilik.
+- Alur baru dikerjakan per PR kecil: (1) kostum → wajib pulang → pagi berikutnya kembali ke Nino; (2) setelah Ular, perayaan Nino/Glen/Aara → pulang → latihan lompat Barongsai tiga tingkat; (3) Tikus Rakus baru sesudah latihan. Arena khusus/ring, penghapusan Curut pendamping Rakus, dan umpan balik injak Curut adalah PR terpisah.
+- PR alur Ular aktif di cabang `codex/snake-lab-celebration`: `snake_lab` → perayaan bertiga di Lab → `snake_home` → `snake_return`. Chapter 6 ditahan sampai PR latihan Barongsai berikutnya; build/probe/review lulus, browser ditunda.
+- PR transisi battle berikutnya membuat Chapter 3/5/6 langsung berpindah ke arena tanpa berjalan mendekati musuh, menurunkan tirai ring menjadi batas lantai, dan memperbaiki spawn Lab/Aara. Ular/Rakus masih memakai geometri kota; arena scene terpisah penuh tetap menjadi pekerjaan lanjutan.
+- Cinematic Drive sudah tersedia di cabang kerja: `cin_open.mp4` untuk Start dan `cin_hill.mp4` sebelum pintu bukit, dengan overlay letterbox 16:9 + Lewati. Browser belum diuji sesuai keputusan pemilik.
+
+### Kalimat baru untuk disuarakan
+
+- `bab1_nino_pulang_dulu` (Nino): “Sekarang pulang dulu ke rumah. Istirahat yang cukup, lalu kembali besok pagi!” — klip belum dibuat; teks tampil sebagai fallback.
+- `bab5_nino_panggil_lab`, `bab5_glen_rayakan`, `bab5_aara_rayakan`, `bab5_nino_pulang`, `bab5_nino_latihan_besok` — dialog checkpoint Ular/Lab/latihan; klip belum dibuat, teks fallback.

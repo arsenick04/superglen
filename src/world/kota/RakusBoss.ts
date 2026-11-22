@@ -310,7 +310,7 @@ export class RakusBoss {
     });
     // A landing stomp pops the glowing pile (one stomp, like a laser hit).
     ctx.player.onStomp((e) => {
-      if (this.disposed || this.pile < 0 || !this.alive[this.pile]) return;
+      if (this.disposed || !this.enabled || this.pile < 0 || !this.alive[this.pile]) return;
       if (Math.hypot(this.px[this.pile] - e.x, this.pz[this.pile] - e.z) < e.radius + 0.6 && Math.abs(e.y) < 3) this.popPile(this.pile, 'stomp');
     });
 
@@ -537,7 +537,7 @@ export class RakusBoss {
 
   /** A pile pops into sparkles: the food is saved. If he was after it he pouts. */
   popPile(i: number, _how: 'laser' | 'stomp'): void {
-    if (!this.alive[i]) return;
+    if (!this.enabled || !this.alive[i]) return;
     const { ctx } = this;
     this.alive[i] = false;
     this.respawn[i] = this.C.pileRespawn;
@@ -577,6 +577,7 @@ export class RakusBoss {
   // ---- laser -------------------------------------------------------------------------------------------------
 
   private laserHit(h: HitInfo): void {
+    if (!this.enabled) return;
     if (!this.vulnerable || this.stars <= 0) {
       this.laserEarly++;
       const { ctx } = this;
@@ -681,6 +682,7 @@ export class RakusBoss {
     if (this.phase === 'idle' || this.phase === 'beaten' || this.phase === 'tamed') {
       this.yaw = turnTo(this.yaw, Math.atan2(pl.x - this.x, pl.z - this.z), dt * 3);
     }
+    if (!this.enabled) return; // no food progression, pending slam or wave damage outside active combat
     switch (this.phase) {
       case 'idle': {
         this.cool = Math.max(0, this.cool - dt);
@@ -1015,6 +1017,23 @@ export class RakusBoss {
     });
     this.phase = 'gone';
     this.group.visible = false;
+  }
+
+  /** The supplied victory film already shows his apology and the returned food. Match its finished state immediately. */
+  finishAfterCinematic(): void {
+    this.phase = 'gone';
+    this.vulnerable = false;
+    this.level = 0;
+    this.glow.visible = false;
+    this.ringOut.visible = this.ringFill.visible = false;
+    this.group.visible = false;
+    for (let i = 0; i < this.C.pileCount; i++) {
+      this.alive[i] = false;
+      this.pk[i] = 0;
+      this.flyT[i] = -1;
+      this.respawn[i] = 1e9;
+    }
+    this.syncTargets();
   }
 
   /** Where the camera looks while he talks. */

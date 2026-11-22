@@ -1,5 +1,4 @@
 import type { PlayerMode } from '../player/PlayerConfig';
-import { CameraConfig } from '../camera/ThirdPersonCamera';
 import { Parkour } from '../config/parkour';
 import { Combat } from '../config/combat';
 import { CATEGORIES, isCategory, type Category } from '../quiz/types';
@@ -16,8 +15,14 @@ import { CATEGORIES, isCategory, type Category } from '../quiz/types';
  */
 export const SAVE_KEY = 'superglen.save.v1';
 export const SAVE_VERSION = 1;
-/** Camera distance (m) the default zoom had before the owner asked for a closer view. */
-const LEGACY_CAMERA_DISTANCE = 5;
+
+export type PreviewChapter = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/** Only an unambiguous, exact chapter number enables a temporary play session. */
+export function previewChapterFor(query: URLSearchParams): PreviewChapter | null {
+  const values = query.getAll('chapter');
+  return values.length === 1 && values[0].length === 1 && /^[1-8]$/.test(values[0]) ? Number(values[0]) as PreviewChapter : null;
+}
 
 export interface SaveData {
   version: number;
@@ -35,8 +40,6 @@ export interface SaveData {
     reduceShake: boolean;
     /** Camera zoom multiplier chosen by the child (1 = default distance). */
     zoom: number;
-    /** Default camera distance the zoom was chosen against (absent in old saves = 5 m). */
-    zoomBase: number;
     /** Sound on/off (voice, effects and the synthesized drum; off also silences the music). */
     sound: boolean;
     /** Background music on/off (default on). */
@@ -55,11 +58,13 @@ export interface SaveData {
    * never (older saves). `world/progress.ts` routes "continue" with it.
    */
   where: string;
+  /** Short story pause between chapters. Empty keeps legacy saves on their old route. */
+  interlude: '' | 'costume_home' | 'costume_return' | 'snake_lab' | 'snake_home' | 'snake_return' | 'rakus_home' | 'rakus_letters' | 'rakus_lab' | 'elang_bank' | 'elang_met' | 'elang_home' | 'forest_invite' | 'forest_lab' | 'forest_ready' | 'forest_training' | 'forest_quiz' | 'forest_quiz_done' | 'forest_home' | 'forest_fire_invite' | 'forest_fire_lab' | 'forest_fire_ready';
   /** Date.now() when each chapter was finished (0 / missing for saves older than this field). */
   doneAt: Record<string, number>;
   quiz: QuizSave;
   /** Kota Botanica, package D3: ids of the coins taken and of the missions done (both survive reloads). */
-  city: { coins: string[]; missions: string[] };
+  city: { coins: string[]; missions: string[]; letters: number[] };
   /**
    * Chapter 3 ("Pasar Kacau!") progress in the city: `step` is '' (not started), 'chase', 'count', 'rakus' or 'closing'
    * (finished = 'bab3' in `chaptersDone`); `tamed` lists the indices of the little rats already tamed.
@@ -140,13 +145,14 @@ function defaults(): SaveData {
     chaptersDone: [],
     skills: { laser: false, shield: false, fly: false },
     lastMode: 'glen',
-    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, reduceShake: false, zoom: 1, zoomBase: CameraConfig.distance, sound: true, music: true, musicVol: 1, sfxVol: 1 },
+    settings: { easyJump: Parkour.easy.defaultOn, easyFight: false, reduceShake: false, zoom: 1, sound: true, music: true, musicVol: 1, sfxVol: 1 },
     slot: null,
     discovered: { lab: false },
     where: '',
+    interlude: '',
     doneAt: {},
     quiz: defaultQuiz(),
-    city: { coins: [], missions: [] },
+    city: { coins: [], missions: [], letters: [] },
     bab3: { step: '', tamed: [] },
     bab4: { step: '', clue: 0 },
     bab5: { step: '' },
@@ -202,6 +208,7 @@ function sanitize(raw: unknown): SaveData {
     const ids = (v: unknown, max: number): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x.length < 40))].slice(0, max) : []);
     out.city.coins = ids(c.coins, 1000);
     out.city.missions = ids(c.missions, 100);
+    if (Array.isArray(c.letters)) out.city.letters = [...new Set(c.letters.filter((x): x is number => Number.isInteger(x) && x >= 0 && x < 9))].sort((a, b) => a - b);
   }
   if (typeof r.bab3 === 'object' && r.bab3 !== null) {
     const b = r.bab3 as Record<string, unknown>;
@@ -227,14 +234,7 @@ function sanitize(raw: unknown): SaveData {
     if (typeof st.easyJump === 'boolean') out.settings.easyJump = st.easyJump;
     if (typeof st.easyFight === 'boolean') out.settings.easyFight = st.easyFight;
     if (typeof st.reduceShake === 'boolean') out.settings.reduceShake = st.reduceShake;
-    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) {
-      let z = st.zoom;
-      // Saves from before the closer default (zoomBase missing) chose their zoom against LEGACY_CAMERA_DISTANCE:
-      // untouched (1) follows the new default, a chosen value keeps the same absolute distance.
-      const base = typeof st.zoomBase === 'number' && Number.isFinite(st.zoomBase) ? st.zoomBase : LEGACY_CAMERA_DISTANCE;
-      if (Math.abs(z - 1) > 0.005 && Math.abs(base - CameraConfig.distance) > 1e-6) z = (z * base) / CameraConfig.distance;
-      out.settings.zoom = Math.max(0.6, Math.min(2, z));
-    }
+    if (typeof st.zoom === 'number' && Number.isFinite(st.zoom)) out.settings.zoom = Math.max(0.6, Math.min(2, st.zoom));
     if (typeof st.sound === 'boolean') out.settings.sound = st.sound;
     if (typeof st.music === 'boolean') out.settings.music = st.music;
     if (typeof st.musicVol === 'number' && Number.isFinite(st.musicVol)) out.settings.musicVol = Math.max(0, Math.min(1, st.musicVol));
@@ -249,6 +249,7 @@ function sanitize(raw: unknown): SaveData {
   }
   if (typeof r.discovered === 'object' && r.discovered !== null) out.discovered.lab = (r.discovered as Record<string, unknown>).lab === true;
   if (typeof r.where === 'string') out.where = r.where;
+  if (r.interlude === 'costume_home' || r.interlude === 'costume_return' || r.interlude === 'snake_lab' || r.interlude === 'snake_home' || r.interlude === 'snake_return' || r.interlude === 'rakus_home' || r.interlude === 'rakus_letters' || r.interlude === 'rakus_lab' || r.interlude === 'elang_bank' || r.interlude === 'elang_met' || r.interlude === 'elang_home' || r.interlude === 'forest_invite' || r.interlude === 'forest_lab' || r.interlude === 'forest_ready' || r.interlude === 'forest_training' || r.interlude === 'forest_quiz' || r.interlude === 'forest_quiz_done' || r.interlude === 'forest_home' || r.interlude === 'forest_fire_invite' || r.interlude === 'forest_fire_lab' || r.interlude === 'forest_fire_ready') out.interlude = r.interlude;
   if (typeof r.doneAt === 'object' && r.doneAt !== null) {
     for (const [k, v] of Object.entries(r.doneAt as Record<string, unknown>)) if (typeof v === 'number' && Number.isFinite(v)) out.doneAt[k] = v;
   }
@@ -257,14 +258,59 @@ function sanitize(raw: unknown): SaveData {
 
 export class SaveStore {
   data: SaveData = defaults();
+  readonly previewChapter: PreviewChapter | null;
+  readonly previewBattle: boolean;
+  readonly previewEagleBattle: boolean;
+  readonly previewFlightTraining: boolean;
+  readonly previewForestTraining: boolean;
+  readonly previewForestQuiz: boolean;
+  readonly previewForestFire: boolean;
+  readonly previewForestRescue: boolean;
+  readonly previewGorillaBattle: boolean;
+  readonly previewLetters: boolean;
 
   constructor() {
-    if (new URLSearchParams(window.location.search).get('reset') === '1') this.reset();
+    const query = new URLSearchParams(window.location.search);
+    this.previewChapter = previewChapterFor(query);
+    this.previewBattle = this.previewChapter === 3 && query.get('battle') === '1';
+    this.previewEagleBattle = this.previewChapter === 7 && query.get('battle') === '1';
+    this.previewFlightTraining = this.previewChapter === 7 && !this.previewEagleBattle && query.getAll('training').length === 1 && query.get('training') === '1';
+    this.previewForestTraining = this.previewChapter === 8 && query.getAll('training').length === 1 && query.get('training') === '1';
+    this.previewForestQuiz = this.previewChapter === 8 && query.getAll('quiz').length === 1 && query.get('quiz') === '1';
+    this.previewForestFire = this.previewChapter === 8 && query.getAll('fire').length === 1 && query.get('fire') === '1';
+    this.previewForestRescue = this.previewChapter === 8 && query.get('rescue') === '1';
+    this.previewGorillaBattle = this.previewChapter === 8 && query.get('gorilla') === '1';
+    const letters = query.getAll('letters');
+    this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
+    if (this.previewChapter || query.get('reset') === '1') this.reset();
     else this.reload();
+  }
+
+  private freshData(): SaveData {
+    const data = defaults();
+    const chapter = this.previewChapter;
+    if (!chapter) return data;
+    for (let i = 1; i < chapter; i++) data.chaptersDone.push(`bab${i}`);
+    data.discovered.lab = chapter >= 2;
+    data.where = chapter === 2 ? 'bab2' : 'kota';
+    data.lastMode = chapter === 1 || chapter === 4 || chapter === 5 ? 'glen' : 'superglen';
+    if (chapter >= 3) data.skills = { laser: true, shield: true, fly: true };
+    if (this.previewBattle) data.bab3.step = 'chase';
+    if (this.previewLetters) {
+      data.chaptersDone.push('bab6');
+      data.interlude = 'rakus_letters';
+    }
+    if (chapter === 7) data.interlude = 'elang_bank';
+    if (chapter === 8) data.interlude = this.previewForestFire ? 'forest_fire_lab' : this.previewForestQuiz ? 'forest_quiz' : this.previewForestTraining ? 'forest_training' : 'forest_invite';
+    return data;
   }
 
   /** Re-read from storage (or keep the in-memory data when storage is unavailable or corrupt). */
   reload(): void {
+    if (this.previewChapter) {
+      this.data = this.freshData();
+      return;
+    }
     try {
       const txt = window.localStorage.getItem(SAVE_KEY);
       if (txt) this.data = sanitize(JSON.parse(txt));
@@ -275,6 +321,7 @@ export class SaveStore {
 
   /** Write to storage. Failure is silent: progress stays in memory for this session. */
   persist(): void {
+    if (this.previewChapter) return;
     try {
       window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
@@ -284,7 +331,8 @@ export class SaveStore {
 
   /** Forget everything (also used by `?reset=1`). */
   reset(): void {
-    this.data = defaults();
+    this.data = this.freshData();
+    if (this.previewChapter) return;
     try {
       window.localStorage.removeItem(SAVE_KEY);
     } catch {
@@ -295,7 +343,7 @@ export class SaveStore {
   /** Parents' page: forget the story and quiz progress but keep the settings (easy jump, sound). */
   resetProgress(): void {
     const settings = { ...this.data.settings };
-    this.data = defaults();
+    this.data = this.freshData();
     this.data.settings = settings;
     this.persist();
   }
@@ -316,6 +364,12 @@ export class SaveStore {
   setWhere(where: string): void {
     if (this.data.where === where) return;
     this.data.where = where;
+    this.persist();
+  }
+
+  setInterlude(interlude: SaveData['interlude']): void {
+    if (this.data.interlude === interlude) return;
+    this.data.interlude = interlude;
     this.persist();
   }
 
@@ -356,7 +410,6 @@ export class SaveStore {
   setZoom(z: number): void {
     if (this.data.settings.zoom === z) return;
     this.data.settings.zoom = z;
-    this.data.settings.zoomBase = CameraConfig.distance;
     this.persist();
   }
 
@@ -410,6 +463,15 @@ export class SaveStore {
     if (this.data.city.coins.includes(id)) return false;
     this.data.city.coins.push(id);
     this.data.quiz.coins += 1;
+    this.persist();
+    return true;
+  }
+
+  /** One position of the nine-letter SUPERGLEN hunt (the two E positions have different indices). */
+  takeCityLetter(index: number): boolean {
+    if (!Number.isInteger(index) || index < 0 || index >= 9 || this.data.city.letters.includes(index)) return false;
+    this.data.city.letters.push(index);
+    this.data.city.letters.sort((a, b) => a - b);
     this.persist();
     return true;
   }
