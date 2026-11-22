@@ -26,6 +26,18 @@ File yang sudah ada dilewati. Teks atau suara yang berubah terdeteksi lewat hash
 2. Beri tanda di `audio/dialog.json` pada kalimat itu: `"source": "recorded"` (untuk soal quiz, di `audio/manifest.json`: `"<id>": { "source": "recorded" }`).
 3. Skrip tidak akan menimpa kalimat itu. MP3 yang tidak ada di manifest juga dianggap buatan tangan dan tidak ditimpa (kecuali `--force`).
 
+## Impor rekaman asli (nama file bebas)
+Untuk suara asli Glen (atau tokoh lain) dari HP: rekam, kumpulkan, jalankan satu perintah. Nama file tidak perlu diubah.
+1. Rekam kalimat di Voice Memos / perekam HP (m4a, mp3, wav, webm semua bisa). Satu file boleh berisi satu kalimat atau beberapa kalimat berurutan; beri jeda diam sekitar 1 detik antar kalimat. Daftar kalimat Glen: `audio/glen-rekam.csv`. Rekam di ruang tenang, mulut sekitar sejengkal dari HP.
+2. Taruh semua file di satu folder (atau kirim di chat, nanti dikumpulkan ke folder).
+3. Cek dulu tanpa menulis apa pun: `npm run audio:import -- --dir=<folder> --dry-run`, lalu baca `audio/import-report.md`.
+4. Jalankan sungguhan: `npm run audio:import -- --dir=<folder>` (tokoh lain: `--speaker=nino`).
+
+Cara kerja: tiap file diubah ke WAV mono, hening awal/akhir dipotong (sisa 80 ms), rekaman panjang dipecah di jeda lebih dari 0,8 detik, tiap potongan ditranskrip dengan ElevenLabs Scribe (hanya kuota speech-to-text, bukan kredit suara; hasil disimpan di `audio/.import-cache.json` sehingga dry run lalu run sungguhan tidak membayar dua kali) dan dicocokkan dengan teks di `audio/dialog.json` (huruf kecil, tanpa tanda baca, angka jadi kata, "Super Glen" = "Superglen"). Hanya kecocokan di atas 0,8 yang dipakai (`--threshold=`). Hasil: `public/audio/<id>.mp3` (-16 LUFS, mono, 96 kbps), `"source": "recorded"` di `audio/manifest.json` (jadi `npm run audio` tidak menimpanya), potongan asli lossless di `audio/recorded-originals/<tokoh>/<id>.flac` (file mentah di `_files/` tidak di-commit).
+Kalimat yang direkam dua kali: dipakai yang skornya tertinggi (lalu yang terpanjang); cadangannya ada di `recorded-originals/<tokoh>/alt/` dan disebut di laporan. Laporan `audio/import-report.md` memuat: cocok, ganda, tidak cocok (dengan transkripnya), dan nomor kalimat yang masih harus direkam. Rekaman ulang kalimat yang sudah `recorded` menggantikan yang lama.
+Opsi: `--out=<folder>` (semua keluaran ke folder uji, tidak menyentuh `public/audio`), `--gap=0.8`, `--no-split`. Data uji sintetis: `node scripts/import-voice-testdata.mjs <folder>`.
+Batas: Scribe bisa salah dengar kata pendek atau nama (kalimat satu-dua kata paling rawan; lihat bagian "tidak cocok"); kalimat yang jedanya di tengah lebih dari 0,8 detik digabung otomatis dari 2 sampai 3 potongan berurutan; kalimat yang diucapkan tidak lengkap atau berbeda dari teks akan masuk "tidak cocok".
+
 ## Suara dan model (v2, 2026-11-14)
 Model: `eleven_v4` (paling ekspresif yang tersedia di paket ini, 1 karakter = 1 kredit; mendukung tag emosi dan bahasa Indonesia/Mandarin/Inggris). Tag seperti `[excited]`, `[laughs]` dibaca sebagai arahan, bukan diucapkan (diperiksa dengan speech-to-text). Tag dihitung sebagai karakter kuota.
 
