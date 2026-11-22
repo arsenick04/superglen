@@ -126,6 +126,9 @@ export class ForestTrainingLevel implements Level {
   private advancing = false;
   private resetCooldown = 0.8;
   private readonly feet = new THREE.Vector3();
+  private windLeaves: THREE.InstancedMesh | null = null;
+  private windTime = 0;
+  private readonly windDummy = new THREE.Object3D();
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -149,6 +152,7 @@ export class ForestTrainingLevel implements Level {
     for (const course of COURSES) this.buildCourse(kit, course);
     this.buildForest(kit);
     kit.build(ctx.root);
+    this.buildWindLeaves(ctx);
 
     this.nino = new NinoActor(ctx, -4, 25);
     this.nino.sit = 1;
@@ -203,12 +207,14 @@ export class ForestTrainingLevel implements Level {
   update(dt: number): void {
     this.nino?.update(dt);
     this.aara?.update(dt);
+    this.updateWindLeaves(dt);
   }
 
   dispose(): void {
     this.ctx = null;
     this.nino = null;
     this.aara = null;
+    this.windLeaves = null;
   }
 
   private buildClearing(kit: Kit): void {
@@ -248,6 +254,41 @@ export class ForestTrainingLevel implements Level {
       kit.lit.sph(crown, [x, h + 0.5, z], green, [1, 0.85, 1], 1);
       kit.deco.sph(crown * 0.75, [x + crown * 0.7, h + 0.35, z], green, [1, 0.8, 1], 1);
     }
+  }
+
+  /** One cheap instanced draw call: drifting leaves make the forest feel alive. */
+  private buildWindLeaves(ctx: LevelContext): void {
+    const geometry = new THREE.PlaneGeometry(0.22, 0.11);
+    const material = new THREE.MeshStandardMaterial({ color: 0x91c95a, roughness: 0.9, side: THREE.DoubleSide });
+    const leaves = new THREE.InstancedMesh(geometry, material, 20);
+    leaves.frustumCulled = false;
+    leaves.castShadow = false;
+    leaves.receiveShadow = false;
+    this.windLeaves = leaves;
+    ctx.root.add(leaves);
+    ctx.onDispose(() => {
+      geometry.dispose();
+      material.dispose();
+    });
+    this.updateWindLeaves(0);
+  }
+
+  private updateWindLeaves(dt: number): void {
+    const leaves = this.windLeaves;
+    if (!leaves) return;
+    this.windTime += dt;
+    for (let i = 0; i < leaves.count; i++) {
+      const phase = i * 1.73;
+      const lane = (i % 5) - 2;
+      const travel = (this.windTime * (0.7 + (i % 3) * 0.13) + i * 3.1) % 36;
+      this.windDummy.position.set(-18 + travel, 2.4 + (i % 4) * 0.72 + Math.sin(this.windTime * 1.7 + phase) * 0.35, 18 + lane * 8 + Math.sin(phase) * 3);
+      this.windDummy.rotation.set(Math.sin(this.windTime * 2.2 + phase) * 0.7, phase + this.windTime, Math.cos(this.windTime * 1.8 + phase) * 0.8);
+      const scale = 0.75 + (i % 4) * 0.12;
+      this.windDummy.scale.setScalar(scale);
+      this.windDummy.updateMatrix();
+      leaves.setMatrixAt(i, this.windDummy.matrix);
+    }
+    leaves.instanceMatrix.needsUpdate = true;
   }
 
   private resetCourse(): void {
