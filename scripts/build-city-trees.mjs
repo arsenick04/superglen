@@ -10,3 +10,4 @@ for (const name of ['NormalTree_1', 'PineTree_2']) {
   await document.transform(weld(), simplify({ simplifier: MeshoptSimplifier, ratio: 0.25, error: 0.01 }), prune());
   await io.write(`public/env/quaternius/${name}_city.glb`, document);
 }
+await import('./check-tree-assets.mjs');
