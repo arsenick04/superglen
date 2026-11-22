@@ -1042,3 +1042,7 @@ Regresi PR #104: FBX dikonversi dengan batang sejajar sumbu Z di GLB, lalu norma
 
 Rekaman pemilik setelah koreksi sumbu masih menunjukkan batang mendatar. Aset kini dibake ke koordinat Y-up langsung pada verteks dan matriks node identitas; memakai nama *_upright.glb agar referensi build berbeda dari aset lama. Loader menyalin geometri sebelum normalisasi sehingga tidak memutasi buffer sumber bersama. Pemeriksaan tambahan memvalidasi batang sendiri dalam koordinat lokal, bukan hanya bounding box scene. Build dan validasi aset lulus; tampilan serta FPS iPhone belum terverifikasi.
 
+# 22 November 2026 — material daun dan render dua sudut
+
+Daun kota/hutan memakai MeshStandardMaterial baru: opaque cutout alphaTest 0.15, DoubleSide dan shadowSide DoubleSide, anisotropy 4; batang opaque. Mengganti material Physical hasil impor BLEND dan alphaTest lama 0.5. Probe scripts/tree-render-probe.html memakai loader/instancing CityTrees dan shadow map; render Chromium lokal dari atas dan bawah memperlihatkan kanopi. Build dan pemeriksaan aset lulus. Kasus hilangnya daun pada Safari belum direproduksi di Chromium; hasil iPhone masih perlu konfirmasi. Probe tidak menguji seluruh alur game.
+
