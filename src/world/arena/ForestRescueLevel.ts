@@ -26,6 +26,7 @@ export class ForestRescueLevel implements Level {
   build(ctx: LevelContext): void {
     this.ctx = ctx;
     ctx.save.setWhere(this.id);
+    ctx.game.preloadCinematic('gorilla-meet');
     ctx.scene.background = new THREE.Color(0xd9a77a);
     ctx.scene.fog = new THREE.Fog(0xc0a38b, 45, 110);
     ctx.root.add(new THREE.HemisphereLight(0xffe5c7, 0x596747, 1.6));
@@ -111,6 +112,7 @@ export class ForestRescueLevel implements Level {
     this.ctx.seq.run(async () => {
       await this.ctx.dialog.say({ id: 'forest_glen_monkeys_safe', speaker: 'glen', text: 'Monyet-monyet sudah aman! Kita harus padamkan api itu!' }, { lockControls: true });
       this.ctx.save.setWhere('battle-gorilla');
+      await this.ctx.game.playCinematic('gorilla-meet');
       await this.ctx.game.loadLevel('battle-gorilla');
     });
   }

@@ -9239,7 +9239,6 @@ async function bab4CluesScenario(page, check, touch) {
     await d3Press(page, 'e', 3);
     // Aara's "Baca katanya" the first time, then the question.
     for (let k = 0; k < 40 && !(await page.evaluate(() => window.__superglen.quiz.open)); k++) await d3Adv(page, 15);
-    if (process.env.DBG) console.log('DBG', i, JSON.stringify(await page.evaluate(() => ({ open: window.__superglen.quiz.open, view: window.__superglen.quiz.view, dlg: window.__superglen.dialog.open, txt: window.__superglen.dialog.text, ctl: window.__superglen.controlsEnabled, clues: window.__ch4.clues() }))));
     const q = await page.evaluate(() => ({ id: window.__superglen.quiz.questionId, kind: window.__superglen.quiz.kind, cat: window.__superglen.quiz.category, state: window.__superglen.quiz.state, big: (document.querySelector('.qp-bigtext') || {}).textContent, cards: document.querySelectorAll('.qp-card').length, say: !!document.querySelector('.qp-say') }));
     check(`bab4-clues ${tag}: clue ${i + 1}: the board word "${words[i]}" is shown big as a reading card with three picture cards and the speaker button`, q.id === `bab4_clue_${words[i]}` && q.kind === 'text' && q.cat === 'membaca' && q.big === words[i] && q.cards === 3 && q.say, JSON.stringify(q));
     if (i === 0) { await page.evaluate(() => window.__superglen.advance(1, true)); await page.screenshot({ path: path.join(OUT, `bab4-clues-card${touch ? '-touch' : ''}.png`) }); }
@@ -10641,7 +10640,6 @@ async function hudLayoutScenario(page, check, touch) {
   await d3Adv(page, 20);
   await sleep(500);
   v = await verify('fight');
-  if (process.env.HUD_DEBUG) console.log('DBG', await page.evaluate(() => JSON.stringify({ e: window.__ch5.engaged(), cls: document.querySelector('.ch5-stars').className, sc: window.__superglen.levelInfo.ch5Scene, was: window.__starsWas })));
   if (shotDir) await page.screenshot({ path: path.join(shotDir, `bab5-fight-${touch ? 'touch' : 'desktop'}.png`) });
   check(`hud-layout ${tag}: during the fight the stars and touch zoom buttons are shown and nothing overlaps`,
     v.names.includes('stars') && (!touch || v.counts.zoom === 2) && v.bad.length === 0 && v.out.length === 0, JSON.stringify(v));
@@ -11618,6 +11616,38 @@ async function dialogNameScenario(page, check) {
   check('dialog-name: no raw {nama} on screen', !raw, String(raw));
 }
 
+// ---- Forest rescue end: the gorilla-meet cinematic plays between the last monkey and the battle load: group `forest-cin` -------------------
+async function forestCinScenario(page, check) {
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&rescue=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'forest-rescue', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await page.evaluate(() => {
+    window.__cinLog = [];
+    const g = window.__superglen;
+    g.save.markChapterDone('forest-rescue-canopy-intro');
+    const v = document.querySelector('video');
+    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    g.pause(true);
+  });
+  const off = [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0];
+  for (let i = 0; i < 10; i++) {
+    const col = i < 5 ? i : 9 - i, x = (col - 2) * 5.4, z = 24 - (Math.floor(i / 5) + 1) * 5.4, top = 4.5 + off[i];
+    await page.evaluate(async ([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y, z); await g.advanceAsync(10, false); }, [x, top + 0.2, z]);
+    await page.keyboard.down('KeyE');
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(10, false); });
+    await page.keyboard.up('KeyE');
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(5, false); });
+  }
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 400 && !window.__cinLog.length; i++) { await g.advanceAsync(10, false); if (g.dialog.open) { const c = document.querySelector('.dlg-card'); if (c) c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); } } });
+  const log = await page.evaluate(() => window.__cinLog);
+  check('forest-cin: gorilla-meet is requested while still in the rescue level', log.length === 1 && /cin_gorilla-meet\.mp4\|forest-rescue$/.test(log[0]), JSON.stringify(log));
+  await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
+  await page.waitForFunction(() => window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  check('forest-cin: battle loads after the cinematic ends', true);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -11863,6 +11893,7 @@ async function main() {
     results.push(await runScenario(browser, 'bab5-flow', { viewport: { width: 1280, height: 720 } }, (p, c) => bab5FlowScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab5-flow-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FlowScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dialog-name', { viewport: { width: 1280, height: 720 } }, dialogNameScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'forest-cin', { viewport: { width: 1280, height: 720 } }, (p, c) => forestCinScenario(p, c), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFallScenario(p, c, false), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => gorillaFallScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'hud-layout', { viewport: { width: 1280, height: 720 } }, (p, c) => hudLayoutScenario(p, c, false), '?level=kota&fps=0&reset=1'));
