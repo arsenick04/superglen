@@ -162,6 +162,21 @@ const W = 0xffffff;
 const DARK = 0x2b2a33;
 const SKIN = 0xf1c9a0;
 
+/** Rounded seated rider shared by bicycles and motorbikes. */
+function riderParts(helmet: boolean): Part[] {
+  return [
+    { g: new THREE.CapsuleGeometry(0.14, 0.20, 2, 8), c: W, p: [0, 1.02, -0.16], r: [0.16, 0, 0], s: [1, 1, 0.8] },
+    { g: sph(0.16, 10, 6), c: SKIN, p: [0, 1.36, -0.10] },
+    { g: new THREE.SphereGeometry(0.17, 10, 5, 0, Math.PI * 2, 0, 1.55), c: helmet ? 0xffc652 : 0x49372f, p: [0, 1.38, -0.11] },
+    ...[-1, 1].flatMap((side): Part[] => [
+      { g: new THREE.CapsuleGeometry(0.045, 0.31, 2, 6), c: SKIN, p: [side * 0.18, 0.97, 0.08], r: [-0.9, 0, side * 0.12] },
+      { g: new THREE.CapsuleGeometry(0.065, 0.26, 2, 6), c: 0x435879, p: [side * 0.13, 0.64, -0.08], r: [-0.45, 0, 0] },
+      { g: sph(0.075, 6, 4), c: 0xf1e8d5, p: [side * 0.14, 0.43, 0.04], s: [1, 0.65, 1.5] },
+      { g: sph(0.018, 5, 3), c: DARK, p: [side * 0.055, 1.38, 0.044] },
+    ]),
+  ];
+}
+
 /** Round toy-like pedestrian. Every vertex has a pivot/part id; one instanced draw still animates the entire crowd. */
 function walkerGeo(): THREE.BufferGeometry {
   const tag = (parts: Part[], id: number, px: number, py: number): THREE.BufferGeometry => {
@@ -276,15 +291,13 @@ function carGeo(): THREE.BufferGeometry {
 /** Motorbike with a rider (the rider's shirt is tinted). About 90 triangles. */
 function motoGeo(): THREE.BufferGeometry {
   return merge([
-    { g: box(0.16, 0.56, 0.56), c: DARK, p: [0, 0.28, 0.6] },
-    { g: box(0.16, 0.56, 0.56), c: DARK, p: [0, 0.28, -0.6] },
-    { g: box(0.3, 0.3, 1.2), c: W, p: [0, 0.6, 0.0] },
+    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, 0.6], r: [0, 0, Math.PI / 2] },
+    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, -0.6], r: [0, 0, Math.PI / 2] },
+    { g: sph(0.4, 10, 6), c: W, p: [0, 0.6, 0.05], s: [0.55, 0.65, 1.45] },
     { g: box(0.34, 0.1, 0.5), c: DARK, p: [0, 0.82, -0.25] },
     { g: box(0.5, 0.06, 0.06), c: DARK, p: [0, 1.02, 0.5] },
-    { g: box(0.3, 0.42, 0.22), c: W, p: [0, 1.1, -0.2] },
-    { g: box(0.22, 0.22, 0.22), c: 0xf2b632, p: [0, 1.48, -0.18] },
-    { g: box(0.16, 0.14, 0.4), c: 0x3d4a7a, p: [0.12, 0.85, 0.05] },
-    { g: box(0.16, 0.14, 0.4), c: 0x3d4a7a, p: [-0.12, 0.85, 0.05] },
+    { g: sph(0.075, 8, 5), c: 0xfff2cb, p: [0, 0.78, 0.58] },
+    ...riderParts(true),
   ]);
 }
 
@@ -297,12 +310,27 @@ function bikeGeo(): THREE.BufferGeometry {
     { g: box(0.05, 0.5, 0.05), c: W, p: [0, 0.55, 0.5] },
     { g: box(0.4, 0.04, 0.05), c: DARK, p: [0, 0.85, 0.5] },
     { g: box(0.14, 0.04, 0.26), c: DARK, p: [0, 0.78, -0.35] },
-    { g: box(0.26, 0.34, 0.18), c: W, p: [0, 1.0, -0.2], r: [0.25, 0, 0] },
-    { g: box(0.2, 0.2, 0.2), c: SKIN, p: [0, 1.3, -0.1] },
-    { g: box(0.22, 0.08, 0.22), c: DARK, p: [0, 1.42, -0.12] },
-    { g: box(0.12, 0.4, 0.12), c: 0x3d4a7a, p: [0.1, 0.6, -0.1], r: [-0.4, 0, 0] },
-    { g: box(0.12, 0.4, 0.12), c: 0x3d4a7a, p: [-0.1, 0.6, -0.1], r: [-0.4, 0, 0] },
+    ...riderParts(false),
   ]);
+}
+
+/** Keep the rider's skin, helmet, tyres and face independent of vehicle paint. */
+function riderMaterial(geometry: THREE.BufferGeometry): THREE.MeshStandardMaterial {
+  const colors = geometry.getAttribute('color');
+  const tint = new Float32Array(colors.count);
+  for (let i = 0; i < colors.count; i++) tint[i] = colors.getX(i) > 0.99 && colors.getY(i) > 0.99 && colors.getZ(i) > 0.99 ? 1 : 0;
+  geometry.setAttribute('aPaint', new THREE.BufferAttribute(tint, 1));
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 });
+  material.customProgramCacheKey = () => 'city-rider-paint';
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPaint;')
+      .replace('#include <color_vertex>', `vColor = vec4(color, 1.0);
+#ifdef USE_INSTANCING_COLOR
+if (aPaint > 0.5) vColor.rgb *= instanceColor;
+#endif`);
+  };
+  return material;
 }
 
 // ---- Walker material: limbs swing in the vertex shader (per-instance phase and amplitude) ----------------------------------------
@@ -553,7 +581,7 @@ export class CityLife {
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, mat, max);
       m.castShadow = false;
-      m.receiveShadow = false;
+      m.receiveShadow = true;
       m.frustumCulled = false;
       m.count = 0;
       m.visible = false;
@@ -570,8 +598,10 @@ export class CityLife {
     const envCar = envModels.geometry('car');
     const kCar = envCar ? null : cityModels.carGeometry();
     this.cars = envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
-    this.motos = mk(motoGeo(), carMat, 40);
-    this.bikes = mk(bikeGeo(), carMat, 40);
+    const moto = motoGeo();
+    const bike = bikeGeo();
+    this.motos = mk(moto, riderMaterial(moto), 40);
+    this.bikes = mk(bike, riderMaterial(bike), 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
