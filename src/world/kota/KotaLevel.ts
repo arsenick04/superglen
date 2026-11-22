@@ -458,14 +458,7 @@ export class KotaLevel implements Level {
     }
     if (state === 'rakus_letters') return;
     if (state === 'forest_home') {
-      this.forestAara = new AaraActor(this.lit, ctx.dialog);
-      this.forestAara.place(HILL_DOOR_SPOT.x + 1.8, HILL_DOOR_SPOT.z + 0.6, HILL_DOOR_SPOT.yaw ?? Math.PI);
-      this.forestAara.setLevel(3);
-      ctx.root.add(this.forestAara.group);
-      ctx.onDispose(() => this.forestAara?.dispose());
-      this.forestAaraFollower = new AaraFollower(this.forestAara, ctx.player);
-      this.forestAaraFollower.reset();
-      void ctx.dialog.say({ id: 'forest_aara_walk_home', speaker: 'aara', text: 'Langit sudah jingga. Aku temani kamu berjalan pulang, Glen!' });
+      // Aara stays in the Lab after hosting the quiz. Glen walks home alone.
       this.hud.show('Senja — pulang ke rumah', 0xffa35c, true);
     }
     if (state === 'forest_invite') {
