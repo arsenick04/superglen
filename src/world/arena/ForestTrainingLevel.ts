@@ -7,6 +7,7 @@ import { AaraActor } from '../kota/Aara';
 import type { Level, LevelContext } from '../Level';
 import type { MapSource } from '../MapSource';
 import { travel } from '../progress';
+import { buildForestScenery } from './ForestScenery';
 
 interface TreeStep {
   readonly x: number;
@@ -152,6 +153,7 @@ export class ForestTrainingLevel implements Level {
     for (const course of COURSES) this.buildCourse(kit, course);
     this.buildForest(kit);
     kit.build(ctx.root);
+    buildForestScenery(ctx);
     this.buildWindLeaves(ctx);
 
     this.nino = new NinoActor(ctx, -4, 25);

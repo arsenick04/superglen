@@ -1026,3 +1026,7 @@ Untuk dicoba: buka `?chapter=3&battle=1`, jinakkan satu Curut dengan laser/injak
 
 Pengendara sepeda/motor memakai bentuk membulat dan roda motor bulat; warna kulit, wajah, helm dan ban dipisahkan dari warna cat. Warga/kendaraan menerima bayangan lingkungan. Build, check:quiz dan reachability lulus. Pengujian browser diserahkan kepada pemilik sesuai permintaan. Coba jalan kota pada link normal dan perhatikan pengendara yang lewat; model mobil dan vegetasi Quaternius belum diganti dalam perubahan ini.
 
+# 22 November 2026 — contoh hutan Quaternius
+
+Empat aset asli (pohon rimbun, cemara, semak, batu) dikonversi ke GLB dengan tekstur WebP 512 px, total sekitar 1 MB. Grove contoh ada di belakang tempat berkumpul di latihan hutan, bisa dibuka dengan `?chapter=8&training=1`. Menggunakan instancing dan batang ber-collision; lintasan latihan tetap sama. Build, check:quiz dan reachability lulus. Browser/visual/performa belum diuji sesuai permintaan pemilik; perlu mencoba tekstur daun dan bayangan di iPhone. Warga belum memakai paket karakter manusia impor.
+
