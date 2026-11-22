@@ -406,14 +406,38 @@ export class KotaLevel implements Level {
   /** Warm late-afternoon light after the forest quiz, clearly distinct from the following morning. */
   private setSunset(): void {
     const { scene } = this.ctx;
-    scene.background = new THREE.Color(0xf08a62);
-    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(0xd98b72);
-    scene.environmentIntensity = 0.48;
-    this.hemi.color.setHex(0xffc28f);
-    this.hemi.groundColor.setHex(0x786b68);
-    this.hemi.intensity = 1.05;
-    this.sun.color.setHex(0xff9b62);
-    this.sun.intensity = 1.15;
+    // A vertical sky gradient keeps the horizon warm without flattening every
+    // object into the same orange colour. CanvasTexture is tiny and works on
+    // the same older browsers as the rest of the city renderer.
+    const canvas = document.createElement('canvas');
+    canvas.width = 2;
+    canvas.height = 256;
+    const paint = canvas.getContext('2d');
+    if (paint) {
+      const gradient = paint.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#405a9d');
+      gradient.addColorStop(0.52, '#9e78a0');
+      gradient.addColorStop(0.78, '#f19a6b');
+      gradient.addColorStop(1, '#ffd29a');
+      paint.fillStyle = gradient;
+      paint.fillRect(0, 0, canvas.width, canvas.height);
+      const sky = new THREE.CanvasTexture(canvas);
+      sky.colorSpace = THREE.SRGBColorSpace;
+      scene.background = sky;
+      this.ctx.onDispose(() => sky.dispose());
+    } else scene.background = new THREE.Color(0xb27688);
+    if (scene.fog instanceof THREE.Fog) {
+      scene.fog.color.setHex(0xb88991);
+      scene.fog.near *= 1.18;
+      scene.fog.far *= 1.08;
+    }
+    scene.environmentIntensity = 0.62;
+    this.hemi.color.setHex(0x92a7d8);
+    this.hemi.groundColor.setHex(0x6d504b);
+    this.hemi.intensity = 0.72;
+    this.sun.color.setHex(0xffb06f);
+    this.sun.intensity = 1.65;
+    this.sun.position.set(-95, 42, 70);
   }
 
   /** Story pauses that require Glen to walk home before the next morning. */
