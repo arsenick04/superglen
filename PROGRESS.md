@@ -1038,3 +1038,7 @@ Pohon round/pine non-far di seluruh tata letak kota kini memakai GLB Quaternius 
 
 Regresi PR #104: FBX dikonversi dengan batang sejajar sumbu Z di GLB, lalu normalisasi tinggi meratakan pohon. Pipeline kini memutar sumber ke Z-up Blender sebelum ekspor menjadi Y-up Three.js. Seluruh GLB pohon/semak/batu kota dan contoh hutan dibuat ulang. check-tree-assets.mjs memastikan empat model pohon tegak, pangkal dekat tanah dan tekstur tersedia; dijalankan otomatis setelah build-city-trees.mjs. Build, check:quiz dan reachability lulus; pemeriksaan visual iPhone tetap oleh pemilik.
 
+# 22 November 2026 — orientasi verteks pohon
+
+Rekaman pemilik setelah koreksi sumbu masih menunjukkan batang mendatar. Aset kini dibake ke koordinat Y-up langsung pada verteks dan matriks node identitas; memakai nama *_upright.glb agar referensi build berbeda dari aset lama. Loader menyalin geometri sebelum normalisasi sehingga tidak memutasi buffer sumber bersama. Pemeriksaan tambahan memvalidasi batang sendiri dalam koordinat lokal, bukan hanya bounding box scene. Build dan validasi aset lulus; tampilan serta FPS iPhone belum terverifikasi.
+
