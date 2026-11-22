@@ -5,9 +5,10 @@
  */
 export const Combat = {
   gorilla: {
-    stars: 3, starsEasy: 2, height: 2.5, arenaRadius: 14,
+    stars: 5, starsEasy: 3, height: 2.5, arenaRadius: 14,
     windup: 1.5, leapTime: 1.15, leapArc: 7, recover: 1.3,
-    cooldown: 1.2, retreatTime: 1.1, vulnerable: 5, hitRadius: 1.65, hitHeight: 2,
+    cooldown: 1, retreatTime: 1.1, vulnerable: 3.5, hitRadius: 1.65, hitHeight: 2,
+    fastLeapTime: .85, enrageWindScale: .8, impactTime: .55, slamArcScale: .75,
     missesToOpen: 2, targetRadius: 1.6,
   },
   hearts: {
