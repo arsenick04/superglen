@@ -806,6 +806,10 @@ export class Game {
       },
       setSkills: (sk, persist) => this.setSkills(sk, persist),
       setLaserSuppressed: (on) => { this.laser.suppressed = on; },
+      setHoseIcon: (on) => {
+        this.profile.hose = on;
+        this.applyLayout();
+      },
       setRiding: (on) => {
         this.profile.bike = on;
         this.applyLayout();
@@ -855,6 +859,7 @@ export class Game {
         this.hud?.setTransformHelp(false);
         this.profile.transform = false;
         this.profile.bike = false;
+        this.profile.hose = false;
         this.player.ride = null;
         this.player.rideLift = 0;
         this.player.flight.resetLevelSettings();

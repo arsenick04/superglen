@@ -77,6 +77,8 @@ export interface LevelGame {
   setSkills(skills: { laser?: boolean; shield?: boolean; fly?: boolean }, persist?: boolean): void;
   /** The laser button keeps working as an input but the beam stays off (the fire hose uses it). Reset on every level load. */
   setLaserSuppressed(on: boolean): void;
+  /** Fire hose level: the touch laser button shows a water drop instead of the bolt (reset on every level load). */
+  setHoseIcon(on: boolean): void;
   /** The city's bike: touch layout shows a bell on the big button while riding (reset on every level load). */
   setRiding(on: boolean): void;
   /** Older name: touch buttons for laser and shield (same as `setSkills({ laser, shield })`). */

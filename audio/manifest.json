@@ -16436,5 +16436,159 @@
     "peak_dbtp": -1.8,
     "generated_at": "2026-11-22T12:48:12.122Z",
     "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+  },
+  "ff_nino_hose": {
+    "id": "ff_nino_hose",
+    "speaker": "nino",
+    "voice_id": "q8qwd1jY2jS3AWOBeq25",
+    "voice": "Pratama - Clear, Confident and Warm",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.35,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": 2,
+    "lang": "id",
+    "hash": "9dc7b7219b1e13cd",
+    "tts": "[excited] Ini selang air! [instructive] Arahkan ke api, lalu tahan tombol semprot sampai apinya padam.",
+    "chars": 102,
+    "bytes": 63052,
+    "duration": 5.22,
+    "lufs": -16.5,
+    "peak_dbtp": -1.6,
+    "generated_at": "2026-11-23T01:22:56.235Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+  },
+  "ff_aara_help": {
+    "id": "ff_aara_help",
+    "speaker": "aara",
+    "voice_id": "d15jrIAARvF899pDoC6T",
+    "voice": "Kak Ceria - Cute Kids Storyteller",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.3,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": 0,
+    "lang": "id",
+    "hash": "7f0f63d00c26f373",
+    "tts": "[cheerful] Aku dan Nino juga menyemprot! [determined] Ayo kita padamkan semua api!",
+    "chars": 82,
+    "bytes": 47378,
+    "duration": 3.92,
+    "lufs": -16.5,
+    "peak_dbtp": -1.9,
+    "generated_at": "2026-11-23T01:22:59.879Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k"
+  },
+  "ff_nino_all_out": {
+    "id": "ff_nino_all_out",
+    "speaker": "nino",
+    "voice_id": "q8qwd1jY2jS3AWOBeq25",
+    "voice": "Pratama - Clear, Confident and Warm",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.35,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": 2,
+    "lang": "id",
+    "hash": "61e2791dd4a2bfb9",
+    "tts": "[relieved] Semua api sudah padam! [proud] Kerja bagus, Superglen!",
+    "chars": 65,
+    "bytes": 47692,
+    "duration": 3.94,
+    "lufs": -16.5,
+    "peak_dbtp": -1.6,
+    "generated_at": "2026-11-23T01:23:03.513Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+  },
+  "ff_aara_hooray": {
+    "id": "ff_aara_hooray",
+    "speaker": "aara",
+    "voice_id": "d15jrIAARvF899pDoC6T",
+    "voice": "Kak Ceria - Cute Kids Storyteller",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.3,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": 0,
+    "lang": "id",
+    "hash": "4f6fbbf3f3c5dd87",
+    "tts": "[happy] Hutannya selamat! [excited] Hore!",
+    "chars": 41,
+    "bytes": 29511,
+    "duration": 2.43,
+    "lufs": -16.4,
+    "peak_dbtp": -5.2,
+    "generated_at": "2026-11-23T01:23:06.811Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k"
+  },
+  "ff_glen_proud": {
+    "id": "ff_glen_proud",
+    "speaker": "glen",
+    "voice_id": "zmTMXWr9TzPTCLvo0Uqr",
+    "voice": "Finn - Expressive & Ads Indonesian",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.3,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": 2,
+    "lang": "id",
+    "hash": "120d44a989a7f09e",
+    "tts": "[proud] Kita berhasil bersama! [relieved] Tidak ada lagi api.",
+    "chars": 61,
+    "bytes": 49259,
+    "duration": 4.08,
+    "lufs": -16.6,
+    "peak_dbtp": -1.8,
+    "generated_at": "2026-11-23T01:23:10.460Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +2 st (rubberband)"
+  },
+  "ff_gorilla_thanks_g": {
+    "id": "ff_gorilla_thanks_g",
+    "speaker": "gorila",
+    "voice_id": "aJiaMo73BheNakP6EPev",
+    "voice": "Bagas - Deep & Relaxed",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.3,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": -2,
+    "lang": "id",
+    "hash": "d0500cde58fc9b13",
+    "tts": "[grateful] Terima kasih, Glen! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "chars": 82,
+    "bytes": 58036,
+    "duration": 4.81,
+    "lufs": -16.6,
+    "peak_dbtp": -1.9,
+    "generated_at": "2026-11-23T01:23:14.785Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +-2 st (rubberband)"
+  },
+  "ff_gorilla_thanks_sg": {
+    "id": "ff_gorilla_thanks_sg",
+    "speaker": "gorila",
+    "voice_id": "aJiaMo73BheNakP6EPev",
+    "voice": "Bagas - Deep & Relaxed",
+    "model": "eleven_v4",
+    "settings": {
+      "stability": 0.3,
+      "similarity_boost": 0.8
+    },
+    "pitchSemitones": -2,
+    "lang": "id",
+    "hash": "a7ffdb9197906a93",
+    "tts": "[grateful] Terima kasih, Superglen! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "chars": 87,
+    "bytes": 60544,
+    "duration": 5.02,
+    "lufs": -16.6,
+    "peak_dbtp": -1.8,
+    "generated_at": "2026-11-23T01:23:18.807Z",
+    "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +-2 st (rubberband)"
   }
 }

@@ -37,6 +37,7 @@ import { PlayerConfig, ModeTunings } from '../src/player/PlayerConfig';
 import { topOf, type Foothold, type KickAlley, type LevelReachData } from '../src/world/kits/ParkourData';
 import { ARENA_REACH } from '../src/world/arena/ArenaData';
 import { STREET_REACH } from '../src/world/bab1/StreetData';
+import { FIREFIGHT_REACH } from '../src/world/arena/FirefightData';
 import { KOTA_REACH } from '../src/world/kota/CityData';
 
 const R = Parkour.reachModel;
@@ -617,7 +618,7 @@ function selfTest(): Problem[] {
 // ---- Main -------------------------------------------------------------------------------------------------------------------------
 
 /** Registered levels. Add the Chapter 1 street here once it has a *Data.ts. */
-const LEVELS: LevelReachData[] = [ARENA_REACH, STREET_REACH, KOTA_REACH];
+const LEVELS: LevelReachData[] = [ARENA_REACH, STREET_REACH, KOTA_REACH, FIREFIGHT_REACH];
 const PENDING: string[] = [];
 
 function main(): void {

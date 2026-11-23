@@ -1601,5 +1601,40 @@
     "lang": "id",
     "text": "Kita harus segera ke sana. Gunakan jalur di belakang gedung Barongsai!",
     "delivery": "[urgent] Kita harus segera ke sana. [determined] Gunakan jalur di belakang gedung Barongsai!"
+  },
+  {
+    "id": "ff_nino_hose",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini selang air! Arahkan ke api, lalu tahan tombol semprot sampai apinya padam.",
+    "delivery": "[excited] Ini selang air! [instructive] Arahkan ke api, lalu tahan tombol semprot sampai apinya padam."
+  },
+  {
+    "id": "ff_aara_help",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Aku dan Nino juga menyemprot! Ayo kita padamkan semua api!",
+    "delivery": "[cheerful] Aku dan Nino juga menyemprot! [determined] Ayo kita padamkan semua api!"
+  },
+  {
+    "id": "ff_nino_all_out",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Semua api sudah padam! Kerja bagus, Superglen!",
+    "delivery": "[relieved] Semua api sudah padam! [proud] Kerja bagus, Superglen!"
+  },
+  {
+    "id": "ff_aara_hooray",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hutannya selamat! Hore!",
+    "delivery": "[happy] Hutannya selamat! [excited] Hore!"
+  },
+  {
+    "id": "ff_glen_proud",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kita berhasil bersama! Tidak ada lagi api.",
+    "delivery": "[proud] Kita berhasil bersama! [relieved] Tidak ada lagi api."
   }
 ]

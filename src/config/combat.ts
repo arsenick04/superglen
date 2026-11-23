@@ -6,22 +6,39 @@
 export const Combat = {
   /** Chapter 8 part 2: putting out the forest fire with water hoses (nothing hurts; every fire can be put out). */
   firefight: {
-    /** Fire spots (x, z) on the ground, all inside the walkable arena. The first ones are near the spawn. */
-    fires: [[-6, 14], [6, 14], [0, 22], [-12, 24], [12, 24], [-9, 6], [9, 6], [0, 8]] as ReadonlyArray<readonly [number, number]>,
-    /** Fires the NPCs spray at (indexes into `fires`); the player must put out all others. */
-    npcFires: { aara: [5, 3], nino: [6, 4] } as Readonly<Record<'aara' | 'nino', readonly number[]>>,
+    /**
+     * Fire spots. Ground fires have no `steps`. A tree fire sits on the top of `steps` round canopy platforms (Parkour.firefightTrees);
+     * the lower steps lead away from the fire along `dir` (radians; direction = (sin dir, cos dir)), so the child must jump up them
+     * to get into spray range. Every spot lies inside the walkable arena.
+     */
+    fires: [
+      { x: -5, z: 10 }, { x: -13, z: 15 }, { x: -8, z: 18 }, { x: 13, z: 15 }, { x: 8, z: 19 }, { x: 3, z: 18 },
+      { x: -20, z: 7, steps: 3, dir: Math.PI / 2 }, { x: -4, z: 26, steps: 3, dir: Math.PI },
+      { x: 20, z: 8, steps: 3, dir: -Math.PI / 2 }, { x: 19, z: 25, steps: 4, dir: -Math.PI / 2 },
+      { x: -19, z: 24, steps: 3, dir: Math.PI / 2 },
+    ] as ReadonlyArray<{ x: number; z: number; steps?: number; dir?: number }>,
+    /** Fires the NPCs spray at (indexes into `fires`; ground fires only); the player must put out all others. */
+    npcFires: { aara: [1, 2], nino: [3, 4] } as Readonly<Record<'aara' | 'nino', readonly number[]>>,
+    /** Low logs in front of some ground fires (x, z, length, rotation y): the child walks around or hops over. */
+    logs: [[3, 16, 5, 0], [-5, 8, 4, 0.3], [-13, 13, 3.5, 0.2]] as ReadonlyArray<readonly [number, number, number, number]>,
     /** Seconds of steady spraying that put one fire out (child). */
-    seconds: 1.8,
+    seconds: 2.4,
     /** Same for NPC helpers: slower, so the child always has work to do. */
-    npcSeconds: 5, npcDelay: 14,
-    /** Spray reach (m) and half-angle of the aim cone around facing / camera forward (degrees). */
-    range: 12, coneDeg: 60,
-    /** Any fire this close (m) is sprayed even when it is behind (a small child may face the wrong way). */
-    closeRange: 5,
+    npcSeconds: 9, npcDelay: 25,
+    /** Spray reach (m, 3D) and half-angle of the aim cone around facing / camera forward (degrees). */
+    range: 9, coneDeg: 45,
+    /** The nozzle sits this high above the feet (m); the target may be at most `maxUp` above the nozzle (tree fires need a canopy step). */
+    nozzleHeight: 0.9, maxUp: 2, targetHeight: 0.5,
+    /** Any ground fire this close (m) is sprayed even when it is behind (a small child may face the wrong way). */
+    closeRange: 4,
+    /** A helper's fire is only sprayed by the child when aimed at within this tight half-angle (degrees). */
+    helperConeDeg: 12,
     /** A fire grows back this fast (fraction/s) when nobody sprays it, up to its last size. */
-    regrow: 0.05,
+    regrow: 0.1,
+    /** Falling from a canopy step this high or more puts the child back on it (m). */
+    fallRespawnMin: 2.5,
     /** Visual: fire size at full strength (m), water particles per stream, stream arc height (m), speed (cycles/s). */
-    fireHeight: 2.2, particles: 26, arc: 0.9, flow: 1.5, particleSize: 0.3,
+    fireHeight: 2.2, particles: 26, arc: 1.2, flow: 1.5, particleSize: 0.3,
     /** Where the helpers stand (x, z) and where the player starts. */
     aaraAt: [-10, 14] as readonly [number, number], ninoAt: [10, 14] as readonly [number, number],
     spawn: { x: 0, y: 0, z: 2, yaw: 0 },

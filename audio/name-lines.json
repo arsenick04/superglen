@@ -539,6 +539,17 @@
     "elang_nino_menang_g",
     "elang_nino_menang_sg"
    ]
+  },
+  {
+   "id": "ff_gorilla_thanks",
+   "speaker": "gorila",
+   "template": "Terima kasih, {nama}! Hutanku selamat berkat kamu, Nino, dan Aara.",
+   "delivery": "[grateful] Terima kasih, {nama}! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
+   "file": "src/world/arena/FirefightLevel.ts",
+   "clips": [
+    "ff_gorilla_thanks_g",
+    "ff_gorilla_thanks_sg"
+   ]
   }
  ],
  "skipped": [
