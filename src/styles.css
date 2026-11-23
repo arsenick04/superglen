@@ -1801,12 +1801,12 @@ html.pad-ui .pad-focus {
   user-select: text;
 }
 
-/* ---- Glen's hearts: top centre (the gear and the fps pill are left, the coin counter right) ---- */
+/* ---- Glen's hearts: desktop top right under the coin counter; touch: a column at the left edge under the gear and drums
+   (clear of the dialog bubble, which starts 130 px from the edges, and of the joystick); in a fight see battle.css ---- */
 .hearts {
   position: absolute;
-  left: 50%;
-  top: calc(env(safe-area-inset-top) + 8px);
-  transform: translateX(-50%);
+  right: calc(env(safe-area-inset-right) + 10px);
+  top: calc(env(safe-area-inset-top) + 60px);
   display: flex;
   gap: 4px;
   padding: 4px 10px;
@@ -1832,12 +1832,17 @@ html.pad-ui .pad-focus {
   animation: heart-pop 0.5s ease-out;
 }
 html.touch-ui .hearts {
-  padding: 2px 8px;
-  gap: 2px;
+  right: auto;
+  left: calc(env(safe-area-inset-left) + 8px);
+  top: calc(env(safe-area-inset-top) + 94px);
+  flex-direction: column;
+  padding: 4px 4px;
+  gap: 1px;
+  border-radius: 14px;
 }
 html.touch-ui .hearts .heart {
-  width: 26px;
-  height: 24px;
+  width: 22px;
+  height: 20px;
 }
 @keyframes heart-pop {
   0% { transform: scale(1.5); }
@@ -1965,7 +1970,7 @@ html.touch-ui .city-toast {
 html.touch-ui .ch5-stars,
 html.touch-ui .ch3-count {
   top: calc(env(safe-area-inset-top) + 96px);
-  left: calc(env(safe-area-inset-left) + 14px);
+  left: calc(env(safe-area-inset-left) + 44px);
   transform: none;
 }
 html.touch-ui .ch5-stars {
@@ -1974,9 +1979,6 @@ html.touch-ui .ch5-stars {
 html.touch-ui .ch5-star {
   width: 34px;
   height: 34px;
-}
-html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .hearts {
-  top: calc(var(--dlg-bottom, calc(env(safe-area-inset-top) + 92px)) + 6px);
 }
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch5-stars,
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .ch3-count {
