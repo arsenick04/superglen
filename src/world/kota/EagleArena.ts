@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { startGate } from '../../core/StartGate';
 import { Combat } from '../../config/combat';
 import type { Level, LevelContext } from '../Level';
-import { travel } from '../progress';
+import { backToTraining, isPractice, travel } from '../progress';
 import { EagleBoss } from './EagleBoss';
 
 /** Separate night sky arena: the city is unloaded and Glen starts inside the fight. */
@@ -12,10 +12,13 @@ export class EagleArena implements Level {
   private ctx!: LevelContext;
   private boss!: EagleBoss;
   private finishing = false;
+  /** Practice fight from the Lab training room: no story progress, back to the room at the end. */
+  private practice = false;
   private lastExhaustions = 0;
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
+    this.practice = isPractice(this.id);
     this.lastExhaustions = ctx.health.exhaustions;
     ctx.scene.background = new THREE.Color(0x1b2d57);
     ctx.scene.fog = new THREE.Fog(0x253b61, 35, 100);
@@ -40,8 +43,17 @@ export class EagleArena implements Level {
     ctx.game.preloadCinematic('elang');
     ctx.game.preloadCinematic('elang-defeat');
     ctx.game.debugInfo.elangStage = 'fight';
+    if (this.practice) {
+      const exit = document.createElement('button');
+      exit.className = 'arena-return';
+      exit.textContent = 'Kembali ke ruang latihan';
+      exit.addEventListener('click', () => { if (!this.finishing) { this.finishing = true; ctx.battle.exit(); void backToTraining(ctx.game); } });
+      ctx.ui.appendChild(exit);
+      ctx.onDispose(() => exit.remove());
+    }
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
+      if (this.practice) { this.enterBattle(); return; }
       // The city approach already played it; direct arena previews and resumed fights still get the introduction.
       await ctx.game.playCinematic('elang');
       this.enterBattle();
@@ -155,6 +167,11 @@ export class EagleArena implements Level {
     ctx.seq.run(async () => {
       ctx.game.setControlsEnabled(false);
       ctx.battle.exit(true);
+      if (this.practice) {
+        await ctx.seq.wait(1.2);
+        await backToTraining(ctx.game);
+        return;
+      }
       await ctx.game.playCinematic('elang-defeat');
       ctx.game.setControlsEnabled(false);
       await ctx.dialog.say('elang_nino_menang', { lockControls: true });

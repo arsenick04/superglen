@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Level, LevelContext } from '../Level';
 import { MarketRats } from './MarketRats';
 import { MARKET, RATS } from './Bab3Data';
-import { travel } from '../progress';
+import { backToTraining, isPractice, travel } from '../progress';
 import { Combat, CombatRng } from '../../config/combat';
 
 /** A separate real-time encounter scene. City geometry and traffic are unloaded. */
@@ -12,12 +12,15 @@ export class CurutArena implements Level {
   private ctx!: LevelContext;
   private rats!: MarketRats;
   private leaving = false;
+  /** Practice fight from the Lab training room: no story progress, back to the room at the end. */
+  private practice = false;
   private victoryLeft = -1;
   private readonly battleFocus = { x: MARKET.hub.x, y: Combat.rat.arena.cameraLookY, z: 0 };
   private readonly screenPoint = new THREE.Vector3();
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
+    this.practice = isPractice(this.id);
     const { root, scene } = ctx;
     scene.background = new THREE.Color(0x62bdf5);
     scene.fog = new THREE.Fog(0xa6dbed, 45, 90);
@@ -52,15 +55,16 @@ export class CurutArena implements Level {
     const specs = RATS.map((r, i) => ({ ...r, cx: MARKET.hub.x + Math.sin(i * Math.PI * 2 / RATS.length) * arena.ratRingX, cz: Math.cos(i * Math.PI * 2 / RATS.length) * arena.ratRingZ, r: arena.ratLoopRadius }));
     this.rats = new MarketRats(ctx, {
       onTamed: (i) => {
+        if (this.practice) return;
         const t = ctx.save.data.bab3.tamed;
         if (!t.includes(i)) ctx.save.setBab3('chase', [...t, i]);
       },
       onCollect: () => {},
-    }, ctx.save.data.bab3.tamed, specs, false, true);
+    }, this.practice ? [] : ctx.save.data.bab3.tamed, specs, false, true);
     ctx.battle.enter({ id: 'curut_cemberut', name: 'Curut Cemberut', focus: () => this.battleFocus, arena: { x: MARKET.hub.x, z: 0, r: arena.radius }, stars: () => ({ left: this.rats.remaining, max: this.rats.n }), ownBar: true, intro: false, punchy: false });
     const exit = document.createElement('button');
     exit.className = 'arena-return';
-    exit.textContent = 'Kembali ke kota';
+    exit.textContent = this.practice ? 'Kembali ke ruang latihan' : 'Kembali ke kota';
     exit.addEventListener('click', () => this.leave(false));
     ctx.ui.appendChild(exit);
     ctx.onDispose(() => exit.remove());
@@ -92,12 +96,13 @@ export class CurutArena implements Level {
     this.leaving = true;
     const ctx = this.ctx;
     this.rats.muted = true;
-    if (won && ctx.save.data.bab3.step === 'chase') ctx.save.setBab3('count', ctx.save.data.bab3.tamed);
+    if (!this.practice && won && ctx.save.data.bab3.step === 'chase') ctx.save.setBab3('count', ctx.save.data.bab3.tamed);
     // A position inside this transient encounter must never remain the
     // preferred Continue slot after the encounter has ended.
     if (ctx.save.data.slot?.level === 'battle-curut') ctx.save.setSlot(null);
     ctx.battle.exit(won);
-    void travel(ctx.game, 'kota', 'marketBattle');
+    if (this.practice) void backToTraining(ctx.game);
+    else void travel(ctx.game, 'kota', 'marketBattle');
   }
 
   fixedUpdate(dt: number): void {

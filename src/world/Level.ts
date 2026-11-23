@@ -23,6 +23,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import type { QuizEngine } from '../quiz/QuizEngine';
 import type { MapSource } from './MapSource';
 import type { BattleMode } from '../gameplay/BattleMode';
+import type { CinematicId, CinematicOptions } from '../ui/CinematicPlayer';
 
 /**
  * A level (story chapter or test area). The LevelManager owns its whole life cycle:
@@ -62,8 +63,8 @@ export interface LevelGame {
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
   /** Play a one-shot cinematic overlay, if its asset is available. */
-  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win'): Promise<void>;
-  preloadCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win'): void;
+  playCinematic(id: CinematicId, opts?: CinematicOptions): Promise<void>;
+  preloadCinematic(id: CinematicId): void;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
   setPlayerMode(mode: PlayerMode, persist?: boolean): void;
   /**

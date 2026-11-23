@@ -1,4 +1,17 @@
-export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win';
+export type CinematicId = 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win' | 'ending';
+
+export interface CinematicOptions {
+  /**
+   * Keeps the layer up after the video (its last frame stays; a sky gradient when there is no video file) and runs this on top of it
+   * (the credit roll). The layer closes when the promise resolves. `stage` is an empty full-screen element on top of the video.
+   */
+  hold?: (stage: HTMLDivElement) => Promise<void>;
+}
+
+/** Is there a file public/cinematics/cin_<id>.mp4? (Known at build time, so a missing one is never requested.) */
+export function cinematicExists(id: CinematicId): boolean {
+  return typeof __CINEMATICS__ === 'undefined' || __CINEMATICS__.includes(id);
+}
 
 /** Small, skippable cinematic layer that fills the available screen. */
 export class CinematicPlayer {
@@ -40,7 +53,7 @@ export class CinematicPlayer {
 
   /** Hint the browser to cache the URL before the encounter. Never gate playback on this. */
   preload(id: CinematicId): void {
-    if (this.prepared.has(id)) return;
+    if (this.prepared.has(id) || !cinematicExists(id)) return;
     this.prepared.add(id);
     const url = `${import.meta.env.BASE_URL}cinematics/cin_${id}.mp4`;
     const hint = document.createElement('link');
@@ -49,9 +62,11 @@ export class CinematicPlayer {
     document.head.appendChild(hint);
   }
 
-  play(id: CinematicId): Promise<void> {
+  play(id: CinematicId, opts: CinematicOptions = {}): Promise<void> {
     if (this.played.has(id) || this.running) return Promise.resolve();
     this.played.add(id);
+    // No file (yet): skip gracefully, or just show the sky gradient behind the held overlay.
+    if (!cinematicExists(id)) return opts.hold ? this.holdOnly(opts.hold) : Promise.resolve();
     this.running = true;
     this.lock(true);
     this.layer.hidden = false;
@@ -61,6 +76,8 @@ export class CinematicPlayer {
     this.onPlayback(true);
     return new Promise<void>((resolve) => {
       let started = false;
+      let holding = false;
+      let holdStarted = false;
       let timeout = window.setTimeout(() => finish(), 12000);
       const onPlaying = (): void => {
         window.clearTimeout(timeout);
@@ -74,6 +91,24 @@ export class CinematicPlayer {
       };
       const finish = (): void => {
         window.clearTimeout(timeout);
+        if (opts.hold && !holdStarted && this.running) {
+          // Keep the last frame and run the overlay; the real finish comes when it is done.
+          holdStarted = true;
+          holding = true;
+          this.video.removeEventListener('playing', onPlaying);
+          this.video.removeEventListener('waiting', onWaiting);
+          this.video.removeEventListener('ended', finish);
+          this.video.removeEventListener('error', finish);
+          this.video.pause();
+          this.layer.style.visibility = '';
+          this.skip.hidden = true;
+          if (!this.video.videoWidth) this.layer.classList.add('cinematic-sky'); // nothing decoded: gradient instead of a black screen
+          this.onPlayback(false); // the voice-over plays on top
+          const stage = this.makeStage();
+          void opts.hold(stage).catch(() => undefined).then(() => { stage.remove(); holding = false; this.skip.hidden = false; this.layer.classList.remove('cinematic-sky'); finish(); });
+          return;
+        }
+        if (holding) return;
         this.video.removeEventListener('playing', onPlaying);
         this.video.removeEventListener('waiting', onWaiting);
         this.video.removeEventListener('ended', finish);
@@ -108,8 +143,37 @@ export class CinematicPlayer {
     });
   }
 
+  /** The hold overlay without any video: a sky gradient and the overlay on top. */
+  private holdOnly(hold: (stage: HTMLDivElement) => Promise<void>): Promise<void> {
+    this.running = true;
+    this.lock(true);
+    this.layer.hidden = false;
+    this.layer.classList.add('cinematic-sky');
+    this.skip.hidden = true;
+    const stage = this.makeStage();
+    return hold(stage).catch(() => undefined).then(() => {
+      stage.remove();
+      this.layer.classList.remove('cinematic-sky');
+      this.layer.hidden = true;
+      this.skip.hidden = false;
+      this.running = false;
+      this.lock(false);
+    });
+  }
+
+  private makeStage(): HTMLDivElement {
+    const stage = document.createElement('div');
+    stage.className = 'cinematic-stage';
+    this.layer.appendChild(stage);
+    return stage;
+  }
+
   private finish(): void {
     if (!this.running) return;
+    // Skipping the video of a held cinematic jumps to its last frame (the overlay then starts on it).
+    if (Number.isFinite(this.video.duration) && this.video.duration > 0) {
+      try { this.video.currentTime = Math.max(0, this.video.duration - 0.04); } catch { /* not seekable yet */ }
+    }
     this.video.pause();
     this.video.dispatchEvent(new Event('ended'));
   }

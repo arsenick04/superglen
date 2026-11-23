@@ -331,3 +331,9 @@ html.touch-ui .battle-banner.intro {
   z-index: 6;
 }
 .firefight-hud { top: calc(env(safe-area-inset-top) + 10px); padding: 6px 18px; font-size: 20px; }
+/* Held cinematic (the ending): the last frame stays and the credit roll sits on top; a sky gradient replaces a missing video. */
+.cinematic-layer.cinematic-sky { background: linear-gradient(180deg, #2f6fc0 0%, #6fb1ec 45%, #bfe3fa 78%, #fff1d6 100%); }
+.cinematic-layer.cinematic-sky .cinematic-video { visibility: hidden; }
+.cinematic-stage { position: absolute; inset: 0; z-index: 3; overflow: hidden; }
+.credit-line { position: absolute; left: 50%; top: 50%; width: min(86vw, 900px); margin: 0; text-align: center; color: #fff; opacity: 0; pointer-events: none; will-change: transform, opacity;
+  font: 600 clamp(24px, 4.4vw, 46px)/1.35 'Palatino Linotype', Palatino, 'Iowan Old Style', 'Book Antiqua', Georgia, serif; letter-spacing: .02em; text-shadow: 0 2px 10px rgba(0,0,0,.55), 0 0 22px rgba(0,0,0,.35); }
