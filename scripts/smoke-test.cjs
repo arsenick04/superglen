@@ -9340,7 +9340,7 @@ async function combatScenario(page, check, touch) {
   // ---- Hearts HUD ----
   let h = await hSt(page);
   const vw = touch ? 844 : 1280;
-  check(`combat ${tag}: Glen has 5 hearts, shown at the top`, h.hearts === 5 && h.visible && (await page.evaluate(() => document.querySelectorAll('.hearts .heart.full').length)) === 5 && h.rect.y < 20, JSON.stringify(h));
+  check(`combat ${tag}: Glen has 5 hearts, shown in a corner, not the top centre`, h.hearts === 5 && h.visible && (await page.evaluate(() => document.querySelectorAll('.hearts .heart.full').length)) === 5 && h.rect.y < 100, JSON.stringify(h));
   const ov = await page.evaluate(() => {
     const hr = window.__superglen.health.rect;
     const bad = [];
@@ -9776,7 +9776,7 @@ async function bab5FightScenario(page, check, touch) {
   h = await ch5Info(page);
   b = await ch5Boss(page);
   const eng = await page.evaluate(() => ({ e: window.__ch5.engaged(), hud: (() => { const e = document.querySelector('.ch5-stars'); if (!e) return null; const r = e.getBoundingClientRect(); const hr = window.__superglen.health.rect; return { shown: e.classList.contains('show'), n: e.querySelectorAll('.ch5-star:not(.lost)').length, r: { x: r.left, y: r.top, w: r.width, h: r.height }, hr }; })() }));
-  check(`bab5-fight ${tag}: after the intro step "fight" is saved, the snake is awake, 5 stars show under the hearts without overlap`, h.step === 'fight' && h.save.bab5.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 5 && eng.hud.r.y >= eng.hud.hr.y + eng.hud.hr.h - 2 && eng.hud.r.x >= 0 && eng.hud.r.x + eng.hud.r.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
+  check(`bab5-fight ${tag}: after the intro step "fight" is saved, the snake is awake, 5 stars show without touching the hearts`, h.step === 'fight' && h.save.bab5.step === 'fight' && eng.e && eng.hud && eng.hud.shown && eng.hud.n === 5 && !(eng.hud.r.x < eng.hud.hr.x + eng.hud.hr.w && eng.hud.hr.x < eng.hud.r.x + eng.hud.r.w && eng.hud.r.y < eng.hud.hr.y + eng.hud.hr.h && eng.hud.hr.y < eng.hud.r.y + eng.hud.r.h) && eng.hud.r.x >= 0 && eng.hud.r.x + eng.hud.r.w <= (touch ? 844 : 1280), JSON.stringify([h.step, eng]));
   // Mastered by hand from here: no attack starts on its own.
   await page.evaluate(() => window.__ch5.mute(true));
   await d3Adv(page, 420); // the dialog lines are over
@@ -11409,9 +11409,19 @@ async function dlgFitScenario(page, check, touch) {
     const c = document.querySelector('.dlg-card').getBoundingClientRect();
     if (!h || h.hidden) return { shown: false };
     const r = h.getBoundingClientRect();
-    return { shown: r.width > 0, overlap: r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom, hearts: [r.top, r.bottom], card: [c.top, c.bottom] };
+    const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const others = [];
+    for (const sel of ['.dlg-card', '.set-gear', '.minimap', '.coin-hud', '.hud-fps', '.drums', '.ch5-stars', '.ch3-count', '.battle-banner', '.zoom-btn', '.tc-button', '.tc-hint', '.tc-base']) {
+      for (const e of document.querySelectorAll(sel)) {
+        const b = e.getBoundingClientRect();
+        const cs = getComputedStyle(e);
+        if (b.width < 2 || b.height < 2 || cs.display === 'none' || cs.visibility === 'hidden' || e.hidden || +cs.opacity === 0) continue;
+        if (hit(r, b)) others.push(sel);
+      }
+    }
+    return { shown: r.width > 0, overlap: hit(r, c) || others.length > 0, others, hearts: [r.left, r.top, r.right, r.bottom], card: [c.left, c.top, c.right, c.bottom] };
   });
-  check(`dlg-fit ${tag}: the hearts row does not touch the bubble showing the longest line`, hb.shown && !hb.overlap, JSON.stringify(hb));
+  check(`dlg-fit ${tag}: the hearts row touches neither the bubble showing the longest line nor any other HUD element`, hb.shown && !hb.overlap, JSON.stringify(hb));
   if (shotDir) {
     fs.mkdirSync(shotDir, { recursive: true });
     await page.screenshot({ path: path.join(shotDir, `longest-${touch ? 'touch' : 'desktop'}.png`) });

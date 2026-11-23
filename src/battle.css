@@ -73,6 +73,7 @@ html.battle.battle .set-gear::before {
 /* Glen's hearts: top left, next to the pause icon (like a game's player bar). */
 html.battle.battle .hearts {
   left: calc(env(safe-area-inset-left) + 60px);
+  right: auto;
   top: calc(env(safe-area-inset-top) + 8px);
   transform: none;
   background: rgba(50, 12, 20, 0.6);
@@ -286,6 +287,11 @@ html.touch-ui.battle.battle.battle .ch5-star {
 }
 html.touch-ui.battle.battle .hearts {
   left: calc(env(safe-area-inset-left) + 56px);
+  top: calc(env(safe-area-inset-top) + 8px);
+  flex-direction: row;
+  padding: 2px 8px;
+  gap: 2px;
+  border-radius: 999px;
 }
 html.touch-ui.battle.battle .ch3-count {
   top: calc(env(safe-area-inset-top) + 100px);
