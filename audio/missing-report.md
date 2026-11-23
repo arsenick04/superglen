@@ -1,10 +1,10 @@
 # Laporan audit suara (otomatis: `npm run audio:audit`)
 
-Diaudit: 672 kalimat beride, 7 kalimat tanpa id.
-- ok: 655
+Diaudit: 690 kalimat beride, 7 kalimat tanpa id.
+- ok: 671
 - missing-clip: 8
 - stale-text: 0
-- missing-in-dialog-json: 9
+- missing-in-dialog-json: 11
 - menunggu varian nama (tidak dibuat sekarang): 8
 - perlu dibuat sekarang: 0 kalimat, sekitar 0 karakter
 
@@ -31,12 +31,14 @@ Diaudit: 672 kalimat beride, 7 kalimat tanpa id.
 | id | speaker | text | status | chars | src |
 |---|---|---|---|---|---|
 | demo_halo | nino | Halo! | missing-in-dialog-json | 5 | src/world/DemoLevel.ts:58 |
-| ff_gorilla_thanks | gorila | Terima kasih, {nama}! Hutanku selamat berkat kamu, Nino, dan Aara. | missing-in-dialog-json | 66 | src/world/arena/FirefightLevel.ts:25 |
-| forest_gorilla_sorry | gorila | Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json | 72 | src/world/arena/GorillaArena.ts:170 |
-| forest_aara_quiz_ready | aara | Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}! | missing-in-dialog-json | 57 | src/world/bab1/Bab1Level.ts:203 |
-| forest_aara_quiz_complete | aara | Hebat! Lima pertanyaan berhasil kamu jawab, {nama}! | missing-in-dialog-json | 51 | src/world/bab1/Bab1Level.ts:207 |
-| forest_aara_sunset | aara | Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}! | missing-in-dialog-json | 60 | src/world/bab1/Bab1Level.ts:209 |
-| forest_nino_fire | nino | {nama}, lihat layar! Ada kebakaran besar di Hutan Botanica! | missing-in-dialog-json | 59 | src/world/bab1/Bab1Level.ts:232 |
+| ff_gorilla_thanks | gorila | Terima kasih, {nama}! Hutanku selamat berkat kamu, Nino, dan Aara. | missing-in-dialog-json | 66 | src/world/arena/FirefightLevel.ts:26 |
+| forest_gorilla_sorry | gorila | Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json | 72 | src/world/arena/GorillaArena.ts:195 |
+| forest_aara_quiz_ready | aara | Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}! | missing-in-dialog-json | 57 | src/world/bab1/Bab1Level.ts:217 |
+| forest_aara_quiz_complete | aara | Hebat! Lima pertanyaan berhasil kamu jawab, {nama}! | missing-in-dialog-json | 51 | src/world/bab1/Bab1Level.ts:221 |
+| forest_aara_sunset | aara | Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}! | missing-in-dialog-json | 60 | src/world/bab1/Bab1Level.ts:223 |
+| forest_nino_fire | nino | {nama}, lihat layar! Ada kebakaran besar di Hutan Botanica! | missing-in-dialog-json | 59 | src/world/bab1/Bab1Level.ts:246 |
+| lab_aara_kuis_halo | aara | Halo, {nama}! Ayo main Tantangan Pintar bersamaku! | missing-in-dialog-json | 50 | src/world/bab1/LabAaraHost.ts:8 |
+| lab_nino_latihan_1 | nino | Selamat datang di Ruang Latihan, {nama}! Semua lawanmu tersimpan di sini sebagai hologram. | missing-in-dialog-json | 90 | src/world/ending/TrainingRoomLevel.ts:18 |
 | forest_aara_home | aara | Pagi, {nama}! Nino mengajak kita ke Lab. Katanya ada tempat latihan baru! | missing-in-dialog-json | 73 | src/world/kota/KotaLevel.ts:486 |
 | forest_nino_urgent | nino | {nama}, segera datang ke Lab! Ada keadaan genting di Hutan Botanica! | missing-in-dialog-json | 68 | src/world/kota/KotaLevel.ts:518 |
 
@@ -69,7 +71,7 @@ Diaudit: 672 kalimat beride, 7 kalimat tanpa id.
 
 (semua ada)
 
-## ok (655)
+## ok (671)
 
 Tidak dirinci; jalankan audit untuk daftar penuh dengan --json=file.
 

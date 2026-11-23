@@ -2106,6 +2106,150 @@
     "category": "lainnya"
   },
   {
+    "id": "lab_nino_latihan_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih lawan yang kamu mau, lalu berjalanlah ke depan hologramnya.",
+    "tts": "[cheerful] Pilih lawan yang kamu mau, lalu berjalanlah ke depan hologramnya.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "lab_nino_latihan_3",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!",
+    "tts": "[excited] Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "lab_nino_latihan_4",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Setelah selesai, kamu kembali ke sini. Selamat berlatih!",
+    "tts": "[warm] Setelah selesai, kamu kembali ke sini. Selamat berlatih!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_pujian_02",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Keren sekali!",
+    "tts": "[proud] Keren sekali!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_pujian_08",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hore, kita berhasil!",
+    "tts": "[excited] Hore, kita berhasil!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_semangat_01",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ayo, kamu pasti bisa!",
+    "tts": "[cheerful] Ayo, kamu pasti bisa!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_semangat_02",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Satu lagi, ayo semangat!",
+    "tts": "[excited] Satu lagi, ayo semangat!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_semangat_04",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Sedikit lagi, kamu hampir sampai!",
+    "tts": "[playful] Sedikit lagi, kamu hampir sampai!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_coba_01",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hampir! Coba lagi, ya.",
+    "tts": "[warm] Hampir! Coba lagi, ya.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_coba_02",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Tidak apa-apa, coba lagi.",
+    "tts": "[warm] Tidak apa-apa, coba lagi.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_coba_03",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hampir sekali! Ayo coba lagi.",
+    "tts": "[playful] Hampir sekali! Ayo coba lagi.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_nino_coba_04",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pelan-pelan saja, kita coba lagi.",
+    "tts": "[warm] Pelan-pelan saja, kita coba lagi.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_quiz_nino_selesai",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Tantangan selesai! Ini koin dan stikermu.",
+    "tts": "[excited] Tantangan selesai! Ini koin dan stikermu!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_quiz_nino_tinggal",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ini dia! Ketuk yang ini ya.",
+    "tts": "[cheerful] Ini dia! Ketuk yang ini ya.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_quiz_nino_kepingan",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Wah, kamu dapat kepingan memori ilmuwan!",
+    "tts": "[amazed] Wah, kamu dapat kepingan memori ilmuwan!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "aara_quiz_nino_album",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Ini album stikermu!",
+    "tts": "[cheerful] Ini album stikermu!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
@@ -6863,6 +7007,132 @@
     "lang": "id",
     "text": "Terima kasih, Superglen! Hutanku selamat berkat kamu, Nino, dan Aara.",
     "tts": "[grateful] Terima kasih, Superglen! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "lab_nino_latihan_1_g",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang di Ruang Latihan, Glen! Semua lawanmu tersimpan di sini sebagai hologram.",
+    "tts": "[excited] Selamat datang di Ruang Latihan, Glen! Semua lawanmu tersimpan di sini sebagai hologram.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "lab_nino_latihan_1_sg",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Selamat datang di Ruang Latihan, Superglen! Semua lawanmu tersimpan di sini sebagai hologram.",
+    "tts": "[excited] Selamat datang di Ruang Latihan, Superglen! Semua lawanmu tersimpan di sini sebagai hologram.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "lab_aara_kuis_halo_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Halo, Glen! Ayo main Tantangan Pintar bersamaku!",
+    "tts": "[cheerful] Halo, Glen! Ayo main Tantangan Pintar bersamaku!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "lab_aara_kuis_halo_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Halo, Superglen! Ayo main Tantangan Pintar bersamaku!",
+    "tts": "[cheerful] Halo, Superglen! Ayo main Tantangan Pintar bersamaku!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_01_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Mantap, Glen!",
+    "tts": "[cheerful] Mantap, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_01_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Mantap, Superglen!",
+    "tts": "[cheerful] Mantap, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_05_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kamu hebat, Glen!",
+    "tts": "[warm] Kamu hebat, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_05_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kamu hebat, Superglen!",
+    "tts": "[warm] Kamu hebat, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_06_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kamu berhasil, Glen!",
+    "tts": "[cheerful] Kamu berhasil, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_06_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Kamu berhasil, Superglen!",
+    "tts": "[cheerful] Kamu berhasil, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_07_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pintar sekali, Glen!",
+    "tts": "[playful] Pintar sekali, Glen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_pujian_07_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pintar sekali, Superglen!",
+    "tts": "[playful] Pintar sekali, Superglen!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_semangat_03_g",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pelan-pelan, Glen. Kamu bisa!",
+    "tts": "[warm] Pelan-pelan, Glen. Kamu bisa!",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "aara_nino_semangat_03_sg",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Pelan-pelan, Superglen. Kamu bisa!",
+    "tts": "[warm] Pelan-pelan, Superglen. Kamu bisa!",
     "source": "audio/name-lines.json",
     "category": "nama"
   }

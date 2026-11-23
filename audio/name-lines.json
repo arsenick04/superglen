@@ -550,6 +550,83 @@
     "ff_gorilla_thanks_g",
     "ff_gorilla_thanks_sg"
    ]
+  },
+  {
+   "id": "lab_nino_latihan_1",
+   "speaker": "nino",
+   "template": "Selamat datang di Ruang Latihan, {nama}! Semua lawanmu tersimpan di sini sebagai hologram.",
+   "delivery": "[excited] Selamat datang di Ruang Latihan, {nama}! Semua lawanmu tersimpan di sini sebagai hologram.",
+   "file": "src/world/ending/TrainingRoomLevel.ts",
+   "clips": [
+    "lab_nino_latihan_1_g",
+    "lab_nino_latihan_1_sg"
+   ]
+  },
+  {
+   "id": "lab_aara_kuis_halo",
+   "speaker": "aara",
+   "template": "Halo, {nama}! Ayo main Tantangan Pintar bersamaku!",
+   "delivery": "[cheerful] Halo, {nama}! Ayo main Tantangan Pintar bersamaku!",
+   "file": "src/world/bab1/LabAaraHost.ts",
+   "clips": [
+    "lab_aara_kuis_halo_g",
+    "lab_aara_kuis_halo_sg"
+   ]
+  },
+  {
+   "id": "aara_nino_pujian_01",
+   "speaker": "aara",
+   "template": "Mantap, {nama}!",
+   "delivery": "[cheerful] Mantap, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "aara_nino_pujian_01_g",
+    "aara_nino_pujian_01_sg"
+   ]
+  },
+  {
+   "id": "aara_nino_pujian_05",
+   "speaker": "aara",
+   "template": "Kamu hebat, {nama}!",
+   "delivery": "[warm] Kamu hebat, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "aara_nino_pujian_05_g",
+    "aara_nino_pujian_05_sg"
+   ]
+  },
+  {
+   "id": "aara_nino_pujian_06",
+   "speaker": "aara",
+   "template": "Kamu berhasil, {nama}!",
+   "delivery": "[cheerful] Kamu berhasil, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "aara_nino_pujian_06_g",
+    "aara_nino_pujian_06_sg"
+   ]
+  },
+  {
+   "id": "aara_nino_pujian_07",
+   "speaker": "aara",
+   "template": "Pintar sekali, {nama}!",
+   "delivery": "[playful] Pintar sekali, {nama}!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "aara_nino_pujian_07_g",
+    "aara_nino_pujian_07_sg"
+   ]
+  },
+  {
+   "id": "aara_nino_semangat_03",
+   "speaker": "aara",
+   "template": "Pelan-pelan, {nama}. Kamu bisa!",
+   "delivery": "[warm] Pelan-pelan, {nama}. Kamu bisa!",
+   "file": "content/nino_variasi.json",
+   "clips": [
+    "aara_nino_semangat_03_g",
+    "aara_nino_semangat_03_sg"
+   ]
   }
  ],
  "skipped": [
