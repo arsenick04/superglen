@@ -79,6 +79,10 @@ Dibuat dengan `npm run env-assets` (scripts/build-env-assets.mjs + scripts/env-k
 - Gedung khusus (gedung tua Barongsai, sekolah, pasar, gudang, bank, rumah sakit, rumah Glen): milik pemilik proyek (Higgsfield + Tripo), `art/models/buildings/`, dioptimalkan ke `public/env/buildings/`.
 - Langit dan cahaya: "Kloofendal 48d Partly Cloudy (Pure Sky)" oleh Greg Zaal, Poly Haven (https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky), CC0 1.0. `public/env/sky/`.
 
+# Tumbuhan kota Quaternius Stylized Nature MegaKit (23 November 2026)
+
+Pohon, pinus, semak, hamparan bunga, rumput, dan batu di kota (dan hutan latihan) memakai model dari **Stylized Nature MegaKit** oleh **Quaternius** (https://quaternius.com/packs/stylizednaturemegakit.html), lisensi **CC0 1.0** (domain publik, https://creativecommons.org/publicdomain/zero/1.0/): tanpa kewajiban atribusi, dicantumkan sebagai ucapan terima kasih. File glTF diperoleh lewat salinan di GitHub (https://github.com/Bass2Gamer/Godot-Bachelor, folder assets/Nature/glTF) karena halaman unduhan resmi (itch.io) tidak bisa dijangkau dari lingkungan pengembangan. Perubahan Superglen (`scripts/build-megakit.mjs`): hanya 6 model dipakai, disederhanakan (jumlah segitiga diturunkan), semua tekstur digabung menjadi satu atlas WebP 2048 x 1024, warna hijau dibuat lebih hangat dan jenuh. Hasil: `public/env/megakit/megakit.glb`. Tidak ada hubungan dukungan dari pembuat aset.
+
 # Contoh hutan Quaternius (22 November 2026)
 
 Model `NormalTree_1`, `PineTree_2`, `Bush`, dan `Rock_1` serta teksturnya berasal dari Quaternius Ultimate Stylized Nature, melalui https://github.com/walterpalladino/godot-quaternius-ultimate-stylized-nature . Salinan lisensi MIT yang disertakan repositori sumber ada di `public/env/quaternius/LICENSE.txt` (copyright Walter H. Palladino untuk distribusi Godot). Pembuat aset: Quaternius, https://quaternius.com . Model dikonversi dari FBX ke GLB dan tekstur diperkecil menjadi WebP 512 px. Contoh ditaruh di belakang area awal latihan hutan; belum mengganti seluruh pepohonan kota.
