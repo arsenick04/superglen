@@ -80,3 +80,6 @@ Model `NormalTree_1`, `PineTree_2`, `Bush`, dan `Rock_1` serta teksturnya berasa
 
 ## Suara pemilik proyek (Daddy)
 Pesan penutup `credit_daddy_1..3.mp3` adalah rekaman suara asli pemilik proyek (bukan ElevenLabs, tanpa kredit TTS); hanya dibersihkan dengan ffmpeg. Asli: `audio/recorded-originals/daddy/Daddy.m4a`.
+
+## Musik kredit akhir
+`public/audio/music/credits.mp3` adalah lagu karya pemilik proyek sendiri (bagian piano/instrumental saja, tanpa vokal; dipotong, disambung, dinormalisasi dengan ffmpeg). Tanpa lisensi pihak ketiga.
