@@ -269,6 +269,8 @@ export class SaveStore {
   readonly previewGorillaBattle: boolean;
   readonly previewFirefight: boolean;
   readonly previewLetters: boolean;
+  /** `?lab=1&done=1`: the finished story in the Lab, held in memory only (the real save is never touched). */
+  readonly previewLabDone: boolean;
 
   constructor() {
     const query = new URLSearchParams(window.location.search);
@@ -284,13 +286,22 @@ export class SaveStore {
     this.previewFirefight = this.previewChapter === 8 && query.get('firefight') === '1';
     const letters = query.getAll('letters');
     this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
-    if (this.previewChapter || query.get('reset') === '1') this.reset();
+    this.previewLabDone = !this.previewChapter && query.get('lab') === '1' && query.get('done') === '1';
+    if (this.previewChapter || this.previewLabDone || query.get('reset') === '1') this.reset();
     else this.reload();
   }
 
   private freshData(): SaveData {
     const data = defaults();
     const chapter = this.previewChapter;
+    if (this.previewLabDone) {
+      data.chaptersDone.push('bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6', 'bab7', 'bab8', 'forest-firefight', 'ending');
+      data.discovered.lab = true;
+      data.where = 'lab';
+      data.lastMode = 'superglen';
+      data.skills = { laser: true, shield: true, fly: true };
+      return data;
+    }
     if (!chapter) return data;
     for (let i = 1; i < chapter; i++) data.chaptersDone.push(`bab${i}`);
     data.discovered.lab = chapter >= 2;
@@ -309,7 +320,7 @@ export class SaveStore {
 
   /** Re-read from storage (or keep the in-memory data when storage is unavailable or corrupt). */
   reload(): void {
-    if (this.previewChapter) {
+    if (this.previewChapter || this.previewLabDone) {
       this.data = this.freshData();
       return;
     }
@@ -323,7 +334,7 @@ export class SaveStore {
 
   /** Write to storage. Failure is silent: progress stays in memory for this session. */
   persist(): void {
-    if (this.previewChapter) return;
+    if (this.previewChapter || this.previewLabDone) return;
     try {
       window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
@@ -334,7 +345,7 @@ export class SaveStore {
   /** Forget everything (also used by `?reset=1`). */
   reset(): void {
     this.data = this.freshData();
-    if (this.previewChapter) return;
+    if (this.previewChapter || this.previewLabDone) return;
     try {
       window.localStorage.removeItem(SAVE_KEY);
     } catch {

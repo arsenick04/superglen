@@ -30,7 +30,16 @@ Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/mu
 | Adegan | File | Pencipta | Lisensi |
 |---|---|---|---|
 | Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3`, `battle_a.mp3`, `battle_b.mp3` (pertarungan) | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
+| Kredit akhir | `credits.mp3` (adegan `kredit`, sekali putar, fade in/out; ditambahkan saat file tersedia) | (isi saat file ada) | (isi saat file ada) |
 | Berubah jadi Superglen | `theme_berubah_tagline.mp3`, `theme_berubah.mp3`, `superglen_theme*.mp3` | lagu tema Superglen milik pemilik proyek (dibuat dengan Suno) | milik pemilik proyek |
+
+## Huruf (fonts)
+Kredit akhir memakai dua huruf gratis berlisensi SIL Open Font License 1.1 (boleh dipakai dan disertakan dalam game), diunduh dari Google Fonts (subset latin, woff2) dan disimpan di `public/fonts/`, tanpa dependensi npm:
+
+| Huruf | Dipakai untuk | File | Lisensi |
+|---|---|---|---|
+| Cinzel (The Cinzel Project Authors) | judul "SUPERGLEN" dan kepala kredit | `public/fonts/Cinzel-latin.woff2`, `OFL-Cinzel.txt` | SIL OFL 1.1 |
+| Cormorant Garamond (Cormorant Project Authors) | baris kredit | `public/fonts/CormorantGaramond-500-latin.woff2`, `CormorantGaramond-500i-latin.woff2`, `OFL-CormorantGaramond.txt` | SIL OFL 1.1 |
 
 ## Suara hewan (domain publik / CC0)
 
@@ -80,3 +89,6 @@ Model `NormalTree_1`, `PineTree_2`, `Bush`, dan `Rock_1` serta teksturnya berasa
 
 ## Suara pemilik proyek (Daddy)
 Pesan penutup `credit_daddy_1..3.mp3` adalah rekaman suara asli pemilik proyek (bukan ElevenLabs, tanpa kredit TTS); hanya dibersihkan dengan ffmpeg. Asli: `audio/recorded-originals/daddy/Daddy.m4a`.
+
+## Musik kredit akhir
+`public/audio/music/credits.mp3` adalah lagu karya pemilik proyek sendiri (bagian piano/instrumental saja, tanpa vokal; dipotong, disambung, dinormalisasi dengan ffmpeg). Tanpa lisensi pihak ketiga.

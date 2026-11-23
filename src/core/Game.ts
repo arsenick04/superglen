@@ -916,8 +916,8 @@ export class Game {
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
     const query = new URLSearchParams(window.location.search);
-    // Debug shortcuts: ?ending=1 (the credits) and ?training=1 (the Lab hologram training room).
-    const wanted = this.save.previewChapter ? null : query.get('level') ?? (query.get('ending') === '1' ? 'ending' : query.get('training') === '1' ? 'training-room' : null);
+    // Debug shortcuts: ?ending=1 (the credits), ?training=1 (the Lab hologram training room), ?lab=1 (the Lab; add &done=1 for the finished story).
+    const wanted = this.save.previewChapter ? null : query.get('level') ?? (query.get('ending') === '1' ? 'ending' : query.get('training') === '1' ? 'training-room' : query.get('lab') === '1' ? 'lab' : null);
     flow.sandbox = false;
     flow.free = false;
     if (wanted && this.levels.has(wanted)) {

@@ -221,7 +221,9 @@ export class QuizEngine {
     const taken = new Set<string>();
     this.panel.openChallenge(reason, reason === 'terminal', opts.promptSpeaker ?? 'nino');
     // Nino's feedback lines are needed in every challenge; each question's own files are loaded as it is chosen.
-    this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
+    // (With Aara as host the feedback clips are her own `aara_<id>` files; a missing one is simply text.)
+    const hostIds = [...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()];
+    this.deps.audio.preload(opts.promptSpeaker === 'aara' ? hostIds.map((id) => `aara_${id}`) : hostIds);
     for (let i = 0; i < count; i++) {
       const q = this.choose(cats[i], taken, opts.questionSet);
       taken.add(q.id);

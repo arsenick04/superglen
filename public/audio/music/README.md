@@ -14,5 +14,6 @@ Taruh soundtrack sendiri di folder ini.
 | `berubah` | saat berubah jadi Superglen |
 | `latihan` | area latihan |
 | `pertarungan` | pertarungan |
+| `kredit` | kredit akhir (`credits.mp3`; diputar sekali, tanpa ulang; kalau file belum ada, tanpa musik) |
 
 Contoh: `"awal": "tema-awal.mp3"`. Catat sumber lagu di `CREDITS.md`.

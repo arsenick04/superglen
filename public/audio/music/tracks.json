@@ -15,5 +15,9 @@
   "pertarungan": {
     "file": "battle_b.mp3",
     "volume": 0.7
+  },
+  "kredit": {
+    "file": "credits.mp3",
+    "volume": 0.7
   }
 }

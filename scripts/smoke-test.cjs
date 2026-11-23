@@ -11824,17 +11824,18 @@ async function endingScenario(page, check, touch) {
     const L = document.querySelector('.cinematic-layer'), line = document.querySelector('.credit-line');
     return { shown: !!L && !L.hidden, sky: !!L && L.classList.contains('cinematic-sky'), text: line ? line.textContent : null, op: line ? Number(line.style.opacity) : -1, st: window.__superglen.levelInfo.ending, lvl: window.__superglen.level };
   });
-  check(`ending ${tag}: the credit roll shows its first line over the held film (sky gradient when the film cannot play)`, a.shown && a.text === 'Dari Daddy, untuk Glen.', JSON.stringify({ ...a, req }));
-  if (process.env.SHOTS) { await sleep(1200); await page.screenshot({ path: path.join(process.env.SHOTS, `ending-credits-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); }
-  // A tap before the first line is done does not skip.
-  if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy);
-  await sleep(500);
-  check(`ending ${tag}: a tap during the first line does not skip the roll`, (await page.evaluate(() => window.__superglen.level)) === 'ending');
-  if (touch) {
-    // After the first line (about 5.4 s) a tap skips to the training room.
-    await sleep(6500);
-    await page.touchscreen.tap(cx, cy);
-  }
+  check(`ending ${tag}: the credit roll opens with the SUPERGLEN title card over the held film (sky gradient when the film cannot play)`, a.shown && a.text === 'SUPERGLEN', JSON.stringify({ ...a, req }));
+  const fonts = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const el = document.querySelector('.credit-line');
+    return { cinzel: document.fonts.check("700 40px Cinzel"), cormorant: document.fonts.check("italic 500 40px 'Cormorant Garamond'"), loaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family), family: el ? getComputedStyle(el).fontFamily : '', music: window.__superglen.audio.musicScene };
+  });
+  check(`ending ${tag}: the credit fonts (Cinzel, Cormorant Garamond) are loaded and the missing credits.mp3 breaks nothing`, fonts.cinzel && fonts.cormorant && /Cinzel/.test(fonts.family) && fonts.music === 'kredit', JSON.stringify(fonts));
+  if (process.env.SHOTS) { await sleep(900); await page.screenshot({ path: path.join(process.env.SHOTS, `ending-title-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); }
+  await page.waitForFunction(() => { const l = document.querySelector('.credit-line'); return !!l && l.textContent === 'Dari Daddy, untuk Glen.'; }, null, { timeout: 20000 }).catch(() => {});
+  if (process.env.SHOTS) { await sleep(2200); await page.screenshot({ path: path.join(process.env.SHOTS, `ending-credits-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); }
+  // The title card has passed (the first line is on): a tap skips from now on. (The earlier tap on the title did not.)
+  if (touch) await page.touchscreen.tap(cx, cy);
   await page.waitForFunction(() => window.__superglen.level === 'training-room' && !window.__superglen.loading, null, { timeout: touch ? 20000 : 60000 });
   const b = await page.evaluate(() => ({ lvl: window.__superglen.level, layer: !document.querySelector('.cinematic-layer') || document.querySelector('.cinematic-layer').hidden, ctl: window.__superglen.controlsEnabled }));
   check(`ending ${tag}: the credits ${touch ? 'are skipped by a tap' : 'play to the end'} and Superglen arrives in the training room, overlay closed`, b.lvl === 'training-room' && b.layer, JSON.stringify(b));
@@ -11853,9 +11854,12 @@ async function trainingScenario(page, check, touch, only = null) {
   if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy);
   await page.waitForFunction(() => window.__superglen.dialog.open, null, { timeout: 45000 }).catch(() => {});
   const a = await page.evaluate(() => ({ holo: window.__superglen.levelInfo.holograms, dlg: window.__superglen.dialog.open, text: window.__superglen.dialog.text }));
-  check(`training ${tag}: five holograms stand on their pedestals and Nino greets the child`, a.holo === 5 && a.dlg && /hologram/.test(a.text || ''), JSON.stringify(a));
+  check(`training ${tag}: five holograms stand on their pedestals and Nino starts the tutorial`, a.holo === 5 && a.dlg && /hologram/.test(a.text || ''), JSON.stringify(a));
+  const signs = await page.evaluate(() => ({ n: window.__superglen.levelInfo.trainingSigns }));
+  check(`training ${tag}: a big name sign stands over each of the five holograms`, signs.n === 5, JSON.stringify(signs));
   if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `training-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
-  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 200 && g.dialog.open; i++) { try { g.dialog.advance?.(); } catch (e) { /* */ } await g.advanceAsync(30, false); } });
+  const tut = await page.evaluate(async () => { const g = window.__superglen; const ids = []; for (let i = 0; i < 300 && (g.dialog.open || ids.length < 4); i++) { if (g.dialog.open && g.dialog.id && ids[ids.length - 1] !== g.dialog.id) ids.push(g.dialog.id); try { g.dialog.advance?.(); } catch (e) { /* */ } await g.advanceAsync(30, false); } return { ids, done: g.save.isChapterDone('training-tutorial') }; });
+  check(`training ${tag}: the tutorial is four short lines (lab_nino_latihan_1..4) and is remembered as heard`, tut.ids.join(',').replace(/_(g|sg)/g, '') === 'lab_nino_latihan_1,lab_nino_latihan_2,lab_nino_latihan_3,lab_nino_latihan_4' && tut.done, JSON.stringify(tut));
   const btn = await page.evaluate(() => JSON.parse(window.__superglen.levelInfo.trainingButtons));
   const want = { curut: 'battle-curut', ular: 'practice-ular', rakus: 'practice-rakus', elang: 'battle-elang', gorilla: 'practice-gorilla' };
   if (process.env.SHOTS && (!only || only[0] === 'curut')) {
@@ -11891,6 +11895,103 @@ async function trainingScenario(page, check, touch, only = null) {
     const back = await page.evaluate(() => ({ lvl: window.__superglen.level, holo: window.__superglen.levelInfo.holograms, dlg: window.__superglen.dialog.open }));
     check(`training ${tag}: leaving the ${b.kind} practice returns to the training room without the greeting`, back.lvl === 'training-room' && back.holo === 5 && !back.dlg, JSON.stringify(back));
   }
+}
+
+// ---- Finished story in the Lab: training door beside Nino, Aara hosts the quiz in place of the computer: groups `lab-done`, `lab-done-touch` ----
+async function labDoneScenario(page, check, touch, part = 'all') {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const [cx, cy] = touch ? [422, 195] : [640, 360];
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  const tap = async () => { if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy); };
+  const press = async (key) => { await page.keyboard.down(key); await adv(8); await page.keyboard.up(key); await adv(4); };
+  const closeDialogs = () => page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 300 && g.dialog.open; i++) { try { g.dialog.advance?.(); } catch (e) { /* */ } await g.advanceAsync(30, false); } });
+  const info = () => page.evaluate(() => ({ door: window.__superglen.levelInfo.trainingDoor, aara: window.__superglen.levelInfo.aaraHost, term: window.__superglen.levelInfo.terminalVisible, uses: window.__superglen.levelInfo.aaraHostUses, lvl: window.__superglen.level }));
+  // A. The story is not finished (Chapter 1 and 2 done): the computer stands there, no door, no Aara.
+  await page.evaluate(() => { localStorage.setItem('superglen.save.v1', JSON.stringify({ chaptersDone: ['bab1', 'bab2'], where: 'lab', skills: { laser: true, shield: true, fly: true } })); localStorage.setItem('superglen.opening-seen.v1', '1'); });
+  await page.goto(URL + '?level=lab&free=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'lab', null, { timeout: 30000 });
+  await adv(30);
+  const a = await info();
+  check(`lab-done ${tag}: before the story is finished the computer stays, the training door is hidden and Aara is not there`, a.door === false && a.aara === false && a.term === true, JSON.stringify(a));
+  // B. Finished story (?lab=1&done=1: in memory only).
+  await page.goto(URL + '?lab=1&done=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'lab', null, { timeout: 30000 });
+  await tap();
+  await adv(40);
+  const b = await info();
+  check(`lab-done ${tag}: finished story: the training door appears and Aara stands where the computer was`, b.door === true && b.aara === true && b.term === false, JSON.stringify(b));
+  if (process.env.SHOTS) {
+    await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(-1.2, -0.9, -67.2); g.setCameraYaw?.(Math.PI); });
+    await adv(40);
+    await sleep(500);
+    await page.screenshot({ path: path.join(process.env.SHOTS, `lab-aara-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+    await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(3.2, -0.9, -66.2); g.setCameraYaw?.(Math.PI * 1.5); });
+    await adv(40);
+    await sleep(500);
+    await page.screenshot({ path: path.join(process.env.SHOTS, `lab-door-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+  }
+  // C. Aara opens the quiz with her face and her voice ids.
+  if (part !== 'door') {
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(-2.8, -0.9, -63.2); });
+  await adv(20);
+  await press('KeyE');
+  await page.waitForFunction(() => window.__superglen.dialog.open, null, { timeout: 15000 }).catch(() => {});
+  const greet = await page.evaluate(() => ({ id: window.__superglen.dialog.id, sp: window.__superglen.dialog.speaker }));
+  check(`lab-done ${tag}: Aara greets (lab_aara_kuis_halo, her own speaker) before the quiz`, /^lab_aara_kuis_halo/.test(greet.id) && greet.sp === 'aara', JSON.stringify(greet));
+  await closeDialogs();
+  await page.waitForFunction(() => window.__superglen.quiz.open && window.__superglen.quiz.state === 'answering', null, { timeout: 20000 }).catch(() => {});
+  let z = await quizSt(page);
+  const host = await page.evaluate(() => { const q = document.querySelector('.qp'); return q ? q.dataset.host : ''; });
+  check(`lab-done ${tag}: the quiz panel host is Aara and her prompt clip id is aara_quiz_*`, z.open && host === 'aara' && /^aara_quiz_/.test(z.spoken[z.spoken.length - 1] || ''), JSON.stringify({ host, spoken: z.spoken }));
+  if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `lab-aara-quiz-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+  await page.keyboard.press(String(z.visible.find((k) => k !== z.key)));
+  await adv(30);
+  z = await quizSt(page);
+  const ninoIds = z.spoken.filter((id) => /nino/.test(id));
+  check(`lab-done ${tag}: Aara's feedback lines use aara_ clip ids (never Nino's voice under her face)`, ninoIds.length > 0 && ninoIds.every((id) => id.startsWith('aara_')), JSON.stringify(z.spoken));
+  await page.keyboard.press(String(z.key));
+  await adv(60);
+  // Finish the three questions (right keys; the end screen continues by itself) and go on.
+  for (let i = 0; i < 80; i++) {
+    z = await quizSt(page);
+    if (!z.open) break;
+    if (z.state === 'answering') await page.keyboard.press(String(z.key));
+    if (z.view === 'end') await page.evaluate(() => { const b = document.querySelector('.qp-ok'); if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })), b && b.click(); });
+    await adv(40);
+  }
+  await adv(30);
+  check(`lab-done ${tag}: the Aara quiz ends normally and the controls are free again`, !(await quizSt(page)).open && (await page.evaluate(() => window.__superglen.controlsEnabled)) && (await info()).uses === 1, JSON.stringify(await info()));
+  }
+  if (part === 'aara') return;
+  // D. The door leads to the training room: tutorial once, big signs, the exit leads back to the Lab.
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(5.4, -0.9, -68.0); });
+  await adv(20);
+  await press('KeyE');
+  await page.waitForFunction(() => window.__superglen.level === 'training-room' && !window.__superglen.loading, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => window.__superglen.levelInfo.holograms === 5, null, { timeout: 30000 }).catch(() => {});
+  await tap();
+  await page.waitForFunction(() => window.__superglen.dialog.open, null, { timeout: 20000 }).catch(() => {});
+  const t1 = await page.evaluate(() => ({ lvl: window.__superglen.level, signs: window.__superglen.levelInfo.trainingSigns, holo: window.__superglen.levelInfo.holograms, dlg: window.__superglen.dialog.open, id: window.__superglen.dialog.id, sp: window.__superglen.dialog.speaker }));
+  check(`lab-done ${tag}: the Lab door leads to the training room: five holograms, five big name signs, Nino's tutorial starts`, t1.lvl === 'training-room' && t1.signs === 5 && t1.holo === 5 && t1.dlg && /^lab_nino_latihan_1/.test(t1.id) && t1.sp === 'nino', JSON.stringify(t1));
+  await closeDialogs();
+  await adv(20);
+  if (process.env.SHOTS) { await sleep(500); await page.screenshot({ path: path.join(process.env.SHOTS, `training-signs-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); }
+  // Out through the exit door: back in the Lab beside the training door.
+  await page.evaluate(() => { window.__superglen.teleportFeet(0, 0, 9.1); });
+  await page.waitForFunction(() => window.__superglen.level === 'lab' && !window.__superglen.loading, null, { timeout: 30000 }).catch(() => {});
+  await adv(30);
+  const back = await page.evaluate(() => { const g = window.__superglen; return { lvl: g.level, x: g.player.x, z: g.player.z, door: g.levelInfo.trainingDoor }; });
+  check(`lab-done ${tag}: the training room's exit leads back into the Lab next to its door`, back.lvl === 'lab' && back.door === true && back.x > 3 && Math.abs(back.z + 68) < 3, JSON.stringify(back));
+  // E. Second visit: the tutorial does not repeat.
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(5.4, -0.9, -68.0); });
+  await adv(20);
+  await press('KeyE');
+  await page.waitForFunction(() => window.__superglen.level === 'training-room' && !window.__superglen.loading, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => window.__superglen.levelInfo.holograms === 5, null, { timeout: 30000 }).catch(() => {});
+  await tap();
+  await sleep(2500);
+  const t2 = await page.evaluate(() => ({ lvl: window.__superglen.level, dlg: window.__superglen.dialog.open }));
+  check(`lab-done ${tag}: on the second visit Nino's tutorial is not repeated`, t2.lvl === 'training-room' && !t2.dlg, JSON.stringify(t2));
 }
 
 // ---- A finished story continues in the free city: group `ending-continue` -----------------------------------------------------------------
@@ -12197,6 +12298,9 @@ async function main() {
     results.push(await runScenario(browser, 'training-gorilla', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['gorilla']), '?level=test'));
     results.push(await runScenario(browser, 'training-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => trainingScenario(p, c, true, ['curut']), '?level=test'));
     results.push(await runScenario(browser, 'training-touch-rakus', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => trainingScenario(p, c, true, ['rakus']), '?level=test'));
+    results.push(await runScenario(browser, 'lab-done', { viewport: { width: 1280, height: 720 } }, (p, c) => labDoneScenario(p, c, false, 'aara'), '?level=test'));
+    results.push(await runScenario(browser, 'lab-done-door', { viewport: { width: 1280, height: 720 } }, (p, c) => labDoneScenario(p, c, false, 'door'), '?level=test'));
+    results.push(await runScenario(browser, 'lab-done-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => labDoneScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'ending-continue', { viewport: { width: 1280, height: 720 } }, endingContinueScenario, '?level=test'));
     results.push(await runScenario(browser, 'firefight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => firefightScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fx', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFxScenario(p, c), '?level=test'));
