@@ -16590,5 +16590,44 @@
     "peak_dbtp": -1.8,
     "generated_at": "2026-11-23T01:23:18.807Z",
     "normalized": "loudnorm -16 LUFS, silence trimmed, mono 96k, pitch +-2 st (rubberband)"
+  },
+  "credit_daddy_1": {
+    "id": "credit_daddy_1",
+    "speaker": "daddy",
+    "source": "recorded",
+    "original_file": "Daddy.m4a",
+    "transcript": "Dari Daddy, untuk Glen.",
+    "bytes": 31078,
+    "duration": 2.56,
+    "lufs": -17.6,
+    "peak_dbtp": -1.9,
+    "imported_at": "2026-11-23T12:41:31.264Z",
+    "normalized": "owner voice: afftdn nr18, highpass 80 Hz, gentle gate, warm EQ (+2.5 dB 200 Hz, -2 dB 3.5 kHz), de-ess, light compression, loudnorm -16 LUFS TP -1.5, mono 44.1k 96k"
+  },
+  "credit_daddy_2": {
+    "id": "credit_daddy_2",
+    "speaker": "daddy",
+    "source": "recorded",
+    "original_file": "Daddy.m4a",
+    "transcript": "Glen, bermimpilah dan berimajinasilah sepuas kamu.",
+    "bytes": 62111,
+    "duration": 5.15,
+    "lufs": -16.4,
+    "peak_dbtp": -1.9,
+    "imported_at": "2026-11-23T12:41:31.264Z",
+    "normalized": "owner voice: afftdn nr18, highpass 80 Hz, gentle gate, warm EQ (+2.5 dB 200 Hz, -2 dB 3.5 kHz), de-ess, light compression, loudnorm -16 LUFS TP -1.5, mono 44.1k 96k"
+  },
+  "credit_daddy_3": {
+    "id": "credit_daddy_3",
+    "speaker": "daddy",
+    "source": "recorded",
+    "original_file": "Daddy.m4a",
+    "transcript": "Superglen telah membuktikan bahwa mimpi dan imajinasi kamu menjadi superhero bisa kita wujudkan.",
+    "bytes": 89070,
+    "duration": 7.39,
+    "lufs": -16.4,
+    "peak_dbtp": -1.9,
+    "imported_at": "2026-11-23T12:41:31.264Z",
+    "normalized": "owner voice: afftdn nr18, highpass 80 Hz, gentle gate, warm EQ (+2.5 dB 200 Hz, -2 dB 3.5 kHz), de-ess, light compression, loudnorm -16 LUFS TP -1.5, mono 44.1k 96k"
   }
 }

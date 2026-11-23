@@ -78,3 +78,5 @@ Model `NormalTree_1`, `PineTree_2`, `Bush`, dan `Rock_1` serta teksturnya berasa
 
 "monkey" oleh **Poly by Google**, lisensi **CC BY 3.0**: https://creativecommons.org/licenses/by/3.0/ . Halaman sumber: https://poly.pizza/m/0yRz2AkLuuo . File FBX beranimasi dan tekstur diperoleh melalui https://github.com/Digx7/Thrust-Pets-Offline/tree/main/Assets/Art/3D/monkey (Credit.txt sumber disalin ke public/models/rescue/CREDIT.txt). Perubahan Superglen: konversi FBX ke GLB, pemilihan animasi run untuk gerakan panik, tekstur WebP 512 px, normalisasi ukuran saat dimuat. Tidak ada hubungan dukungan dari pembuat aset.
 
+## Suara pemilik proyek (Daddy)
+Pesan penutup `credit_daddy_1..3.mp3` adalah rekaman suara asli pemilik proyek (bukan ElevenLabs, tanpa kredit TTS); hanya dibersihkan dengan ffmpeg. Asli: `audio/recorded-originals/daddy/Daddy.m4a`.
