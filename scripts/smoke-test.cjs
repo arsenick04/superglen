@@ -11492,7 +11492,7 @@ async function gorillaFallScenario(page, check, touch) {
   await page.waitForFunction(() => { const b = document.querySelector('.battle-banner'); return b && !b.hidden && !b.classList.contains('intro') && b.getBoundingClientRect().top < 20; }, null, { timeout: 15000 });
   // HUD layout of the fight.
   const layout = await page.evaluate(() => {
-    const sels = { banner: '.battle-banner', bar: '.bb-bar', hint: '.gorilla-hint', hearts: '.hearts', gear: '.set-gear', zoom: '.zoom-btn', btn: '.tc-button', joy: '.tc-hint, .tc-base', fps: '.hud-fps' };
+    const sels = { banner: '.battle-banner', bar: '.bb-bar', hint: '.gorilla-hint, .firefight-hint', hearts: '.hearts', gear: '.set-gear', zoom: '.zoom-btn', btn: '.tc-button', joy: '.tc-hint, .tc-base', fps: '.hud-fps' };
     const boxes = [];
     for (const [name, sel] of Object.entries(sels)) for (const e of document.querySelectorAll(sel)) {
       const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -11507,11 +11507,12 @@ async function gorillaFallScenario(page, check, touch) {
       if (x.l < y.r && y.l < x.r && x.t < y.b && y.t < x.b) bad.push(x.name + '/' + y.name);
     }
     const bar = boxes.find((b) => b.name === 'bar'), hint = boxes.find((b) => b.name === 'hint');
-    return { bad, names: [...new Set(boxes.map((b) => b.name))], out: boxes.filter((b) => b.l < -1 || b.t < -1 || b.r > innerWidth + 1 || b.b > innerHeight + 1).map((b) => b.name), hintBelowBar: !!(bar && hint && hint.t >= bar.b), hintText: document.querySelector('.gorilla-hint')?.textContent, rects: boxes.filter((b) => ['banner', 'bar', 'hint'].includes(b.name)).map((b) => b.name + ':' + Math.round(b.t) + '-' + Math.round(b.b)), battle: document.documentElement.className };
+    return { bad, names: [...new Set(boxes.map((b) => b.name))], out: boxes.filter((b) => b.l < -1 || b.t < -1 || b.r > innerWidth + 1 || b.b > innerHeight + 1).map((b) => b.name), hintCount: document.querySelectorAll('.gorilla-hint').length, rects: boxes.filter((b) => ['banner', 'bar', 'hint'].includes(b.name)).map((b) => b.name + ':' + Math.round(b.t) + '-' + Math.round(b.b)), battle: document.documentElement.className };
   });
-  check(`gorilla-fall ${tag}: banner, star bar, hint, hearts, pause, zoom and buttons overlap nothing and stay on screen`,
-    layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('bar') && layout.names.includes('hint') && layout.names.includes('hearts') && !layout.names.includes('fps') && layout.hintBelowBar, JSON.stringify(layout));
-  check(`gorilla-fall ${tag}: hint is short and has no duplicate energy number`, !!layout.hintText && layout.hintText.length < 32 && !/Energi/.test(layout.hintText), layout.hintText);
+  check(`gorilla-fall ${tag}: banner, star bar, hearts, pause, zoom and buttons overlap nothing and stay on screen`,
+    layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('bar') && !layout.names.includes('hint') && layout.hintCount === 0 && layout.names.includes('hearts') && !layout.names.includes('fps'), JSON.stringify(layout));
+  // No tutorial pill at all in the fight: nothing can overlap a dialog bubble.
+  check(`gorilla-fall ${tag}: no instruction text pill exists in the fight (star bar and hearts only)`, layout.hintCount === 0, JSON.stringify(layout));
   const shotDir = process.env.HUD_SHOTS;
   if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `gorilla-${touch ? 'touch' : 'desktop'}.png`) }); }
   // Fall once: -1 heart, stars and chain kept. Wait until the boss's safe time (if any) is over, then top up.
@@ -11659,10 +11660,18 @@ async function firefightScenario(page, check, touch) {
   if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
   await sleep(500);
   await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(30, false); });
+  const early = await page.evaluate(() => {
+    const hud = document.querySelector('.firefight-hud'), card = document.querySelector('.dlg-card');
+    if (!hud || !card) return { missing: true };
+    const h = hud.getBoundingClientRect(), c = card.getBoundingClientRect();
+    return { dlg: window.__superglen.dialog.open, hudVisible: getComputedStyle(hud).visibility !== 'hidden', overlap: h.left < c.right && c.left < h.right && h.top < c.bottom && c.top < h.bottom, hint: document.querySelectorAll('.firefight-hint').length };
+  });
+  check(`firefight ${tag}: the fire counter never overlaps the dialog bubble (hidden while it is open), no hint pill`, !early.missing && early.dlg && (!early.hudVisible || !early.overlap) && early.hint === 0, JSON.stringify(early));
   const info = () => page.evaluate(() => ({ out: window.__superglen.levelInfo.firesOut, total: window.__superglen.levelInfo.firesTotal, done: !!window.__superglen.levelInfo.firefightDone, lvl: window.__superglen.level, dlg: window.__superglen.dialog.open, ctl: window.__superglen.controlsEnabled }));
   await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 60 && (g.dialog.open || !g.controlsEnabled); i++) { await g.advanceAsync(15, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } } await g.advanceAsync(10, true); });
   const a = await info();
-  check(`firefight ${tag}: level starts with 0/8 fires out and controls free`, a.out === 0 && a.total === 8 && a.ctl, JSON.stringify(a));
+  check(`firefight ${tag}: level starts with 0/11 fires out and controls free`, a.out === 0 && a.total === 11 && a.ctl, JSON.stringify(a));
   const hold = async (on) => {
     if (touch) await page.evaluate((on) => {
       const b = document.querySelector('.tc-button[data-action=laser]'); const r = b.getBoundingClientRect();
@@ -11671,58 +11680,81 @@ async function firefightScenario(page, check, touch) {
     }, on);
     else if (on) await page.keyboard.down('KeyJ'); else await page.keyboard.up('KeyJ');
   };
-  const fireAt = (i) => [[-6, 14], [6, 14], [0, 22], [-12, 24], [12, 24], [-9, 6], [9, 6], [0, 8]][i];
+  // Layout of the fire spots (mirror of Combat.firefight.fires; steps are 3.9 m apart and 1.35 m higher each).
+  const FIRES = [[-5, 10], [-13, 15], [-8, 18], [13, 15], [8, 19], [3, 18], [-20, 7, 3, Math.PI / 2], [-4, 26, 3, Math.PI], [20, 8, 3, -Math.PI / 2], [19, 25, 4, -Math.PI / 2], [-19, 24, 3, Math.PI / 2]];
+  const stepAt = (i, k) => { const [x, z, n, dir] = FIRES[i]; const back = (n - k) * 3.9; return [x + Math.sin(dir) * back, z + Math.cos(dir) * back, k * 1.35]; };
+  // Stand at (px, py, pz) (feet) looking at fire i and hold the spray for `frames`.
+  const sprayFrom = async (px, py, pz, i, frames) => {
+    const [fx, fz] = FIRES[i];
+    await page.evaluate(([px, py, pz, yaw]) => { const g = window.__superglen; g.teleportFeet(px, py, pz); if (py === 0) g.levelInfo.fireForgetStep = true; g.setCameraYaw(yaw); }, [px, py, pz, Math.atan2(-(fx - px), -(fz - pz))]);
+    await hold(true);
+    await page.evaluate(async (n) => { await window.__superglen.advanceAsync(n, false); }, frames);
+    await hold(false);
+  };
+  const lit = async (i) => (await page.evaluate(() => window.__superglen.levelInfo.fireLeft))[i] === '1';
   // Spraying without a fire nearby does nothing.
   await hold(true);
   await page.evaluate(async () => { await window.__superglen.advanceAsync(40, false); });
   await hold(false);
   check(`firefight ${tag}: pressing the button with no fire in reach puts nothing out`, (await info()).out === 0, JSON.stringify(await info()));
-  // Fire 7 (0,8): stand south of it, face it, hold ~2.4 s.
-  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(0, 3); g.setCameraYaw(0); });
+  // Ground fire 0: stand south of it, face it, hold.
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(-5, 0, 6); g.setCameraYaw(Math.PI); });
   await hold(true);
   await page.evaluate(async () => { await window.__superglen.advanceAsync(20, true); });
   const mid = await page.evaluate(() => ({ spraying: window.__superglen.levelInfo.spraying }));
   check(`firefight ${tag}: holding the button near a fire sprays`, mid.spraying === true, JSON.stringify(mid));
-  if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `firefight-${touch ? 'touch' : 'desktop'}.png`) });
-  await page.evaluate(async () => { await window.__superglen.advanceAsync(140, false); });
+  if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `firefight-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(200, false); });
   await hold(false);
   const b = await info();
-  check(`firefight ${tag}: the fire is out after about 2 s of spraying (1/8)`, b.out === 1, JSON.stringify(b));
-  // HUD layout.
+  check(`firefight ${tag}: the ground fire is out after about 2.4 s of spraying (1/11)`, b.out === 1, JSON.stringify(b));
+  // HUD layout: counter, buttons and corners overlap nothing; there is no tutorial pill.
   const layout = await page.evaluate(() => {
     const sels = { hud: '.firefight-hud', hint: '.firefight-hint', gear: '.set-gear', zoom: '.zoom-btn', btn: '.tc-button', joy: '.tc-hint, .tc-base', hearts: '.hearts' };
     const boxes = [];
     for (const [name, sel] of Object.entries(sels)) for (const e of document.querySelectorAll(sel)) { const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden') boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom }); }
     const bad = [];
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const p = boxes[i], q = boxes[j]; if (p.l < q.r && q.l < p.r && p.t < q.b && q.t < p.b) bad.push(p.name + '/' + q.name); }
-    return { bad, names: [...new Set(boxes.map((x) => x.name))], out: boxes.filter((x) => x.l < -1 || x.t < -1 || x.r > innerWidth + 1 || x.b > innerHeight + 1).map((x) => x.name), text: document.querySelector('.firefight-hud')?.textContent };
+    return { bad, names: [...new Set(boxes.map((x) => x.name))], out: boxes.filter((x) => x.l < -1 || x.t < -1 || x.r > innerWidth + 1 || x.b > innerHeight + 1).map((x) => x.name), text: document.querySelector('.firefight-hud')?.textContent, pills: document.querySelectorAll('.firefight-hint, .gorilla-hint').length };
   });
-  check(`firefight ${tag}: HUD counter, hint, buttons and corners overlap nothing and stay on screen`, layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('hud') && layout.names.includes('hint'), JSON.stringify(layout));
-  check(`firefight ${tag}: counter reads "Api padam: 1/8"`, layout.text === 'Api padam: 1/8', layout.text);
-  // Put out the other four player fires (0, 1, 2 and the near ones), the helpers do the rest after their delay.
-  for (const i of [0, 1, 2]) {
-    const [x, z] = fireAt(i);
-    await page.evaluate(([x, z]) => { const g = window.__superglen; g.placePlayer(x, z - 4); g.setCameraYaw(0); }, [x, z]);
-    await hold(true);
-    await page.evaluate(async () => { await window.__superglen.advanceAsync(150, false); });
-    await hold(false);
+  check(`firefight ${tag}: HUD counter and buttons overlap nothing and stay on screen, no hint pill`, layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('hud') && layout.pills === 0, JSON.stringify(layout));
+  check(`firefight ${tag}: counter reads "Api padam: 1/11"`, layout.text === 'Api padam: 1/11', layout.text);
+  // The touch spray button shows a water drop (not the bolt) in this level.
+  if (touch) {
+    const icon = await page.evaluate(() => document.querySelector('.tc-button[data-action=laser] svg path')?.getAttribute('d') || '');
+    check(`firefight ${tag}: the spray button shows the water drop icon`, icon.startsWith('M32 6 C32 6'), icon);
   }
+  // A helper's fire (1) is not picked when the child looks away, but is when aimed at directly.
+  await page.evaluate(() => { const g = window.__superglen; g.teleportFeet(-13, 0, 18); g.setCameraYaw(Math.PI); });
+  await hold(true);
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(200, false); });
+  await hold(false);
+  check(`firefight ${tag}: a helper's fire is not put out automatically while looking elsewhere`, await lit(1), JSON.stringify(await info()));
+  // Tree fire 6 (-20, 7): not from the ground, not from the first step, only from the second step.
+  await sprayFrom(-16.5, 0, 7, 6, 200);
+  check(`firefight ${tag}: a tree fire cannot be reached from the ground`, await lit(6), JSON.stringify(await info()));
+  { const [x, z, y] = stepAt(6, 1); await sprayFrom(x, y, z, 6, 200); }
+  check(`firefight ${tag}: a tree fire cannot be reached from the first canopy step`, await lit(6), JSON.stringify(await info()));
+  // Falling from the second step puts the child back on it.
+  { const [x, z, y] = stepAt(6, 2);
+    await page.evaluate(async ([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 0.05, z); await g.advanceAsync(15, false); g.teleportFeet(x + 0.5, 0, z + 4); await g.advanceAsync(30, false); }, [x, y, z]);
+    const fy = await page.evaluate(() => window.__superglen.feetY);
+    check(`firefight ${tag}: falling from a high canopy step returns to that step without a penalty`, fy > 2.3, String(fy)); }
+  { const [x, z, y] = stepAt(6, 2); await sprayFrom(x, y + 0.05, z, 6, 40);
+    if (process.env.SHOTS) { await hold(true); await page.evaluate(async () => { await window.__superglen.advanceAsync(15, true); }); await page.screenshot({ path: path.join(process.env.SHOTS, `firefight-tree-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); await hold(false); }
+    await sprayFrom(x, y + 0.05, z, 6, 200); }
+  check(`firefight ${tag}: from the second canopy step the tree fire goes out`, !(await lit(6)), JSON.stringify(await info()));
+  // The other player fires: ground fires 0 (done), 5 (behind logs) and trees 7..10 from their upper steps.
+  { await sprayFrom(3, 0, 13.5, 5, 220);  }
+  for (const i of [7, 8, 9, 10]) { const n = FIRES[i][2]; const [x, z, y] = stepAt(i, n - 1); await sprayFrom(x, y + 0.05, z, i, 220); }
+  // Fire 1 aimed at directly: goes out although it is a helper's.
+  await sprayFrom(-13, 0, 12, 1, 220);
   const c = await info();
-  check(`firefight ${tag}: four fires out by the child, the helpers' fires still burn at first`, c.out >= 4 && !c.done, JSON.stringify(c));
-  // Helpers put out their own fires after a while (10 s steady is enough).
-  await page.evaluate(async () => { await window.__superglen.advanceAsync(60 * 40, false); });
-  const before = await info();
-  check(`firefight ${tag}: the helpers put out their fires on their own (at least 7 of 8 now)`, before.out >= 7, JSON.stringify(before));
-  // Sweep the field for whatever is left (the child's last fire).
-  for (let i = 0; i < 8 && !(await info()).done; i++) {
-    const [x, z] = fireAt(i);
-    await page.evaluate(([x, z]) => { const g = window.__superglen; g.placePlayer(x, z - 3); g.setCameraYaw(0); }, [x, z]);
-    await hold(true);
-    await page.evaluate(async () => { await window.__superglen.advanceAsync(200, false); });
-    await hold(false);
-  }
+  check(`firefight ${tag}: the child's fires and the aimed helper fire are out (8 or more of 11)`, c.out >= 8, JSON.stringify(c));
+  // Helpers put out their own fires after a while.
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 1500 && !g.levelInfo.firefightDone; i++) await g.advanceAsync(20, false); });
   const d = await page.evaluate(() => ({ sp: window.__superglen.levelInfo.spraying, ctl: window.__superglen.controlsEnabled, left: window.__superglen.levelInfo.fireLeft, out: window.__superglen.levelInfo.firesOut, done: !!window.__superglen.levelInfo.firefightDone, saved: window.__superglen.save.isChapterDone('forest-firefight'), dlg: window.__superglen.dialog.open }));
-  check(`firefight ${tag}: all 8 fires out, completion fires and the chapter is saved`, d.out === 8 && d.done && d.saved, JSON.stringify(d));
+  check(`firefight ${tag}: all 11 fires out, completion fires and the chapter is saved`, d.out === 11 && d.done && d.saved, JSON.stringify(d));
   // End dialog (4 lines), then the reward and back to the city.
   const ids = [];
   await page.evaluate(async () => { const g = window.__superglen; window.__ids = []; for (let i = 0; i < 400 && g.level === 'forest-firefight'; i++) { await g.advanceAsync(20, false); if (g.dialog.open) { window.__ids.push(g.dialog.text); try { g.dialog.advance?.(); } catch (e) { /* */ } } } });

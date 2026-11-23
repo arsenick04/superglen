@@ -48,7 +48,7 @@ export class Objectives {
       typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Beam: open cylinder, vertex colours fade from gold (bottom) to black (top); additive blending makes black invisible.
-    const geo = new THREE.CylinderGeometry(0.45, 0.8, BEAM_HEIGHT, 20, 1, true);
+    const geo = new THREE.CylinderGeometry(0.16, 0.3, BEAM_HEIGHT, 20, 1, true);
     geo.translate(0, BEAM_HEIGHT / 2, 0);
     const pos = geo.getAttribute('position');
     const colors = new Float32Array(pos.count * 4);
@@ -57,7 +57,7 @@ export class Objectives {
       colors[i * 4] = 1;
       colors[i * 4 + 1] = 0.78;
       colors[i * 4 + 2] = 0.15;
-      colors[i * 4 + 3] = 0.5 * k * k; // alpha fades out toward the top
+      colors[i * 4 + 3] = 0.26 * k * k; // alpha (narrow and see-through: never hides the target) fades out toward the top
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     // Normal alpha blending (additive washes out to white on bright skies).

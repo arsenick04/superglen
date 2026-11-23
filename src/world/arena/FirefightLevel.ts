@@ -8,10 +8,12 @@ import { NinoActor } from '../bab2/NinoActor';
 import { AaraActor } from '../kota/Aara';
 import { Celebration } from '../Celebration';
 import { travel } from '../progress';
+import { Parkour } from '../../config/parkour';
+import { buildFirefightLayout } from './FirefightData';
 import { buildForestScenery } from './ForestScenery';
 import { ForestFireEffects } from './ForestFireEffects';
 
-const F = Combat.firefight;
+const F = Combat.firefight, T = Parkour.firefightTrees;
 const STEAM = 0xd9e4ea;
 
 export const FirefightLines = {
@@ -25,6 +27,8 @@ export const FirefightLines = {
 
 interface Fire {
   x: number; z: number;
+  /** Height of the ground the fire stands on (0, or the top of its canopy). */
+  y: number;
   /** 1 = full fire, 0 = out. */
   s: number;
   gone: boolean;
@@ -76,7 +80,7 @@ export class FirefightLevel implements Level {
   private aara!: AaraActor;
   private streams: WaterStream[] = [];
   private hud!: HTMLDivElement;
-  private hint!: HTMLDivElement;
+  private dlgOpen = false;
   private time = 0;
   private activeTime = 0;
   private finished = false;
@@ -86,6 +90,11 @@ export class FirefightLevel implements Level {
   private readonly tmp = new THREE.Vector3();
   private readonly npcAim: (Fire | null)[] = [null, null];
   private readonly flame: THREE.Mesh[][] = [];
+  private readonly feet = new THREE.Vector3();
+  private readonly steps: { x: number; z: number; top: number }[] = [];
+  private lastStep: { x: number; z: number; top: number } | null = null;
+  private lastStepT = 0;
+  private respawnCooldown = 0;
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -99,6 +108,16 @@ export class FirefightLevel implements Level {
     const mats = makeMaterials();
     const kit = new Kit(ctx.physics, mats);
     kit.solid([110, 0.4, 110], [0, -0.2, 0], 0x453a2c);
+    const layout = buildFirefightLayout();
+    // Canopy steps: a thin trunk, a disc collider on top (like the forest rescue) and a leafy cap.
+    for (const st of layout.steps) {
+      this.steps.push(st);
+      kit.solidCyl(0.3, st.top, [st.x, st.top / 2, st.z], 0x895e40);
+      ctx.physics.addFixedCylinder(0.08, T.radius, { x: st.x, y: st.top - 0.08, z: st.z });
+      for (let side = -1; side <= 1; side++) kit.lit.sph(1.5, [st.x + side * 0.8, st.top - 0.4, st.z + (side % 2) * 0.3], side === 0 ? 0x6fad47 : 0x497e37, [1, 0.3, 1], 1);
+    }
+    // Low logs in front of some fires.
+    for (const [lx, lz, len, rot] of F.logs) kit.solid([len, 1.2, 0.9], [lx, 0.6, lz], 0x7a5230, [0, rot, 0]);
     kit.build(ctx.root);
     buildForestScenery(ctx, true);
     this.fireFx = new ForestFireEffects(ctx);
@@ -111,11 +130,12 @@ export class FirefightLevel implements Level {
     const flameMats = [0xff3d12, 0xff9a1f, 0xffe061].map((c) => new THREE.MeshBasicMaterial({ color: c, fog: false }));
     const charMat = new THREE.MeshBasicMaterial({ color: 0x2a211b });
     ctx.onDispose(() => { cone.dispose(); disc.dispose(); flameMats.forEach((m) => m.dispose()); charMat.dispose(); });
-    for (const [x, z] of F.fires) {
+    for (const spot of layout.fires) {
+      const { x, y, z } = spot;
       const group = new THREE.Group();
-      group.position.set(x, 0, z);
+      group.position.set(x, y, z);
       const char = new THREE.Mesh(disc, charMat);
-      char.position.y = 0.02;
+      char.position.set(x, y + 0.14, z);
       char.scale.setScalar(1.1);
       ctx.root.add(char);
       const parts: THREE.Mesh[] = [];
@@ -127,7 +147,7 @@ export class FirefightLevel implements Level {
       }
       ctx.root.add(group);
       this.flame.push(parts);
-      this.fires.push({ x, z, s: 1, gone: false, group, steamT: 0 });
+      this.fires.push({ x, y, z, s: 1, gone: false, group, steamT: 0 });
     }
 
     // Water streams: 0 = player, 1 = Aara, 2 = Nino.
@@ -152,6 +172,7 @@ export class FirefightLevel implements Level {
     // The laser button is the water button here; the beam itself stays off.
     ctx.game.setSkills({ laser: true, shield: false, fly: false });
     ctx.game.setLaserSuppressed(true);
+    ctx.game.setHoseIcon(true);
     ctx.player.levelSpeedScale = 0.9;
     const bounds = { minX: -F.arenaHalf, maxX: F.arenaHalf, minZ: -F.arenaHalf, maxZ: F.arenaHalf };
     ctx.player.flight.bounds = bounds;
@@ -160,11 +181,8 @@ export class FirefightLevel implements Level {
 
     this.hud = document.createElement('div');
     this.hud.className = 'firefight-hud';
-    this.hint = document.createElement('div');
-    this.hint.className = 'firefight-hint';
-    this.hint.textContent = 'Nino: tahan tombol, semprot api!';
-    ctx.ui.append(this.hud, this.hint);
-    ctx.onDispose(() => { this.hud.remove(); this.hint.remove(); });
+    ctx.ui.append(this.hud);
+    ctx.onDispose(() => this.hud.remove());
     this.refresh();
 
     ctx.seq.run(async () => {
@@ -198,7 +216,7 @@ export class FirefightLevel implements Level {
         if (d < bestD) { bestD = d; best = f; }
       }
     }
-    if (best) { this.marker.set(best.x, 0.5, best.z); this.ctx.objectives.set(this.marker); } else this.ctx.objectives.clear();
+    if (best) { this.marker.set(best.x, best.y + 0.5, best.z); this.ctx.objectives.set(this.marker); } else this.ctx.objectives.clear();
   }
 
   private isNpcFire(i: number): boolean {
@@ -210,8 +228,8 @@ export class FirefightLevel implements Level {
     f.s = 0;
     f.group.visible = false;
     const fx = this.ctx.fx.sparkles;
-    fx.burst(f.x, 0.8, f.z, 22, 2.2, STEAM, { life: 1.1, up: 2.2, gravity: -0.4 });
-    fx.burst(f.x, 0.4, f.z, 10, 3, 0x9fdcff, { life: 0.6, up: 1, gravity: 3 });
+    fx.burst(f.x, f.y + 0.8, f.z, 22, 2.2, STEAM, { life: 1.1, up: 2.2, gravity: -0.4 });
+    fx.burst(f.x, f.y + 0.4, f.z, 10, 3, 0x9fdcff, { life: 0.6, up: 1, gravity: 3 });
     this.ctx.sfx.coin();
     this.refresh();
     this.fireFx.setStrength(0.15 + 0.85 * (this.remaining / this.fires.length));
@@ -223,29 +241,57 @@ export class FirefightLevel implements Level {
     f.steamT -= dt;
     if (f.steamT <= 0 && f.s > 0) {
       f.steamT = 0.35;
-      this.ctx.fx.sparkles.burst(f.x, 0.6 + f.s, f.z, 4, 1.2, STEAM, { life: 0.8, up: 1.6, gravity: -0.3 });
+      this.ctx.fx.sparkles.burst(f.x, f.y + 0.6 + f.s, f.z, 4, 1.2, STEAM, { life: 0.8, up: 1.6, gravity: -0.3 });
     }
     if (f.s <= 0) this.extinguish(f);
   }
 
-  /** Best lit fire inside the cone of the facing or the camera forward, within range. */
+  /**
+   * Best lit fire in reach: 3D distance within range, target at most `maxUp` above the nozzle (a tree fire needs a canopy step),
+   * inside the cone of the facing or the camera forward. The helpers' fires are skipped unless aimed at within a tight cone.
+   */
   private pickFire(): Fire | null {
     const pl = this.ctx.player, p = pl.position;
+    pl.getFeetPosition(this.feet);
+    const nozzleY = this.feet.y + F.nozzleHeight;
     const fx = Math.sin(pl.facing), fz = Math.cos(pl.facing);
     const cx = -Math.sin(this.ctx.cameraRig.yaw), cz = -Math.cos(this.ctx.cameraRig.yaw);
-    const cos = Math.cos((F.coneDeg * Math.PI) / 180);
+    const cos = Math.cos((F.coneDeg * Math.PI) / 180), tight = Math.cos((F.helperConeDeg * Math.PI) / 180);
     let best: Fire | null = null, bestScore = Infinity;
-    for (const f of this.fires) {
+    for (let i = 0; i < this.fires.length; i++) {
+      const f = this.fires[i];
       if (f.gone) continue;
       const dx = f.x - p.x, dz = f.z - p.z, d = Math.hypot(dx, dz);
-      if (d > F.range) continue;
+      const dy = f.y + F.targetHeight - nozzleY;
+      if (dy > F.maxUp || Math.hypot(d, dy) > F.range) continue;
       const nx = d > 0.001 ? dx / d : fx, nz = d > 0.001 ? dz / d : fz;
       const dot = Math.max(nx * fx + nz * fz, nx * cx + nz * cz);
-      if (d > F.closeRange && dot < cos) continue;
-      const score = d * 0.5 + (1 - dot) * 8;
+      if (this.isNpcFire(i)) { if (dot < tight) continue; }
+      else if (!(d <= F.closeRange && f.y === 0) && dot < cos) continue;
+      const score = d * 0.5 + (1 - dot) * 12;
       if (score < bestScore) { bestScore = score; best = f; }
     }
     return best;
+  }
+
+  /** Falling from a high canopy step: back onto that step, no penalty. */
+  private respawnCheck(dt: number): void {
+    const pl = this.ctx.player;
+    this.respawnCooldown = Math.max(0, this.respawnCooldown - dt);
+    if (this.ctx.game.debugInfo.fireForgetStep) { delete this.ctx.game.debugInfo.fireForgetStep; this.lastStep = null; } // test hook: a teleport is not a fall
+    pl.getFeetPosition(this.feet);
+    this.lastStepT += dt;
+    if (pl.grounded) {
+      for (const st of this.steps) {
+        if (Math.abs(this.feet.y - st.top) < 0.3 && Math.hypot(this.feet.x - st.x, this.feet.z - st.z) < T.radius) { this.lastStep = st; this.lastStepT = 0; break; }
+      }
+      if (this.lastStep && this.feet.y < T.resetFeetHeight && this.lastStep.top >= F.fallRespawnMin && this.lastStepT < 3 && this.respawnCooldown <= 0) {
+        const st = this.lastStep;
+        pl.placeAt(st.x, st.top + 0.1, st.z, pl.facing);
+        this.respawnCooldown = 1;
+        this.lastStepT = 0;
+      }
+    }
   }
 
   fixedUpdate(dt: number): void {
@@ -254,6 +300,7 @@ export class FirefightLevel implements Level {
     if (!startGate.started || this.finished) return;
     if (!ctx.game.controlsEnabled) return;
     this.activeTime += dt;
+    this.respawnCheck(dt);
     // Child: hold the laser button / key / mouse.
     const target = ctx.input.isDown('laser') && ctx.player.mode === 'superglen' ? this.pickFire() : null;
     const s0 = this.streams[0];
@@ -263,7 +310,7 @@ export class FirefightLevel implements Level {
       ctx.player.turnTo(Math.atan2(target.x - ctx.player.position.x, target.z - ctx.player.position.z));
       this.hit(target, 1 / F.seconds, dt);
       s0.on = true;
-      s0.to.set(target.x, 0.5 + target.s * 0.8, target.z);
+      s0.to.set(target.x, target.y + 0.5 + target.s * 0.8, target.z);
     }
     // Helpers: slow, start after a while, only their own fires.
     const slots: [number, readonly number[], number][] = [[1, F.npcFires.aara, 0], [2, F.npcFires.nino, 1]];
@@ -277,7 +324,7 @@ export class FirefightLevel implements Level {
         if (f.gone) continue;
         this.npcAim[k] = f;
         st.on = true;
-        st.to.set(f.x, 0.5 + f.s * 0.8, f.z);
+        st.to.set(f.x, f.y + 0.5 + f.s * 0.8, f.z);
         this.hit(f, 1 / F.npcSeconds, dt);
         break;
       }
@@ -298,7 +345,6 @@ export class FirefightLevel implements Level {
     ctx.game.debugInfo.firefightDone = true;
     ctx.seq.run(async () => {
       await ctx.seq.wait(F.endDelay);
-      this.hint.textContent = '';
       this.nino.emote('cheer');
       this.aara.emote('cheer');
       await ctx.dialog.say(FirefightLines.ninoDone, { lockControls: true });
@@ -318,6 +364,9 @@ export class FirefightLevel implements Level {
 
   update(dt: number): void {
     this.time += dt;
+    // The counter never sits on a dialog bubble.
+    const dlg = this.ctx.dialog.active;
+    if (dlg !== this.dlgOpen) { this.dlgOpen = dlg; this.hud.style.visibility = dlg ? 'hidden' : ''; }
     this.fireFx.update(dt);
     const t = this.time;
     for (let i = 0; i < this.fires.length; i++) {

@@ -32,6 +32,10 @@ const BARONGSAI_ICON =
 const LASER_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M38 4 L14 36 H28 L24 60 L50 26 H35 Z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
 
+// Selang air: water drop (fire hose level only, replaces the bolt on the laser button).
+const HOSE_ICON =
+  '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 C32 6 14 28 14 40 A18 18 0 0 0 50 40 C50 28 32 6 32 6 Z" fill="#fff"/><path d="M24 42 A8 8 0 0 0 32 50" fill="none" stroke="#3aa6e8" stroke-width="4" stroke-linecap="round"/></svg>';
+
 // Perisai: shield.
 const SHIELD_ICON =
   '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L54 14 V32 C54 45 45 54 32 59 C19 54 10 45 10 32 V14 Z" fill="#fff"/><path d="M32 16 L45 21 V32 C45 40 40 46 32 50 Z" fill="#1fb5a8" opacity="0.55"/></svg>';
@@ -161,6 +165,7 @@ function storyLaserPlacement(m: ViewMetrics): Placement {
 
 const STORY_INTERACT: TouchButtonDef = { action: 'interact', icon: INTERACT_ICON, color: '#e8453c', size: 88, right: 148, bottom: 66, place: storyInteractPlacement };
 const STORY_LASER: TouchButtonDef = { action: 'laser', icon: LASER_ICON, color: '#e8453c', size: 88, right: 150, bottom: 166, place: storyLaserPlacement };
+const STORY_HOSE: TouchButtonDef = { ...STORY_LASER, icon: HOSE_ICON, color: '#2f8fe0' };
 const STORY_SHIELD: TouchButtonDef = { action: 'shield', icon: SHIELD_ICON, color: '#1fa8b8', size: 88, right: 32, bottom: 150, place: shieldPlacement };
 const STORY_FLIGHT: TouchButtonDef = { action: 'flight', icon: FLIGHT_ICON, color: '#438bfa', size: 84, right: 242, bottom: 28, place: (m) => isShort(m) ? { size: MIN_BUTTON, right: 20, bottom: 0, top: 96 } : { size: 84, right: 246, bottom: 42 } };
 const GLEN_JUMP = GLEN_BUTTONS[0];
@@ -179,6 +184,8 @@ export interface ControlProfile {
   flight: boolean;
   /** Riding a bike (Glen): the big button rings the bell instead of jumping. */
   bike: boolean;
+  /** Fire hose level: the laser button shows a water drop. */
+  hose?: boolean;
 }
 
 const BIKE_JUMP: TouchButtonDef = { action: 'jump', icon: BELL_ICON, color: '#2ec4b6', size: 104, right: 24, bottom: 24, place: jumpPlacement };
@@ -189,13 +196,13 @@ const layoutCache = new Map<string, readonly TouchButtonDef[]>();
 export function getLayout(mode: PlayerMode, p: ControlProfile): readonly TouchButtonDef[] {
   if (p.legacyTest) return mode === 'superglen' ? SUPERGLEN_BUTTONS : GLEN_BUTTONS;
   const bike = p.bike && mode === 'glen';
-  const key = `${mode}|${p.transform ? 1 : 0}${bike ? 'b' : ''}${mode === 'superglen' ? `${p.laser ? 1 : 0}${p.shield ? 1 : 0}${p.flight ? 1 : 0}` : ''}`;
+  const key = `${mode}|${p.transform ? 1 : 0}${bike ? 'b' : ''}${mode === 'superglen' ? `${p.laser ? 1 : 0}${p.shield ? 1 : 0}${p.flight ? 1 : 0}${p.hose ? 'h' : ''}` : ''}`;
   let defs = layoutCache.get(key);
   if (!defs) {
     const list: TouchButtonDef[] = [];
     if (mode === 'superglen') {
       list.push(SUPERGLEN_JUMP, STORY_INTERACT);
-      if (p.laser) list.push(STORY_LASER);
+      if (p.laser) list.push(p.hose ? STORY_HOSE : STORY_LASER);
       if (p.shield) list.push(STORY_SHIELD);
       if (p.flight) list.push(STORY_FLIGHT);
     } else {

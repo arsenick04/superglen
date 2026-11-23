@@ -15,6 +15,8 @@ export const Parkour = {
     // Gentle rises (<= 1 m) with resting descents, all reachable at rhythm level 0.
     heightOffsets: [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0],
   },
+  /** Fire hose level: tree fires sit on top of 3 or 4 round canopy steps, each `rise` higher (< a level-0 jump apex), `spacing` apart (centre to centre). */
+  firefightTrees: { rise: 1.35, radius: 1.6, spacing: 3.9, resetFeetHeight: 0.3 },
   gorillaCanopy: { spacing: 5, radius: 2.35, heights: [4.5, 5, 5.5], resetFeetHeight: 0.25 },
   // ---- Gravity and falling -------------------------------------------------------------------------------
   /** Gravity while rising (m/s^2). The player applies its own; the physics world's gravity is only for props. */

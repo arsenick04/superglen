@@ -311,30 +311,8 @@ html.touch-ui .battle-banner.intro {
   }
 }
 
-/* Gorilla fight instruction line: one short line under the star bar (banner 58 px + bar 42 px + gaps). */
-.gorilla-hint {
-  position: absolute;
-  left: 50%;
-  top: calc(env(safe-area-inset-top) + 64px);
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.82);
-  padding: 4px 14px;
-  border-radius: 999px;
-  color: #513b29;
-  font: 800 17px/1.2 system-ui, sans-serif;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 6;
-}
-html.battle .gorilla-hint {
-  top: calc(env(safe-area-inset-top) + 132px);
-}
-.gorilla-hint:empty {
-  display: none;
-}
-
-/* Fire hose level: counter at the top centre, one short hint line under it. */
-.firefight-hud, .firefight-hint {
+/* Fire hose level: counter at the top centre (hidden while a dialog bubble is open). */
+.firefight-hud {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -347,5 +325,3 @@ html.battle .gorilla-hint {
   z-index: 6;
 }
 .firefight-hud { top: calc(env(safe-area-inset-top) + 10px); padding: 6px 18px; font-size: 20px; }
-.firefight-hint { top: calc(env(safe-area-inset-top) + 52px); padding: 3px 14px; }
-.firefight-hint:empty { display: none; }

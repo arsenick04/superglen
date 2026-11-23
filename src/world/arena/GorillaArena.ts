@@ -33,7 +33,6 @@ export class GorillaArena implements Level {
   private attackIndex = 0;
   private leapDuration: number = C.leapTime;
   private visualTime = 0;
-  private hud!: HTMLDivElement;
   private fire!: ForestFireEffects;
   private sound!: ForestRescueSound;
   private phase: Phase = 'wait';
@@ -71,13 +70,12 @@ export class GorillaArena implements Level {
     const bounds={minX:-C.arenaRadius,maxX:C.arenaRadius,minZ:-C.arenaRadius,maxZ:C.arenaRadius};
     ctx.player.flight.bounds=bounds;ctx.player.flight.groundBounds=bounds;
     ctx.health.setShown(true);this.lastExhaustions=ctx.health.exhaustions;
-    this.hud=document.createElement('div');this.hud.className='gorilla-hint';
-    ctx.ui.append(this.hud);ctx.onDispose(()=>{this.hud.remove();ctx.health.setShown(false);});
+    ctx.onDispose(()=>ctx.health.setShown(false));
     this.safe.set(this.spawn.x,this.spawn.y,this.spawn.z);
     this.reset();
     ctx.seq.run(async()=>{
       await ctx.seq.waitUntil(()=>startGate.started);
-      if(ctx.save.isChapterDone('forest-gorilla')){this.phase='done';this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';if(!ctx.save.isChapterDone('forest-firefight')){ctx.save.setWhere('forest-firefight');await ctx.game.loadLevel('forest-firefight');}return;}
+      if(ctx.save.isChapterDone('forest-gorilla')){this.phase='done';if(!ctx.save.isChapterDone('forest-firefight')){ctx.save.setWhere('forest-firefight');await ctx.game.loadLevel('forest-firefight');}return;}
       await ctx.dialog.say({id:'forest_gorilla_accuse',speaker:'gorila',text:'Kamu manusia yang membakar hutanku? Pergi dari sini!'},{lockControls:true});
       await ctx.dialog.say({id:'forest_glen_explain',speaker:'glen',text:'Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!'},{lockControls:true});
       await ctx.dialog.say({id:'forest_nino_gorilla_pattern',speaker:'nino',text:'Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. Alat terbangmu masih rusak, jadi tetap di atas pohon!'},{lockControls:true});
@@ -171,7 +169,6 @@ export class GorillaArena implements Level {
     ctx.seq.run(async()=>{
       await ctx.dialog.say({id:'forest_gorilla_sorry',speaker:'gorila',text:'Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami.'},{lockControls:true});
       await ctx.dialog.say({id:'forest_glen_help_fire',speaker:'glen',text:'Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!'},{lockControls:true});
-      this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';
       ctx.save.setWhere('forest-firefight');
       await ctx.game.playCinematic('gorilla-win');
       await ctx.game.loadLevel('forest-firefight');
@@ -192,7 +189,6 @@ export class GorillaArena implements Level {
     if(this.alert.visible)this.alert.material.opacity=.28+.58*(.5+.5*Math.sin(this.visualTime*16));
     this.aim.copy(this.boss.position);this.aim.y+=C.height*.6;
     this.boss.rotation.y=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
-    if(this.phase!=='done'){const t=this.phase==='open'?'Sekarang tembak!':`Hindari atau tangkis: ${this.misses}/${C.missesToOpen}`;if(this.hud.textContent!==t)this.hud.textContent=t;}
   }
   dispose(): void {}
 }
