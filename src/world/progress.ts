@@ -93,6 +93,7 @@ export interface StartPlan {
 }
 
 export function startPlanFor(save: SaveStore): StartPlan {
+  if (save.previewFirefight || (save.data.where === 'forest-firefight' && !save.isChapterDone('forest-firefight')) || (save.data.where === 'battle-gorilla' && save.isChapterDone('forest-gorilla') && !save.isChapterDone('forest-firefight'))) return { level: 'forest-firefight' };
   if(save.previewGorillaBattle||save.data.where==='battle-gorilla'||(save.data.where==='forest-rescue'&&save.isChapterDone('forest-rescue'))) return {level:'battle-gorilla'};
   if (save.previewForestRescue) return { level: 'forest-rescue' };
   if (save.data.where === 'forest-rescue' && save.data.interlude === 'forest_fire_ready') return { level: 'forest-rescue' };

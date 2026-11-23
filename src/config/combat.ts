@@ -4,6 +4,31 @@
  * (a soft fade and a rest at the Rumah Sakit with full hearts, nothing lost).
  */
 export const Combat = {
+  /** Chapter 8 part 2: putting out the forest fire with water hoses (nothing hurts; every fire can be put out). */
+  firefight: {
+    /** Fire spots (x, z) on the ground, all inside the walkable arena. The first ones are near the spawn. */
+    fires: [[-6, 14], [6, 14], [0, 22], [-12, 24], [12, 24], [-9, 6], [9, 6], [0, 8]] as ReadonlyArray<readonly [number, number]>,
+    /** Fires the NPCs spray at (indexes into `fires`); the player must put out all others. */
+    npcFires: { aara: [5, 3], nino: [6, 4] } as Readonly<Record<'aara' | 'nino', readonly number[]>>,
+    /** Seconds of steady spraying that put one fire out (child). */
+    seconds: 1.8,
+    /** Same for NPC helpers: slower, so the child always has work to do. */
+    npcSeconds: 5, npcDelay: 14,
+    /** Spray reach (m) and half-angle of the aim cone around facing / camera forward (degrees). */
+    range: 12, coneDeg: 60,
+    /** Any fire this close (m) is sprayed even when it is behind (a small child may face the wrong way). */
+    closeRange: 5,
+    /** A fire grows back this fast (fraction/s) when nobody sprays it, up to its last size. */
+    regrow: 0.05,
+    /** Visual: fire size at full strength (m), water particles per stream, stream arc height (m), speed (cycles/s). */
+    fireHeight: 2.2, particles: 26, arc: 0.9, flow: 1.5, particleSize: 0.3,
+    /** Where the helpers stand (x, z) and where the player starts. */
+    aaraAt: [-10, 14] as readonly [number, number], ninoAt: [10, 14] as readonly [number, number],
+    spawn: { x: 0, y: 0, z: 2, yaw: 0 },
+    arenaHalf: 28,
+    /** Seconds the NPCs wait before they begin to help, and the pause before the end dialog. */
+    endDelay: 0.8,
+  },
   gorilla: {
     stars: 5, starsEasy: 3, height: 2.5, arenaRadius: 14,
     windup: 1.5, leapTime: 1.15, leapArc: 7, recover: 1.3,

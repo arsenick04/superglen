@@ -805,6 +805,7 @@ export class Game {
         this.refreshTransform();
       },
       setSkills: (sk, persist) => this.setSkills(sk, persist),
+      setLaserSuppressed: (on) => { this.laser.suppressed = on; },
       setRiding: (on) => {
         this.profile.bike = on;
         this.applyLayout();
@@ -866,6 +867,7 @@ export class Game {
         this.player.speedScale = 1;
         this.player.levelSpeedScale = 1;
         this.player.preferAirJump = false;
+        this.laser.suppressed = false;
         this.setSkills({ ...this.save.data.skills });
         for (const a of ['jump', 'flight', 'laser', 'shield', 'transform'] as const) this.touch?.controls.setPulse(a, false);
         for (const k of Object.keys(this.debug.levelInfo)) delete this.debug.levelInfo[k];

@@ -77,7 +77,7 @@ export class GorillaArena implements Level {
     this.reset();
     ctx.seq.run(async()=>{
       await ctx.seq.waitUntil(()=>startGate.started);
-      if(ctx.save.isChapterDone('forest-gorilla')){this.phase='done';this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';return;}
+      if(ctx.save.isChapterDone('forest-gorilla')){this.phase='done';this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';if(!ctx.save.isChapterDone('forest-firefight')){ctx.save.setWhere('forest-firefight');await ctx.game.loadLevel('forest-firefight');}return;}
       await ctx.dialog.say({id:'forest_gorilla_accuse',speaker:'gorila',text:'Kamu manusia yang membakar hutanku? Pergi dari sini!'},{lockControls:true});
       await ctx.dialog.say({id:'forest_glen_explain',speaker:'glen',text:'Bukan! Kami datang untuk menolong. Tenang dulu, Gorilla!'},{lockControls:true});
       await ctx.dialog.say({id:'forest_nino_gorilla_pattern',speaker:'nino',text:'Hindari lompatan Gorilla atau pakai perisai. Setelah dua serangannya gagal, tembak saat dia beristirahat. Alat terbangmu masih rusak, jadi tetap di atas pohon!'},{lockControls:true});
@@ -132,6 +132,7 @@ export class GorillaArena implements Level {
     }
     const forced=ctx.game.debugInfo.gorillaForceStars;// test hook: set the energy once
     if(typeof forced==='number'){this.stars=forced;delete ctx.game.debugInfo.gorillaForceStars;}
+    if(ctx.game.debugInfo.gorillaForceOpen){delete ctx.game.debugInfo.gorillaForceOpen;this.alert.visible=false;this.phase='open';this.timer=C.vulnerable;this.target.enabled=true;}// test hook: open the fight now
     this.timer-=dt;
     if(this.phase==='retreat'){
       const t=Math.min(1,1-this.timer/C.retreatTime);this.boss.position.lerpVectors(this.from,this.landing,t);this.boss.position.y+=Math.sin(t*Math.PI)*C.leapArc*.6;
@@ -171,6 +172,9 @@ export class GorillaArena implements Level {
       await ctx.dialog.say({id:'forest_gorilla_sorry',speaker:'gorila',text:'Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami.'},{lockControls:true});
       await ctx.dialog.say({id:'forest_glen_help_fire',speaker:'glen',text:'Tidak apa-apa, Gorilla. Ayo kita selamatkan hutan ini bersama!'},{lockControls:true});
       this.hud.textContent='Gorilla sudah tenang — berikutnya padamkan api';
+      ctx.save.setWhere('forest-firefight');
+      await ctx.game.playCinematic('gorilla-win');
+      await ctx.game.loadLevel('forest-firefight');
     });
   }
   update(dt: number): void {

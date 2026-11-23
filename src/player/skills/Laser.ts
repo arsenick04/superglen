@@ -81,6 +81,8 @@ function markerTexture(): THREE.CanvasTexture {
 export class Laser {
   /** Target the next press would hit (null = none). */
   aimTarget: Target | null = null;
+  /** A level that owns the laser button for something else (the water hose) turns the beam off. Reset on every load. */
+  suppressed = false;
   private sinceShot = 10;
   private markerT = 0;
   private readonly query: AimQuery = { x: 0, y: 0, z: 0, facingX: 0, facingZ: 1, cameraX: 0, cameraZ: -1, range: LaserConfig.range, cone: (LaserConfig.coneDeg * Math.PI) / 180 };
@@ -135,7 +137,7 @@ export class Laser {
   /** Can the laser fire right now? */
   get canFire(): boolean {
     const p = this.player;
-    return p.skills.unlocked.laser && p.mode === 'superglen' && p.inputEnabled && !p.skills.shield.up;
+    return !this.suppressed && p.skills.unlocked.laser && p.mode === 'superglen' && p.inputEnabled && !p.skills.shield.up;
   }
 
   /** Fixed step (before the player moves). */

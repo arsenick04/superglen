@@ -62,8 +62,8 @@ export interface LevelGame {
   setControlsEnabled(enabled: boolean): void;
   readonly controlsEnabled: boolean;
   /** Play a one-shot cinematic overlay, if its asset is available. */
-  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet'): Promise<void>;
-  preloadCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet'): void;
+  playCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win'): Promise<void>;
+  preloadCinematic(id: 'open' | 'hill' | 'transform' | 'curut' | 'rakus-appears' | 'snake-defeat' | 'rakus-warehouse' | 'rakus-defeat' | 'elang' | 'elang-defeat' | 'elang-chaos' | 'aara-meet' | 'forest-fire' | 'gorilla-meet' | 'gorilla-win'): void;
   /** Switch Glen <-> Superglen (colours, tuning, touch buttons, flash ring). */
   setPlayerMode(mode: PlayerMode, persist?: boolean): void;
   /**
@@ -75,6 +75,8 @@ export interface LevelGame {
    * `persist: true` also writes the unlocked ones into the save (use `ctx.save.unlockSkill` for story unlocks).
    */
   setSkills(skills: { laser?: boolean; shield?: boolean; fly?: boolean }, persist?: boolean): void;
+  /** The laser button keeps working as an input but the beam stays off (the fire hose uses it). Reset on every level load. */
+  setLaserSuppressed(on: boolean): void;
   /** The city's bike: touch layout shows a bell on the big button while riding (reset on every level load). */
   setRiding(on: boolean): void;
   /** Older name: touch buttons for laser and shield (same as `setSkills({ laser, shield })`). */

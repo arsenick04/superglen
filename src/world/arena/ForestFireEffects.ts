@@ -4,6 +4,10 @@ import type { LevelContext } from '../Level';
 /** Three instanced particle layers: turbulent flame, rising smoke and embers. */
 export class ForestFireEffects {
   private readonly time = { value: 0 };
+  /** All flame layers (hide it when the fire is out). */
+  readonly group = new THREE.Group();
+  readonly light: THREE.PointLight;
+  private readonly baseLight: number;
   constructor(ctx: LevelContext) {
     const vertexShader = `varying vec2 uvFire; varying float seed; uniform float time;
       void main(){uvFire=uv;seed=instanceMatrix[3].x*0.17+instanceMatrix[3].z;
@@ -47,9 +51,12 @@ export class ForestFireEffects {
         if(layer===0)dummy.scale.multiplyScalar(.75+(i%4)*.18);
         dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
       }
-      mesh.frustumCulled = false;ctx.root.add(mesh);
+      mesh.frustumCulled = false;this.group.add(mesh);
     }
-    const light = new THREE.PointLight(0xff8b36, 16, 45, 2);light.position.set(0,3,18);ctx.root.add(light);
+    ctx.root.add(this.group);
+    const light = new THREE.PointLight(0xff8b36, 16, 45, 2);light.position.set(0,3,18);this.group.add(light);this.light=light;this.baseLight=16;
   }
   update(dt: number): void { this.time.value += dt; }
+  /** 1 = full fire, 0 = out (dims the glow). */
+  setStrength(k: number): void { this.light.intensity = this.baseLight * k; this.group.visible = k > 0.01; }
 }
