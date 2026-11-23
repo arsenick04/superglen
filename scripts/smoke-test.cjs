@@ -11558,6 +11558,40 @@ async function gorillaFallScenario(page, check, touch) {
   check(`gorilla-fall ${tag}: after the rest hearts are full again and only now the energy is back to full`, e.ex === before.ex + 1 && e.hearts === 5 && e.stars === 5, JSON.stringify(e) + JSON.stringify(await page.evaluate(() => ({ ctl: window.__superglen.controlsEnabled, dlg: window.__superglen.dialog.open, txt: window.__superglen.dialog.text, lvl: window.__superglen.level, resting: window.__superglen.health.resting }))));
 }
 
+// ---- Gorilla fx: ground pound effect and hurt flash trigger: group `gorilla-fx` -----------------------------------------------------
+async function gorillaFxScenario(page, check) {
+  const shotDir = process.env.GORILLA_SHOTS;
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&gorilla=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 400 && (g.dialog.open || g.levelInfo.gorillaPhase === undefined); i++) { await g.advanceAsync(20, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } }
+    await g.advanceAsync(480, true);
+  });
+  await sleep(1200);
+  const fx = () => page.evaluate(() => ({ pounds: window.__superglen.levelInfo.gorillaPounds, hurts: window.__superglen.levelInfo.gorillaHurts, flash: window.__superglen.levelInfo.gorillaFlash, phase: window.__superglen.levelInfo.gorillaPhase }));
+  await page.evaluate(() => { const g = window.__superglen; g.levelInfo.gorillaForceStars = 4; g.levelInfo.gorillaForceOpen = true; });
+  const open = await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 20 && g.levelInfo.gorillaPhase !== 'open'; i++) await g.advanceAsync(2, false); return g.levelInfo.gorillaPhase; });
+  check('gorilla-fx: the fight reaches the open phase', open === 'open', String(open));
+  await page.evaluate(async () => { const g = window.__superglen; await g.advanceAsync(30, false); g.skills.fireLaser(); await g.advanceAsync(12, true); });
+  await sleep(300);
+  const h = await fx();
+  check('gorilla-fx: a laser hit while open triggers the hurt reaction and a flash', h.hurts >= 1 && h.flash > 0, JSON.stringify(h));
+  if (shotDir) await page.screenshot({ path: path.join(shotDir, 'gorilla-hurt.png') });
+  // Wait for the leap to land (the player stays on his perch; the pound happens wherever the gorilla lands).
+  const base = (await fx()).pounds || 0;
+  const landed = await page.evaluate(async (b) => { const g = window.__superglen; for (let i = 0; i < 900 && !(g.levelInfo.gorillaPounds > b); i++) await g.advanceAsync(1, false); return g.levelInfo.gorillaPounds; }, base);
+  check('gorilla-fx: the landing triggers the ground pound effect', landed > base, JSON.stringify(await fx()));
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(4, true); });
+  await sleep(300);
+  if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, 'gorilla-pound.png') }); }
+}
+
 // ---- {nama} in non-player lines: group `dialog-name` ----------------------------------------------------------------------------------
 async function dialogNameScenario(page, check) {
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), false);
@@ -12147,7 +12181,13 @@ async function main() {
     if (browser) await browser.close().catch(() => {});
     killServer();
   }
+    results.push(await runScenario(browser, 'ending', { viewport: { width: 1280, height: 720 } }, (p, c) => endingScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'ending-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => endingScenario(p, c, true), '?level=test'));
+    results.push(await runScenario(browser, 'training', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'training-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => trainingScenario(p, c, true), '?level=test'));
+    results.push(await runScenario(browser, 'ending-continue', { viewport: { width: 1280, height: 720 } }, endingContinueScenario, '?level=test'));
 
+    results.push(await runScenario(browser, 'gorilla-fx', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFxScenario(p, c), '?level=test'));
   let failed = false;
   console.log('\nSMOKE TEST SUMMARY');
   console.log('scenario'.padEnd(18) + 'fps min/avg'.padEnd(14) + 'errors  checks');

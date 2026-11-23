@@ -12,7 +12,7 @@ import { ForestFireEffects } from './ForestFireEffects';
 import { ForestRescueSound } from './ForestRescueSound';
 import { poseGorillaArms } from './GorillaPose';
 
-const C = Combat.gorilla, P = Parkour.gorillaCanopy;
+const C = Combat.gorilla, A = C.anim, PO = C.pound, P = Parkour.gorillaCanopy;
 type Phase = 'wait' | 'wind' | 'leap' | 'retreat' | 'recover' | 'open' | 'done';
 
 /** Telegraphed leap -> dodge/shield twice -> one clear laser opening. */
@@ -44,6 +44,12 @@ export class GorillaArena implements Level {
   private lastExhaustions = 0;
   private safe = new THREE.Vector3();
   private modelReady = false;
+  private bodyMat: THREE.MeshStandardMaterial | null = null;
+  private pose = { crouch: 0, lean: 0, roll: 0, yaw: 0, stretch: 0, yawInit: false };
+  private hurtLeft = 0;
+  private tiredLeft = 0;
+  private poundTime = 0;
+  private fxCount = { pounds: 0, hurts: 0, tired: 0 };
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;ctx.save.setWhere(this.id);
@@ -91,12 +97,12 @@ export class GorillaArena implements Level {
     for(const child of this.boss.children)if(child instanceof THREE.Mesh)child.geometry.dispose();
     const material=enemyModels.material('gorilla_gembira')!.clone();
     this.armDrop=poseGorillaArms(geometry,material,C.height);
-    this.boss.clear();this.boss.add(new THREE.Mesh(geometry,material));this.modelReady=true;
+    this.boss.clear();this.boss.add(new THREE.Mesh(geometry,material));this.bodyMat=material;this.modelReady=true;
   }
   private reset(): void {
     this.boss.position.copy(this.perches[1]);this.phase='wait';this.timer=C.cooldown;
     this.misses=0;this.stars=this.maxStars;this.target.enabled=false;this.alert.visible=false;
-    this.impact=0;this.attackIndex=0;
+    this.impact=0;this.attackIndex=0;this.hurtLeft=0;this.tiredLeft=0;this.poundTime=0;
   }
   private enterBattle(): void {
     this.ctx.battle.enter({id:'gorila',name:'Gorilla Gembira',focus:()=>this.aim,
@@ -146,11 +152,7 @@ export class GorillaArena implements Level {
         const near=Math.hypot(this.feet.x-this.landing.x,this.feet.z-this.landing.z)<C.hitRadius&&Math.abs(this.feet.y-this.landing.y)<C.hitHeight;
         const result=near?ctx.health.hurt(this.from.x,this.from.z):'miss';
         if(result==='miss'||result==='blocked')this.misses++;else if(result==='hit')this.misses=0;
-        this.impact=C.impactTime;
-        ctx.fx.sparkles.burst(this.landing.x,this.landing.y+.1,this.landing.z,32,3,0xc9af86,{life:.8,up:.8,gravity:1.5});
-        ctx.fx.sparkles.burst(this.landing.x,this.landing.y+.3,this.landing.z,20,4,0x77a44c,{life:1,up:2,gravity:3});
-        ctx.synth.drum(0,true);
-        if(!ctx.save.data.settings.reduceShake)ctx.cameraRig.shake(.22,.3);
+        this.impact=C.impactTime;this.poundTime=C.impactTime*2.2;this.poundFx();
         this.phase='recover';this.timer=C.recover;
       }
     } else if(this.phase==='recover'&&this.timer<=0){
@@ -162,7 +164,30 @@ export class GorillaArena implements Level {
     if(this.phase!=='open')return;
     this.stars--;this.target.enabled=false;this.misses=0;
     this.ctx.fx.sparkles.burst(this.aim.x,this.aim.y,this.aim.z,24,3,0xffdb65,{life:.8});
-    if(this.stars<=0){this.phase='done';this.win();}else this.retreat();
+    if(this.stars<=0){this.phase='done';this.tired();this.ctx.seq.run(async()=>{await this.ctx.seq.wait(C.tiredTime);this.win();});}
+    else{this.hurtFx();this.retreat();}
+  }
+  /** Cartoon "ouch": flinch pose, white/red flash, sweat drops, small stars. No pain, just silly. */
+  private hurtFx(): void {
+    const ctx=this.ctx;this.hurtLeft=C.hurtTime;this.fxCount.hurts++;
+    ctx.fx.sparkles.burst(this.aim.x,this.aim.y+.9,this.aim.z,C.sweatDrops,2.2,0x8fd8ff,{life:.7,up:2.2,gravity:6});
+    ctx.fx.stars.show(this.aim,C.height*.5,C.hurtTime+.4,.7);ctx.sfx.ouch();
+  }
+  private tired(): void {
+    this.tiredLeft=C.tiredTime;this.hurtLeft=C.hurtTime*.6;this.fxCount.tired++;this.target.enabled=false;
+    this.ctx.fx.sparkles.burst(this.aim.x,this.aim.y+.9,this.aim.z,C.sweatDrops,2.2,0x8fd8ff,{life:.8,up:2,gravity:6});
+    this.ctx.fx.stars.show(this.aim,C.height*.5,C.tiredTime+.3,.8);this.ctx.sfx.ouch();
+  }
+  /** Both fists hit the ground: dust ring as wide as the danger zone, debris and leaves, thump, short shake. */
+  private poundFx(): void {
+    const ctx=this.ctx,l=this.landing;this.fxCount.pounds++;
+    ctx.fx.rings.spawn(l.x,l.y+.05,l.z,C.hitRadius,PO.ringTime,0xd8c29a,.85);
+    ctx.fx.rings.spawn(l.x,l.y+.07,l.z,C.hitRadius*PO.innerRing,PO.ringTime*.7,0xffffff,.7);
+    ctx.fx.sparkles.burst(l.x,l.y+.1,l.z,PO.dust,3.2,0xc9af86,{life:.8,up:.8,gravity:1.5});
+    ctx.fx.sparkles.burst(l.x,l.y+.3,l.z,PO.leaves,4,0x77a44c,{life:1.1,up:2.6,gravity:3});
+    ctx.fx.sparkles.burst(l.x,l.y+.3,l.z,8,3.4,0x8a603f,{life:.9,up:2.2,gravity:5});
+    ctx.synth.drum(0,true);ctx.sfx.thump();
+    if(!ctx.save.data.settings.reduceShake)ctx.cameraRig.shake(PO.shake,PO.shakeTime);
   }
   private win(): void {
     const ctx=this.ctx;ctx.battle.exit(true);ctx.audio.music.setScene('jelajah');ctx.save.markChapterDone('forest-gorilla');
@@ -176,19 +201,44 @@ export class GorillaArena implements Level {
   }
   update(dt: number): void {
     if(!this.modelReady)this.installModel();this.fire.update(dt);this.sound.update(dt,false);
-    this.visualTime+=dt;
-    this.impact=Math.max(0,this.impact-dt);
-    const airborne=this.phase==='leap',striking=this.impact>0;
-    const drop=airborne?1.2:this.phase==='retreat'?.65:1.1;
-    this.armDrop.value=THREE.MathUtils.lerp(this.armDrop.value,drop,Math.min(1,dt*12));
-    const forward=airborne?2.5:this.phase==='wind'?1.3:striking?.12:0;
-    this.armDrop.forward.value=THREE.MathUtils.lerp(this.armDrop.forward.value,forward,Math.min(1,dt*(striking?30:10)));
-    const squash=this.impact/C.impactTime;
-    this.boss.scale.set(1+squash*.08,1-squash*.2,1+squash*.08);
-    this.boss.rotation.x=striking?.3:this.phase==='wind'?.12:this.phase==='open'?.07:0;
+    this.visualTime+=dt;const t=this.visualTime,ps=this.pose;
+    this.impact=Math.max(0,this.impact-dt);this.hurtLeft=Math.max(0,this.hurtLeft-dt);this.tiredLeft=Math.max(0,this.tiredLeft-dt);this.poundTime=Math.max(0,this.poundTime-dt);
+    const ph=this.phase,airborne=ph==='leap',striking=this.impact>0,hurt=this.hurtLeft>0,tired=this.tiredLeft>0,open=ph==='open';
+    const windP=ph==='wind'?THREE.MathUtils.clamp(1-this.timer/(C.windup*(this.stars<=this.maxStars/2?C.enrageWindScale:1)),0,1):0;
+    const swing=Math.sin(t*A.armSwingSpeed),swing2=Math.sin(t*A.armSwingSpeed+1.3);
+    const calm=!airborne&&!striking&&ph!=='wind'&&!hurt&&!tired;
+    // Target pose for this moment; everything eases toward it (no snapping).
+    let crouch=0,lean=0,roll=Math.sin(t*A.shiftSpeed)*A.shiftRoll,drop=1.1+swing*A.armSwing,fwd=swing2*A.armSwing*1.5,stretch=0,rate:number=A.poseRate;
+    if(ph==='retreat'){drop=.65;fwd=.3;stretch=A.leapStretch*.5;}
+    if(open){lean=.07;drop=1.2+swing*A.armSwing*2;}
+    if(ph==='wind'){crouch=A.windCrouch*windP;lean=A.windLeanBack*windP;drop=1.1-.2*windP;fwd=A.windArms*windP;roll=Math.sin(t*38)*.025*windP;}
+    if(airborne){crouch=0;stretch=A.leapStretch;lean=A.leapLean;drop=1.2;fwd=2.5;}
+    if(striking){crouch=.12;lean=.3;drop=1.1;fwd=.12;rate=A.strikeRate;}
+    else if(this.poundTime>0&&!hurt){lean=.12;fwd=.5;}
+    if(hurt){const k=this.hurtLeft/C.hurtTime;lean=C.hurtRecoil*Math.min(1,k*1.6);crouch=.1*k;roll=-.12*k;drop=C.hurtArms;fwd=1.3;rate=18;}
+    if(tired){lean=.22;crouch=.14;drop=1.35;fwd=.3;roll=Math.sin(t*3.2)*C.tiredWobble;rate=5;}
+    const ease=Math.min(1,dt*rate);
+    this.armDrop.value=THREE.MathUtils.lerp(this.armDrop.value,drop,Math.min(1,dt*(striking?30:hurt?18:12)));
+    this.armDrop.forward.value=THREE.MathUtils.lerp(this.armDrop.forward.value,fwd,Math.min(1,dt*(striking?30:hurt?18:10)));
+    ps.crouch+=(crouch-ps.crouch)*ease;ps.lean+=(lean-ps.lean)*ease;ps.roll+=(roll-ps.roll)*Math.min(1,dt*6);ps.stretch+=(stretch-ps.stretch)*Math.min(1,dt*10);
+    // Breathing (faster when puffing in the open phase) and a damped bounce after the pound (follow-through).
+    const br=Math.sin(t*(open||tired?A.breatheOpenSpeed:A.breatheSpeed))*A.breathe*(open||tired?1.8:1);
+    const squash=this.impact/C.impactTime,after=this.poundTime>0&&!striking?Math.sin(this.poundTime*24)*A.followThrough*(this.poundTime/(C.impactTime*2.2)):0;
+    const sy=1-ps.crouch+ps.stretch+br-squash*.2+after,sxz=1+ps.crouch*.5-ps.stretch*.4-br*.5+squash*.08-after*.5;
+    this.boss.scale.set(sxz,sy,sxz);
+    this.boss.rotation.x=ps.lean;this.boss.rotation.z=ps.roll;
+    if(calm&&!open)this.boss.rotation.x+=Math.sin(t*A.breatheSpeed*.5)*.02;
     if(this.alert.visible)this.alert.material.opacity=.28+.58*(.5+.5*Math.sin(this.visualTime*16));
     this.aim.copy(this.boss.position);this.aim.y+=C.height*.6;
-    this.boss.rotation.y=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
+    // Look at the player with eased turning (the whole body turns; the mesh has no separate head).
+    const want=Math.atan2(this.ctx.player.position.x-this.boss.position.x,this.ctx.player.position.z-this.boss.position.z);
+    if(!ps.yawInit||airborne){ps.yaw=want;ps.yawInit=true;}else{let d=want-ps.yaw;d-=Math.PI*2*Math.round(d/(Math.PI*2));ps.yaw+=d*Math.min(1,dt*A.yawRate);}
+    this.boss.rotation.y=ps.yaw;
+    // White then red flash while flinching.
+    const f=hurt?this.hurtLeft/C.hurtTime:0;
+    if(this.bodyMat){const w=hurt&&this.hurtLeft>C.hurtTime-.2?1:0;this.bodyMat.emissive.setRGB(.9*f,(.12+.6*w)*f,(.12+.6*w)*f);}
+    this.ctx.game.debugInfo.gorillaFlash=f;this.ctx.game.debugInfo.gorillaPounds=this.fxCount.pounds;
+    this.ctx.game.debugInfo.gorillaHurts=this.fxCount.hurts;this.ctx.game.debugInfo.gorillaTired=this.fxCount.tired;
   }
   dispose(): void {}
 }

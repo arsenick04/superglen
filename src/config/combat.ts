@@ -51,6 +51,16 @@ export const Combat = {
     windup: 1.5, leapTime: 1.15, leapArc: 7, recover: 1.3,
     cooldown: 1, retreatTime: 1.1, vulnerable: 3.5, hitRadius: 1.65, hitHeight: 2,
     fastLeapTime: .85, enrageWindScale: .8, impactTime: .55, slamArcScale: .75,
+    /** Body language (all visual). Crouch/lean in radians or share of height; rates are easing speeds per second. */
+    anim: {
+      breathe: 0.016, breatheSpeed: 2.2, breatheOpenSpeed: 5, shiftRoll: 0.05, shiftSpeed: 0.9, armSwing: 0.1, armSwingSpeed: 1.8,
+      windCrouch: 0.26, windLeanBack: -0.2, windArms: -0.9, leapLean: 0.28, leapStretch: 0.07, followThrough: 0.05,
+      yawRate: 7, poseRate: 8, strikeRate: 30,
+    },
+    /** Ground pound: dust ring (radius = hitRadius, so it matches the danger zone), debris, camera shake. */
+    pound: { ringTime: 0.55, innerRing: 0.6, dust: 28, leaves: 22, shake: 0.32, shakeTime: 0.35 },
+    /** Hurt flinch and the tired/dizzy wobble after the last star (s). Flash fades over hurtTime. */
+    hurtTime: 0.8, hurtRecoil: -0.4, hurtArms: -0.8, tiredTime: 1.5, tiredWobble: 0.12, sweatDrops: 8,
     missesToOpen: 2, targetRadius: 1.6,
   },
   hearts: {
