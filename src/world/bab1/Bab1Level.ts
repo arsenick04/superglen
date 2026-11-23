@@ -17,6 +17,8 @@ import { Story } from './Story';
 import { LabVisit } from './LabVisit';
 import { StreetFx } from './StreetFx';
 import { NinoTerminal } from '../../gameplay/props/NinoTerminal';
+import { LabAaraHost } from './LabAaraHost';
+import { TrainingDoor, TRAINING_DOOR } from './TrainingDoor';
 import { STREET_REACH, STREET_BUILDINGS, BODY, SCHOOL, streetRoutes } from './StreetData';
 import { flow, takeArrival, travel, LAB_EXIT_TARGET } from '../progress';
 import { DOOR_HALF } from './Layout';
@@ -64,6 +66,9 @@ export class Bab1Level implements Level {
   private streetFx: StreetFx | null = null;
   private leaving = false;
   private terminal!: NinoTerminal;
+  /** After the whole story: Aara replaces the computer and hosts the quiz; the training room door appears (lab mode only). */
+  private aaraHost: LabAaraHost | null = null;
+  private trainingDoor: TrainingDoor | null = null;
   /** Chapter 5: Aara meets Nino here (null otherwise). */
   private visit: LabVisit | null = null;
   /** Chapter 8 invitation: Aara waits beside Nino before the walk to the forest entrance. */
@@ -144,7 +149,12 @@ export class Bab1Level implements Level {
     labKit.build(root);
 
     // Nino's terminal in the lab: appears once Chapter 1 is done ("mix" of all categories).
-    this.terminal = new NinoTerminal(ctx, { x: TERMINAL_LAB.x, y: LAB_FLOOR, z: TERMINAL_LAB.z, category: 'mix', enabled: () => ctx.save.isChapterDone('bab1') });
+    this.terminal = new NinoTerminal(ctx, { x: TERMINAL_LAB.x, y: LAB_FLOOR, z: TERMINAL_LAB.z, category: 'mix', enabled: () => ctx.save.isChapterDone('bab1') && !ctx.save.isChapterDone('ending') });
+    if (lab) {
+      // Once the story is finished (save 'ending'): Aara on the computer's spot and the door to the training room beside Nino.
+      this.aaraHost = new LabAaraHost(ctx, mats.lit, { x: TERMINAL_LAB.x, z: TERMINAL_LAB.z }, () => ctx.save.isChapterDone('ending'));
+      this.trainingDoor = new TrainingDoor(ctx, this.sparkles, () => ctx.save.isChapterDone('ending'));
+    }
     this.funny = new FunnyFx(root, ctx.player, this.sparkles);
     this.story = new Story({
       ctx,
@@ -165,6 +175,10 @@ export class Bab1Level implements Level {
         this.spawn = { x: this.lab.ninoPos.x - 3.2, y: LAB_FLOOR, z: this.lab.ninoPos.z + 2.8, yaw: Math.PI };
         this.atmosphere.snap(2);
         ctx.game.setPlayerMode('superglen', false);
+      } else if (arrival === 'labFromTraining') {
+        // Back from the training room: beside its door.
+        this.spawn = { x: TRAINING_DOOR.x - 2.2, y: LAB_FLOOR, z: TRAINING_DOOR.z + 0.4, yaw: Math.PI };
+        this.atmosphere.snap(2);
       } else if (arrival === 'labEntrance') {
         this.spawn = { x: ENTRY.x, y: 0, z: ENTRY.z, yaw: Math.PI };
         this.atmosphere.snap(1);
@@ -318,11 +332,19 @@ export class Bab1Level implements Level {
     this.funny.update(dt);
     this.streetFx?.update(dt);
     this.terminal.update(dt);
+    this.aaraHost?.update(dt);
+    this.trainingDoor?.update(dt);
     this.visit?.update(dt);
     this.forestAara?.update(dt);
     const n = this.lab.collect(p.x, p.y, p.z);
     if (n > 0) this.story.onCoins(n);
     const info = this.ctx.game.debugInfo;
+    if (this.trainingDoor && this.aaraHost) {
+      info.trainingDoor = this.trainingDoor.visible;
+      info.aaraHost = this.aaraHost.visible;
+      info.aaraHostUses = this.aaraHost.uses;
+      info.terminalVisible = this.terminal.visibleNow;
+    }
     info.step = this.story.step;
     info.flashlight = this.flashlight.on;
     info.wallOpen = this.hall.opened;

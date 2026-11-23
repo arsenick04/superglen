@@ -230,6 +230,7 @@ export class QuizPanel {
   /** Open the overlay for a challenge (or keep it open when the picker just ran). */
   openChallenge(reason: QuizReason, closable: boolean, host: 'nino' | 'aara' = 'nino'): void {
     this.host = host;
+    this.element.dataset.host = host;
     this.face.innerHTML = faceSvg(host);
     this.element.dataset.reason = reason;
     this.element.classList.toggle('closable', closable);
@@ -755,7 +756,7 @@ export class QuizPanel {
     this.setView('album');
     this.dots.forEach((d) => (d.style.display = 'none'));
     this.setBubble('Album stikermu');
-    this.deps.speak(QuizLines.album.id, QuizLines.album.text, 'nino');
+    this.deps.speak(voiceIdFor(this.host === 'aara' ? `aara_${QuizLines.album.id}` : QuizLines.album.id, QuizLines.album.text), QuizLines.album.text, 'nino');
     this.renderAlbum();
   }
 

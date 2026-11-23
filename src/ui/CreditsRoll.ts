@@ -4,7 +4,8 @@ import { Ending } from '../config/ending';
 /**
  * The movie-style credit roll: one centred white line at a time fades in below the middle, rises slowly through it and fades out.
  * Each line plays its voice-over clip when it starts (when the clip exists); it stays until the clip ends (plus a tail) or for a
- * fallback time, never shorter than `Ending.minLineSeconds`. A tap skips the roll once the first line is done.
+ * fallback time, never shorter than `Ending.minLineSeconds`. A tap skips the roll once the title card is done.
+ * Title card first, then the lines, then a closing card. Fonts: Cinzel + Cormorant Garamond (public/fonts, OFL). Music: scene 'kredit'.
  * Runs in real time (requestAnimationFrame), independent of the game loop. Resolves when it is over or skipped.
  */
 export function runCredits(stage: HTMLElement, audio: AudioManager | null): Promise<void> {
@@ -19,6 +20,7 @@ export function runCredits(stage: HTMLElement, audio: AudioManager | null): Prom
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
       audio?.stopVoice();
+      audio?.music.setScene(null, 1.2);
       stage.removeEventListener('pointerup', onTap);
       stage.style.transition = 'opacity .8s';
       stage.style.opacity = '0';
@@ -29,9 +31,9 @@ export function runCredits(stage: HTMLElement, audio: AudioManager | null): Prom
 
     const wait = (s: number): Promise<void> => new Promise((r) => { timer = window.setTimeout(r, s * 1000); });
 
-    const showLine = (text: string, seconds: number): Promise<void> => new Promise((r) => {
+    const showLine = (text: string, seconds: number, kind: 'title' | 'head' | 'text'): Promise<void> => new Promise((r) => {
       const el = document.createElement('p');
-      el.className = 'credit-line';
+      el.className = `credit-line credit-${kind}`;
       el.textContent = text;
       stage.appendChild(el);
       const t0 = performance.now();
@@ -52,6 +54,19 @@ export function runCredits(stage: HTMLElement, audio: AudioManager | null): Prom
     });
 
     void (async () => {
+      // Fonts first (bounded wait: a slow or blocked font never holds the roll back), then the music and the title card.
+      try {
+        await Promise.race([
+          Promise.all(["700 48px 'Cinzel'", "500 32px 'Cinzel'", "italic 500 32px 'Cormorant Garamond'", "500 32px 'Cormorant Garamond'"].map((f) => document.fonts.load(f, 'SUPERGLEN'))),
+          new Promise((r) => window.setTimeout(r, 2500)),
+        ]);
+      } catch { /* system serif fallback */ }
+      if (done) return;
+      audio?.music.setScene('kredit', Ending.musicFadeIn);
+      await showLine(Ending.titleText, Ending.titleSeconds, 'title');
+      skipOk = true;
+      if (done) return;
+      await wait(Ending.gapSeconds);
       for (let i = 0; i < Ending.lines.length && !done; i++) {
         const line = Ending.lines[i];
         let seconds = Math.max(Ending.minLineSeconds, Ending.fallbackLineSeconds, line.text.length * Ending.secondsPerChar + 2);
@@ -61,11 +76,15 @@ export function runCredits(stage: HTMLElement, audio: AudioManager | null): Prom
             if (v.played) seconds = Math.max(Ending.minLineSeconds, v.duration + Ending.voiceTailSeconds);
           } catch { /* no clip: the fallback time */ }
         }
-        await showLine(line.text, seconds);
-        if (i + 1 >= Ending.skipAfterLine) skipOk = true;
+        await showLine(line.text, seconds, line.kind);
         if (done) return;
-        await wait(i + 1 < Ending.lines.length ? Ending.gapSeconds : Ending.endHoldSeconds);
+        await wait(Ending.gapSeconds);
       }
+      if (done) return;
+      await showLine(Ending.endText, Ending.endSeconds, 'head');
+      if (done) return;
+      audio?.music.setScene(null, Ending.musicFadeOut);
+      await wait(Ending.endHoldSeconds);
       finish();
     })();
   });

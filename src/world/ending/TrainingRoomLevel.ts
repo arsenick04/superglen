@@ -9,10 +9,24 @@ import { camoBallGeo } from '../kota/SnakeBoss';
 import { flow, startPractice, takeArrival, travel, practice, type PracticeKind } from '../progress';
 import { Holo, makeHologramMaterial } from './Hologram';
 
-/** Nino's welcome (no audio file yet; the text is shown and the clip plays once it exists under this id). */
+/**
+ * Nino's tutorial on the first visit (no audio files yet: the text is shown and each clip plays once it exists under its id; with
+ * {nama} the clip ids get `_g` / `_sg`). The first line replaces the old single welcome `lab_nino_hologram`.
+ */
 export const TrainingLines = {
-  welcome: { id: 'lab_nino_hologram', speaker: 'nino', text: 'Hebat, {nama}! Semua lawanmu tersimpan di sini sebagai hologram. Kapan saja kamu mau berlatih, tekan tombol di depan lawan yang kamu pilih!' },
+  tutorial: [
+    { id: 'lab_nino_latihan_1', speaker: 'nino', text: 'Selamat datang di Ruang Latihan, {nama}! Semua lawanmu tersimpan di sini sebagai hologram.' },
+    { id: 'lab_nino_latihan_2', speaker: 'nino', text: 'Pilih lawan yang kamu mau, lalu berjalanlah ke depan hologramnya.' },
+    { id: 'lab_nino_latihan_3', speaker: 'nino', text: 'Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!' },
+    { id: 'lab_nino_latihan_4', speaker: 'nino', text: 'Setelah selesai, kamu kembali ke sini. Selamat berlatih!' },
+  ],
 } as const;
+
+/** Save flag: the tutorial was heard once (it is not repeated). */
+export const TRAINING_TUTORIAL_FLAG = 'training-tutorial';
+
+/** Entered through the Lab door (the exit door then leads back to the Lab instead of the city). Kept across practice fights. */
+let fromLab = false;
 
 /** The room: x in [-W, W], z in [-D, D]; the exit door is in the front wall (+z). */
 const W = 13.5, D = 9.5, H = 5.2;
@@ -41,34 +55,45 @@ const ORDER: readonly { kind: PracticeKind; name: string; height: number; model:
   { kind: 'gorilla', name: 'Gorilla Gembira', height: 2.4, model: 'gorilla_gembira' },
 ];
 
-function plate(text: string): THREE.Sprite {
+/** The big name sign above each hologram: two lines, large, readable from the entrance (also on a small phone screen). */
+function nameSign(name: string, accent: string): THREE.Sprite {
   const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 128;
+  c.width = 640;
+  c.height = 360;
   const g = c.getContext('2d');
   if (g) {
-    g.fillStyle = 'rgba(8,40,60,.78)';
-    g.strokeStyle = '#7ff6ea';
-    g.lineWidth = 6;
+    g.fillStyle = 'rgba(6,30,48,.88)';
+    g.strokeStyle = accent;
+    g.lineWidth = 12;
     g.beginPath();
-    g.roundRect(6, 6, 500, 116, 28);
+    g.roundRect(8, 8, 624, 344, 44);
     g.fill();
     g.stroke();
-    g.fillStyle = '#e8fdff';
-    g.font = '800 54px system-ui, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(text, 256, 52);
-    g.fillStyle = '#ffd23f';
-    g.font = '700 30px system-ui, sans-serif';
-    g.fillText('Latihan', 256, 100);
+    g.lineJoin = 'round';
+    g.font = '900 136px system-ui, "Arial Rounded MT Bold", sans-serif';
+    g.lineWidth = 14;
+    g.strokeStyle = '#04141f';
+    g.fillStyle = '#ffffff';
+    const [a, b] = name.split(' ');
+    g.strokeText(a, 320, 118);
+    g.fillText(a, 320, 118);
+    g.fillStyle = accent;
+    g.strokeText(b, 320, 252);
+    g.fillText(b, 320, 252);
   }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
-  s.scale.set(3.4, 0.85, 1);
+  s.scale.set(SIGN.w, SIGN.h, 1);
   return s;
 }
+
+/** Sign size (m), the height of its centre and its distance in front of the pedestal: low and close, so the third-person camera at the entrance sees all five whole (a sign above the holograms was cut off on a phone). */
+const SIGN = { w: 2.5, h: 1.4, y: 1.15, front: 1.9 } as const;
+const ACCENTS = ['#7ff6ea', '#9bff8a', '#ffb25c', '#8ab8ff', '#ffd23f'] as const;
 
 function exitDoorTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -101,7 +126,7 @@ function exitDoorTexture(): THREE.CanvasTexture {
 /**
  * The Lab training room after the story: the defeated opponents stand frozen on pedestals as cyan holograms. A big floor button in
  * front of each starts a practice fight (no story progress); winning or leaving returns here. The door in the front wall leads to
- * the free city. Reachable from the ending and from Nino in the Lab once the story is complete. Debug: `?training=1`.
+ * the free city. Reachable from the ending and from the training door in the Lab once the story is complete. Debug: `?training=1`.
  */
 export class TrainingRoomLevel implements Level {
   readonly id = 'training-room';
@@ -118,6 +143,8 @@ export class TrainingRoomLevel implements Level {
   build(ctx: LevelContext): void {
     this.ctx = ctx;
     const arrival = takeArrival(this.id);
+    if (arrival === 'trainingFromLab') fromLab = true;
+    else if (arrival !== 'trainingBack') fromLab = false;
     practice.level = '';
     const real = !flow.sandbox;
     if (real) ctx.save.setWhere('training-room');
@@ -127,7 +154,7 @@ export class TrainingRoomLevel implements Level {
     key.position.set(4, 12, 10);
     ctx.root.add(key);
     ctx.audio.music.setScene('latihan');
-    ctx.audio.preload([TrainingLines.welcome.id]);
+    ctx.audio.preload(TrainingLines.tutorial.map((l) => l.id));
 
     // Superglen with every power ready; the child may switch back to Glen.
     ctx.game.setPlayerMode('superglen', false);
@@ -180,9 +207,11 @@ export class TrainingRoomLevel implements Level {
       const b = new THREE.Mesh(beam, beamMat);
       b.position.set(s.x, PED.h + 1.7, s.z);
       ctx.root.add(b);
-      const label = plate(s.name);
-      label.position.set(s.x, 0.42, s.z + 1.7);
-      ctx.root.add(label);
+      const sign = nameSign(s.name, ACCENTS[this.slots.indexOf(s) % ACCENTS.length]);
+      sign.position.set(s.x, SIGN.y, s.z + SIGN.front);
+      sign.name = `sign-${s.kind}`;
+      ctx.root.add(sign);
+      ctx.onDispose(() => { sign.material.map?.dispose(); sign.material.dispose(); });
       // The big press button on the floor in front of the pedestal.
       const bz = s.z + 3.0;
       const pad = new THREE.Mesh(padGeo, padMat);
@@ -217,7 +246,7 @@ export class TrainingRoomLevel implements Level {
       center: new THREE.Vector3(0, 1, D - 0.2),
       half: new THREE.Vector3(DOOR_HALF - 0.1, 2, 0.6),
       once: true,
-      onEnter: () => { void travel(ctx.game, 'kota', 'hillDoor'); },
+      onEnter: () => { void (fromLab ? travel(ctx.game, 'lab', 'labFromTraining') : travel(ctx.game, 'kota', 'hillDoor')); },
     });
 
     this.nino = new NinoActor(ctx, -3.2, 3.2);
@@ -227,11 +256,14 @@ export class TrainingRoomLevel implements Level {
       const s = this.slots.find((x) => x.kind === practice.kind);
       if (s) { this.spawn.x = s.x; this.spawn.z = s.z + 4.6; }
     }
-    if (arrival !== 'trainingBack') {
+    // Nino's tutorial: the first time only (not after a practice fight, not on later visits).
+    ctx.game.debugInfo.trainingSigns = this.slots.length;
+    if (arrival !== 'trainingBack' && !ctx.save.isChapterDone(TRAINING_TUTORIAL_FLAG)) {
       ctx.seq.run(async () => {
         await ctx.seq.waitUntil(() => startGate.started);
         await ctx.seq.wait(0.6);
-        await ctx.dialog.say(TrainingLines.welcome, { lockControls: true });
+        for (const line of TrainingLines.tutorial) await ctx.dialog.say(line, { lockControls: true });
+        ctx.save.markChapterDone(TRAINING_TUTORIAL_FLAG);
       });
     }
   }

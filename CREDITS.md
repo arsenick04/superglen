@@ -30,7 +30,16 @@ Soundtrack milik pemilik proyek (diisi setelah file diunggah ke `public/audio/mu
 | Adegan | File | Pencipta | Lisensi |
 |---|---|---|---|
 | Musik latar (awal, menjelajah, latihan, pertarungan) | `ringan_a.mp3`, `ringan_b.mp3`, `battle_a.mp3`, `battle_b.mp3` (pertarungan) | Musik orisinal dibuat dengan skrip untuk proyek ini (`scripts/make-music.py`, sintesis numpy/scipy), tanpa sampel pihak lain | milik proyek |
+| Kredit akhir | `credits.mp3` (adegan `kredit`, sekali putar, fade in/out; ditambahkan saat file tersedia) | (isi saat file ada) | (isi saat file ada) |
 | Berubah jadi Superglen | `theme_berubah_tagline.mp3`, `theme_berubah.mp3`, `superglen_theme*.mp3` | lagu tema Superglen milik pemilik proyek (dibuat dengan Suno) | milik pemilik proyek |
+
+## Huruf (fonts)
+Kredit akhir memakai dua huruf gratis berlisensi SIL Open Font License 1.1 (boleh dipakai dan disertakan dalam game), diunduh dari Google Fonts (subset latin, woff2) dan disimpan di `public/fonts/`, tanpa dependensi npm:
+
+| Huruf | Dipakai untuk | File | Lisensi |
+|---|---|---|---|
+| Cinzel (The Cinzel Project Authors) | judul "SUPERGLEN" dan kepala kredit | `public/fonts/Cinzel-latin.woff2`, `OFL-Cinzel.txt` | SIL OFL 1.1 |
+| Cormorant Garamond (Cormorant Project Authors) | baris kredit | `public/fonts/CormorantGaramond-500-latin.woff2`, `CormorantGaramond-500i-latin.woff2`, `OFL-CormorantGaramond.txt` | SIL OFL 1.1 |
 
 ## Suara hewan (domain publik / CC0)
 

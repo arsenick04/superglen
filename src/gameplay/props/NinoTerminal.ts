@@ -163,6 +163,11 @@ export class NinoTerminal {
     });
   }
 
+  /** Visible and usable right now (tests). */
+  get visibleNow(): boolean {
+    return this.group.visible;
+  }
+
   /** Once per rendered frame: glow towards "lit" when the player is near, a gentle bob. */
   update(dt: number): void {
     const on = this.opts.enabled ? this.opts.enabled() : true;

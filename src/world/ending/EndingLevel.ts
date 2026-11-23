@@ -23,7 +23,7 @@ export class EndingLevel implements Level {
     ctx.game.setTransformAllowed(false);
     ctx.audio.preload(Ending.lines.map((l) => l.id));
     ctx.game.preloadCinematic('ending');
-    ctx.audio.music.setScene('jelajah');
+    ctx.audio.music.setScene(null); // the credit roll starts its own music (scene 'kredit')
     ctx.seq.run(async () => {
       await ctx.seq.waitUntil(() => startGate.started);
       ctx.game.debugInfo.ending = 'playing';

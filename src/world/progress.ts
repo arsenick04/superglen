@@ -38,6 +38,10 @@ export type Arrival =
   | 'labFromHangar'
   /** Training room: right after the ending (Nino shows the holograms). */
   | 'trainingFromEnding'
+  /** Training room: through the new door in the Lab (the exit door then leads back to the Lab). */
+  | 'trainingFromLab'
+  /** Lab: back from the training room, beside its door. */
+  | 'labFromTraining'
   /** Training room: back from a practice fight (in front of that opponent's pedestal, see `practice.kind`). */
   | 'trainingBack';
 
@@ -224,8 +228,6 @@ export function labNinoTalk(save: SaveStore): { line: string | null; next: strin
   if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: 'flight-training' };
   if (save.data.interlude === 'elang_bank' || save.data.interlude === 'elang_met') return { line: 'elang_nino_alarm', next: null };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
-  // The story is complete: Nino offers the training room with the holograms.
-  if (save.isChapterDone('ending')) return { line: null, next: 'training-room' };
   return { line: 'bab2_nino_hebat', next: null };
 }
 

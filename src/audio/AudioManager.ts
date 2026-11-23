@@ -34,10 +34,10 @@ export const AudioConfig = {
   tail: 0.35,
 } as const;
 
-export type MusicScene = 'awal' | 'jelajah' | 'berubah' | 'latihan' | 'pertarungan';
-export const MUSIC_SCENES: readonly MusicScene[] = ['awal', 'jelajah', 'berubah', 'latihan', 'pertarungan'];
+export type MusicScene = 'awal' | 'jelajah' | 'berubah' | 'latihan' | 'pertarungan' | 'kredit';
+export const MUSIC_SCENES: readonly MusicScene[] = ['awal', 'jelajah', 'berubah', 'latihan', 'pertarungan', 'kredit'];
 /** `berubah` (the transformation) is a one-shot sting; the rest loop. */
-const SCENE_LOOPS: Record<MusicScene, boolean> = { awal: true, jelajah: true, berubah: false, latihan: true, pertarungan: true };
+const SCENE_LOOPS: Record<MusicScene, boolean> = { awal: true, jelajah: true, berubah: false, latihan: true, pertarungan: true, kredit: false };
 
 export interface VoiceResult {
   played: boolean;
@@ -146,6 +146,8 @@ export class AudioManager {
   maxBufferSeconds = 0;
   private tracksLoaded: Promise<void> | null = null;
   private wanted: MusicScene | null = null;
+  /** Fade (s) of the scene change that is being applied (crossfade by default; the credits use longer fades). */
+  private sceneFade: number = AudioConfig.crossfade;
   private current: MusicPlay | null = null;
   private readonly fading = new Set<MusicPlay>();
   private sceneToken = 0;
@@ -585,7 +587,8 @@ export class AudioManager {
    * `audio/music/tracks.json` (scene -> file name; empty = silence); changing scene crossfades. Before the first tap the
    * scene is remembered and starts with the tap.
    */
-  setScene(scene: MusicScene | null): void {
+  setScene(scene: MusicScene | null, fadeSeconds?: number): void {
+    this.sceneFade = fadeSeconds ?? AudioConfig.crossfade;
     // Remember the looping scene a one-shot (berubah) interrupts, to return to it when the sting ends.
     if (scene !== null && !SCENE_LOOPS[scene] && this.wanted !== null && SCENE_LOOPS[this.wanted]) this.returnScene = this.wanted;
     this.wanted = scene;
@@ -594,7 +597,7 @@ export class AudioManager {
 
   /** `audio.music.setScene('latihan')`: the music lane as a small facade. */
   readonly music = {
-    setScene: (scene: MusicScene | null): void => this.setScene(scene),
+    setScene: (scene: MusicScene | null, fadeSeconds?: number): void => this.setScene(scene, fadeSeconds),
   };
 
   get musicScene(): string {
@@ -611,7 +614,7 @@ export class AudioManager {
     const scene = this.wanted;
     const token = ++this.sceneToken; // any switch still loading is out of date now
     if (this.musicSilent || scene === null) {
-      if (this.current) this.fadeOutCurrent(this.musicSilent ? 0.15 : AudioConfig.crossfade);
+      if (this.current) this.fadeOutCurrent(this.musicSilent ? 0.15 : this.sceneFade);
       return;
     }
     if (this.current && this.current.scene === scene) return;
@@ -625,7 +628,7 @@ export class AudioManager {
       if (token !== this.sceneToken) return;
       const entry = this.tracks[scene];
       const key = entry && entry.file ? `music/${entry.file}` : '';
-      if (this.current) this.fadeOutCurrent(AudioConfig.crossfade);
+      if (this.current) this.fadeOutCurrent(this.sceneFade);
       if (!key || !entry) return; // silence for this scene
       let url = this.injectedMusic.get(key) ?? '';
       if (!url) {
@@ -636,14 +639,14 @@ export class AudioManager {
         }
         url = `${this.base}audio/${key}`;
       }
-      this.startMusic(scene, key, url, entry.vol);
+      this.startMusic(scene, key, url, entry.vol, this.sceneFade);
     } catch {
       // never break the game for music
     }
   }
 
   /** Start streaming one track. The file is never decoded: the browser streams it through the element. */
-  private startMusic(scene: MusicScene, key: string, url: string, vol: number): void {
+  private startMusic(scene: MusicScene, key: string, url: string, vol: number, fadeIn: number = AudioConfig.crossfade): void {
     const ctx = this.ctx;
     const dest = this.musicGain;
     if (!ctx || !dest) return;
@@ -667,7 +670,8 @@ export class AudioManager {
       this.current = null;
       this.releaseMusic(play);
       // A one-shot (berubah) is over: go back to the scene it interrupted.
-      if (!SCENE_LOOPS[scene] && this.wanted === scene) this.setScene(this.returnScene);
+      // The credit music ends in silence; the transformation sting returns to the scene it interrupted.
+      if (!SCENE_LOOPS[scene] && this.wanted === scene) this.setScene(scene === 'kredit' ? null : this.returnScene);
     });
     el.addEventListener('error', () => {
       if (play.dead) return;
@@ -679,7 +683,7 @@ export class AudioManager {
     this.current = play;
     el.src = url;
     this.rampMusic(play, vol, 0, 0);
-    this.rampMusic(play, vol, 1, AudioConfig.crossfade);
+    this.rampMusic(play, vol, 1, fadeIn);
     this.kickMusic();
   }
 
