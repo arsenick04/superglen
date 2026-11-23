@@ -1,10 +1,10 @@
 # Laporan audit suara (otomatis: `npm run audio:audit`)
 
-Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
-- ok: 650
+Diaudit: 672 kalimat beride, 7 kalimat tanpa id.
+- ok: 655
 - missing-clip: 8
 - stale-text: 0
-- missing-in-dialog-json: 8
+- missing-in-dialog-json: 9
 - menunggu varian nama (tidak dibuat sekarang): 8
 - perlu dibuat sekarang: 0 kalimat, sekitar 0 karakter
 
@@ -31,7 +31,8 @@ Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
 | id | speaker | text | status | chars | src |
 |---|---|---|---|---|---|
 | demo_halo | nino | Halo! | missing-in-dialog-json | 5 | src/world/DemoLevel.ts:58 |
-| forest_gorilla_sorry | gorila | Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json | 72 | src/world/arena/GorillaArena.ts:171 |
+| ff_gorilla_thanks | gorila | Terima kasih, {nama}! Hutanku selamat berkat kamu, Nino, dan Aara. | missing-in-dialog-json | 66 | src/world/arena/FirefightLevel.ts:25 |
+| forest_gorilla_sorry | gorila | Maaf, {nama}. Aku salah paham. Ternyata kamu datang untuk menolong kami. | missing-in-dialog-json | 72 | src/world/arena/GorillaArena.ts:170 |
 | forest_aara_quiz_ready | aara | Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}! | missing-in-dialog-json | 57 | src/world/bab1/Bab1Level.ts:203 |
 | forest_aara_quiz_complete | aara | Hebat! Lima pertanyaan berhasil kamu jawab, {nama}! | missing-in-dialog-json | 51 | src/world/bab1/Bab1Level.ts:207 |
 | forest_aara_sunset | aara | Matahari mulai terbenam. Ayo kita keluar dan pulang, {nama}! | missing-in-dialog-json | 60 | src/world/bab1/Bab1Level.ts:209 |
@@ -68,7 +69,7 @@ Diaudit: 666 kalimat beride, 7 kalimat tanpa id.
 
 (semua ada)
 
-## ok (650)
+## ok (655)
 
 Tidak dirinci; jalankan audit untuk daftar penuh dengan --json=file.
 

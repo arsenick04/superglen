@@ -2061,6 +2061,51 @@
     "category": "lainnya"
   },
   {
+    "id": "ff_nino_hose",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini selang air! Arahkan ke api, lalu tahan tombol semprot sampai apinya padam.",
+    "tts": "[excited] Ini selang air! [instructive] Arahkan ke api, lalu tahan tombol semprot sampai apinya padam.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "ff_aara_help",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Aku dan Nino juga menyemprot! Ayo kita padamkan semua api!",
+    "tts": "[cheerful] Aku dan Nino juga menyemprot! [determined] Ayo kita padamkan semua api!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "ff_nino_all_out",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Semua api sudah padam! Kerja bagus, Superglen!",
+    "tts": "[relieved] Semua api sudah padam! [proud] Kerja bagus, Superglen!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "ff_aara_hooray",
+    "speaker": "aara",
+    "lang": "id",
+    "text": "Hutannya selamat! Hore!",
+    "tts": "[happy] Hutannya selamat! [excited] Hore!",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
+    "id": "ff_glen_proud",
+    "speaker": "glen",
+    "lang": "id",
+    "text": "Kita berhasil bersama! Tidak ada lagi api.",
+    "tts": "[proud] Kita berhasil bersama! [relieved] Tidak ada lagi api.",
+    "source": "audio/dialog.json",
+    "category": "lainnya"
+  },
+  {
     "id": "quiz_hitung_001",
     "speaker": "nino",
     "lang": "id",
@@ -6800,6 +6845,24 @@
     "lang": "id",
     "text": "Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Superglen.",
     "tts": "[relieved] Elang Belang sudah tenang! Warga aman. Malam ini pulang dan istirahat dulu, Superglen.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "ff_gorilla_thanks_g",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Terima kasih, Glen! Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "tts": "[grateful] Terima kasih, Glen! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "source": "audio/name-lines.json",
+    "category": "nama"
+  },
+  {
+    "id": "ff_gorilla_thanks_sg",
+    "speaker": "gorila",
+    "lang": "id",
+    "text": "Terima kasih, Superglen! Hutanku selamat berkat kamu, Nino, dan Aara.",
+    "tts": "[grateful] Terima kasih, Superglen! [warm] Hutanku selamat berkat kamu, Nino, dan Aara.",
     "source": "audio/name-lines.json",
     "category": "nama"
   }
