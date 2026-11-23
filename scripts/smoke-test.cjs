@@ -11648,6 +11648,123 @@ async function forestCinScenario(page, check) {
   check('forest-cin: battle loads after the cinematic ends', true);
 }
 
+// ---- Fire hose level (Chapter 8 part 2): group `firefight`, `firefight-touch` -------------------------------------------------------------
+async function firefightScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const vw = touch ? 844 : 1280;
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&firefight=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'forest-firefight', null, { timeout: 30000 });
+  await sleep(900);
+  if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  const info = () => page.evaluate(() => ({ out: window.__superglen.levelInfo.firesOut, total: window.__superglen.levelInfo.firesTotal, done: !!window.__superglen.levelInfo.firefightDone, lvl: window.__superglen.level, dlg: window.__superglen.dialog.open, ctl: window.__superglen.controlsEnabled }));
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 60 && (g.dialog.open || !g.controlsEnabled); i++) { await g.advanceAsync(15, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } } await g.advanceAsync(10, true); });
+  const a = await info();
+  check(`firefight ${tag}: level starts with 0/8 fires out and controls free`, a.out === 0 && a.total === 8 && a.ctl, JSON.stringify(a));
+  const hold = async (on) => {
+    if (touch) await page.evaluate((on) => {
+      const b = document.querySelector('.tc-button[data-action=laser]'); const r = b.getBoundingClientRect();
+      const o = { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, isPrimary: true };
+      (on ? b : document.querySelector('.tc-button[data-action=laser]')).dispatchEvent(new PointerEvent(on ? 'pointerdown' : 'pointerup', o));
+    }, on);
+    else if (on) await page.keyboard.down('KeyJ'); else await page.keyboard.up('KeyJ');
+  };
+  const fireAt = (i) => [[-6, 14], [6, 14], [0, 22], [-12, 24], [12, 24], [-9, 6], [9, 6], [0, 8]][i];
+  // Spraying without a fire nearby does nothing.
+  await hold(true);
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(40, false); });
+  await hold(false);
+  check(`firefight ${tag}: pressing the button with no fire in reach puts nothing out`, (await info()).out === 0, JSON.stringify(await info()));
+  // Fire 7 (0,8): stand south of it, face it, hold ~2.4 s.
+  await page.evaluate(() => { const g = window.__superglen; g.placePlayer(0, 3); g.setCameraYaw(0); });
+  await hold(true);
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(20, true); });
+  const mid = await page.evaluate(() => ({ spraying: window.__superglen.levelInfo.spraying }));
+  check(`firefight ${tag}: holding the button near a fire sprays`, mid.spraying === true, JSON.stringify(mid));
+  if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `firefight-${touch ? 'touch' : 'desktop'}.png`) });
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(140, false); });
+  await hold(false);
+  const b = await info();
+  check(`firefight ${tag}: the fire is out after about 2 s of spraying (1/8)`, b.out === 1, JSON.stringify(b));
+  // HUD layout.
+  const layout = await page.evaluate(() => {
+    const sels = { hud: '.firefight-hud', hint: '.firefight-hint', gear: '.set-gear', zoom: '.zoom-btn', btn: '.tc-button', joy: '.tc-hint, .tc-base', hearts: '.hearts' };
+    const boxes = [];
+    for (const [name, sel] of Object.entries(sels)) for (const e of document.querySelectorAll(sel)) { const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden') boxes.push({ name, l: r.left, t: r.top, r: r.right, b: r.bottom }); }
+    const bad = [];
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const p = boxes[i], q = boxes[j]; if (p.l < q.r && q.l < p.r && p.t < q.b && q.t < p.b) bad.push(p.name + '/' + q.name); }
+    return { bad, names: [...new Set(boxes.map((x) => x.name))], out: boxes.filter((x) => x.l < -1 || x.t < -1 || x.r > innerWidth + 1 || x.b > innerHeight + 1).map((x) => x.name), text: document.querySelector('.firefight-hud')?.textContent };
+  });
+  check(`firefight ${tag}: HUD counter, hint, buttons and corners overlap nothing and stay on screen`, layout.bad.length === 0 && layout.out.length === 0 && layout.names.includes('hud') && layout.names.includes('hint'), JSON.stringify(layout));
+  check(`firefight ${tag}: counter reads "Api padam: 1/8"`, layout.text === 'Api padam: 1/8', layout.text);
+  // Put out the other four player fires (0, 1, 2 and the near ones), the helpers do the rest after their delay.
+  for (const i of [0, 1, 2]) {
+    const [x, z] = fireAt(i);
+    await page.evaluate(([x, z]) => { const g = window.__superglen; g.placePlayer(x, z - 4); g.setCameraYaw(0); }, [x, z]);
+    await hold(true);
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(150, false); });
+    await hold(false);
+  }
+  const c = await info();
+  check(`firefight ${tag}: four fires out by the child, the helpers' fires still burn at first`, c.out >= 4 && !c.done, JSON.stringify(c));
+  // Helpers put out their own fires after a while (10 s steady is enough).
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(60 * 40, false); });
+  const before = await info();
+  check(`firefight ${tag}: the helpers put out their fires on their own (at least 7 of 8 now)`, before.out >= 7, JSON.stringify(before));
+  // Sweep the field for whatever is left (the child's last fire).
+  for (let i = 0; i < 8 && !(await info()).done; i++) {
+    const [x, z] = fireAt(i);
+    await page.evaluate(([x, z]) => { const g = window.__superglen; g.placePlayer(x, z - 3); g.setCameraYaw(0); }, [x, z]);
+    await hold(true);
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(200, false); });
+    await hold(false);
+  }
+  const d = await page.evaluate(() => ({ sp: window.__superglen.levelInfo.spraying, ctl: window.__superglen.controlsEnabled, left: window.__superglen.levelInfo.fireLeft, out: window.__superglen.levelInfo.firesOut, done: !!window.__superglen.levelInfo.firefightDone, saved: window.__superglen.save.isChapterDone('forest-firefight'), dlg: window.__superglen.dialog.open }));
+  check(`firefight ${tag}: all 8 fires out, completion fires and the chapter is saved`, d.out === 8 && d.done && d.saved, JSON.stringify(d));
+  // End dialog (4 lines), then the reward and back to the city.
+  const ids = [];
+  await page.evaluate(async () => { const g = window.__superglen; window.__ids = []; for (let i = 0; i < 400 && g.level === 'forest-firefight'; i++) { await g.advanceAsync(20, false); if (g.dialog.open) { window.__ids.push(g.dialog.text); try { g.dialog.advance?.(); } catch (e) { /* */ } } } });
+  const e = await page.evaluate(() => ({ lvl: window.__superglen.level, lines: [...new Set(window.__ids)].length }));
+  check(`firefight ${tag}: after the thanks dialog the game returns to the city`, e.lvl === 'kota' && e.lines >= 4, JSON.stringify(e));
+}
+
+// ---- Gorilla win: the gorilla-win cinematic plays after the win dialog, then the fire hose level loads: group `gorilla-win` -------------
+async function gorillaWinScenario(page, check) {
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&gorilla=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => {
+    window.__cinLog = [];
+    const g = window.__superglen;
+    const v = document.querySelector('video');
+    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    g.pause(true);
+  });
+  // Win through the story hook: the arena marks the chapter and runs its win sequence when its last star goes; here the save flag is set
+  // and the level is rebuilt through the real win path by forcing the last star and letting a laser shot land in the open phase.
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 400 && (g.dialog.open || g.levelInfo.gorillaPhase === undefined); i++) { await g.advanceAsync(20, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } }
+    g.levelInfo.gorillaForceStars = 1;
+    await g.advanceAsync(3, false);
+    return g.levelInfo.gorillaPhase;
+  });
+  await page.evaluate(() => { window.__superglen.levelInfo.gorillaForceOpen = true; });
+  const won = await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 20 && g.levelInfo.gorillaPhase !== 'open'; i++) await g.advanceAsync(2, false); return g.levelInfo.gorillaPhase; });
+  if (won !== 'open') { check('gorilla-win: the fight reached the open phase', false, String(won)); return; }
+  await page.evaluate(async () => { window.__superglen.skills.fireLaser(); const g = window.__superglen; for (let i = 0; i < 400 && !window.__cinLog.length; i++) { await g.advanceAsync(10, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } } });
+  const log = await page.evaluate(() => window.__cinLog);
+  check('gorilla-win: the cinematic is requested in the gorilla arena after the win dialog', log.length === 1 && /cin_gorilla-win\.mp4\|battle-gorilla$/.test(log[0]), JSON.stringify(log));
+  await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
+  await page.waitForFunction(() => window.__superglen.level === 'forest-firefight', null, { timeout: 30000 });
+  check('gorilla-win: the fire hose level loads after the cinematic', true);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -11894,6 +12011,9 @@ async function main() {
     results.push(await runScenario(browser, 'bab5-flow-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab5FlowScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'dialog-name', { viewport: { width: 1280, height: 720 } }, dialogNameScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'forest-cin', { viewport: { width: 1280, height: 720 } }, (p, c) => forestCinScenario(p, c), '?level=test'));
+    results.push(await runScenario(browser, 'gorilla-win', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaWinScenario(p, c), '?level=test'));
+    results.push(await runScenario(browser, 'firefight', { viewport: { width: 1280, height: 720 } }, (p, c) => firefightScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'firefight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => firefightScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFallScenario(p, c, false), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => gorillaFallScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'hud-layout', { viewport: { width: 1280, height: 720 } }, (p, c) => hudLayoutScenario(p, c, false), '?level=kota&fps=0&reset=1'));
