@@ -11558,6 +11558,40 @@ async function gorillaFallScenario(page, check, touch) {
   check(`gorilla-fall ${tag}: after the rest hearts are full again and only now the energy is back to full`, e.ex === before.ex + 1 && e.hearts === 5 && e.stars === 5, JSON.stringify(e) + JSON.stringify(await page.evaluate(() => ({ ctl: window.__superglen.controlsEnabled, dlg: window.__superglen.dialog.open, txt: window.__superglen.dialog.text, lvl: window.__superglen.level, resting: window.__superglen.health.resting }))));
 }
 
+// ---- Gorilla fx: ground pound effect and hurt flash trigger: group `gorilla-fx` -----------------------------------------------------
+async function gorillaFxScenario(page, check) {
+  const shotDir = process.env.GORILLA_SHOTS;
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+  await page.goto(URL + '?chapter=8&gorilla=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(async () => {
+    const g = window.__superglen;
+    for (let i = 0; i < 400 && (g.dialog.open || g.levelInfo.gorillaPhase === undefined); i++) { await g.advanceAsync(20, false); if (g.dialog.open) { try { g.dialog.advance?.(); } catch (e) { /* */ } } }
+    await g.advanceAsync(480, true);
+  });
+  await sleep(1200);
+  const fx = () => page.evaluate(() => ({ pounds: window.__superglen.levelInfo.gorillaPounds, hurts: window.__superglen.levelInfo.gorillaHurts, flash: window.__superglen.levelInfo.gorillaFlash, phase: window.__superglen.levelInfo.gorillaPhase }));
+  await page.evaluate(() => { const g = window.__superglen; g.levelInfo.gorillaForceStars = 4; g.levelInfo.gorillaForceOpen = true; });
+  const open = await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 20 && g.levelInfo.gorillaPhase !== 'open'; i++) await g.advanceAsync(2, false); return g.levelInfo.gorillaPhase; });
+  check('gorilla-fx: the fight reaches the open phase', open === 'open', String(open));
+  await page.evaluate(async () => { const g = window.__superglen; await g.advanceAsync(30, false); g.skills.fireLaser(); await g.advanceAsync(12, true); });
+  await sleep(300);
+  const h = await fx();
+  check('gorilla-fx: a laser hit while open triggers the hurt reaction and a flash', h.hurts >= 1 && h.flash > 0, JSON.stringify(h));
+  if (shotDir) await page.screenshot({ path: path.join(shotDir, 'gorilla-hurt.png') });
+  // Wait for the leap to land (the player stays on his perch; the pound happens wherever the gorilla lands).
+  const base = (await fx()).pounds || 0;
+  const landed = await page.evaluate(async (b) => { const g = window.__superglen; for (let i = 0; i < 900 && !(g.levelInfo.gorillaPounds > b); i++) await g.advanceAsync(1, false); return g.levelInfo.gorillaPounds; }, base);
+  check('gorilla-fx: the landing triggers the ground pound effect', landed > base, JSON.stringify(await fx()));
+  await page.evaluate(async () => { await window.__superglen.advanceAsync(4, true); });
+  await sleep(300);
+  if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, 'gorilla-pound.png') }); }
+}
+
 // ---- {nama} in non-player lines: group `dialog-name` ----------------------------------------------------------------------------------
 async function dialogNameScenario(page, check) {
   await ch3Open(page, ch5Save({ bab5: { step: 'city' } }), false);
@@ -11696,7 +11730,7 @@ async function firefightScenario(page, check, touch) {
   // Stand at (px, py, pz) (feet) looking at fire i and hold the spray for `frames`.
   const sprayFrom = async (px, py, pz, i, frames) => {
     const [fx, fz] = FIRES[i];
-    await page.evaluate(([px, py, pz, yaw]) => { const g = window.__superglen; g.teleportFeet(px, py, pz); if (py === 0) g.levelInfo.fireForgetStep = true; g.setCameraYaw(yaw); }, [px, py, pz, Math.atan2(-(fx - px), -(fz - pz))]);
+    await page.evaluate(([px, py, pz, yaw]) => { const g = window.__superglen; g.teleportFeet(px, py, pz); g.setCameraYaw(yaw); }, [px, py, pz, Math.atan2(-(fx - px), -(fz - pz))]);
     await hold(true);
     await page.evaluate(async (n) => { await window.__superglen.advanceAsync(n, false); }, frames);
     await hold(false);
@@ -11749,7 +11783,7 @@ async function firefightScenario(page, check, touch) {
   { const [x, z, y] = stepAt(6, 2);
     await page.evaluate(async ([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 0.05, z); await g.advanceAsync(15, false); g.teleportFeet(x + 0.5, 0, z + 4); await g.advanceAsync(30, false); }, [x, y, z]);
     const fy = await page.evaluate(() => window.__superglen.feetY);
-    check(`firefight ${tag}: falling from a high canopy step returns to that step without a penalty`, fy > 2.3, String(fy)); }
+    check(`firefight ${tag}: falling from a high canopy step just lands on the ground (no respawn to the step)`, fy < 0.5, String(fy)); }
   { const [x, z, y] = stepAt(6, 2); await sprayFrom(x, y + 0.05, z, 6, 40);
     if (process.env.SHOTS) { await hold(true); await page.evaluate(async () => { await window.__superglen.advanceAsync(15, true); }); await page.screenshot({ path: path.join(process.env.SHOTS, `firefight-tree-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); await hold(false); }
     await sprayFrom(x, y + 0.05, z, 6, 200); }
@@ -11769,7 +11803,106 @@ async function firefightScenario(page, check, touch) {
   const ids = [];
   await page.evaluate(async () => { const g = window.__superglen; window.__ids = []; for (let i = 0; i < 400 && g.level === 'forest-firefight'; i++) { await g.advanceAsync(20, false); if (g.dialog.open) { window.__ids.push(g.dialog.text); try { g.dialog.advance?.(); } catch (e) { /* */ } } } });
   const e = await page.evaluate(() => ({ lvl: window.__superglen.level, lines: [...new Set(window.__ids)].length }));
-  check(`firefight ${tag}: after the thanks dialog the game returns to the city`, e.lvl === 'kota' && e.lines >= 4, JSON.stringify(e));
+  check(`firefight ${tag}: after the thanks dialog the ending starts (credits level, story not yet complete)`, e.lvl === 'ending' && e.lines >= 4, JSON.stringify(e));
+}
+
+
+// ---- Ending: credits over the sky (the film file is missing here), then the training room: groups `ending`, `ending-touch` ---------------
+async function endingScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const [cx, cy] = touch ? [422, 195] : [640, 360];
+  await page.evaluate(() => { localStorage.removeItem('superglen.save.v1'); localStorage.setItem('superglen.opening-seen.v1', '1'); });
+  await page.goto(URL + '?ending=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'ending', null, { timeout: 30000 });
+  await sleep(900);
+  const req = [];
+  page.on('request', (r) => { if (/cin_ending/.test(r.url())) req.push(r.url()); });
+  if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy);
+  await page.waitForFunction(() => !!document.querySelector('.credit-line'), null, { timeout: 40000 }).catch(() => {});
+  await sleep(1500);
+  const a = await page.evaluate(() => {
+    const L = document.querySelector('.cinematic-layer'), line = document.querySelector('.credit-line');
+    return { shown: !!L && !L.hidden, sky: !!L && L.classList.contains('cinematic-sky'), text: line ? line.textContent : null, op: line ? Number(line.style.opacity) : -1, st: window.__superglen.levelInfo.ending, lvl: window.__superglen.level };
+  });
+  check(`ending ${tag}: the credit roll shows its first line over the held film (sky gradient when the film cannot play)`, a.shown && a.text === 'Dari Daddy, untuk Glen.', JSON.stringify({ ...a, req }));
+  if (process.env.SHOTS) { await sleep(1200); await page.screenshot({ path: path.join(process.env.SHOTS, `ending-credits-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 }); }
+  // A tap before the first line is done does not skip.
+  if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy);
+  await sleep(500);
+  check(`ending ${tag}: a tap during the first line does not skip the roll`, (await page.evaluate(() => window.__superglen.level)) === 'ending');
+  if (touch) {
+    // After the first line (about 5.4 s) a tap skips to the training room.
+    await sleep(6500);
+    await page.touchscreen.tap(cx, cy);
+  }
+  await page.waitForFunction(() => window.__superglen.level === 'training-room' && !window.__superglen.loading, null, { timeout: touch ? 20000 : 60000 });
+  const b = await page.evaluate(() => ({ lvl: window.__superglen.level, layer: !document.querySelector('.cinematic-layer') || document.querySelector('.cinematic-layer').hidden, ctl: window.__superglen.controlsEnabled }));
+  check(`ending ${tag}: the credits ${touch ? 'are skipped by a tap' : 'play to the end'} and Superglen arrives in the training room, overlay closed`, b.lvl === 'training-room' && b.layer, JSON.stringify(b));
+  check(`ending ${tag}: ?ending=1 is a debug jump and leaves the save story state alone`, !(await page.evaluate(() => window.__superglen.save.isChapterDone('ending'))));
+}
+
+// ---- Training room: five holograms, buttons launch practice fights, returning works: groups `training`, `training-touch` ------------------
+async function trainingScenario(page, check, touch, only = null) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const [cx, cy] = touch ? [422, 195] : [640, 360];
+  await page.evaluate(() => { localStorage.removeItem('superglen.save.v1'); localStorage.setItem('superglen.opening-seen.v1', '1'); });
+  await page.goto(URL + '?training=1&fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'training-room', null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__superglen.levelInfo.holograms === 5, null, { timeout: 30000 }).catch(() => {});
+  await sleep(700);
+  if (touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy);
+  await page.waitForFunction(() => window.__superglen.dialog.open, null, { timeout: 45000 }).catch(() => {});
+  const a = await page.evaluate(() => ({ holo: window.__superglen.levelInfo.holograms, dlg: window.__superglen.dialog.open, text: window.__superglen.dialog.text }));
+  check(`training ${tag}: five holograms stand on their pedestals and Nino greets the child`, a.holo === 5 && a.dlg && /hologram/.test(a.text || ''), JSON.stringify(a));
+  if (process.env.SHOTS) await page.screenshot({ path: path.join(process.env.SHOTS, `training-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+  await page.evaluate(async () => { const g = window.__superglen; for (let i = 0; i < 200 && g.dialog.open; i++) { try { g.dialog.advance?.(); } catch (e) { /* */ } await g.advanceAsync(30, false); } });
+  const btn = await page.evaluate(() => JSON.parse(window.__superglen.levelInfo.trainingButtons));
+  const want = { curut: 'battle-curut', ular: 'practice-ular', rakus: 'practice-rakus', elang: 'battle-elang', gorilla: 'practice-gorilla' };
+  if (process.env.SHOTS && (!only || only[0] === 'curut')) {
+    await page.evaluate(([x, z]) => { const g = window.__superglen; g.teleportFeet(x, 0, z + 2.6); g.setCameraYaw?.(0); }, [btn[2].x, btn[2].z]);
+    await sleep(500);
+    await page.screenshot({ path: path.join(process.env.SHOTS, `training-button-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+  }
+  let first = true;
+  for (const b of btn.filter((x) => !only || only.includes(x.kind))) {
+    // A fresh page per opponent keeps the headless browser's memory low (no greeting: the start tap is not given).
+    if (!first) {
+      await page.goto(URL + '?training=1&fps=0');
+      await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'training-room' && window.__superglen.levelInfo.holograms === 5, null, { timeout: 60000 });
+    }
+    first = false;
+    await page.evaluate(([x, z]) => { window.__superglen.teleportFeet(x, 0, z + 0.3); }, [b.x, b.z]);
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(20, false); });
+    await page.keyboard.down('KeyE');
+    await page.evaluate(async () => { await window.__superglen.advanceAsync(6, false); });
+    await page.keyboard.up('KeyE');
+    await page.waitForFunction((id) => window.__superglen.level === id && !window.__superglen.loading, want[b.kind], { timeout: 30000 }).catch(() => {});
+    await sleep(600);
+    const inFight = await page.evaluate(() => ({ lvl: window.__superglen.level, ret: !!document.querySelector('.arena-return') }));
+    check(`training ${tag}: the ${b.kind} button starts the practice fight (${want[b.kind]}) with a way back`, inFight.lvl === want[b.kind] && inFight.ret, JSON.stringify(inFight));
+    if (b.kind === 'curut' || b.kind === 'ular') {
+      const st = await page.evaluate(() => ({ b3: window.__superglen.save.data.bab3.step, tamed: window.__superglen.save.data.bab3.tamed.length, b5: window.__superglen.save.isChapterDone('bab5'), b3d: window.__superglen.save.isChapterDone('bab3') }));
+      check(`training ${tag}: practice (${b.kind}) changes no story progress`, st.b3d === false && st.b5 === false && st.tamed === 0, JSON.stringify(st));
+    }
+    if (process.env.SHOTS && b.kind === 'rakus') await page.screenshot({ path: path.join(process.env.SHOTS, `training-practice-${touch ? 'touch' : 'desktop'}.png`), timeout: 120000 });
+    await page.evaluate(() => document.querySelector('.arena-return').click());
+    await page.waitForFunction(() => window.__superglen.level === 'training-room' && !window.__superglen.loading, null, { timeout: 90000 });
+    await page.waitForFunction(() => window.__superglen.levelInfo.holograms === 5, null, { timeout: 30000 }).catch(() => {});
+    const back = await page.evaluate(() => ({ lvl: window.__superglen.level, holo: window.__superglen.levelInfo.holograms, dlg: window.__superglen.dialog.open }));
+    check(`training ${tag}: leaving the ${b.kind} practice returns to the training room without the greeting`, back.lvl === 'training-room' && back.holo === 5 && !back.dlg, JSON.stringify(back));
+  }
+}
+
+// ---- A finished story continues in the free city: group `ending-continue` -----------------------------------------------------------------
+async function endingContinueScenario(page, check) {
+  await page.evaluate(() => localStorage.setItem('superglen.save.v1', JSON.stringify({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6', 'bab7', 'bab8', 'forest-firefight', 'ending'], where: 'training-room', skills: { laser: true, shield: true, fly: true } })));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+  check('ending-continue: a finished story continues in the city', (await page.evaluate(() => window.__superglen.level)) === 'kota');
+  await page.evaluate(() => localStorage.setItem('superglen.save.v1', JSON.stringify({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6', 'bab7', 'bab8', 'forest-firefight'], where: 'ending', skills: { laser: true, shield: true, fly: true } })));
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading, null, { timeout: 30000 });
+  check('ending-continue: closed in the middle of the credits, the ending plays again', (await page.evaluate(() => window.__superglen.level)) === 'ending');
 }
 
 // ---- Gorilla win: the gorilla-win cinematic plays after the win dialog, then the fire hose level loads: group `gorilla-win` -------------
@@ -12055,7 +12188,18 @@ async function main() {
     results.push(await runScenario(browser, 'forest-cin', { viewport: { width: 1280, height: 720 } }, (p, c) => forestCinScenario(p, c), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-win', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaWinScenario(p, c), '?level=test'));
     results.push(await runScenario(browser, 'firefight', { viewport: { width: 1280, height: 720 } }, (p, c) => firefightScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'ending', { viewport: { width: 1280, height: 720 } }, (p, c) => endingScenario(p, c, false), '?level=test'));
+    results.push(await runScenario(browser, 'ending-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => endingScenario(p, c, true), '?level=test'));
+    results.push(await runScenario(browser, 'training', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['curut']), '?level=test'));
+    results.push(await runScenario(browser, 'training-ular', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['ular']), '?level=test'));
+    results.push(await runScenario(browser, 'training-rakus', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['rakus']), '?level=test'));
+    results.push(await runScenario(browser, 'training-elang', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['elang']), '?level=test'));
+    results.push(await runScenario(browser, 'training-gorilla', { viewport: { width: 1280, height: 720 } }, (p, c) => trainingScenario(p, c, false, ['gorilla']), '?level=test'));
+    results.push(await runScenario(browser, 'training-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => trainingScenario(p, c, true, ['curut']), '?level=test'));
+    results.push(await runScenario(browser, 'training-touch-rakus', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => trainingScenario(p, c, true, ['rakus']), '?level=test'));
+    results.push(await runScenario(browser, 'ending-continue', { viewport: { width: 1280, height: 720 } }, endingContinueScenario, '?level=test'));
     results.push(await runScenario(browser, 'firefight-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => firefightScenario(p, c, true), '?level=test'));
+    results.push(await runScenario(browser, 'gorilla-fx', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFxScenario(p, c), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall', { viewport: { width: 1280, height: 720 } }, (p, c) => gorillaFallScenario(p, c, false), '?level=test'));
     results.push(await runScenario(browser, 'gorilla-fall-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => gorillaFallScenario(p, c, true), '?level=test'));
     results.push(await runScenario(browser, 'hud-layout', { viewport: { width: 1280, height: 720 } }, (p, c) => hudLayoutScenario(p, c, false), '?level=kota&fps=0&reset=1'));

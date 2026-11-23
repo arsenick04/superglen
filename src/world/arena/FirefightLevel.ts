@@ -14,6 +14,7 @@ import { buildForestScenery } from './ForestScenery';
 import { ForestFireEffects } from './ForestFireEffects';
 
 const F = Combat.firefight, T = Parkour.firefightTrees;
+// Falling from a canopy step is fine here: the child lands on the ground and climbs again (no respawn).
 const STEAM = 0xd9e4ea;
 
 export const FirefightLines = {
@@ -91,10 +92,6 @@ export class FirefightLevel implements Level {
   private readonly npcAim: (Fire | null)[] = [null, null];
   private readonly flame: THREE.Mesh[][] = [];
   private readonly feet = new THREE.Vector3();
-  private readonly steps: { x: number; z: number; top: number }[] = [];
-  private lastStep: { x: number; z: number; top: number } | null = null;
-  private lastStepT = 0;
-  private respawnCooldown = 0;
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
@@ -111,7 +108,6 @@ export class FirefightLevel implements Level {
     const layout = buildFirefightLayout();
     // Canopy steps: a thin trunk, a disc collider on top (like the forest rescue) and a leafy cap.
     for (const st of layout.steps) {
-      this.steps.push(st);
       kit.solidCyl(0.3, st.top, [st.x, st.top / 2, st.z], 0x895e40);
       ctx.physics.addFixedCylinder(0.08, T.radius, { x: st.x, y: st.top - 0.08, z: st.z });
       for (let side = -1; side <= 1; side++) kit.lit.sph(1.5, [st.x + side * 0.8, st.top - 0.4, st.z + (side % 2) * 0.3], side === 0 ? 0x6fad47 : 0x497e37, [1, 0.3, 1], 1);
@@ -121,6 +117,7 @@ export class FirefightLevel implements Level {
     kit.build(ctx.root);
     buildForestScenery(ctx, true);
     this.fireFx = new ForestFireEffects(ctx);
+    ctx.game.preloadCinematic('ending');
 
     // Fire spots: three overlapping flame cones each, shared geometry and materials.
     const cone = new THREE.ConeGeometry(0.5, 1, 7);
@@ -274,33 +271,12 @@ export class FirefightLevel implements Level {
     return best;
   }
 
-  /** Falling from a high canopy step: back onto that step, no penalty. */
-  private respawnCheck(dt: number): void {
-    const pl = this.ctx.player;
-    this.respawnCooldown = Math.max(0, this.respawnCooldown - dt);
-    if (this.ctx.game.debugInfo.fireForgetStep) { delete this.ctx.game.debugInfo.fireForgetStep; this.lastStep = null; } // test hook: a teleport is not a fall
-    pl.getFeetPosition(this.feet);
-    this.lastStepT += dt;
-    if (pl.grounded) {
-      for (const st of this.steps) {
-        if (Math.abs(this.feet.y - st.top) < 0.3 && Math.hypot(this.feet.x - st.x, this.feet.z - st.z) < T.radius) { this.lastStep = st; this.lastStepT = 0; break; }
-      }
-      if (this.lastStep && this.feet.y < T.resetFeetHeight && this.lastStep.top >= F.fallRespawnMin && this.lastStepT < 3 && this.respawnCooldown <= 0) {
-        const st = this.lastStep;
-        pl.placeAt(st.x, st.top + 0.1, st.z, pl.facing);
-        this.respawnCooldown = 1;
-        this.lastStepT = 0;
-      }
-    }
-  }
-
   fixedUpdate(dt: number): void {
     const ctx = this.ctx;
     this.spraying = false;
     if (!startGate.started || this.finished) return;
     if (!ctx.game.controlsEnabled) return;
     this.activeTime += dt;
-    this.respawnCheck(dt);
     // Child: hold the laser button / key / mouse.
     const target = ctx.input.isDown('laser') && ctx.player.mode === 'superglen' ? this.pickFire() : null;
     const s0 = this.streams[0];
@@ -356,10 +332,16 @@ export class FirefightLevel implements Level {
     });
   }
 
+  /** After the closing scene: the ending (sky film + credits, then the training room). A finished story goes straight to the city. */
   private async leave(): Promise<void> {
     this.ctx.save.setInterlude('');
-    this.ctx.save.setWhere('kota');
-    await travel(this.ctx.game, 'kota', 'hillDoor');
+    if (this.ctx.save.isChapterDone('ending')) {
+      this.ctx.save.setWhere('kota');
+      await travel(this.ctx.game, 'kota', 'hillDoor');
+      return;
+    }
+    this.ctx.save.setWhere('ending');
+    await this.ctx.game.loadLevel('ending');
   }
 
   update(dt: number): void {

@@ -35,7 +35,11 @@ export type Arrival =
   /** Lab: just inside the old building's front door. */
   | 'labEntrance'
   /** Lab: next to the glowing hangar door (back from Chapter 2). */
-  | 'labFromHangar';
+  | 'labFromHangar'
+  /** Training room: right after the ending (Nino shows the holograms). */
+  | 'trainingFromEnding'
+  /** Training room: back from a practice fight (in front of that opponent's pedestal, see `practice.kind`). */
+  | 'trainingBack';
 
 let pending: { level: string; arrival: Arrival } | null = null;
 
@@ -56,6 +60,36 @@ export function marketPending(save: SaveStore): boolean {
  */
 export function sandboxActive(save: SaveStore): boolean {
   return flow.sandbox && (flow.free || !marketPending(save));
+}
+
+/**
+ * Practice fights of the Lab training room: the opponent's battle level is loaded again with no story progress. A level is "in
+ * practice" when `practice.level` is its id (the Game clears it as soon as any other level than the room loads).
+ */
+export type PracticeKind = 'curut' | 'ular' | 'rakus' | 'elang' | 'gorilla';
+export const PRACTICE_LEVEL: Readonly<Record<PracticeKind, string>> = {
+  curut: 'battle-curut',
+  ular: 'practice-ular',
+  rakus: 'practice-rakus',
+  elang: 'battle-elang',
+  gorilla: 'practice-gorilla',
+};
+export const practice: { level: string; kind: PracticeKind | null } = { level: '', kind: null };
+
+export function isPractice(levelId: string): boolean {
+  return practice.level === levelId;
+}
+
+export function startPractice(game: LevelGame, kind: PracticeKind): Promise<void> {
+  practice.kind = kind;
+  practice.level = PRACTICE_LEVEL[kind];
+  return game.loadLevel(practice.level);
+}
+
+/** Leave a practice fight: back to the training room, in front of the pedestal that was practised. */
+export function backToTraining(game: LevelGame): Promise<void> {
+  practice.level = '';
+  return travel(game, 'training-room', 'trainingBack');
 }
 
 /** Remember where the next build of `level` should put the player. */
@@ -93,6 +127,13 @@ export interface StartPlan {
 }
 
 export function startPlanFor(save: SaveStore): StartPlan {
+  // The story is complete: free open world. (Closed in the middle of the credits: the ending plays again.)
+  if (!save.previewChapter && save.data.where === 'ending' && !save.isChapterDone('ending')) return { level: 'ending' };
+  if (!save.previewChapter && save.isChapterDone('ending')) {
+    const sl = save.data.slot;
+    if (sl?.level === 'kota' && sl.t >= (save.data.doneAt.ending ?? 0)) return { level: 'kota', slot: { ...sl } };
+    return { level: 'kota', arrival: 'hillDoor' };
+  }
   if (save.previewFirefight || (save.data.where === 'forest-firefight' && !save.isChapterDone('forest-firefight')) || (save.data.where === 'battle-gorilla' && save.isChapterDone('forest-gorilla') && !save.isChapterDone('forest-firefight'))) return { level: 'forest-firefight' };
   if(save.previewGorillaBattle||save.data.where==='battle-gorilla'||(save.data.where==='forest-rescue'&&save.isChapterDone('forest-rescue'))) return {level:'battle-gorilla'};
   if (save.previewForestRescue) return { level: 'forest-rescue' };
@@ -183,6 +224,8 @@ export function labNinoTalk(save: SaveStore): { line: string | null; next: strin
   if (save.data.interlude === 'rakus_lab') return { line: 'rakus_nino_lab_arrival', next: 'flight-training' };
   if (save.data.interlude === 'elang_bank' || save.data.interlude === 'elang_met') return { line: 'elang_nino_alarm', next: null };
   if (!save.isChapterDone('bab2')) return { line: 'bab1_nino_besok', next: 'bab2' };
+  // The story is complete: Nino offers the training room with the holograms.
+  if (save.isChapterDone('ending')) return { line: null, next: 'training-room' };
   return { line: 'bab2_nino_hebat', next: null };
 }
 

@@ -35,7 +35,7 @@ import { Objectives } from '../gameplay/Objectives';
 import { LevelManager } from '../world/LevelManager';
 import type { LevelGame } from '../world/Level';
 import { LEVELS } from '../world/levels';
-import { flow, migrateSave, setArrival, startPlanFor } from '../world/progress';
+import { flow, migrateSave, practice, setArrival, startPlanFor } from '../world/progress';
 import { SaveStore } from './Save';
 import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
@@ -793,7 +793,7 @@ export class Game {
         this.levelControls = on;
         this.updateControls();
       },
-      playCinematic: (id) => this.cinematics.play(id),
+      playCinematic: (id, opts) => this.cinematics.play(id, opts),
       preloadCinematic: (id) => this.cinematics.preload(id),
       get controlsEnabled() {
         return self.controlsEnabled;
@@ -901,6 +901,8 @@ export class Game {
         this.testTargets.length = 0;
       },
       onAfterBuild: () => {
+        // A practice fight lasts only while its own level (or the training room) is loaded.
+        if (practice.level && this.levels.currentId !== practice.level && this.levels.currentId !== 'training-room') practice.level = '';
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
         this.maps.setSource(this.levels.current?.map ?? null);
         this.settings.refresh();
@@ -913,7 +915,9 @@ export class Game {
       },
     });
     for (const [id, factory] of Object.entries(LEVELS)) this.levels.register(id, factory);
-    const wanted = this.save.previewChapter ? null : new URLSearchParams(window.location.search).get('level');
+    const query = new URLSearchParams(window.location.search);
+    // Debug shortcuts: ?ending=1 (the credits) and ?training=1 (the Lab hologram training room).
+    const wanted = this.save.previewChapter ? null : query.get('level') ?? (query.get('ending') === '1' ? 'ending' : query.get('training') === '1' ? 'training-room' : null);
     flow.sandbox = false;
     flow.free = false;
     if (wanted && this.levels.has(wanted)) {
@@ -1368,7 +1372,7 @@ export class Game {
       await this.fadeUi.out();
       // A dedicated encounter ends when Glen needs a rest; return to the
       // city's hospital rather than respawning inside an inactive battle HUD.
-      if (this.levels.currentId === 'battle-curut') await this.levels.load('kota');
+      if (this.levels.currentId === 'battle-curut') await this.levels.load(practice.level === 'battle-curut' ? 'training-room' : 'kota');
       const spot = this.health.hospital;
       if (spot && this.levels.currentId === 'kota') {
         this.player.velocity.set(0, 0, 0);

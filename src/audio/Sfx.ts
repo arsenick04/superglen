@@ -45,12 +45,15 @@ export type SfxId =
   | 'sparkle'
   | 'bell'
   | 'alarm'
-  | 'battleStart';
+  | 'battleStart'
+  | 'thump'
+  | 'ouch';
 
 export const SFX_IDS: readonly SfxId[] = [
   'coin', 'coinDone', 'laserFire', 'laserHit', 'laserMiss', 'targetFlip', 'jetStart', 'shieldUp', 'shieldDown', 'shieldBlock',
   'ballHit', 'jump', 'jumpSuper', 'doubleJump', 'land', 'wallKick', 'mantle', 'ringPass', 'pop', 'quizTap', 'blip', 'bling',
   'transformUp', 'transformDown', 'fanfare', 'quizWrong', 'quizRight', 'sparkle', 'bell', 'alarm', 'battleStart',
+  'thump', 'ouch',
 ];
 
 /** Every tuning number of the effects. Seconds, Hz and linear gains. */
@@ -66,14 +69,14 @@ export const SfxConfig = {
     coin: 0.05, coinDone: 0.5, laserFire: 0.1, laserHit: 0.08, laserMiss: 0.2, targetFlip: 0.15, jetStart: 0.25,
     shieldUp: 0.15, shieldDown: 0.15, shieldBlock: 0.1, ballHit: 0.2, jump: 0.08, jumpSuper: 0.08, doubleJump: 0.15,
     land: 0.12, wallKick: 0.1, mantle: 0.2, ringPass: 0.2, pop: 0.06, quizTap: 0.06, blip: 0.08, bling: 0.3,
-    transformUp: 0.4, transformDown: 0.4, fanfare: 1, quizWrong: 0.2, quizRight: 0.2, sparkle: 0.5, bell: 0.25, alarm: 1, battleStart: 1,
+    transformUp: 0.4, transformDown: 0.4, fanfare: 1, quizWrong: 0.2, quizRight: 0.2, sparkle: 0.5, bell: 0.25, alarm: 1, battleStart: 1, thump: 0.3, ouch: 0.4,
   } as Record<SfxId, number>,
   /** Per sound: trim on top of `level` (1 = as designed). */
   trim: {
     coin: 0.9, coinDone: 0.9, laserFire: 0.9, laserHit: 0.9, laserMiss: 0.8, targetFlip: 0.9, jetStart: 0.9,
     shieldUp: 0.9, shieldDown: 0.8, shieldBlock: 1, ballHit: 1, jump: 0.7, jumpSuper: 0.85, doubleJump: 0.9,
     land: 0.9, wallKick: 0.9, mantle: 0.8, ringPass: 1, pop: 0.8, quizTap: 0.8, blip: 0.7, bling: 0.8,
-    transformUp: 1, transformDown: 0.9, fanfare: 1, quizWrong: 0.9, quizRight: 1, sparkle: 0.8, bell: 0.9, alarm: 0.8, battleStart: 0.9,
+    transformUp: 1, transformDown: 0.9, fanfare: 1, quizWrong: 0.9, quizRight: 1, sparkle: 0.8, bell: 0.9, alarm: 0.8, battleStart: 0.9, thump: 1, ouch: 0.9,
   } as Record<SfxId, number>,
   /** C major pentatonic from C5: coins, rings and twinkles pick their notes from here (they fit the drum notes). */
   pentatonic: [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093, 2349.32, 2637.02] as readonly number[],
@@ -533,6 +536,23 @@ export class Sfx {
     this.puff(v, 'lowpass', 700, 300, 0.7, 0, 0.05, 0.14);
   }
 
+  /** A big soft ground-pound "dum" (deep, no crack). */
+  thump(): void {
+    const v = this.open('thump');
+    if (!v) return;
+    this.tone(v, 'sine', 120, 42, 0, 0.32, 0.6, 0.12);
+    this.tone(v, 'triangle', 210, 80, 0, 0.14, 0.2, 0.08);
+    this.puff(v, 'lowpass', 500, 160, 0.8, 0, 0.18, 0.2);
+  }
+
+  /** A playful cartoon "aduh": a wobbly squeak that slides down. */
+  ouch(): void {
+    const v = this.open('ouch');
+    if (!v) return;
+    this.wobble(v, 'triangle', [620, 880, 420], 0, 0.34, 0.3);
+    this.tone(v, 'sine', 1240, 700, 0.05, 0.12, 0.1, 0.08);
+  }
+
   /** The "hup" of a jump: Glen is small and quick, Superglen deeper and bigger. */
   jump(big: boolean): void {
     const v = this.open(big ? 'jumpSuper' : 'jump');
@@ -856,6 +876,8 @@ export class Sfx {
       shieldDown: () => self.shieldDown(),
       shieldBlock: () => self.shieldBlock(),
       ballHit: () => self.ballHit(),
+      thump: () => self.thump(),
+      ouch: () => self.ouch(),
       jump: () => self.jump(false),
       jumpSuper: () => self.jump(true),
       doubleJump: () => self.doubleJump(),
