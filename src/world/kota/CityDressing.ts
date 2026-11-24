@@ -180,7 +180,7 @@ export function dressOf(b: CityBuilding): Dress | null {
   const hue0 = hueOf(b.wallColor);
   const wallHue = hue0 > 0 ? hue0 : WALL_HUES[Math.floor(hsh(b.x, b.z, 9) * WALL_HUES.length) % WALL_HUES.length];
   // Landmarks: assembled from the Downtown kit (scripts/build-downtown.mjs) at the exact footprint of the data.
-  const lmName = b.glen ? 'dt_glen' : DT_LANDMARKS[b.kind];
+  const lmName = b.glen || b.kind === 'oldBarongsai' ? undefined : DT_LANDMARKS[b.kind];
   const lm = lmName ? cityModels.get(lmName) : undefined;
   if (lm?.body) {
     // Glen's house keeps the tintable wall (data colour) and gets an orange roof; the others have fixed colours baked in.

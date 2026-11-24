@@ -1,0 +1,52 @@
+{
+ "generated": "2026-11-16",
+ "buildings": {
+  "old_barongsai": {
+   "file": "buildings/old_barongsai.glb",
+   "tris": 11983,
+   "bytes": 376188,
+   "min": [
+    -0.4995,
+    0,
+    -0.4648
+   ],
+   "max": [
+    0.4981,
+    0.7046,
+    0.4633
+   ],
+   "kind": "oldBarongsai",
+   "body": [
+    -0.3,
+    0.3,
+    -0.3,
+    0.16
+   ],
+   "shift": 0,
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  },
+  "rumah_glen": {
+   "file": "buildings/rumah_glen.glb",
+   "tris": 11998,
+   "bytes": 389056,
+   "min": [
+    -0.4995,
+    0,
+    -0.3893
+   ],
+   "max": [
+    0.4997,
+    0.6387,
+    0.3882
+   ],
+   "kind": "glen",
+   "body": [
+    -0.24,
+    0.26,
+    -0.36,
+    0.12
+   ],
+   "source": "Pemilik proyek (Higgsfield + Tripo)"
+  }
+ }
+}
