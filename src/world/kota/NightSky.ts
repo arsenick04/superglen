@@ -38,17 +38,6 @@ export function nightBackground(): THREE.DataTexture {
     const c = mix(NIGHT.skyHorizon, NIGHT.skyTop, t);
     for (let x = 0; x < W; x++) put(data, (y * W + x) * 4, c);
   }
-  // Stars: deterministic pseudo-random points, only above the horizon.
-  let s = 12345;
-  const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-  for (let i = 0; i < NIGHT.stars; i++) {
-    const x = Math.floor(rnd() * W), y = Math.floor((0.55 + rnd() * 0.45) * H);
-    const b = NIGHT.starBrightness * (0.5 + rnd() * 0.5), big = rnd() < 0.08;
-    for (let dy = 0; dy <= 0; dy++) for (let dx = 0; dx <= (big ? 1 : 0); dx++) {
-      const o = (Math.min(H - 1, y + dy) * W + ((x + dx) % W)) * 4;
-      put(data, o, [b, b, b * 0.95]);
-    }
-  }
   // Moon: bright disc with a soft halo.
   const [mu, mv] = uv(NIGHT.sunOffset);
   const mc = new THREE.Color(NIGHT.moonColor);
@@ -92,4 +81,60 @@ export function sunsetBackground(): THREE.DataTexture {
     }
   }
   return make(data);
+}
+
+/** Crisp night stars as GL points (constant pixel size, centred on the player, hidden behind buildings). Twinkle = one opacity write per frame. */
+export class StarField {
+  readonly group = new THREE.Group();
+  private readonly small: THREE.PointsMaterial;
+  private readonly bright: THREE.PointsMaterial;
+  private readonly cross: THREE.CanvasTexture;
+  private t = 0;
+
+  constructor() {
+    let s = 987654;
+    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const make = (n: number, minEl: number) => {
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        // Fewer near the horizon: elevation sine biased toward the zenith.
+        const el = Math.asin(minEl + (1 - minEl) * Math.sqrt(rnd())), az = rnd() * Math.PI * 2;
+        pos[i * 3] = Math.cos(el) * Math.cos(az) * NIGHT.starRadius;
+        pos[i * 3 + 1] = Math.sin(el) * NIGHT.starRadius;
+        pos[i * 3 + 2] = Math.cos(el) * Math.sin(az) * NIGHT.starRadius;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      return g;
+    };
+    const base = { sizeAttenuation: false, fog: false, depthWrite: false, transparent: true, color: 0xffffff } as const;
+    this.small = new THREE.PointsMaterial({ ...base, size: NIGHT.starSize });
+    // Tiny sparkle cross for the bright ones.
+    const c = document.createElement('canvas');
+    c.width = c.height = 32;
+    const g2 = c.getContext('2d');
+    if (g2) {
+      g2.fillStyle = '#fff';
+      g2.fillRect(15, 4, 2, 24);
+      g2.fillRect(4, 15, 24, 2);
+      g2.fillRect(13, 13, 6, 6);
+    }
+    this.cross = new THREE.CanvasTexture(c);
+    this.bright = new THREE.PointsMaterial({ ...base, size: NIGHT.starBrightSize, map: this.cross });
+    const sp = new THREE.Points(make(NIGHT.stars, 0.08), this.small);
+    const bp = new THREE.Points(make(NIGHT.brightStars, 0.25), this.bright);
+    for (const o of [sp, bp]) { o.frustumCulled = false; o.renderOrder = -1; this.group.add(o); }
+  }
+
+  update(dt: number, x: number, z: number): void {
+    this.group.position.set(x, 0, z);
+    this.t += dt;
+    this.bright.opacity = 0.75 + 0.25 * Math.sin(this.t * 2.3);
+    this.small.opacity = 0.85 + 0.15 * Math.sin(this.t * 1.1 + 1.3);
+  }
+
+  dispose(): void {
+    for (const o of this.group.children) (o as THREE.Points).geometry.dispose();
+    this.small.dispose(); this.bright.dispose(); this.cross.dispose();
+  }
 }

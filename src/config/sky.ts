@@ -8,7 +8,7 @@ export const NIGHT = {
   moonColor: 0xf2f6ff, moonIntensity: 1.05,
   sunOffset: [-26, 38, -34] as const, // light direction and moon position (same vector)
   moonRadius: 0.045, // radians-ish in texture u/v units
-  stars: 380, starBrightness: 0.95,
+  stars: 320, brightStars: 22, starSize: 1.6, starBrightSize: 9, starRadius: 160, // size in screen px (constant)
   lampColor: 0xffc878, lampIntensity: 2.2, lampDistance: 15, // warm pool that follows the player
 };
 

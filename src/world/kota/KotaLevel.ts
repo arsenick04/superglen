@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CityDressing } from './CityDressing';
 import { CityNature } from './CityNature';
 import { applySky } from './Sky';
-import { nightBackground, sunsetBackground } from './NightSky';
+import { nightBackground, sunsetBackground, StarField } from './NightSky';
 import { NIGHT, SUNSET } from '../../config/sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
@@ -101,6 +101,7 @@ export class KotaLevel implements Level {
   private sun!: THREE.DirectionalLight;
   private hemi!: THREE.HemisphereLight;
   private lampPool: THREE.PointLight | null = null;
+  private stars: StarField | null = null;
   private dressing!: CityDressing;
   private trees!: CityNature;
   private follower: ShadowFollower | null = null;
@@ -425,6 +426,11 @@ export class KotaLevel implements Level {
     this.sun.intensity = NIGHT.moonIntensity;
     this.sunOffset.set(...NIGHT.sunOffset);
     // One warm light pool that travels with the player (a street lamp glow); no shadows.
+    if (!this.stars) {
+      this.stars = new StarField();
+      this.ctx.root.add(this.stars.group);
+      this.ctx.onDispose(() => this.stars?.dispose());
+    }
     if (!this.lampPool) {
       this.lampPool = new THREE.PointLight(NIGHT.lampColor, NIGHT.lampIntensity, NIGHT.lampDistance, 1.6);
       this.ctx.root.add(this.lampPool);
@@ -704,6 +710,7 @@ export class KotaLevel implements Level {
     this.elangIntro?.update(dt);
     this.forestAara?.update(dt);
     this.lampPool?.position.set(p.x, p.y + 4.5, p.z);
+    this.stars?.update(dt, p.x, p.z);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;
