@@ -1,4 +1,4 @@
-import { column, softPool } from '../bab1/Round';
+import { column, PoolBatch } from '../bab1/Round';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { LevelContext } from '../Level';
@@ -146,13 +146,15 @@ export class Hangar {
       kit.glow.sph(0.18, [s * (maxX - 0.48), 7.8, z], 0xffd46a);
     }
     // Five lightweight ceiling lanterns provide depth landmarks across the long room.
+    const hangarPools = new PoolBatch();
     for (const z of [-4, -13, -22, -31, -40]) {
       kit.deco.sph(0.48, [0, ceil - 1.85, z], C.RED, [0.82, 1.18, 0.82]);
       kit.deco.cyl(0.2, 0.14, [0, ceil - 1.28, z], C.GOLD);
       kit.deco.cyl(0.22, 0.12, [0, ceil - 2.43, z], C.GOLD);
       kit.glow.sph(0.2, [0, ceil - 1.85, z], 0xffb347);
-      softPool(ctx.root, 0, 0.03, z, 3.2, [0.3, 0.17, 0.05]);
+      hangarPools.add(0, 0.03, z, 3.2, [0.3, 0.17, 0.05]);
     }
+    hangarPools.build(ctx.root);
 
     // ---- High windows (sky-blue glass) ----
     for (const s of [-1, 1]) {

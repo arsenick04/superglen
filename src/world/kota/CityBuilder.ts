@@ -45,13 +45,13 @@ const MARK = 0xfff3b0;
 const STONE = 0xe8d9b5;
 /** Visual heights of the flat layers (the collider ground is y = 0): small steps so nothing z-fights. */
 const Y: Record<GroundKind | 'base' | 'walk' | 'road' | 'mark', number> = {
-  base: -0.08,
-  grass: -0.05,
-  field: -0.03,
-  flowers: -0.02,
-  sand: -0.02,
-  dirt: -0.02,
-  plaza: -0.015,
+  base: -0.1,
+  grass: -0.07,
+  field: -0.05,
+  flowers: -0.035,
+  sand: -0.035,
+  dirt: -0.035,
+  plaza: -0.02,
   paving: -0.01,
   water: -0.01,
   walk: 0.0,
@@ -400,7 +400,7 @@ function branchLook(r: Recipe, t: { x: number; z: number; s: number; base: numbe
   const top = center[1] + size[1] / 2;
   r.add(Sh.Body, center, size, 0x9a6a44);
   // Moss strip: flat green quad just above the top face, inset from the bark rim.
-  r.quad(alongX ? size[0] - 0.14 : size[0] * 0.62, alongX ? size[2] * 0.62 : size[2] - 0.14, [center[0], top + 0.012, center[2]], leaf);
+  r.quad(alongX ? size[0] - 0.14 : size[0] * 0.62, alongX ? size[2] * 0.62 : size[2] - 0.14, [center[0], top + 0.03, center[2]], leaf);
   // Support strut (12 triangles), top at 0.55 of the limb, leaning in to the trunk.
   const L = 0.8 * t.s;
   const th = 0.6;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ColorBatch, Vec3 } from './Batch';
 
@@ -88,9 +89,24 @@ export function column(b: ColorBatch, x: number, z: number, y0: number, h: numbe
   ring(b, r * 1.0, 0.035, [x, y0 + h * 0.5, z], cap, [Math.PI / 2, 0, 0], Math.PI * 2, undefined, 6, seg);
 }
 
-/** Soft additive light pool lying on a surface (fake light: no real light, cheap on phones). */
-export function softPool(parent: THREE.Object3D, x: number, y: number, z: number, radius: number, rgb: readonly [number, number, number], vertical?: 'x' | 'z'): THREE.Mesh {
-  const g = new THREE.CircleGeometry(radius, 28);
+let poolMat: THREE.MeshBasicMaterial | null = null;
+/** One shared material for every fake light pool: additive, no depth write, pulled toward the camera (no z-fighting with the floor). */
+function poolMaterial(): THREE.MeshBasicMaterial {
+  return (poolMat ??= new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+    fog: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4,
+  }));
+}
+
+function poolGeometry(x: number, y: number, z: number, radius: number, rgb: readonly [number, number, number], vertical?: 'x' | 'z'): THREE.BufferGeometry {
+  const g = new THREE.CircleGeometry(radius, 20);
   const pa = g.getAttribute('position');
   const c = new Float32Array(pa.count * 3);
   for (let i = 0; i < pa.count; i++) {
@@ -101,14 +117,40 @@ export function softPool(parent: THREE.Object3D, x: number, y: number, z: number
     c[i * 3 + 2] = rgb[2] * f;
   }
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  const mesh = new THREE.Mesh(
-    g,
-    new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false, fog: false }),
-  );
-  if (!vertical) mesh.rotation.x = -Math.PI / 2;
-  else if (vertical === 'x') mesh.rotation.y = Math.PI / 2;
-  mesh.position.set(x, y, z);
+  if (!vertical) g.rotateX(-Math.PI / 2);
+  else if (vertical === 'x') g.rotateY(Math.PI / 2);
+  g.translate(x, y, z);
+  return g;
+}
+
+/** Many soft light pools merged into ONE draw call (fake light: no real light, cheap on phones). */
+export class PoolBatch {
+  private readonly geos: THREE.BufferGeometry[] = [];
+
+  add(x: number, y: number, z: number, radius: number, rgb: readonly [number, number, number], vertical?: 'x' | 'z'): this {
+    this.geos.push(poolGeometry(x, y, z, radius, rgb, vertical));
+    return this;
+  }
+
+  build(parent: THREE.Object3D): THREE.Mesh | null {
+    if (this.geos.length === 0) return null;
+    const merged = mergeGeometries(this.geos, false);
+    for (const g of this.geos) g.dispose();
+    this.geos.length = 0;
+    if (!merged) return null;
+    const mesh = new THREE.Mesh(merged, poolMaterial());
+    mesh.renderOrder = 2;
+    mesh.matrixAutoUpdate = false;
+    parent.add(mesh);
+    return mesh;
+  }
+}
+
+/** Soft additive light pool lying on a surface (single pool; prefer PoolBatch for several). */
+export function softPool(parent: THREE.Object3D, x: number, y: number, z: number, radius: number, rgb: readonly [number, number, number], vertical?: 'x' | 'z'): THREE.Mesh {
+  const mesh = new THREE.Mesh(poolGeometry(x, y, z, radius, rgb, vertical), poolMaterial());
   mesh.renderOrder = 2;
+  mesh.matrixAutoUpdate = false;
   parent.add(mesh);
   return mesh;
 }

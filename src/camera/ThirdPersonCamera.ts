@@ -10,7 +10,7 @@ const DEG = Math.PI / 180;
 
 export const CameraConfig = {
   fov: 55,
-  near: 0.1,
+  near: 0.2,
   /** Radians of rotation per pixel of mouse movement (pointer locked). */
   mouseSensitivity: 0.0025,
   /** Default distance from the look target (m). */

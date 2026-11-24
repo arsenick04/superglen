@@ -154,6 +154,8 @@ export class Atmosphere {
     this.fog.far = far;
     (this.scene.background as THREE.Color).copy(this.bg);
     this.hallAmount = w[1];
+    // Zero-intensity sun (hall, lab): skip its shadow pass entirely (the map is invisible then).
+    this.sun.shadow.autoUpdate = sun > 0.01;
   }
 }
 
