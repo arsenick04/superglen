@@ -179,7 +179,7 @@ class CityModels {
           if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
-      // Quaternius cars and buses for CityLife (scripts/build-cars.mjs): car_n1, car_n2, car_suv, car_sports, car_taxi, bus_city, bus_school.
+      // Quaternius cars and buses for CityLife (scripts/build-cars.mjs): car_n1, car_n2, car_suv_q, car_sports, car_taxi_q, bus_city, bus_school.
       const cars = loader
         .loadAsync(`${base}env/cars/cars.glb`)
         .then((gltf) => {
