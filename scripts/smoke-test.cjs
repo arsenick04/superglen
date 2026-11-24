@@ -8569,7 +8569,7 @@ async function kotaD3Scenario(page, check, touch) {
   for (const p of open2) fullOn.push(orange(await pix('.fullmap-base', p.x, p.z, 'orange')));
   const bikeFull = [];
   for (const b of bikesNow) bikeFull.push(await pix('.fullmap-base', b.x, b.z, 'teal'));
-  check(`kota-d3 ${tag}: the full map shows the resident icons (${fullOn.filter(Boolean).length}/${open2.length}) and every parked bike (${bikesNow.length})`, fullOn.every(Boolean) && bikesNow.length === 3 && bikeFull.every((n) => n >= 6), JSON.stringify({ fullOn, bikeFull }));
+  check(`kota-d3 ${tag}: the full map shows the resident icons (${fullOn.filter(Boolean).length}/${open2.length}) and every parked bike (${bikesNow.length})`, fullOn.every(Boolean) && bikesNow.length === P.bikes.length && bikeFull.every((n) => n >= 6), JSON.stringify({ fullOn, bikeFull }));
   await uiShot(page, `kota-d3-fullmap-${touch ? 'touch' : 'desktop'}`);
   await menuHit(page, '.fullmap-close', touch);
   await menuHit(page, '.settings-close', touch);
@@ -8646,7 +8646,7 @@ async function kotaD3StoryScenario(page, check) {
   const NONE = { laser: false, shield: false, fly: false };
   const ALL = { laser: true, shield: true, fly: true };
   s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1'], skills: NONE, lastMode: 'superglen', discovered: { lab: true } });
-  check('kota-d3 story: Chapter 1 done: coins, bikes, residents and signposts are in the city', s.level === 'kota' && s.d3 === 'object' && s.li.d3CoinTotal > 150 && s.li.d3Signs >= 6 && s.li.d3Bikes === 3 && s.li.d3Residents >= 6, JSON.stringify({ c: s.li.d3CoinTotal, s: s.li.d3Signs }));
+  check('kota-d3 story: Chapter 1 done: coins, bikes, residents and signposts are in the city', s.level === 'kota' && s.d3 === 'object' && s.li.d3CoinTotal > 150 && s.li.d3Signs >= 6 && s.li.d3Bikes >= 12 && s.li.d3Residents >= 6, JSON.stringify({ c: s.li.d3CoinTotal, s: s.li.d3Signs }));
   check('kota-d3 story: between Chapter 1 and 2 no mission is offered (the story beam is on the door)', s.people.every((p) => !p.available), JSON.stringify(s.people.map((p) => p.available)));
   const r = s.people[0];
   await d3Talk(page, r.id);
@@ -12079,6 +12079,10 @@ async function kotaBikeScenario(page, check, touch) {
   await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.sfx.reset(); });
   await d3Adv(page, 30);
   const bk = await page.evaluate(() => window.__d3.places().bikes[1]);
+  const all = await page.evaluate(() => window.__d3.places().bikes);
+  const nearest = (b) => Math.min(...all.filter((o) => o !== b).map((o) => Math.hypot(o.x - b.x, o.z - b.z)));
+  check(`kota-bike ${tag}: ${all.length} bikes around the city (>= 12), in at least 5 distinct 100 m cells, none stacked`, all.length >= 12 && new Set(all.map((b) => Math.floor((b.x + 150) / 100) + ',' + Math.floor((b.z + 150) / 100))).size >= 5 && all.every((b) => nearest(b) > 6), JSON.stringify(all.map((b) => [b.id, b.x, b.z])));
+  check(`kota-bike ${tag}: the hill bike exists, on the hill top near the old building`, all.some((b) => b.id === 'bike-bukit' && b.y > 4 && Math.hypot(b.x - 102, b.z + 104) < 14), JSON.stringify(all.find((b) => b.id === 'bike-bukit')));
   await page.evaluate(() => window.__superglen.game.setPlayerMode('glen'));
   await d3Go(page, bk.x, bk.z + 1.5, 20);
   if (!touch) await d3Press(page, 'e', 6);
@@ -12172,6 +12176,25 @@ async function kotaBikeScenario(page, check, touch) {
   }
   const off = await ride();
   check(`kota-bike ${tag}: getting off clears the ride pose`, off === null);
+  // The hill bike: go there, get on, it rides.
+  const hb = all.find((b) => b.id === 'bike-bukit');
+  if (hb) {
+    await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 1, z + 1.5); g.advance(40, false); }, [hb.x, hb.y, hb.z]);
+    await page.evaluate(([x, y, z]) => window.__superglen.lookFrom([x + 2.6, y + 1.0, z + 2.6, x, y + 0.4, z]), [hb.x, hb.y, hb.z]);
+    await page.evaluate(() => window.__superglen.advance(1, true));
+    await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-7-hill`);
+    await d3Adv(page, 20);
+    if (!touch) await d3Press(page, 'e', 8);
+    else {
+      const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="interact"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+      await page.touchscreen.tap(r[0], r[1]);
+      await d3Adv(page, 8);
+    }
+    await d3Adv(page, 30);
+    const hr = await ride();
+    check(`kota-bike ${tag}: the hill bike can be mounted and ridden`, hr && hr.w > 0.9, JSON.stringify(hr));
+    if (!touch) await d3Press(page, 'e', 6);
+  }
 }
 
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {

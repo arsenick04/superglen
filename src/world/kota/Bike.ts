@@ -26,8 +26,10 @@ export const BikeConfig = {
   remountCooldown: 0.5,
   /** A bike parked by hand is placed this far to the side of the player (m). */
   parkSide: 1.1,
+  /** Parked bikes farther than this are hidden (m). */
+  showRadius: 70,
   wheelRadius: 0.32,
-  colors: [0xe8453c, 0x2ec4b6, 0xff9f43],
+  colors: [0xe8453c, 0x2ec4b6, 0xff9f43, 0xffd23f, 0x9b6bff, 0x4dabf7],
 } as const;
 
 const SKIN = 0.55; // capsule centre to feet (PlayerConfig.height / 2)
@@ -99,7 +101,7 @@ export class BikeSystem {
     private readonly lit: THREE.Material,
     places: readonly CityBike[],
   ) {
-    const spots = SESSION ?? places.map((b) => ({ x: b.x, y: 0, z: b.z, yaw: b.yaw }));
+    const spots = SESSION ?? places.map((b) => ({ x: b.x, y: b.y ?? 0, z: b.z, yaw: b.yaw }));
     SESSION = spots;
     spots.forEach((s, i) => {
       const body = new THREE.Mesh(frameGeo(BikeConfig.colors[i % BikeConfig.colors.length]), this.lit);
@@ -173,7 +175,7 @@ export class BikeSystem {
       if (i === this.riding) continue;
       const dx = b.x - p.x;
       const dz = b.z - p.z;
-      b.group.visible = dx * dx + dz * dz < 110 * 110;
+      b.group.visible = dx * dx + dz * dz < BikeConfig.showRadius * BikeConfig.showRadius;
     }
   }
 
