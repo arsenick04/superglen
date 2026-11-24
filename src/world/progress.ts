@@ -115,8 +115,8 @@ export function travel(game: LevelGame, level: string, arrival: Arrival): Promis
   return game.loadLevel(level);
 }
 
-/** Feet spot in the city in front of the old building's door (outside the door's walk-in zone), facing south (+z). */
-export const HILL_DOOR_SPOT = { x: CITY_LAYOUT.lab.door.x, y: CITY_LAYOUT.lab.door.y, z: CITY_LAYOUT.lab.door.z + 4.6, yaw: 0 } as const;
+/** Feet spot on the hill in front of the old building's door, facing AWAY from it (south, +z). 7.6 m out so the snapped camera (2.5 m behind Glen, i.e. toward the building) clears the porch, the lion mask and the model overhang. */
+export const HILL_DOOR_SPOT = { x: CITY_LAYOUT.lab.door.x, y: CITY_LAYOUT.lab.door.y, z: CITY_LAYOUT.lab.door.z + 7.6, yaw: 0 } as const;
 
 /** Retreat outside Pasar while combat is pending; after victory return inside for the counting story. */
 export function marketBattleSpawn(step: string): { x: number; y: number; z: number; yaw: number } {
