@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { C } from '../bab1/Kit';
 import { EDGE_COLOR } from '../kits/ParkourKit';
 import { Parkour } from '../../config/parkour';
@@ -1257,9 +1258,17 @@ function drawGround(B: Builder, L: CityLayout): void {
         const u = (i + 0.5) / n;
         const x = x0 + (x1 - x0) * u;
         const z = z0 + (z1 - z0) * u;
-        const y = hillY(hill, Math.hypot(x - hill.x, z - hill.z));
+        // Tilt each strip to the slope along the path (a flat strip on the hill poked out of the ground and sank Glen's feet).
+        const ua = i / n;
+        const ub = (i + 1) / n;
+        const ya = hillY(hill, Math.hypot(x0 + (x1 - x0) * ua - hill.x, z0 + (z1 - z0) * ua - hill.z));
+        const yb = hillY(hill, Math.hypot(x0 + (x1 - x0) * ub - hill.x, z0 + (z1 - z0) * ub - hill.z));
+        const seg = len / n;
+        const pitch = Math.atan2(yb - ya, seg);
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -pitch));
+        const rot = new THREE.Euler().setFromQuaternion(q, 'XYZ');
         const ch = B.at(x, z);
-        ch.deco.box([2.6, 0.06, len / n + 0.1], [x, y + 0.03, z], 0xc9a46f, [0, yaw, 0]);
+        ch.deco.box([2.6, 0.04, Math.hypot(seg, yb - ya) + 0.1], [x, (ya + yb) / 2, z], 0xc9a46f, [rot.x, rot.y, rot.z]);
       }
     }
   }
