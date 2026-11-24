@@ -10,7 +10,7 @@
  * normalised: long axis = +z, front at +z, wheels on y = 0, centred in x / z, scaled to a toy size. Wheels stay part of the body
  * (cars roll by instancing, not by spinning wheels). Models are simplified to a small triangle budget.
  *
- * Models (node names are the runtime ids): car_n1, car_n2, car_suv, car_sports, car_taxi, bus_city, bus_school, and the traffic light as
+ * Models (node names are the runtime ids): car_n1, car_n2, car_suv_q, car_sports, car_taxi_q, bus_city, bus_school, and the traffic light as
  * light_pole + light_lamp. Cars carry `_WHEEL` (vec4 per vertex: wheel centre + radius, flag -1 = body, radius + 10 = front wheel): the
  * wheels are spun in the vertex shader around their own axle, so every car is still one draw call.
  * Skipped on purpose: Cop (police look), SportsCar2, Ambulance, Train, Bicycle.
@@ -43,9 +43,9 @@ const BUS_COMMON = { Windows: [lin(0x8fdcf2), 0], Lights: [LAMP, 0], Bumper: [li
 const MODELS = [
   { name: 'car_n1', dir: CARS, file: 'NormalCar1', length: 3.9, mats: { ...CAR_COMMON, Blue: paint(1) }, tris: 700 },
   { name: 'car_n2', dir: CARS, file: 'NormalCar2', length: 3.5, mats: { ...CAR_COMMON, LightBlue: paint(1), 'Material.007': [TRIM, 0] }, tris: 700 },
-  { name: 'car_suv', dir: CARS, file: 'SUV', length: 4.2, mats: { ...CAR_COMMON, White: paint(1) }, tris: 750 },
+  { name: 'car_suv_q', dir: CARS, file: 'SUV', length: 4.2, mats: { ...CAR_COMMON, White: paint(1) }, tris: 750 },
   { name: 'car_sports', dir: CARS, file: 'SportsCar', length: 3.8, mats: { ...CAR_COMMON, Orange: paint(1), DarkOrange: paint(0.7) }, tris: 700 },
-  { name: 'car_taxi', dir: CARS, file: 'Taxi', length: 4.0, mats: { ...CAR_COMMON, Yellow: [lin(0xffd23f), 0] }, tris: 750 },
+  { name: 'car_taxi_q', dir: CARS, file: 'Taxi', length: 4.0, mats: { ...CAR_COMMON, Yellow: [lin(0xffd23f), 0] }, tris: 750 },
   { name: 'bus_city', dir: PT, file: 'Bus', length: 7.2, mats: { ...BUS_COMMON, Top: paint(1), Bottom: [lin(0x4b5b86), 0], Material: [TIRE, 0] }, tris: 1600 },
   { name: 'bus_school', dir: PT, file: 'SchoolBus', length: 7.0, mats: { ...BUS_COMMON, Yellow: [lin(0xffd23f), 0], Wheel: [TIRE, 0] }, tris: 1600 },
 ];

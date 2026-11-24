@@ -63,7 +63,6 @@ function wheelParts(r: number, z: number, tyre: number, hub: number, tyreR = r):
 export function scooterGeo(): THREE.BufferGeometry {
   const R = ScooterConfig.wheelR;
   const Z = ScooterConfig.wheelZ;
-  const H = ScooterConfig.head;
   const parts: Tagged[] = [
     ...wheelParts(R, Z, 0.15, GREY),
     ...wheelParts(R, -Z, 0.17, GREY),
@@ -94,9 +93,6 @@ export function scooterGeo(): THREE.BufferGeometry {
     // Seat (dark leather) and an exhaust pipe.
     { g: sph(0.2, 12, 8), c: 0x4a2f27, p: [0, 0.6, -0.24], s: [1, 0.4, 1.7] },
     { g: cyl(0.045, 0.05, 0.5, 8), c: GREY, p: [0.2, 0.18, -0.62], r: [Math.PI / 2, 0, 0] },
-    // Rider helmet: a rounded shell, tinted (mask 0.5), with a dark visor.
-    { g: sph(H.r, 14, 10), c: W, p: [0, H.y + 0.03, H.z], s: [1, 0.95, 1.05], m: 0.5 },
-    { g: sph(0.15, 10, 6), c: DARK, p: [0, H.y - 0.01, H.z + 0.12], s: [1.15, 0.5, 0.6] },
   ];
   return build(parts);
 }
@@ -117,7 +113,6 @@ export function bicycleGeo(): THREE.BufferGeometry {
     { g: sph(0.06, 6, 5), c: DARK, p: [-0.26, 0.96, 0.42] },
     { g: sph(0.15, 10, 6), c: 0x4a2f27, p: [0, 0.62, -0.24], s: [0.9, 0.35, 1.5] },
     ...[-1, 1].map((s): Tagged => ({ g: box(0.1, 0.03, 0.2), c: DARK, p: [s * 0.2, 0.26, 0.16] })),
-    { g: sph(0.2, 12, 8), c: W, p: [0, 1.36, -0.12], s: [1, 0.95, 1.05], m: 0.5 },
   ];
   return build(parts);
 }

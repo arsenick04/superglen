@@ -393,12 +393,15 @@ export class CityDressing {
     const mesh = this.mesh;
     if (!mesh) return;
     if (!force && this.tick++ % 8 !== 0) return;
-    const f2 = LOD_FAR * LOD_FAR;
+    // Hysteresis: an instance only changes LOD when it clearly crosses the threshold (no flip-flopping at the boundary).
+    const far2 = (LOD_FAR + 4) * (LOD_FAR + 4);
+    const near2 = (LOD_FAR - 4) * (LOD_FAR - 4);
     for (let i = 0; i < this.inst.length; i++) {
       const it = this.inst[i];
       const dx = it.x - px;
       const dz = it.z - pz;
-      const far = dx * dx + dz * dz > f2;
+      const d2 = dx * dx + dz * dz;
+      const far = d2 > far2 ? true : d2 < near2 ? false : it.far;
       if (far !== it.far) {
         it.far = far;
         mesh.setGeometryIdAt(it.id, far ? it.g1 : it.g0);

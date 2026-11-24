@@ -62,9 +62,9 @@ const PED_BOX = new THREE.Box3(new THREE.Vector3(-0.3027, 0.0148, -0.2212), new 
 const CAR_MODELS = [
   { name: 'car_n1', weight: 5, max: 40 },
   { name: 'car_n2', weight: 5, max: 40 },
-  { name: 'car_suv', weight: 4, max: 40 },
+  { name: 'car_suv_q', weight: 4, max: 40 },
   { name: 'car_sports', weight: 3, max: 30 },
-  { name: 'car_taxi', weight: 3, max: 30 },
+  { name: 'car_taxi_q', weight: 3, max: 30 },
   { name: 'bus_city', weight: 1, max: 12 },
   { name: 'bus_school', weight: 1, max: 12 },
 ] as const;
