@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CityDressing } from './CityDressing';
-import { CityTrees } from './CityTrees';
+import { CityNature } from './CityNature';
 import { applySky } from './Sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
@@ -96,7 +96,7 @@ export class KotaLevel implements Level {
   private sun!: THREE.DirectionalLight;
   private hemi!: THREE.HemisphereLight;
   private dressing!: CityDressing;
-  private trees!: CityTrees;
+  private trees!: CityNature;
   private follower: ShadowFollower | null = null;
   private readonly sunOffset = new THREE.Vector3(30, 45, 18);
   private glimmer!: THREE.Mesh;
@@ -185,17 +185,17 @@ export class KotaLevel implements Level {
     // Start the atmospheric perspective before the skyline: distant blocks
     // recede while the player and nearby NPCs remain crisp.
     scene.fog = new THREE.Fog(0xc6e6fa, 115, 285);
-    const hemi = new THREE.HemisphereLight(0xe1f3ff, 0xd3d9b5, 1.15);
+    const hemi = new THREE.HemisphereLight(0xdcefff, 0xdcd8b8, 1.15);
     this.hemi = hemi;
     root.add(hemi);
-    this.sun = new THREE.DirectionalLight(0xffe2b4, 2.5); // warm morning sun
+    this.sun = new THREE.DirectionalLight(0xffe0b0, 2.5); // warm morning sun
     // L18: HDRI sky + image-based light (Sky.ts). The hemisphere fill steps back (the sky light does its job), the sun warms up,
     // the fog takes the horizon colour of the picture.
     applySky(scene, () => {
       hemi.intensity = 1.0;
-      hemi.groundColor.setHex(0xd3d9b5);
-      this.sun.intensity = 2.15;
-      this.sun.color.setHex(0xfff1d8);
+      hemi.groundColor.setHex(0xdcd8b8); // warm bounce light from the ground
+      this.sun.intensity = 2.2;
+      this.sun.color.setHex(0xffedd0);
       (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
     if (!sandbox && ctx.save.data.interlude === 'forest_home') this.setSunset();
@@ -213,6 +213,9 @@ export class KotaLevel implements Level {
       s.camera.far = 120;
       s.bias = -0.0005;
       s.normalBias = 0.03;
+      // Soft, light shadows (storybook look): wider PCF kernel, slightly transparent.
+      s.radius = Quality.isTouch ? 2.2 : 3;
+      s.intensity = 0.9;
       this.follower = new ShadowFollower(this.sun, this.sunOffset, a, Quality.shadowMapSize);
     }
     root.add(this.sun, this.sun.target);
@@ -226,7 +229,7 @@ export class KotaLevel implements Level {
     this.dressing = new CityDressing(CITY_LAYOUT, root);
     ctx.onDispose(() => this.dressing.dispose());
     this.dressing.update(this.spawn.x, this.spawn.z, true);
-    this.trees = new CityTrees(ctx);
+    this.trees = new CityNature(ctx);
     this.trees.update(this.spawn.x, this.spawn.z);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;

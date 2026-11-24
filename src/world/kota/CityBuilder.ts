@@ -6,7 +6,7 @@ import { ATLAS_TILES, T } from './CityAtlas';
 import { envModels } from './EnvModels';
 import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
-import { hasCityTree } from './CityTrees';
+import { GREEN_PLAN, hasCityTree, natureReady, natureSize, type NatureId } from './CityNature';
 import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
@@ -900,10 +900,12 @@ function drawProps(B: Builder, L: CityLayout): void {
  * over the grass of the blocks, never on a building, a climbing piece or a path. Deterministic (hash of the position).
  */
 function scatterGreen(B: Builder, L: CityLayout): void {
+  const nature = natureReady();
+  GREEN_PLAN.length = 0;
   const bush = ['nat_plant_bushDetailed', 'nat_plant_bushLarge', 'nat_plant_bush'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
   const flower = ['nat_flower_redA', 'nat_flower_yellowB', 'nat_flower_purpleA', 'nat_flower_redB', 'nat_flower_purpleC'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
   const tuft = ['nat_grass_large', 'nat_grass_leafsLarge'].map((n) => cityModels.template(n)).filter((i) => i >= 0);
-  if (!bush.length || !flower.length || !tuft.length) return;
+  if (!nature && (!bush.length || !flower.length || !tuft.length)) return;
   const blocked = (x: number, z: number, m: number): boolean =>
     L.buildings.some((b) => Math.abs(x - b.x) < b.w / 2 + m && Math.abs(z - b.z) < b.d / 2 + m) ||
     L.buildings.some((b) => b.pieces.some((p) => Math.abs(x - p.x) < p.w / 2 + m && Math.abs(z - p.z) < p.d / 2 + m)) ||
@@ -917,32 +919,68 @@ function scatterGreen(B: Builder, L: CityLayout): void {
     const scale = size * (0.92 + h * 0.16);
     ch.deco.add(list[Math.floor(h * 97) % list.length] as Sh, [x, 0, z], [scale, scale, scale], 0xffffff, [0, h * 6.283, 0]);
   };
+  // MegaKit plants (CityNature.ts): same places, drawn as instances around the player; `size` is the height in metres.
+  const green = (id: NatureId, x: number, z: number, size: number, k: number, tints: number[] = [0xffffff], free = false): void => {
+    if (!free && blocked(x, z, 0.4)) return;
+    const h = hsh(x, z, k);
+    const a = natureSize(id);
+    if (!a) return;
+    GREEN_PLAN.push({ id, x, y: 0, z, yaw: h * 6.283, s: (size * (0.9 + hsh(x, z, k + 11) * 0.2)) / a.y, tint: tints[Math.floor(h * 97) % tints.length] });
+  };
+  const BUSH_TINT = [0xffffff, 0xf0ffd8, 0xe4ffd0];
+  const GRASS_TINT = [0xffffff, 0xf2ffd6, 0xe6ffc8];
   // Front gardens: a bush at both front corners, flowers between.
   for (const b of L.buildings) {
     if (b.base > 0 || (b.kind !== 'house' && b.kind !== 'ruko' && b.kind !== 'kiosk')) continue;
     const L2 = facadeLen(b) / 2;
     for (const s of [-1, 1]) {
       const [x, , z] = fp(b, s * (L2 - 0.3), 0.75, 0);
-      put(bush, x, z, 2.6, 1);
       const [fx, , fz] = fp(b, s * (L2 - 1.3), 0.6, 0);
-      put(flower, fx, fz, 3.2, 2);
+      if (nature) {
+        green('bush', x, z, 1.25, 1, BUSH_TINT);
+        green('flowerbed', fx, fz, 1.0, 2);
+      } else {
+        put(bush, x, z, 2.6, 1);
+        put(flower, fx, fz, 3.2, 2);
+      }
     }
   }
-  // Grass of the blocks: a tuft or a flower every ~9 m (jittered grid).
+  // Grass of the blocks: a tuft, a flower bed, a bush or a rock every ~9 m (jittered grid).
   for (const g of L.ground) {
     if (g.kind !== 'grass' && g.kind !== 'flowers') continue;
-    const step = g.kind === 'flowers' ? 1.6 : 9;
+    const step = g.kind === 'flowers' ? (nature ? 3 : 1.6) : 9;
     for (let x = g.x0 + step / 2; x < g.x1; x += step)
       for (let z = g.z0 + step / 2; z < g.z1; z += step) {
         const jx = x + (hsh(x, z, 3) - 0.5) * step * 0.8;
         const jz = z + (hsh(x, z, 4) - 0.5) * step * 0.8;
         if (jx < g.x0 + 0.5 || jx > g.x1 - 0.5 || jz < g.z0 + 0.5 || jz > g.z1 - 0.5) continue;
         const r = hsh(jx, jz, 5);
+        if (nature) {
+          if (g.kind === 'flowers') green('flowerbed', jx, jz, 0.95, 6);
+          else if (r < 0.5) green('grass', jx, jz, 0.8, 7, GRASS_TINT);
+          else if (r < 0.74) green('flowerbed', jx, jz, 0.95, 8);
+          else if (r < 0.93) green('bush', jx, jz, 1.1, 9, BUSH_TINT);
+          else green('rock', jx, jz, 0.55 + hsh(jx, jz, 14) * 0.4, 10);
+          continue;
+        }
         if (g.kind === 'flowers') put(flower, jx, jz, 3.0, 6);
         else if (r < 0.55) put(tuft, jx, jz, 2.4, 7);
         else if (r < 0.8) put(flower, jx, jz, 2.8, 8);
         else put(bush, jx, jz, 2.2, 9);
       }
+  }
+  // Pond edges: a ring of rocks with a few tufts (nature kit only).
+  if (nature) {
+    for (const p of L.ponds) {
+      const n = 9;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + hsh(p.x, p.z, i) * 0.4;
+        const rr = p.r + 0.5 + hsh(p.z, p.x, i) * 0.5;
+        const px = p.x + Math.cos(a) * rr, pz = p.z + Math.sin(a) * rr;
+        if (i % 3 === 0) green('rock', px, pz, 0.45 + hsh(px, pz, 3) * 0.4, 20, [0xffffff], true);
+        else green('grass', px, pz, 0.8, 21, GRASS_TINT, true);
+      }
+    }
   }
 }
 

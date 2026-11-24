@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { LevelContext } from '../Level';
 import { treeMaterial } from '../kota/TreeMaterial';
+import { natureAsset, natureReady, type NatureId } from '../kota/CityNature';
 
 /** Small Quaternius grove behind the lesson clearing; course landings stay visible. */
 export function buildForestScenery(ctx: LevelContext, dense = false): void {
@@ -25,7 +26,31 @@ export function buildForestScenery(ctx: LevelContext, dense = false): void {
     const angle = i * 2.399, radius = 19 + i % 8 * 2.8;
     plans[i % 2].points.push([Math.cos(angle) * radius, 18 + Math.sin(angle) * radius]);
   }
-  for (const plan of plans) {
+  // Quaternius MegaKit (shared atlas, a few hundred triangles each) when it loaded at boot; else the older single models below.
+  const MEGA: Record<string, NatureId> = { NormalTree_1: 'tree_a', PineTree_2: 'pine_a', Bush: 'bush', Rock_1: 'rock' };
+  const mega = natureReady();
+  if (mega) {
+    const dummy = new THREE.Object3D();
+    for (const plan of plans) {
+      const a = natureAsset(MEGA[plan.name]);
+      if (!a) continue;
+      const instances = new THREE.InstancedMesh(a.geometry, a.material, plan.points.length);
+      plan.points.forEach(([x, z], index) => {
+        dummy.position.set(x, 0, z);
+        dummy.rotation.set(0, index * 2.399, 0);
+        const k = (plan.height / a.size.y) * (0.92 + (index % 3) * 0.08);
+        dummy.scale.set(k * (0.92 + (index % 4) * 0.07), k, k * (0.92 + (index % 4) * 0.07));
+        dummy.updateMatrix();
+        instances.setMatrixAt(index, dummy.matrix);
+      });
+      instances.castShadow = !dense && plan.name.includes('Tree');
+      instances.receiveShadow = true;
+      instances.frustumCulled = false;
+      ctx.root.add(instances);
+      ctx.onDispose(() => instances.dispose()); // geometry / material are shared with the city
+    }
+  }
+  for (const plan of mega ? [] : plans) {
     const asset = dense && plan.name.includes('Tree') ? `${plan.name}_city` : plan.name;
     void new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}env/quaternius/${asset}_upright.glb`).then(({ scene }) => {
       scene.updateMatrixWorld(true);
