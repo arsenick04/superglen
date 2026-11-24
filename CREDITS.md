@@ -96,3 +96,7 @@ Pesan penutup `credit_daddy_1..3.mp3` adalah rekaman suara asli pemilik proyek (
 
 ## Musik kredit akhir
 `public/audio/music/credits.mp3` adalah lagu karya pemilik proyek sendiri (bagian piano/instrumental saja, tanpa vokal; dipotong, disambung, dinormalisasi dengan ffmpeg). Tanpa lisensi pihak ketiga.
+
+# Gedung kota dari Downtown City MegaKit (24 November 2026)
+
+Rumah, ruko, kios pasar, dan badan menara di Kota Botanica dirakit dari potongan modular **Downtown City MegaKit** (versi Standard gratis) oleh **Quaternius** (https://quaternius.com), lisensi **CC0 1.0** (domain publik, https://creativecommons.org/publicdomain/zero/1.0/; `License_Standard.txt` dari paket menegaskan ini): tanpa kewajiban atribusi, dicantumkan sebagai ucapan terima kasih. Paket diberikan oleh pemilik proyek (bukan diunduh dari lingkungan pengembangan). Perubahan Superglen (`scripts/build-downtown.mjs`): dinding, jendela, bingkai pintu, kolom, dan pot tanaman dirakit ulang menjadi 18 bangunan ukuran data kota, tekstur PBR diganti palet warna pastel (warna per titik, tanpa tekstur), bagian dalam dibuang, atap limas dibuat sendiri, setiap model disederhanakan dan punya LOD jauh. Hasil: `public/env/downtown/downtown.glb`. Sumber asli (235 MB) tidak ikut repositori. Tidak ada hubungan dukungan dari pembuat aset.

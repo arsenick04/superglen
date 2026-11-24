@@ -15,7 +15,7 @@ import { Parkour } from '../../config/parkour';
  * The colliders, footholds and climbing pieces never change: the data (CityData.ts) is the truth, the models are only dressed
  * on top. `dressOf` is pure and deterministic: CityBuilder asks it which procedural parts to leave out.
  */
-const LOD_FAR = 70;
+const LOD_FAR = 38;
 
 /** Per-building dress: which model and how (all world units). */
 export interface Dress {
@@ -30,6 +30,11 @@ export interface Dress {
   skipFacade: boolean;
 }
 
+// Quaternius Downtown City MegaKit buildings (public/env/downtown, scripts/build-downtown.mjs); the Kenney lists below are the fallback.
+const DT_HOUSES = ['a', 'b', 'c', 'd', 'e', 'f'].map((c) => `dt_house_${c}`);
+const DT_RUKOS = ['a', 'b', 'c', 'd', 'e', 'f'].map((c) => `dt_ruko_${c}`);
+const DT_KIOSKS = ['dt_kiosk_a', 'dt_kiosk_b'];
+const DT_TOWERS: Record<string, string> = { clock: 'dt_tower_a', bell: 'dt_tower_b', water: 'dt_tower_c', pagoda: 'dt_tower_d', coin: 'dt_tower_a' };
 const HOUSES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'n', 'o', 's', 't', 'u'].map((c) => `sub_building-type-${c}`);
 const SHOPS = ['a', 'b', 'd', 'f', 'g', 'h', 'i', 'l'].map((c) => `com_building-${c}`);
 const KIOSKS = ['com_building-c', 'com_building-e'];
@@ -62,6 +67,16 @@ function fit(min: THREE.Vector3, max: THREE.Vector3, x: number, y: number, z: nu
   const c = new THREE.Vector3(((min.x + max.x) / 2) * s, min.y * s, ((min.z + max.z) / 2) * s).applyAxisAngle(UP, yaw);
   tmpQ.setFromAxisAngle(UP, yaw);
   return new THREE.Matrix4().compose(new THREE.Vector3(x - c.x, base - c.y, z - c.z), tmpQ, new THREE.Vector3(s, s, s));
+}
+
+/**
+ * Downtown model (authored at the data's size, origin = base centre, front +z): scale x / z to the footprint and y to the wall (+ roof)
+ * height, so the visible walls sit exactly on the collider box and the roof plateau on the roof foothold.
+ */
+function fitExact(m: KModel, x: number, y: number, z: number, yaw: number, along: number, wall: number, deep: number): THREE.Matrix4 {
+  const body = m.body as THREE.Vector3;
+  tmpQ.setFromAxisAngle(UP, yaw);
+  return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), tmpQ, new THREE.Vector3(along / body.x, wall / body.y, deep / body.z));
 }
 
 function customFit(cb: CustomBuilding, b: CityBuilding, yaw: number, along: number, deep: number): THREE.Matrix4 {
@@ -98,6 +113,11 @@ export function dressedBody(d: Dress, envelope = false): THREE.Box3 {
   const custom = d.model.startsWith('custom:') ? cityModels.buildings.get(d.model.slice(7)) : undefined;
   const model = custom ?? cityModels.get(d.model);
   if (!model) return new THREE.Box3();
+  if (!custom && (model as KModel).body) {
+    // Downtown model: the walls are the data's box (the roof / cornice overhang is a few cm).
+    const bd = (model as KModel).body as THREE.Vector3;
+    return new THREE.Box3(new THREE.Vector3(-bd.x / 2, model.min.y, -bd.z / 2), new THREE.Vector3(bd.x / 2, bd.y, bd.z / 2)).applyMatrix4(d.matrix);
+  }
   const min = model.min.clone();
   const max = model.max.clone();
   if (custom && !envelope) {
@@ -164,6 +184,11 @@ export function dressOf(b: CityBuilding): Dress | null {
   if (cb) {
     return { model: `custom:${cb.name}`, matrix: customFit(cb, b, yaw, along, deep), color: new THREE.Vector4(1, 1, 1, 0), skipBody: true, skipRoof: true, skipFacade: true };
   }
+  /** Downtown variant (hash of the position, so neighbours differ); undefined when the kit file is missing. */
+  const dtPick = (list: string[], salt: number): KModel | undefined => {
+    const ok = list.map((n) => cityModels.get(n)).filter((m): m is KModel => !!m && !!m.body);
+    return ok.length ? ok[Math.floor(hsh(b.x, b.z, salt) * ok.length) % ok.length] : undefined;
+  };
   const pick = (list: string[]): KModel | undefined => {
     const height = b.wall + (b.roof === 'hip' ? b.roofH * (1 - Parkour.world.roofPlateau) : 0);
     const ok = list.map((n) => cityModels.get(n)).filter((m): m is KModel => !!m);
@@ -178,6 +203,8 @@ export function dressOf(b: CityBuilding): Dress | null {
   const accent = new THREE.Vector4(tmpC.r, tmpC.g, tmpC.b, wallHue);
   switch (b.kind) {
     case 'house': {
+      const dt = dtPick(DT_HOUSES, 5);
+      if (dt) return { model: dt.name, matrix: fitExact(dt, b.x, b.base, b.z, yaw, along, b.wall, deep), color: accent, skipBody: true, skipRoof: true, skipFacade: true };
       const m = pick(HOUSES);
       if (!m) return null;
       const roofW = b.face < 2 ? b.roofW : b.roofD;
@@ -185,17 +212,23 @@ export function dressOf(b: CityBuilding): Dress | null {
       return { model: m.name, matrix: fit(m.min, m.max, b.x, b.base, b.z, yaw, roofW, b.wall + b.roofH * (1 - Parkour.world.roofPlateau), roofD), color: accent, skipBody: true, skipRoof: true, skipFacade: true };
     }
     case 'ruko': {
+      const dt = dtPick(DT_RUKOS, 6);
+      if (dt) return { model: dt.name, matrix: fitExact(dt, b.x, b.base, b.z, yaw, along, b.wall, deep), color: accent, skipBody: true, skipRoof: true, skipFacade: true };
       const m = pick(SHOPS);
       if (!m) return null;
       return { model: m.name, matrix: fit(m.min, m.max, b.x, b.base, b.z, yaw, along, b.wall, deep), color: accent, skipBody: true, skipRoof: false, skipFacade: true };
     }
     case 'kiosk': {
+      const dt = dtPick(DT_KIOSKS, 7);
+      if (dt) return { model: dt.name, matrix: fitExact(dt, b.x, b.base, b.z, yaw, along, b.wall, deep), color: accent, skipBody: true, skipRoof: true, skipFacade: false };
       const m = pick(KIOSKS);
       if (!m) return null;
       return { model: m.name, matrix: fit(m.min, m.max, b.x, b.base, b.z, yaw, along, b.wall, deep), color: accent, skipBody: true, skipRoof: true, skipFacade: false };
     }
     case 'tower': {
       const t = b.tower;
+      const dt = t ? cityModels.get(DT_TOWERS[t.style]) : undefined;
+      if (t && dt?.body) return { model: dt.name, matrix: fitExact(dt, b.x, b.base + t.podium, b.z, yaw, t.size, b.wall - t.podium, t.size), color: accent, skipBody: true, skipRoof: true, skipFacade: true };
       const name = t ? TOWERS[t.style] : undefined;
       const m = name ? cityModels.get(name) : undefined;
       if (!t || !m) return null;

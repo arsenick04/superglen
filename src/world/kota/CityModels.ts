@@ -20,6 +20,12 @@ export interface KModel {
   lod: THREE.BufferGeometry | null;
   min: THREE.Vector3;
   max: THREE.Vector3;
+  /**
+   * Downtown City MegaKit buildings (public/env/downtown/downtown.glb) are authored at the size of the city data: the wall box of the
+   * model at scale 1 (x along the facade, y wall height, z deep), model origin = base centre. CityDressing scales instances to the
+   * exact footprint / wall height of each building. Kenney models have no `body`.
+   */
+  body?: THREE.Vector3;
 }
 
 export interface CustomBuilding {
@@ -49,6 +55,8 @@ export interface BuildingHint {
   /** Shift along the facade (m, after scaling): e.g. to put the model's door on the city's door. */
   shift?: number;
 }
+
+const IDENTITY = new THREE.Matrix4();
 
 class CityModels {
   readonly models = new Map<string, KModel>();
@@ -134,27 +142,41 @@ class CityModels {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
       const base = import.meta.env.BASE_URL;
+      /** Read a glTF of vertex-coloured models (`name` + optional `name@1` far LOD) into the library. */
+      const ingest = (gltf: { scene: THREE.Group }): void => {
+        const lods = new Map<string, THREE.BufferGeometry>();
+        for (const o of gltf.scene.children) {
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) continue;
+          const g = plain(mesh.geometry);
+          // meshopt quantisation moves the dequantisation scale / offset into the node: bake it back into the floats.
+          mesh.updateMatrix();
+          if (!mesh.matrix.equals(IDENTITY)) g.applyMatrix4(mesh.matrix);
+          if (o.name.endsWith('@1')) lods.set(o.name.slice(0, -2), g);
+          else {
+            g.computeBoundingBox();
+            const bb = g.boundingBox as THREE.Box3;
+            const body = (o.userData as { body?: number[] }).body;
+            this.models.set(o.name, { name: o.name, geo: g, lod: null, min: bb.min.clone(), max: bb.max.clone(), body: body ? new THREE.Vector3(body[0], body[2], body[1]) : undefined });
+          }
+          mesh.geometry.dispose();
+        }
+        for (const [k, g] of lods) {
+          const m = this.models.get(k);
+          if (m) m.lod = g;
+        }
+      };
       const kenney = loader
         .loadAsync(`${base}env/kenney.glb`)
         .then((gltf) => {
-          if (finished) return;
-          const lods = new Map<string, THREE.BufferGeometry>();
-          for (const o of gltf.scene.children) {
-            const mesh = o as THREE.Mesh;
-            if (!mesh.isMesh) continue;
-            const g = plain(mesh.geometry);
-            if (o.name.endsWith('@1')) lods.set(o.name.slice(0, -2), g);
-            else {
-              g.computeBoundingBox();
-              const bb = g.boundingBox as THREE.Box3;
-              this.models.set(o.name, { name: o.name, geo: g, lod: null, min: bb.min.clone(), max: bb.max.clone() });
-            }
-            mesh.geometry.dispose();
-          }
-          for (const [k, g] of lods) {
-            const m = this.models.get(k);
-            if (m) m.lod = g;
-          }
+          if (!finished) ingest(gltf);
+        })
+        .catch(() => undefined);
+      // Quaternius Downtown City MegaKit buildings (scripts/build-downtown.mjs): houses, shops, kiosks and tower bodies.
+      const downtown = loader
+        .loadAsync(`${base}env/downtown/downtown.glb`)
+        .then((gltf) => {
+          if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
       const custom = fetch(`${base}env/buildings/manifest.json`)
@@ -191,7 +213,7 @@ class CityModels {
           );
         })
         .catch(() => undefined);
-      void Promise.all([kenney, custom]).then(() => {
+      void Promise.all([kenney, downtown, custom]).then(() => {
         if (!finished) this.ready = this.models.size > 0 || this.buildings.size > 0;
         done();
       });
