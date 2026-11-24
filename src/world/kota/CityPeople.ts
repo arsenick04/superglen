@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import type { BikeSystem } from './Bike';
 import type { CityMission, CityResident, ItemIcon, MissionItem } from './CityPlaces';
 import { box, cone, cyl, merge, sph, type Part } from './ColorMesh';
+import { Clip, type Crowd, type PoseState, bottomColorIndex, crowdColor, drawPose, newPose, packLook, skinColorIndex, stepPose } from './Crowd';
 
 const SKIN = 0xf1c9a0;
 const FEET = 0.55;
@@ -203,10 +204,19 @@ class YesNo {
 
 interface Person {
   data: CityResident;
-  mesh: THREE.Mesh;
+  /** Old low-poly body: only when the animated models did not load. */
+  mesh: THREE.Mesh | null;
   phase: number;
   yaw: number;
+  variant: number;
+  look: number;
+  pose: PoseState;
+  /** Drawn height scale. */
+  scale: number;
 }
+
+/** Body variant of the named residents (see Crowd.VARIANTS: 0 male casual, 1 shirt, 2 long sleeve, 3 suit, 4 female casual, 5 dress, 6 tank top, 7 alternative). */
+const BODY: Record<string, number> = { sari: 4, joko: 1, dimas: 0, guru: 2, lala: 5, pos: 2, ani: 7, bima: 1 };
 
 interface Active {
   m: CityMission;
@@ -258,6 +268,7 @@ export class CityPeople {
     private readonly bike: BikeSystem,
     /** False between Chapter 1 and 2 (the story's own beam is on): residents only wave. */
     private readonly canOffer: () => boolean,
+    private readonly crowd: Crowd,
   ) {
     for (const m of missions) this.missions.set(m.id, m);
     this.done = new Set(ctx.save.data.city.missions);
@@ -275,15 +286,21 @@ export class CityPeople {
     this.markers.count = 1;
     ctx.root.add(this.markers);
     residents.forEach((r, i) => {
-      const g = personGeo(r.color, r.hair);
-      this.geos.push(g);
-      const mesh = new THREE.Mesh(g, this.lit);
-      mesh.position.set(r.x, 0, r.z);
-      mesh.rotation.y = r.yaw;
-      mesh.castShadow = false;
-      ctx.root.add(mesh);
+      let mesh: THREE.Mesh | null = null;
+      if (!crowd.ready) {
+        const g = personGeo(r.color, r.hair);
+        this.geos.push(g);
+        mesh = new THREE.Mesh(g, this.lit);
+        mesh.position.set(r.x, 0, r.z);
+        mesh.rotation.y = r.yaw;
+        mesh.castShadow = false;
+        ctx.root.add(mesh);
+      }
       ctx.physics.addFixedCylinder(0.75, 0.4, { x: r.x, y: 0.75, z: r.z });
-      this.people.push({ data: r, mesh, phase: i * 1.7, yaw: r.yaw });
+      const h = [...r.id].reduce((t, c) => (t * 31 + c.charCodeAt(0)) >>> 0, 7);
+      const variant = BODY[r.id] ?? h % 8;
+      const look = packLook(skinColorIndex(h >> 3), crowdColor(r.color), bottomColorIndex(h >> 5), crowdColor(r.hair));
+      this.people.push({ data: r, mesh, phase: i * 1.7, yaw: r.yaw, variant, look, pose: newPose((i * 0.37) % 1), scale: r.id === 'guru' ? 1.04 : 0.98 });
       ctx.interactions.add({
         position: new THREE.Vector3(r.x, 0.8, r.z),
         radius: PeopleConfig.talkRadius,
@@ -561,19 +578,27 @@ export class CityPeople {
       const dz = pv.z - p.data.z;
       const d2 = dx * dx + dz * dz;
       const show = d2 < PeopleConfig.showRadius * PeopleConfig.showRadius;
-      p.mesh.visible = show;
+      if (p.mesh) p.mesh.visible = show;
       if (!show) continue;
-      const s = Math.sin(this.t * 2.2 + p.phase);
-      p.mesh.position.y = Math.abs(s) * 0.035;
-      p.mesh.rotation.z = Math.sin(this.t * 1.3 + p.phase) * 0.04;
-      p.mesh.scale.y = 1 + s * 0.012;
+      if (p.mesh) {
+        const s = Math.sin(this.t * 2.2 + p.phase);
+        p.mesh.position.y = Math.abs(s) * 0.035;
+        p.mesh.rotation.z = Math.sin(this.t * 1.3 + p.phase) * 0.04;
+        p.mesh.scale.y = 1 + s * 0.012;
+      }
       if (d2 < PeopleConfig.faceRadius * PeopleConfig.faceRadius) {
         const want = Math.atan2(dx, dz);
         let diff = (want - p.yaw) % (Math.PI * 2);
         if (diff > Math.PI) diff -= Math.PI * 2;
         else if (diff < -Math.PI) diff += Math.PI * 2;
         p.yaw += diff * Math.min(1, dt * 4);
-        p.mesh.rotation.y = p.yaw;
+        if (p.mesh) p.mesh.rotation.y = p.yaw;
+      }
+      if (!p.mesh) {
+        // Wave at Glen when he comes close (and while talking), stand with the idle breathing otherwise.
+        const near = d2 < (PeopleConfig.talkRadius + 4) * (PeopleConfig.talkRadius + 4);
+        stepPose(this.crowd, p.variant, p.pose, near ? Clip.wave : Clip.idle, dt);
+        drawPose(this.crowd, p.variant, p.look, p.data.x, 0, p.data.z, p.yaw, p.scale, p.pose);
       }
       if (this.isAvailable(p.data.mission)) {
         this.mq.setFromAxisAngle(this.my, this.t * 2);

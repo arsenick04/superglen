@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { Game } from './core/Game';
 import { versionGuard } from './core/VersionGuard';
 import { characterModels } from './player/CharacterModels';
+import { crowdModels } from './world/kota/Crowd';
 import { envModels } from './world/kota/EnvModels';
 import { cityModels } from './world/kota/CityModels';
 import { preloadSky } from './world/kota/Sky';
@@ -47,6 +48,7 @@ async function boot(): Promise<void> {
   // Do not reveal procedural/blocky character placeholders on the first playable frame.
   // If a GLB genuinely fails, Avatar still keeps its safe fallback instead of blocking startup forever.
   await characterModels.load();
+  await crowdModels.load();
   await preloadCityNature();
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');

@@ -6,6 +6,7 @@ import { CityCoins } from './CityCoins';
 import type { CityMap } from './CityMap';
 import { CITY_LAYOUT } from './CityData';
 import { CityPeople } from './CityPeople';
+import type { Crowd } from './Crowd';
 import { Signposts } from './Signposts';
 
 /**
@@ -25,13 +26,14 @@ export class CityD3 {
     lit: THREE.Material,
     map: CityMap,
     canOffer: () => boolean,
+    crowd: Crowd,
   ) {
     const P = CITY_LAYOUT.places;
     this.signs = new Signposts(ctx, P.signs, P.signDests);
     this.coins = new CityCoins(ctx, P.coins);
     this.bike = new BikeSystem(ctx, lit, P.bikes);
-    this.people = new CityPeople(ctx, lit, P.residents, P.missions, this.bike, canOffer);
-    this.care = new CityCare(ctx, lit);
+    this.people = new CityPeople(ctx, lit, P.residents, P.missions, this.bike, canOffer, crowd);
+    this.care = new CityCare(ctx, lit, crowd);
     // Map: residents with a mission to give (mini map and full map) and parked bikes (full map).
     map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots() };
     this.bike.onChange = () => map.invalidate();
@@ -65,6 +67,7 @@ export class CityD3 {
     this.coins.update(dt);
     this.bike.update();
     this.people.update(dt);
+    this.care.update(dt);
     const info = this.ctx.game.debugInfo;
     info.d3Coins = this.coins.taken;
     info.d3CoinsNow = this.coins.takenNow;

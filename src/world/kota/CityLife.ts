@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
+import { Clip, Crowd, CrowdConfig, VARIANT_COUNT, randomLook } from './Crowd';
 
 /**
  * PACKAGE D6 L14: a living Kota Botanica. Ambient, NON-interactive people and traffic: pedestrians on the sidewalks, children
@@ -13,8 +14,9 @@ import { box, cyl, merge, sph, type Part } from './ColorMesh';
  * network of `CITY_LAYOUT.roads`.
  *
  *  - Nearby agents have kinematic colliders. Traffic and pedestrians brake and wait for Glen.
- *  - Cheap: ONE InstancedMesh per kind (5 draw calls in all, no shadow casting), per-instance colour, walkers posed in the vertex
- *    shader. Only agents within `simRadius` of the player are simulated (at most `maxSim`), the rest stay frozen where they are;
+ *  - Cheap: ONE InstancedMesh per vehicle kind (no shadow casting), per-instance colour. People (walkers, children, bystanders) are
+ *    animated Quaternius models drawn by the shared `Crowd` (GPU-skinned, baked clips, one draw call per body variant, see Crowd.ts).
+ *    Only agents within `simRadius` of the player are simulated (at most `maxSim`), the rest stay frozen where they are;
  *    only those within `showRadius` and inside the camera frustum are written to the instance buffers.
  *  - No per-frame allocation: all state lives in plain preallocated objects and typed arrays.
  * Placement is derived from the city layout with the seeded generator (same crowd on every run).
@@ -49,7 +51,8 @@ export const LifeConfig = {
   walkSpeed: [1.0, 1.6],
 } as const;
 
-const MAX_PED = 200;
+/** Footprint of a person (m, scale 1) used for the collider: unchanged from the old toy walker so the blocking feel stays the same. */
+const PED_BOX = new THREE.Box3(new THREE.Vector3(-0.3027, 0.0148, -0.2212), new THREE.Vector3(0.3027, 1.345, 0.2249));
 
 /**
  * Car models of public/env/cars/cars.glb (scripts/build-cars.mjs, Quaternius CC0): one InstancedMesh each. `weight` = share of the
@@ -107,7 +110,6 @@ interface Agent {
   yaw: number;
   y: number;
   phase: number;
-  amp: number;
   color: number;
   /** Scale (x, y, z). */
   sx: number;
@@ -123,6 +125,20 @@ interface Agent {
   a0: number;
   /** Kid ball game: index of the ball (or -1). */
   ball: number;
+  /** People: body variant and look (see Crowd), the clip wanted with its ground speed, the clip playing and its cycle fraction, the clip fading out. */
+  variant: number;
+  /** Visual size factor of a person (children are drawn a bit smaller than their collider scale says). */
+  vs: number;
+  look: number;
+  want: number;
+  spd: number;
+  clip: number;
+  ct: number;
+  pclip: number;
+  pct: number;
+  bl: number;
+  /** Drawn yaw (follows `yaw` smoothly; 99 = not placed yet). */
+  ryaw: number;
   /** Battle reaction: 0 normal, 1 running away, 2 watching from a distance, 3 walking back. `ox`/`oz` is the offset from the usual place. */
   flee: number;
   ox: number;
@@ -203,99 +219,6 @@ function riderParts(helmet: boolean): Part[] {
   ];
 }
 
-/** Round toy-like pedestrian. Every vertex has a pivot/part id; one instanced draw still animates the entire crowd. */
-function walkerGeo(): THREE.BufferGeometry {
-  const tag = (parts: Part[], id: number, px: number, py: number): THREE.BufferGeometry => {
-    const g = merge(parts);
-    g.translate(px, py, 0);
-    const n = g.getAttribute('position').count;
-    const a = new Float32Array(n * 4);
-    for (let i = 0; i < n; i++) {
-      a[i * 4] = px;
-      a[i * 4 + 1] = py;
-      a[i * 4 + 2] = 0;
-      a[i * 4 + 3] = id;
-    }
-    g.setAttribute('pivotPart', new THREE.BufferAttribute(a, 4));
-    return g;
-  };
-  // Large expressive head, soft hair cap, shirt sleeves, rounded hands and shoes share the heroes' friendly proportions.
-  const body = tag(
-    [
-      { g: new THREE.CapsuleGeometry(0.19, 0.21, 1, 8), c: W, p: [0, 0.73, 0], s: [1, 1, 0.76] },
-      { g: sph(0.2, 12, 8), c: SKIN, p: [0, 1.12, 0] },
-      { g: new THREE.SphereGeometry(0.21, 12, 5, 0, Math.PI * 2, 0, 1.38), c: 0x4d352c, p: [0, 1.135, -0.015] },
-      { g: sph(0.033, 6, 4), c: SKIN, p: [0, 1.105, 0.192], s: [0.92, 0.86, 1.15] },
-      ...[-1, 1].flatMap((s): Part[] => [
-        { g: sph(0.045, 6, 3), c: SKIN, p: [s * 0.196, 1.105, 0] },
-        { g: sph(0.036, 6, 3), c: 0xfffdf6, p: [s * 0.073, 1.14, 0.179], s: [1, 1.2, 0.45] },
-        { g: sph(0.021, 5, 3), c: DARK, p: [s * 0.073, 1.137, 0.196], s: [1, 1.15, 0.5] },
-        { g: sph(0.007, 5, 2), c: 0xfffdf6, p: [s * 0.073 - 0.006, 1.146, 0.206] },
-      ]),
-      { g: new THREE.TorusGeometry(0.046, 0.009, 3, 6, Math.PI), c: 0x9c5146, p: [0, 1.065, 0.19], r: [0, 0, Math.PI] },
-    ],
-    0,
-    0,
-    0,
-  );
-  const arm = (x: number, id: number): THREE.BufferGeometry => tag([
-    { g: new THREE.CapsuleGeometry(0.055, 0.21, 1, 6), c: SKIN, p: [0, -0.17, 0] },
-    { g: sph(0.084, 6, 3), c: W, p: [0, -0.015, 0], s: [1, 1.3, 1] },
-    { g: sph(0.063, 6, 3), c: SKIN, p: [0, -0.32, 0] },
-  ], id, x, 0.87);
-  const leg = (x: number, id: number): THREE.BufferGeometry => tag([
-    { g: new THREE.CapsuleGeometry(0.065, 0.28, 1, 6), c: 0x47619b, p: [0, -0.19, 0] },
-    { g: sph(0.085, 6, 3), c: 0xf6efdc, p: [0, -0.4, 0.035], s: [1, 0.65, 1.45] },
-  ], id, x, 0.47);
-  const list = [body, arm(-0.23, 1), arm(0.23, 2), leg(-0.09, 3), leg(0.09, 4)];
-  return finish(list);
-}
-
-function finish(list: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  const g = mergeAll(list);
-  g.computeBoundingSphere();
-  return g;
-}
-
-function mergeAll(list: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  // Same attribute set on every geometry (position, normal, uv, color, pivotPart): concatenate by hand to avoid another import.
-  let verts = 0;
-  let idx = 0;
-  for (const g of list) {
-    verts += g.getAttribute('position').count;
-    idx += g.index ? g.index.count : g.getAttribute('position').count;
-  }
-  const out = new THREE.BufferGeometry();
-  const pos = new Float32Array(verts * 3);
-  const nrm = new Float32Array(verts * 3);
-  const col = new Float32Array(verts * 3);
-  const pp = new Float32Array(verts * 4);
-  const ix = new Uint16Array(idx);
-  let v = 0;
-  let k = 0;
-  for (const g of list) {
-    const p = g.getAttribute('position');
-    pos.set(p.array as Float32Array, v * 3);
-    nrm.set(g.getAttribute('normal').array as Float32Array, v * 3);
-    col.set(g.getAttribute('color').array as Float32Array, v * 3);
-    pp.set(g.getAttribute('pivotPart').array as Float32Array, v * 4);
-    if (g.index) for (let i = 0; i < g.index.count; i++) ix[k++] = g.index.getX(i) + v;
-    else for (let i = 0; i < p.count; i++) ix[k++] = i + v;
-    v += p.count;
-    g.dispose();
-  }
-  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
-  out.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  // Clothes alone inherit the instance palette. Skin, eyes, hair and shoes keep their authored colour.
-  const cloth = new Float32Array(verts);
-  for (let i = 0; i < verts; i++) cloth[i] = col[i * 3] > 0.99 && col[i * 3 + 1] > 0.99 && col[i * 3 + 2] > 0.99 ? 1 : 0;
-  out.setAttribute('aCloth', new THREE.BufferAttribute(cloth, 1));
-  out.setAttribute('pivotPart', new THREE.BufferAttribute(pp, 4));
-  out.setIndex(new THREE.BufferAttribute(ix, 1));
-  return out;
-}
-
 /** Car: tinted body and cabin, dark windows and wheels, light lamps. About 110 triangles. Stretched into a van by the instance scale. */
 function carGeo(): THREE.BufferGeometry {
   return merge([
@@ -359,38 +282,6 @@ if (aPaint > 0.5) vColor.rgb *= instanceColor;
   return material;
 }
 
-// ---- Walker material: limbs swing in the vertex shader (per-instance phase and amplitude) ----------------------------------------
-
-const GLSL = `
-attribute vec4 pivotPart;
-attribute vec2 aAnim;
-mat3 lifeR(float id) {
-  float s = sin(aAnim.x) * aAnim.y;
-  float ax = id < 0.5 ? 0.0 : (id < 1.5 ? -s * 0.8 : (id < 2.5 ? s * 0.8 : (id < 3.5 ? s : -s)));
-  float az = id < 0.5 ? 0.0 : (id < 1.5 ? -0.08 : (id < 2.5 ? 0.08 : 0.0));
-  float cx = cos(ax), sx = sin(ax), cz = cos(az), sz = sin(az);
-  mat3 rx = mat3(1.0, 0.0, 0.0, 0.0, cx, sx, 0.0, -sx, cx);
-  mat3 rz = mat3(cz, sz, 0.0, -sz, cz, 0.0, 0.0, 0.0, 1.0);
-  return rx * rz;
-}
-`;
-
-function walkerMaterial(): THREE.MeshStandardMaterial {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 });
-  m.customProgramCacheKey = () => 'city-life-walker';
-  m.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aCloth;\n' + GLSL)
-      .replace('#include <color_vertex>', `vColor = vec4(color, 1.0);
-#ifdef USE_INSTANCING_COLOR
-if (aCloth > 0.5) vColor.rgb *= instanceColor;
-#endif`)
-      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = lifeR(pivotPart.w) * objectNormal;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed = pivotPart.xyz + lifeR(pivotPart.w) * (position - pivotPart.xyz);');
-  };
-  return m;
-}
-
 // ---- The system -----------------------------------------------------------------------------------------------------------------
 
 export class CityLife {
@@ -402,7 +293,6 @@ export class CityLife {
   private readonly bikes: THREE.InstancedMesh;
   private readonly peds: THREE.InstancedMesh;
   private readonly ballMesh: THREE.InstancedMesh;
-  private readonly anim: THREE.InstancedBufferAttribute;
   private readonly meshes: THREE.InstancedMesh[];
   /** Bounding box of every car model (index = Agent.model); the first one is the old single car. */
   private readonly carBoxes: THREE.Box3[] = [];
@@ -443,7 +333,7 @@ export class CityLife {
   stopped = 0;
   readonly counts: number[] = [0, 0, 0, 0, 0];
 
-  constructor(private readonly ctx: LevelContext) {
+  constructor(private readonly ctx: LevelContext, private readonly crowd: Crowd) {
     const rnd = rngFor(CITY.seed ^ 0x11fe);
     const pick = <T>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
     const range = (r: readonly [number, number]): number => r[0] + rnd() * (r[1] - r[0]);
@@ -641,10 +531,28 @@ export class CityLife {
         a.cx = f.x + (rnd() - 0.5) * 1.6;
         a.cz = f.z + (rnd() - 0.5) * 1.6;
         a.yaw = f.yaw;
+        a.r = f.yaw;
         a.a0 = rnd() * 6;
         a.color = pick(PALETTE);
         a.sx = a.sy = a.sz = 0.92 + rnd() * 0.2;
         this.agents.push(a);
+      }
+    }
+
+    // People: body variant, look and a random point in the cycle (own random stream: the crowd's layout stays the same).
+    {
+      const pr = rngFor(CITY.seed ^ 0x9e0b);
+      for (const a of this.agents) {
+        if (a.kind < 3) continue;
+        // Casual, shirt, dress and tank top are common; long sleeves and the alternative look less so, suits are rare.
+        const W = [3, 3, 1.5, 0.4, 3, 3, 3, 1.5];
+        let u = pr() * W.reduce((t, w) => t + w, 0);
+        let vi = 0;
+        while (vi < VARIANT_COUNT - 1 && u >= W[vi]) u -= W[vi++];
+        a.variant = vi;
+        a.vs = a.kind === 4 && a.mode !== 3 ? 0.87 : 1;
+        a.look = randomLook(pr);
+        a.ct = pr();
       }
     }
 
@@ -661,11 +569,8 @@ export class CityLife {
       ctx.root.add(m);
       return m;
     };
-    const pedGeo = walkerGeo();
-    this.anim = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PED * 2), 2);
-    this.anim.setUsage(THREE.DynamicDrawUsage);
-    pedGeo.setAttribute('aAnim', this.anim);
-    this.peds = mk(pedGeo, walkerMaterial(), MAX_PED);
+    // Slot 3 of `meshes` stays so the indices of the other meshes keep their meaning; people are drawn by the Crowd, never by this one.
+    this.peds = mk(new THREE.BoxGeometry(0.01, 0.01, 0.01), new THREE.MeshBasicMaterial(), 1);
     // Prefer the rounded toy car from the local env library.
     const envCar = envModels.geometry('car');
     const kCar = envCar ? null : cityModels.carGeometry();
@@ -793,7 +698,7 @@ export class CityLife {
   }
 
   private blank(kind: number): Agent {
-    return { kind, roll: 0, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
+    return { kind, roll: 0, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, variant: 0, vs: 1, look: 0, want: 0, spd: 0, clip: 0, ct: 0, pclip: 0, pct: 0, bl: 0, ryaw: 99, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
   }
 
   /** World position and yaw of a lane agent. */
@@ -810,7 +715,38 @@ export class CityLife {
     }
   }
 
+  /** Step of the running fixed update (s), for the helpers below. */
+  private dt = 1 / 60;
+
+  /**
+   * Advance the animation of a person: switch to the wanted clip (cross-fade, walk and run keep their step), advance the cycle so
+   * the feet match the ground speed (`spd`), and turn the drawn yaw smoothly towards the walking direction.
+   */
+  private animate(a: Agent, d: number): void {
+    const want = a.want;
+    if (a.clip !== want) {
+      a.pclip = a.clip;
+      a.pct = a.ct;
+      a.bl = 1;
+      if (!((a.clip === Clip.walk && want === Clip.run) || (a.clip === Clip.run && want === Clip.walk))) a.ct = 0;
+      a.clip = want;
+    }
+    const scale = a.sy;
+    const cps = want === Clip.walk || want === Clip.run ? this.crowd.cps(a.variant, want, a.spd, scale * a.vs) : this.crowd.natural(a.variant, want);
+    a.ct += Math.min(cps, 4) * d;
+    if (a.ct >= 1) a.ct -= Math.floor(a.ct);
+    if (a.bl > 0) a.bl = Math.max(0, a.bl - d / CrowdConfig.fade);
+    if (a.ryaw > 50) a.ryaw = a.yaw;
+    else {
+      let diff = (a.yaw - a.ryaw) % (Math.PI * 2);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      else if (diff < -Math.PI) diff += Math.PI * 2;
+      a.ryaw += diff * Math.min(1, d * 9);
+    }
+  }
+
   fixedUpdate(d: number): void {
+    this.dt = d;
     this.t += d;
     this.updateLights();
     const p = this.ctx.player.position;
@@ -845,7 +781,10 @@ export class CityLife {
         if (a.flee !== 0) this.lanePlace(a);
         else this.walker(a, d, p.x, p.z, onGround);
       } else this.kid(a);
-      if (a.kind >= 3) this.react(a, d, p.x, p.z);
+      if (a.kind >= 3) {
+        this.react(a, d, p.x, p.z);
+        this.animate(a, d);
+      }
       this.syncCollider(a, p, wasPlaced, oldX, oldY, oldZ, oldS);
       a.placed = true;
       if (a.v < 0.15 && a.kind < 4) stopped++;
@@ -866,7 +805,7 @@ export class CityLife {
       a.body = undefined;
       return;
     }
-    const scale = a.kind === 0 ? this.carBoxes[a.model] : this.meshes[Math.min(3, a.kind)].geometry.boundingBox!;
+    const scale = a.kind === 0 ? this.carBoxes[a.model] : PED_BOX;
     const halfX = (scale.max.x - scale.min.x) * a.sx / 2;
     const halfZ = (scale.max.z - scale.min.z) * a.sz / 2;
     const halfY = scale.max.y * a.sy / 2;
@@ -884,7 +823,7 @@ export class CityLife {
       a.y = oldY;
       a.z = oldZ;
       a.s = oldS;
-      a.v = a.amp = 0;
+      a.v = 0;
     }
 
     // Moving platform: Glen standing on the roof is carried along with the car (the move is added to his next step, so his body and
@@ -997,8 +936,12 @@ export class CityLife {
       this.sphere.radius = 2.2;
       if (!this.frustum.intersectsSphere(this.sphere)) continue;
       const k = a.kind === 4 ? 3 : a.kind === 0 && a.model > 0 ? 4 + a.model : a.kind;
+      if (k === 3) {
+        const gb = a.bl > 0;
+        if (this.crowd.add(a.variant, a.look, a.x, a.y, a.z, a.ryaw, a.sy * a.vs, this.crowd.row(a.variant, a.clip, a.ct), gb ? this.crowd.row(a.variant, a.pclip, a.pct) : 0, a.bl)) n[3]++;
+        continue;
+      }
       const idx = n[k];
-      if (k === 3 && idx >= MAX_PED) continue;
       if (idx >= (this.meshes[k].instanceMatrix.count)) continue;
       const c = Math.cos(a.yaw);
       const s = Math.sin(a.yaw);
@@ -1024,10 +967,6 @@ export class CityLife {
       const roll = this.rollOf[k];
       if (roll) roll.array[idx] = a.roll;
       mesh.setColorAt(idx, this.tc.setHex(a.color));
-      if (k === 3) {
-        this.anim.array[idx * 2] = a.phase;
-        this.anim.array[idx * 2 + 1] = a.amp;
-      }
       n[k]++;
     }
     // Balls.
@@ -1048,6 +987,7 @@ export class CityLife {
     }
     n[4] = nb;
     for (let k = 0; k < this.meshes.length; k++) {
+      if (k === 3) continue;
       const mesh = this.meshes[k];
       mesh.count = n[k];
       mesh.visible = n[k] > 0;
@@ -1058,7 +998,6 @@ export class CityLife {
         if (mesh.instanceColor && k !== 4) mesh.instanceColor.needsUpdate = true;
       }
     }
-    if (n[3] > 0) this.anim.needsUpdate = true;
     this.shown = 0;
     for (let k = 0; k < this.meshes.length; k++) this.shown += n[k];
     const info = this.ctx.game.debugInfo;
@@ -1116,7 +1055,6 @@ export class CityLife {
     else if (l.dir < 0 && a.s < l.a0) a.s = l.a1;
     this.lanePlace(a);
     a.y = a.kind === 2 ? 0 : 0.03;
-    a.amp = 0;
   }
 
   /** Walker: strolls along the sidewalk and turns round at the ends; waits when Glen is right in front. */
@@ -1142,8 +1080,8 @@ export class CityLife {
     // `lanePlace` reads `mode` as the facing: > 0 follows the lane direction.
     this.lanePlace(a);
     a.y = 0;
-    a.phase += dt * (3 + a.v * 4);
-    a.amp = Math.min(1, a.v / 1.1) * 0.7;
+    a.want = a.v < 0.12 ? Clip.idle : Clip.walk;
+    a.spd = a.v;
   }
 
   /** Battle reaction of a walker, child or bystander (after its normal place was computed): run away, watch, cheer, walk back. */
@@ -1204,15 +1142,15 @@ export class CityLife {
       a.yaw = Math.atan2(-a.ux, -a.uz);
       const cheer = this.cheerLeft > 0;
       a.y = cheer ? Math.abs(Math.sin(this.t * 9 + a.a0 * 5)) * 0.4 : 0;
-      a.amp = cheer ? 0.9 : 0.1;
-      a.phase = this.t * (cheer ? 12 : 1.5) + a.a0;
+      a.want = cheer ? Clip.wave : Clip.idle;
+      a.spd = 0;
       a.v = 1;
     } else {
       this.fleeing++;
       a.yaw = Math.atan2(mx / (md || 1), mz / (md || 1));
       a.y = 0;
-      a.amp = 1;
-      a.phase += dt * (a.flee === 1 ? 15 : 7);
+      a.want = a.flee === 1 ? Clip.run : Clip.walk;
+      a.spd = sp;
       a.v = 1;
     }
   }
@@ -1237,8 +1175,8 @@ export class CityLife {
       a.z = a.cz + Math.sin(th) * a.r;
       // Tangent direction (model faces +Z): velocity = (-sin, cos) * w.
       a.yaw = Math.atan2(-Math.sin(th) * Math.sign(a.w), Math.cos(th) * Math.sign(a.w));
-      a.phase = t * 9 + a.a0;
-      a.amp = 0.9;
+      a.want = Clip.run;
+      a.spd = Math.abs(a.w) * a.r;
       a.y = 0;
       a.v = 1;
     } else if (a.mode === 1) {
@@ -1249,23 +1187,33 @@ export class CityLife {
       const cyc = (t % 3.2) / 1.6;
       const mine = (cyc < 1) === (a.a0 === 0);
       a.y = mine && cyc % 1 < 0.2 ? 0.25 * Math.sin((cyc % 1) * Math.PI * 5) : 0;
-      a.amp = mine ? 0.5 : 0.1;
-      a.phase = t * 7;
+      a.want = mine ? Clip.wave : Clip.idle;
+      a.spd = 0;
       a.v = 1;
     } else if (a.mode === 3) {
       a.x = a.cx;
       a.z = a.cz;
       a.y = 0;
-      a.amp = 0;
-      a.phase = 0;
+      // A bystander waves at Glen when he comes close and turns to him, then turns back to the shop or the street.
+      const p = this.ctx.player.position;
+      const dx = p.x - a.cx;
+      const dz = p.z - a.cz;
+      const near = dx * dx + dz * dz < 36;
+      a.want = near ? Clip.wave : Clip.idle;
+      a.spd = 0;
+      const want = near ? Math.atan2(dx, dz) : a.r;
+      let diff = (want - a.yaw) % (Math.PI * 2);
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      else if (diff < -Math.PI) diff += Math.PI * 2;
+      a.yaw += diff * Math.min(1, this.dt * 4);
       a.v = 1;
     } else {
       a.x = a.cx;
       a.z = a.cz;
       a.yaw = Math.sin(t * 0.7 + a.a0) * 2;
       a.y = Math.abs(Math.sin(t * 5 + a.a0)) * 0.3;
-      a.amp = 0.8;
-      a.phase = t * 10 + a.a0;
+      a.want = Clip.wave;
+      a.spd = 0;
       a.v = 1;
     }
   }
