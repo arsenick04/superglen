@@ -43,6 +43,7 @@ export class CityD3 {
         coins: () => this.coins.list(),
         people: () => this.people.list(),
         bikes: () => this.bike.list(),
+        ride: () => this.bike.rideInfo(),
         places: () => P,
         drop: () => this.people.drop(),
         ring: () => this.bike.ring(),

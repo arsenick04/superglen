@@ -7491,6 +7491,79 @@ async function kotaLifeScenario(page, check, touch) {
     return out;
   }, spots);
   check(`kota-life ${tag}: simulated agents <= 120 everywhere; some are drawn near the player in most districts`, sims.every((x) => x[0] <= 120) && sims.filter((x) => x[1] > 0).length >= 4, JSON.stringify(sims));
+  // Moving platform: Glen standing on a moving car's roof is carried along with it and stays on top.
+  const ride = await page.evaluate(() => {
+    const g = window.__superglen;
+    g.placePlayer(52.5, 20);
+    g.advance(20, false);
+    const L = window.__life;
+    const car = L.vehicles().find((v) => v.kind === 0 && (v.x || v.z) && v.v > 3 && Math.hypot(v.x - g.player.x, v.z - g.player.z) < 25);
+    if (!car) return null;
+    const t0 = L.carTop(car.i);
+    g.placePlayer(t0.x, t0.z);
+    g.advance(40, false);
+    const top = L.carTop(car.i);
+    g.teleportFeet(top.x, top.y + 0.03, top.z);
+    g.advance(10, false);
+    const s0 = { x: g.player.x, z: g.player.z, car: L.carTop(car.i) };
+    g.advance(60, false);
+    const s1 = { x: g.player.x, z: g.player.z, car: L.carTop(car.i), feet: g.feetY };
+    const carMoved = Math.hypot(s1.car.x - s0.car.x, s1.car.z - s0.car.z);
+    const glenMoved = Math.hypot(s1.x - s0.x, s1.z - s0.z);
+    const rel = Math.hypot(s1.x - s1.car.x, s1.z - s1.car.z);
+    return { carMoved, glenMoved, rel, onTop: Math.abs(s1.feet - s1.car.y) < 0.15, half: Math.max(s1.car.halfX, s1.car.halfZ) };
+  });
+  check(`kota-life ${tag}: Glen on a moving car's roof is carried along (moving platform) and stays on top`, !!ride && ride.carMoved > 2 && Math.abs(ride.glenMoved - ride.carMoved) < 0.6 && ride.onTop && ride.rel < ride.half, JSON.stringify(ride));
+  // Traffic lights: the two roads of a crossing never both have go (green / yellow) at once, every lamp matches its signal, a car never
+  // crosses the stop line on a red that has lasted more than a second, and it does drive on when the light turns green.
+  const lights = await page.evaluate(() => {
+    const g = window.__superglen;
+    const L = window.__life;
+    g.placePlayer(40, 20);
+    g.advance(20, false);
+    const js = L.junctions();
+    const ix = js.findIndex((j) => Math.abs(j.x - 50) < 1 && Math.abs(j.z - 50) < 1);
+    if (ix < 0) return { junctions: js.length, ix };
+    let conflict = 0;
+    let greens = [0, 0];
+    for (let i = 0; i < 480; i++) {
+      const sx = L.signal(ix, 'x');
+      const sz = L.signal(ix, 'z');
+      if (sx < 2 && sz < 2) conflict++;
+      if (sx === 0) greens[0]++;
+      if (sz === 0) greens[1]++;
+      g.advance(6, false);
+    }
+    const mismatch = L.lights().filter((l) => l.lamp !== 2 - L.signal(l.ix, l.ax)).length;
+    // A car approaching from the south on x = 52.5 (z axis, towards +z).
+    g.placePlayer(60, 25);
+    g.advance(20, false);
+    const stopZ = 50 - L.stopLineOf();
+    const info = L.carOnLane('z', 52.5, stopZ, 22);
+    if (!info) return { junctions: js.length, ix, conflict, greens, mismatch, noCar: true };
+    const half = L.half(info.index);
+    let redRun = 0;
+    let crossedOnRed = 0;
+    let crossed = 0;
+    let prevD = null;
+    let minV = 9;
+    for (let i = 0; i < 1500; i++) {
+      g.advance(6, false);
+      const a = L.agent(info.index);
+      const sig = L.signal(ix, 'z');
+      redRun = sig === 2 ? redRun + 0.1 : 0;
+      const d = (stopZ - a.s) * info.dir - half;
+      if (prevD !== null && prevD > 0 && d <= 0 && d > -3) {
+        crossed++;
+        if (redRun > 1) crossedOnRed++;
+      }
+      if (d > 0 && d < 2.5 && sig === 2 && redRun > 4) minV = Math.min(minV, a.v);
+      prevD = d;
+    }
+    return { junctions: js.length, ix, conflict, greens, mismatch, crossed, crossedOnRed, minV };
+  });
+  check(`kota-life ${tag}: traffic lights: no crossing has go on both roads, lamps match signals, cars stop at red and go on green`, !!lights && lights.ix >= 0 && lights.junctions >= 3 && lights.conflict === 0 && lights.greens[0] > 60 && lights.greens[1] > 60 && lights.mismatch === 0 && !lights.noCar && lights.crossed >= 1 && lights.crossedOnRed === 0 && lights.minV < 0.5, JSON.stringify(lights));
+  await page.evaluate(() => window.__life.forceGreen(true));
   // A car stops for Glen standing in its lane and goes on when he leaves.
   const stop = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7535,6 +7608,7 @@ async function kotaLifeScenario(page, check, touch) {
   check(`kota-life ${tag}: the car blocks Glen from the side and supports him on top`,
     !!collision && collision.sideGap > 0.6 && collision.sideGap < 1.85
       && collision.grounded && collision.feet > 1 && collision.feet < 2.1, JSON.stringify(collision));
+  await page.evaluate(() => window.__life.forceGreen(false));
   // Perf at the busiest spot and one screenshot of the busy city.
   const busy = await page.evaluate(() => {
     const g = window.__superglen;
@@ -8546,7 +8620,7 @@ async function kotaD3Scenario(page, check, touch) {
   for (const p of open2) fullOn.push(orange(await pix('.fullmap-base', p.x, p.z, 'orange')));
   const bikeFull = [];
   for (const b of bikesNow) bikeFull.push(await pix('.fullmap-base', b.x, b.z, 'teal'));
-  check(`kota-d3 ${tag}: the full map shows the resident icons (${fullOn.filter(Boolean).length}/${open2.length}) and every parked bike (${bikesNow.length})`, fullOn.every(Boolean) && bikesNow.length === 3 && bikeFull.every((n) => n >= 6), JSON.stringify({ fullOn, bikeFull }));
+  check(`kota-d3 ${tag}: the full map shows the resident icons (${fullOn.filter(Boolean).length}/${open2.length}) and every parked bike (${bikesNow.length})`, fullOn.every(Boolean) && bikesNow.length === P.bikes.length && bikeFull.every((n) => n >= 6), JSON.stringify({ fullOn, bikeFull }));
   await uiShot(page, `kota-d3-fullmap-${touch ? 'touch' : 'desktop'}`);
   await menuHit(page, '.fullmap-close', touch);
   await menuHit(page, '.settings-close', touch);
@@ -8623,7 +8697,7 @@ async function kotaD3StoryScenario(page, check) {
   const NONE = { laser: false, shield: false, fly: false };
   const ALL = { laser: true, shield: true, fly: true };
   s = await open({ version: 1, where: 'kota', chaptersDone: ['bab1'], skills: NONE, lastMode: 'superglen', discovered: { lab: true } });
-  check('kota-d3 story: Chapter 1 done: coins, bikes, residents and signposts are in the city', s.level === 'kota' && s.d3 === 'object' && s.li.d3CoinTotal > 150 && s.li.d3Signs >= 6 && s.li.d3Bikes === 3 && s.li.d3Residents >= 6, JSON.stringify({ c: s.li.d3CoinTotal, s: s.li.d3Signs }));
+  check('kota-d3 story: Chapter 1 done: coins, bikes, residents and signposts are in the city', s.level === 'kota' && s.d3 === 'object' && s.li.d3CoinTotal > 150 && s.li.d3Signs >= 6 && s.li.d3Bikes >= 12 && s.li.d3Residents >= 6, JSON.stringify({ c: s.li.d3CoinTotal, s: s.li.d3Signs }));
   check('kota-d3 story: between Chapter 1 and 2 no mission is offered (the story beam is on the door)', s.people.every((p) => !p.available), JSON.stringify(s.people.map((p) => p.available)));
   const r = s.people[0];
   await d3Talk(page, r.id);
@@ -12041,6 +12115,139 @@ async function gorillaWinScenario(page, check) {
   check('gorilla-win: the fire hose level loads after the cinematic', true);
 }
 
+
+// ---- Bike model and riding animation (bike.glb, RideLayer): group `kota-bike` ------------------------------------------------------
+
+async function kotaBikeScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const ride = () => page.evaluate(() => window.__d3.ride());
+  await kotaBoot(page, touch);
+  await page.waitForSelector('.cinematic-skip', { state: 'visible', timeout: 8000 }).catch(() => undefined);
+  if (await page.locator('.cinematic-skip:visible').count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => !document.querySelector('.cinematic-layer:not([hidden])'), null, { timeout: 8000 }).catch(() => undefined);
+  if (!touch) { await page.mouse.click(640, 360); await sleep(400); }
+  await d3Adv(page, 20);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.sfx.reset(); });
+  await d3Adv(page, 30);
+  const bk = await page.evaluate(() => window.__d3.places().bikes[1]);
+  const all = await page.evaluate(() => window.__d3.places().bikes);
+  const nearest = (b) => Math.min(...all.filter((o) => o !== b).map((o) => Math.hypot(o.x - b.x, o.z - b.z)));
+  check(`kota-bike ${tag}: ${all.length} bikes around the city (>= 12), in at least 5 distinct 100 m cells, none stacked`, all.length >= 12 && new Set(all.map((b) => Math.floor((b.x + 150) / 100) + ',' + Math.floor((b.z + 150) / 100))).size >= 5 && all.every((b) => nearest(b) > 6), JSON.stringify(all.map((b) => [b.id, b.x, b.z])));
+  check(`kota-bike ${tag}: the hill bike exists, on the hill top near the old building`, all.some((b) => b.id === 'bike-bukit' && b.y > 4 && Math.hypot(b.x - 102, b.z + 104) < 14), JSON.stringify(all.find((b) => b.id === 'bike-bukit')));
+  await page.evaluate(() => window.__superglen.game.setPlayerMode('glen'));
+  await d3Go(page, bk.x, bk.z + 1.5, 20);
+  if (!touch) await d3Press(page, 'e', 6);
+  else {
+    const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="interact"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  }
+  await d3Adv(page, 40);
+  let r0 = await ride();
+  check(`kota-bike ${tag}: the bike model is loaded and Glen rides it (ride pose fully on)`, r0 && r0.w > 0.99, JSON.stringify(r0));
+  // Side camera: the player's heading comes from two samples while moving.
+  const side = async (d = 2.3) => {
+    const a = await d3Player(page);
+    await d3Adv(page, 1);
+    const b = await d3Player(page);
+    let hx = b.x - a.x, hz = b.z - a.z;
+    const l = Math.hypot(hx, hz);
+    if (l < 1e-5) { hx = side.hx ?? 0; hz = side.hz ?? -1; } else { hx /= l; hz /= l; }
+    side.hx = hx; side.hz = hz;
+    await page.evaluate(([x, y, z, sx, sz, d]) => window.__superglen.lookFrom([x + sx * d, y + 0.35, z + sz * d, x, y - 0.1, z]), [b.x, b.feet + 0.5, b.z, hz, -hx, d]);
+    await page.evaluate(() => window.__superglen.advance(1, true));
+  };
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  await d3Adv(page, 20);
+  r0 = await ride();
+  check(`kota-bike ${tag}: stopped: the left foot is down and the right foot is on its pedal`, r0.footDown > 0.9 && r0.miss[0] < 0.06 && r0.miss[1] < 0.06 && r0.miss[2] < 0.06 && r0.miss[3] < 0.06, JSON.stringify(r0));
+  await side();
+  await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-1-stopped`);
+
+  // Pedalling: wheels and crank turn, the feet follow the pedals, the hands stay on the grips.
+  await page.keyboard.down('w');
+  await d3Adv(page, 60);
+  const samples = [];
+  for (let i = 0; i < 12; i++) {
+    await d3Adv(page, 4);
+    samples.push(await ride());
+  }
+  const wheelTurn = samples.reduce((m, q, i) => (i ? m + Math.abs(Math.atan2(Math.sin(q.wheel - samples[i - 1].wheel), Math.cos(q.wheel - samples[i - 1].wheel))) : m), 0);
+  const crankTurn = samples.reduce((m, q, i) => (i ? m + Math.abs(Math.atan2(Math.sin(q.crank - samples[i - 1].crank), Math.cos(q.crank - samples[i - 1].crank))) : m), 0);
+  const worstFoot = Math.max(...samples.map((q) => Math.max(q.miss[0], q.miss[1])));
+  const worstHand = Math.max(...samples.map((q) => Math.max(q.miss[2], q.miss[3])));
+  console.log(`   [kota-bike ${tag}] wheel ${wheelTurn.toFixed(2)} rad, crank ${crankTurn.toFixed(2)} rad, worst foot miss ${worstFoot.toFixed(3)} m, hand ${worstHand.toFixed(3)} m, stand ${samples[samples.length - 1].stand.toFixed(2)}`);
+  check(`kota-bike ${tag}: the wheels turn while riding (${wheelTurn.toFixed(1)} rad in 48 frames)`, wheelTurn > 3, wheelTurn.toFixed(2));
+  check(`kota-bike ${tag}: the crank turns while riding (${crankTurn.toFixed(1)} rad) but slower than the wheel`, crankTurn > 1.5 && crankTurn < wheelTurn, crankTurn.toFixed(2));
+  check(`kota-bike ${tag}: feet stay on the pedals (worst ${worstFoot.toFixed(3)} m) and hands on the grips (worst ${worstHand.toFixed(3)} m)`, worstFoot < 0.05 && worstHand < 0.05, JSON.stringify({ worstFoot, worstHand }));
+  check(`kota-bike ${tag}: the left foot is up again while riding`, samples[samples.length - 1].footDown < 0.05, JSON.stringify(samples[samples.length - 1]));
+  await side();
+  await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-2-pedal-a`);
+  await d3Adv(page, 6);
+  await side();
+  await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-3-pedal-b`);
+  await d3Adv(page, 5);
+  await side();
+  await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-3b-pedal-c`);
+
+  // Turning: handlebar and lean follow, then back (the extreme values over each turn).
+  const turn = async (key, frames) => {
+    await page.keyboard.down(key);
+    let best = null;
+    for (let i = 0; i < frames / 5; i++) {
+      await d3Adv(page, 5);
+      const q = await ride();
+      if (!best || Math.abs(q.steer) > Math.abs(best.steer)) best = q;
+      if (i === 5) { await side(); await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-4-turn-${key === 'a' ? 'left' : 'right'}`); }
+    }
+    await page.keyboard.up(key);
+    return best;
+  };
+  const tl = await turn('a', 60);
+  await d3Adv(page, 40);
+  const tr = await turn('d', 60);
+  console.log(`   [kota-bike ${tag}] turn left steer ${tl.steer.toFixed(2)} lean ${tl.lean.toFixed(2)}, right steer ${tr.steer.toFixed(2)} lean ${tr.lean.toFixed(2)}`);
+  check(`kota-bike ${tag}: the handlebar turns and the bike leans into turns (opposite signs left / right)`, Math.abs(tl.steer) > 0.1 && Math.abs(tr.steer) > 0.1 && tl.steer * tr.steer < 0 && Math.abs(tl.lean) > 0.02 && tl.lean * tr.lean < 0, JSON.stringify({ tl, tr }));
+  check(`kota-bike ${tag}: feet and hands stay on pedals and grips in a turn`, Math.max(...tl.miss, ...tr.miss) < 0.06, JSON.stringify({ tl: tl.miss, tr: tr.miss }));
+
+  // Stop: the crank settles, one foot goes down, the handlebar is straight.
+  await page.keyboard.up('w');
+  await d3Adv(page, 90);
+  const st = await ride();
+  await side();
+  await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-6-stopped-again`);
+  check(`kota-bike ${tag}: stopped again: left foot down, straight handlebar, crank settled`, st.footDown > 0.9 && Math.abs(st.steer) < 0.05 && Math.abs(Math.atan2(Math.sin(st.crank - Math.PI), Math.cos(st.crank - Math.PI))) < 0.1, JSON.stringify(st));
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  // Get off and on again: the pose switches off and on cleanly.
+  if (!touch) await d3Press(page, 'e', 6);
+  else {
+    const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="interact"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  }
+  const off = await ride();
+  check(`kota-bike ${tag}: getting off clears the ride pose`, off === null);
+  // The hill bike: go there, get on, it rides.
+  const hb = all.find((b) => b.id === 'bike-bukit');
+  if (hb) {
+    await page.evaluate(([x, y, z]) => { const g = window.__superglen; g.teleportFeet(x, y + 1, z + 1.5); g.advance(40, false); }, [hb.x, hb.y, hb.z]);
+    await page.evaluate(([x, y, z]) => window.__superglen.lookFrom([x + 2.6, y + 1.0, z + 2.6, x, y + 0.4, z]), [hb.x, hb.y, hb.z]);
+    await page.evaluate(() => window.__superglen.advance(1, true));
+    await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-7-hill`);
+    await d3Adv(page, 20);
+    if (!touch) await d3Press(page, 'e', 8);
+    else {
+      const r = await page.evaluate(() => { const b = document.querySelector('.tc-button[data-action="interact"]').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; });
+      await page.touchscreen.tap(r[0], r[1]);
+      await d3Adv(page, 8);
+    }
+    await d3Adv(page, 30);
+    const hr = await ride();
+    check(`kota-bike ${tag}: the hill bike can be mounted and ridden`, hr && hr.w > 0.9, JSON.stringify(hr));
+    if (!touch) await d3Press(page, 'e', 6);
+  }
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -12257,6 +12464,8 @@ async function main() {
     results.push(await runScenario(browser, 'kota-d3-pad', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, kotaD3PadScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-d3-story', { viewport: { width: 1280, height: 720 } }, kotaD3StoryScenario, '?fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-bike', { viewport: { width: 1280, height: 720 } }, (p, c) => kotaBikeScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'kota-bike-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, (p, c) => kotaBikeScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     // Package D4: Chapter 3 (market)
     results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-start', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3StartScenario(p, c, false), '?level=kota&fps=0&reset=1'));

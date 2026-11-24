@@ -34,6 +34,8 @@ export interface CityCoin {
 export interface CityBike {
   id: string;
   x: number;
+  /** Ground height (the hill bike stands on the hill top); 0 when omitted. */
+  y?: number;
   z: number;
   yaw: number;
 }
@@ -294,6 +296,29 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
   bikes.push({ id: 'bike-alun', x: plazaBike.x, z: plazaBike.z, yaw: Math.PI / 2 });
   const eastBike = findFree(64, -18, 1.0, 6);
   bikes.push({ id: 'bike-pasar', x: eastBike.x, z: eastBike.z, yaw: 0 });
+  // More bikes, a few in every district (always on free ground away from buildings, trees, lamps and benches; never on a street).
+  const near = (x: number, z: number): boolean => bikes.some((b) => Math.hypot(b.x - x, b.z - z) < 12);
+  const extra = (id: string, x: number, z: number, yaw: number): void => {
+    const p = findFree(x, z, 1.6, 8);
+    if (free(p.x, p.z, 1.6) && !near(p.x, p.z)) bikes.push({ id, x: p.x, z: p.z, yaw });
+  };
+  const schoolB = L.buildings.find((b) => b.kind === 'school');
+  if (schoolB) extra('bike-sekolah', schoolB.x + schoolB.w / 2 + 5, schoolB.z + schoolB.d / 2 + 4, 0.8);
+  extra('bike-sekolah2', -95, -90, 2.2);
+  parks.forEach((pk, n) => extra(`bike-taman${n}`, pk.x + 7, pk.z + 3, 1.2 + n));
+  extra('bike-alun2', 14, -14, 3.9);
+  extra('bike-pasar2', 100, 40, 1.9);
+  extra('bike-pasar3', 105, -42, 0.4);
+  extra('bike-bank', 0, 82, 2.6);
+  extra('bike-bank2', 30, 105, 5.1);
+  extra('bike-rumah2', -82, -30, 4.2);
+  extra('bike-rumah3', -100, 62, 1.0);
+  extra('bike-rumah4', -62, 100, 2.9);
+  // A small discovery: one bike behind the old building on the hill top (the building's door faces south; this is its north side).
+  {
+    const ob = L.buildings.find((b) => b.kind === 'oldBarongsai');
+    if (ob) bikes.push({ id: 'bike-bukit', x: r2(ob.x + 3.2), y: ob.base ?? L.lab.door.y, z: r2(ob.z - ob.d / 2 - 3.4), yaw: 0.5 });
+  }
 
   // ---- Residents and missions --------------------------------------------------------------------------------------------------
   const cellOf = (x: number, z: number): [number, number] => [Math.max(-1, Math.min(1, Math.floor((x + 50) / 100))), Math.max(-1, Math.min(1, Math.floor((z + 50) / 100)))];

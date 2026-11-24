@@ -179,6 +179,13 @@ class CityModels {
           if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
+      // Quaternius cars and buses for CityLife (scripts/build-cars.mjs): car_n1, car_n2, car_suv, car_sports, car_taxi, bus_city, bus_school.
+      const cars = loader
+        .loadAsync(`${base}env/cars/cars.glb`)
+        .then((gltf) => {
+          if (!finished) ingest(gltf);
+        })
+        .catch(() => undefined);
       const custom = fetch(`${base}env/buildings/manifest.json`)
         .then((r) => (r.ok ? (r.json() as Promise<{ buildings: Record<string, { file: string } & BuildingHint> }>) : null))
         .then((man) => {
@@ -213,7 +220,7 @@ class CityModels {
           );
         })
         .catch(() => undefined);
-      void Promise.all([kenney, downtown, custom]).then(() => {
+      void Promise.all([kenney, downtown, cars, custom]).then(() => {
         if (!finished) this.ready = this.models.size > 0 || this.buildings.size > 0;
         done();
       });
@@ -250,6 +257,11 @@ function plain(src: THREE.BufferGeometry): THREE.BufferGeometry {
   g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.setAttribute('aMask', new THREE.BufferAttribute(mask, 1));
+  // Car wheels (vec4: centre + radius, see scripts/build-cars.mjs) and traffic-light lamp ids.
+  const Wh = src.getAttribute('_wheel');
+  if (Wh) g.setAttribute('aWheel', new THREE.BufferAttribute(Float32Array.from(Wh.array as ArrayLike<number>), 4));
+  const Lp = src.getAttribute('_lamp');
+  if (Lp) g.setAttribute('aLamp', new THREE.BufferAttribute(Float32Array.from(Lp.array as ArrayLike<number>), 1));
   const I = src.getIndex();
   if (I) g.setIndex(new THREE.BufferAttribute(n > 65535 ? Uint32Array.from(I.array as ArrayLike<number>) : Uint16Array.from(I.array as ArrayLike<number>), 1));
   return g;
@@ -257,11 +269,25 @@ function plain(src: THREE.BufferGeometry): THREE.BufferGeometry {
 
 export const cityModels = new CityModels();
 
-/** Car-kit material: per-instance colour only on the paint (aMask = 1); everything else keeps the baked colours. */
-export function paintMaterial(): THREE.MeshStandardMaterial {
+/**
+ * Car-kit material: per-instance colour only on the paint (aMask = 1); everything else keeps the baked colours. With `wheels` the
+ * vertices of the wheels (aWheel: centre xyz + flag, see scripts/build-cars.mjs) spin around their own axle by the instance's rolled
+ * distance (instanced attribute aRoll, metres): one draw call per car model, no separate wheel meshes.
+ */
+export function paintMaterial(wheels = false): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.05 });
   m.onBeforeCompile = (s) => {
-    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute float aMask;').replace(
+    s.vertexShader = s.vertexShader.replace('#include <common>', `#include <common>
+attribute float aMask;
+${wheels ? `attribute vec4 aWheel;
+attribute float aRoll;
+vec3 sgSpin(vec3 v, vec3 c, float r, bool pos) {
+  vec3 d = pos ? v - c : v;
+  float a = aRoll / r;
+  float cs = cos(a), sn = sin(a);
+  d = vec3(d.x, d.y * cs - d.z * sn, d.y * sn + d.z * cs);
+  return pos ? d + c : d;
+}` : ''}`).replace(
       '#include <color_vertex>',
       `vColor = vec4(1.0);
 #ifdef USE_COLOR
@@ -271,7 +297,12 @@ vColor.rgb *= color;
 if (aMask > 0.75) vColor.rgb = instanceColor.rgb * clamp(dot(vColor.rgb, vec3(0.2126, 0.7152, 0.0722)) / 0.3, 0.6, 1.3);
 #endif`,
     );
+    if (wheels) {
+      s.vertexShader = s.vertexShader
+        .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (aWheel.w > 0.0) objectNormal = sgSpin(objectNormal, vec3(0.0), max(aWheel.w - 10.0 * step(10.0, aWheel.w), 0.05), false);')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nif (aWheel.w > 0.0) transformed = sgSpin(transformed, aWheel.xyz, max(aWheel.w - 10.0 * step(10.0, aWheel.w), 0.05), true);');
+    }
   };
-  m.customProgramCacheKey = () => 'sg-car-paint';
+  m.customProgramCacheKey = () => (wheels ? 'sg-car-paint-wheels' : 'sg-car-paint');
   return m;
 }
