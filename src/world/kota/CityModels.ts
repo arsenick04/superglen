@@ -179,6 +179,13 @@ class CityModels {
           if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
+      // Quaternius cars and buses for CityLife (scripts/build-cars.mjs): car_n1, car_n2, car_suv, car_sports, car_taxi, bus_city, bus_school.
+      const cars = loader
+        .loadAsync(`${base}env/cars/cars.glb`)
+        .then((gltf) => {
+          if (!finished) ingest(gltf);
+        })
+        .catch(() => undefined);
       const custom = fetch(`${base}env/buildings/manifest.json`)
         .then((r) => (r.ok ? (r.json() as Promise<{ buildings: Record<string, { file: string } & BuildingHint> }>) : null))
         .then((man) => {
@@ -213,7 +220,7 @@ class CityModels {
           );
         })
         .catch(() => undefined);
-      void Promise.all([kenney, downtown, custom]).then(() => {
+      void Promise.all([kenney, downtown, cars, custom]).then(() => {
         if (!finished) this.ready = this.models.size > 0 || this.buildings.size > 0;
         done();
       });

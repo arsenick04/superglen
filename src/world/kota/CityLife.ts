@@ -48,6 +48,20 @@ export const LifeConfig = {
 } as const;
 
 const MAX_PED = 200;
+
+/**
+ * Car models of public/env/cars/cars.glb (scripts/build-cars.mjs, Quaternius CC0): one InstancedMesh each. `weight` = share of the
+ * cars on every lane; All cars drive on the main roads. A missing file keeps the single old car.
+ */
+const CAR_MODELS = [
+  { name: 'car_n1', weight: 5, max: 40 },
+  { name: 'car_n2', weight: 5, max: 40 },
+  { name: 'car_suv', weight: 4, max: 40 },
+  { name: 'car_sports', weight: 3, max: 30 },
+  { name: 'car_taxi', weight: 3, max: 30 },
+  { name: 'bus_city', weight: 1, max: 12 },
+  { name: 'bus_school', weight: 1, max: 12 },
+] as const;
 const SIDE = { main: { off: 2.5, walk: 6.5 }, local: { off: 1.75, walk: 4.75 } } as const;
 
 // ---- Data -------------------------------------------------------------------------------------------------------------------
@@ -66,6 +80,10 @@ interface Lane {
 interface Agent {
   /** 0 car, 1 moto, 2 bike, 3 walker, 4 kid. */
   kind: number;
+  /** Cars: index into CAR_MODELS (which InstancedMesh draws it, whose box is its collider). */
+  model: number;
+  /** Half length (m) of a vehicle: followers and the stop in front of Glen keep this much more room for long buses. */
+  half: number;
   body?: RAPIER.RigidBody;
   placed?: boolean;
   lane: Lane | null;
@@ -378,6 +396,8 @@ export class CityLife {
   private readonly ballMesh: THREE.InstancedMesh;
   private readonly anim: THREE.InstancedBufferAttribute;
   private readonly meshes: THREE.InstancedMesh[];
+  /** Bounding box of every car model (index = Agent.model); the first one is the old single car. */
+  private readonly carBoxes: THREE.Box3[] = [];
   private readonly frustum = new THREE.Frustum();
   private readonly pv = new THREE.Matrix4();
   private readonly sphere = new THREE.Sphere();
@@ -405,13 +425,18 @@ export class CityLife {
   simulated = 0;
   shown = 0;
   stopped = 0;
-  readonly counts = [0, 0, 0, 0, 0];
+  readonly counts: number[] = [0, 0, 0, 0, 0];
 
   constructor(private readonly ctx: LevelContext) {
     const rnd = rngFor(CITY.seed ^ 0x11fe);
     const pick = <T>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
     const range = (r: readonly [number, number]): number => r[0] + rnd() * (r[1] - r[0]);
     const lines = roadLines();
+    // Car models from cars.glb (all or nothing: a half set would change the traffic mix).
+    const carGeos = CAR_MODELS.map((m) => cityModels.get(m.name)?.geo ?? null);
+    const useModels = carGeos.every((g) => g !== null);
+    const modelRnd = rngFor(CITY.seed ^ 0xca75);
+    const totalWeight = CAR_MODELS.reduce((t, m) => t + m.weight, 0);
 
     // Vehicle lanes (left-hand traffic): both directions of every road line.
     const lanes: Lane[] = [];
@@ -433,7 +458,17 @@ export class CityLife {
       const cz = lane.ax === 'x' ? mid : a.s;
       const dist = districtAt(cx, cz);
       a.color = rnd() < 0.55 ? pick([dist.color, ...dist.roofs, dist.walls[0]]) : pick(PALETTE);
-      if (kind === 0 && rnd() < 0.4) {
+      if (kind === 0 && useModels) {
+        // A model by weight; own random stream so the rest of the city keeps its layout. Buses are a little slower.
+        let r = modelRnd() * totalWeight;
+        let m = 0;
+        while (m < CAR_MODELS.length - 1 && r >= CAR_MODELS[m].weight) r -= CAR_MODELS[m++].weight;
+        a.model = m;
+        a.sx = a.sy = a.sz = m >= 5 ? 1 : 0.96 + modelRnd() * 0.08;
+        if (m >= 5) a.cruise *= 0.85;
+        a.v = a.cruise;
+        a.half = (cityModels.get(CAR_MODELS[m].name)!.max.z - cityModels.get(CAR_MODELS[m].name)!.min.z) * a.sz / 2;
+      } else if (kind === 0 && rnd() < 0.4) {
         a.sx = 1.05;
         a.sy = 1.35;
         a.sz = 1.2;
@@ -597,7 +632,10 @@ export class CityLife {
     // Prefer the rounded toy car from the local env library.
     const envCar = envModels.geometry('car');
     const kCar = envCar ? null : cityModels.carGeometry();
-    this.cars = envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
+    const paint = useModels ? paintMaterial() : null;
+    this.cars = paint
+      ? mk((carGeos[0] as THREE.BufferGeometry).clone(), paint, CAR_MODELS[0].max)
+      : envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
     const moto = motoGeo();
     const bike = bikeGeo();
     this.motos = mk(moto, riderMaterial(moto), 40);
@@ -605,7 +643,11 @@ export class CityLife {
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
+    // Other car models: meshes 5.. (index 4 + Agent.model); all share one paint material (one program).
+    if (paint) for (let i = 1; i < CAR_MODELS.length; i++) this.meshes.push(mk((carGeos[i] as THREE.BufferGeometry).clone(), paint, CAR_MODELS[i].max));
     for (const m of this.meshes) m.geometry.computeBoundingBox();
+    this.carBoxes.push(this.cars.geometry.boundingBox as THREE.Box3);
+    for (let i = 1; paint && i < CAR_MODELS.length; i++) this.carBoxes.push(this.meshes[4 + i].geometry.boundingBox as THREE.Box3);
     ctx.onDispose(() => {
       for (const m of this.meshes) {
         m.geometry.dispose();
@@ -618,7 +660,7 @@ export class CityLife {
       const w = window as unknown as { __life?: unknown };
       w.__life = {
         total: () => this.agents.length,
-        vehicles: () => this.agents.filter((a) => a.kind < 3).map((a, i) => ({ i, kind: a.kind, ax: a.lane?.ax, c: a.lane?.c, dir: a.lane?.dir, main: a.lane?.main, s: a.s, v: a.v, x: a.x, z: a.z })),
+        vehicles: () => this.agents.filter((a) => a.kind < 3).map((a, i) => ({ i, kind: a.kind, model: a.model, ax: a.lane?.ax, c: a.lane?.c, dir: a.lane?.dir, main: a.lane?.main, s: a.s, v: a.v, x: a.x, z: a.z })),
         agents: () => this.agents.map((a) => ({ kind: a.kind, x: a.x, z: a.z, v: a.v })),
         /** Put a car on the lane (axis, centre line near c) exactly `dist` m behind `along`, at cruise speed. */
         carOnLane: (ax: string, c: number, along: number, dist: number) => {
@@ -645,7 +687,7 @@ export class CityLife {
   }
 
   private blank(kind: number): Agent {
-    return { kind, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
+    return { kind, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
   }
 
   /** World position and yaw of a lane agent. */
@@ -716,7 +758,7 @@ export class CityLife {
       a.body = undefined;
       return;
     }
-    const scale = this.meshes[Math.min(3, a.kind)].geometry.boundingBox!;
+    const scale = a.kind === 0 ? this.carBoxes[a.model] : this.meshes[Math.min(3, a.kind)].geometry.boundingBox!;
     const halfX = (scale.max.x - scale.min.x) * a.sx / 2;
     const halfZ = (scale.max.z - scale.min.z) * a.sz / 2;
     const halfY = scale.max.y * a.sy / 2;
@@ -773,6 +815,7 @@ export class CityLife {
     const cam = this.ctx.cameraRig.camera;
     this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     const n = this.counts;
+    while (n.length < this.meshes.length) n.push(0);
     n.fill(0);
 
     const ag = this.agents;
@@ -787,7 +830,7 @@ export class CityLife {
       this.sphere.center.set(a.x, 0.8, a.z);
       this.sphere.radius = 2.2;
       if (!this.frustum.intersectsSphere(this.sphere)) continue;
-      const k = a.kind === 4 ? 3 : a.kind;
+      const k = a.kind === 4 ? 3 : a.kind === 0 && a.model > 0 ? 4 + a.model : a.kind;
       const idx = n[k];
       if (k === 3 && idx >= MAX_PED) continue;
       if (idx >= (this.meshes[k].instanceMatrix.count)) continue;
@@ -836,17 +879,18 @@ export class CityLife {
       nb++;
     }
     n[4] = nb;
-    for (let k = 0; k < 5; k++) {
+    for (let k = 0; k < this.meshes.length; k++) {
       const mesh = this.meshes[k];
       mesh.count = n[k];
       mesh.visible = n[k] > 0;
       if (n[k] > 0) {
         mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor && k < 4) mesh.instanceColor.needsUpdate = true;
+        if (mesh.instanceColor && k !== 4) mesh.instanceColor.needsUpdate = true;
       }
     }
     if (n[3] > 0) this.anim.needsUpdate = true;
-    this.shown = n[0] + n[1] + n[2] + n[3] + n[4];
+    this.shown = 0;
+    for (let k = 0; k < this.meshes.length; k++) this.shown += n[k];
     const info = this.ctx.game.debugInfo;
     info.lifeAgents = ag.length;
     info.lifeSim = this.simulated;
@@ -864,10 +908,11 @@ export class CityLife {
       const across = l.ax === 'x' ? pz : px;
       const ahead = (along - a.s) * l.dir;
       const side = Math.abs(across - l.c);
-      if (ahead > -1.5 && ahead < LifeConfig.brakeDist + LifeConfig.carStopGap && side < LifeConfig.laneHalf) {
-        const k = Math.max(0, Math.min(1, (ahead - LifeConfig.carStopGap) / LifeConfig.brakeDist));
+      const stop = LifeConfig.carStopGap + Math.max(0, a.half - 1.75);
+      if (ahead > -1.5 && ahead < LifeConfig.brakeDist + stop && side < LifeConfig.laneHalf) {
+        const k = Math.max(0, Math.min(1, (ahead - stop) / LifeConfig.brakeDist));
         target = Math.min(target, a.cruise * k * k);
-        if (ahead < LifeConfig.carStopGap + 0.2) target = 0;
+        if (ahead < stop + 0.2) target = 0;
       }
     }
     const bt = this.battle;
@@ -877,8 +922,10 @@ export class CityLife {
       const len = l.a1 - l.a0;
       let gap = ((o.s - a.s) * l.dir) % len;
       if (gap < 0) gap += len;
-      if (gap < LifeConfig.followGap + 6) target = Math.min(target, o.v + Math.max(0, gap - LifeConfig.followGap) * 0.8);
-      if (gap < LifeConfig.followGap) target = 0;
+      // Keep followGap for two 3.5 m cars; long buses ask for more room.
+      const follow = LifeConfig.followGap + Math.max(0, a.half + o.half - 3.5);
+      if (gap < follow + 6) target = Math.min(target, o.v + Math.max(0, gap - follow) * 0.8);
+      if (gap < follow) target = 0;
     }
     const acc = target > a.v ? 3.5 : 9;
     a.v += Math.max(-acc * dt, Math.min(acc * dt, target - a.v));
