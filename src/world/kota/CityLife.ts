@@ -5,8 +5,9 @@ import { cityModels, paintMaterial } from './CityModels';
 import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
-import { box, cyl, merge, sph, type Part } from './ColorMesh';
-import { Clip, Crowd, CrowdConfig, VARIANT_COUNT, randomLook } from './Crowd';
+import { box, merge, sph } from './ColorMesh';
+import { bicycleGeo, scooterGeo, vehicleMaterial } from './Scooter';
+import { Clip, Crowd, CrowdConfig, RiderScale, VARIANT_COUNT, randomLook } from './Crowd';
 
 /**
  * PACKAGE D6 L14: a living Kota Botanica. Ambient, NON-interactive people and traffic: pedestrians on the sidewalks, children
@@ -202,22 +203,6 @@ const PALETTE = [0xff8fb1, 0x4dabf7, 0xf2b632, 0xff9f43, 0x2ec4b6, 0xe8577e, 0x7
 
 const W = 0xffffff;
 const DARK = 0x2b2a33;
-const SKIN = 0xf1c9a0;
-
-/** Rounded seated rider shared by bicycles and motorbikes. */
-function riderParts(helmet: boolean): Part[] {
-  return [
-    { g: new THREE.CapsuleGeometry(0.14, 0.20, 2, 8), c: W, p: [0, 1.02, -0.16], r: [0.16, 0, 0], s: [1, 1, 0.8] },
-    { g: sph(0.16, 10, 6), c: SKIN, p: [0, 1.36, -0.10] },
-    { g: new THREE.SphereGeometry(0.17, 10, 5, 0, Math.PI * 2, 0, 1.55), c: helmet ? 0xffc652 : 0x49372f, p: [0, 1.38, -0.11] },
-    ...[-1, 1].flatMap((side): Part[] => [
-      { g: new THREE.CapsuleGeometry(0.045, 0.31, 2, 6), c: SKIN, p: [side * 0.18, 0.97, 0.08], r: [-0.9, 0, side * 0.12] },
-      { g: new THREE.CapsuleGeometry(0.065, 0.26, 2, 6), c: 0x435879, p: [side * 0.13, 0.64, -0.08], r: [-0.45, 0, 0] },
-      { g: sph(0.075, 6, 4), c: 0xf1e8d5, p: [side * 0.14, 0.43, 0.04], s: [1, 0.65, 1.5] },
-      { g: sph(0.018, 5, 3), c: DARK, p: [side * 0.055, 1.38, 0.044] },
-    ]),
-  ];
-}
 
 /** Car: tinted body and cabin, dark windows and wheels, light lamps. About 110 triangles. Stretched into a van by the instance scale. */
 function carGeo(): THREE.BufferGeometry {
@@ -235,51 +220,6 @@ function carGeo(): THREE.BufferGeometry {
     { g: box(0.3, 0.12, 0.06), c: 0xd9432f, p: [0.5, 0.58, -1.72] },
     { g: box(0.3, 0.12, 0.06), c: 0xd9432f, p: [-0.5, 0.58, -1.72] },
   ]);
-}
-
-/** Motorbike with a rider (the rider's shirt is tinted). About 90 triangles. */
-function motoGeo(): THREE.BufferGeometry {
-  return merge([
-    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, 0.6], r: [0, 0, Math.PI / 2] },
-    { g: cyl(0.28, 0.28, 0.16, 12), c: DARK, p: [0, 0.28, -0.6], r: [0, 0, Math.PI / 2] },
-    { g: sph(0.4, 10, 6), c: W, p: [0, 0.6, 0.05], s: [0.55, 0.65, 1.45] },
-    { g: box(0.34, 0.1, 0.5), c: DARK, p: [0, 0.82, -0.25] },
-    { g: box(0.5, 0.06, 0.06), c: DARK, p: [0, 1.02, 0.5] },
-    { g: sph(0.075, 8, 5), c: 0xfff2cb, p: [0, 0.78, 0.58] },
-    ...riderParts(true),
-  ]);
-}
-
-/** Bicycle with a child rider. About 100 triangles. */
-function bikeGeo(): THREE.BufferGeometry {
-  return merge([
-    { g: cyl(0.3, 0.3, 0.06, 7), c: DARK, p: [0, 0.3, 0.55], r: [0, 0, Math.PI / 2] },
-    { g: cyl(0.3, 0.3, 0.06, 7), c: DARK, p: [0, 0.3, -0.55], r: [0, 0, Math.PI / 2] },
-    { g: box(0.06, 0.06, 1.0), c: W, p: [0, 0.55, 0], r: [0.1, 0, 0] },
-    { g: box(0.05, 0.5, 0.05), c: W, p: [0, 0.55, 0.5] },
-    { g: box(0.4, 0.04, 0.05), c: DARK, p: [0, 0.85, 0.5] },
-    { g: box(0.14, 0.04, 0.26), c: DARK, p: [0, 0.78, -0.35] },
-    ...riderParts(false),
-  ]);
-}
-
-/** Keep the rider's skin, helmet, tyres and face independent of vehicle paint. */
-function riderMaterial(geometry: THREE.BufferGeometry): THREE.MeshStandardMaterial {
-  const colors = geometry.getAttribute('color');
-  const tint = new Float32Array(colors.count);
-  for (let i = 0; i < colors.count; i++) tint[i] = colors.getX(i) > 0.99 && colors.getY(i) > 0.99 && colors.getZ(i) > 0.99 ? 1 : 0;
-  geometry.setAttribute('aPaint', new THREE.BufferAttribute(tint, 1));
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 });
-  material.customProgramCacheKey = () => 'city-rider-paint';
-  material.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPaint;')
-      .replace('#include <color_vertex>', `vColor = vec4(color, 1.0);
-#ifdef USE_INSTANCING_COLOR
-if (aPaint > 0.5) vColor.rgb *= instanceColor;
-#endif`);
-  };
-  return material;
 }
 
 // ---- The system -----------------------------------------------------------------------------------------------------------------
@@ -554,6 +494,17 @@ export class CityLife {
         a.look = randomLook(pr);
         a.ct = pr();
       }
+      // Riders of scooters and bicycles (own random stream again): the same cartoon people, seated.
+      const rr = rngFor(CITY.seed ^ 0x51de);
+      for (const a of this.agents) {
+        if (a.kind !== 1 && a.kind !== 2) continue;
+        let u = rr() * 20;
+        const W = [3, 3, 1.5, 0.4, 3, 3, 3, 1.5];
+        let vi = 0;
+        while (vi < VARIANT_COUNT - 1 && u >= W[vi]) u -= W[vi++];
+        a.variant = vi;
+        a.look = randomLook(rr);
+      }
     }
 
     // Meshes.
@@ -586,10 +537,10 @@ export class CityLife {
     this.cars = paint
       ? mk(withRoll((carGeos[0] as THREE.BufferGeometry).clone(), CAR_MODELS[0].max), paint, CAR_MODELS[0].max)
       : envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
-    const moto = motoGeo();
-    const bike = bikeGeo();
-    this.motos = mk(moto, riderMaterial(moto), 40);
-    this.bikes = mk(bike, riderMaterial(bike), 40);
+    // Scooters and bicycles: one shared material (painted body, tinted helmet, spinning wheels); the riders are Crowd people.
+    const vehicleMat = vehicleMaterial();
+    this.motos = mk(withRoll(scooterGeo(), 40), vehicleMat, 40);
+    this.bikes = mk(withRoll(bicycleGeo(), 40), vehicleMat, 40);
     this.ballMesh = mk(sph(0.16, 6, 4), new THREE.MeshStandardMaterial({ roughness: 0.5 }), Math.max(1, this.balls.length));
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
@@ -968,6 +919,7 @@ export class CityLife {
       if (roll) roll.array[idx] = a.roll;
       mesh.setColorAt(idx, this.tc.setHex(a.color));
       n[k]++;
+      if (k === 1 || k === 2) this.crowd.add(a.variant, a.look, a.x, a.y, a.z, a.yaw, a.sy * RiderScale, this.crowd.row(a.variant, Clip.ride, 0), 0, 0);
     }
     // Balls.
     const bm = this.ballMesh.instanceMatrix.array as Float32Array;

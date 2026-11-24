@@ -30,7 +30,11 @@ export const CrowdConfig = {
  */
 export const Cartoon = { head: 1.7, neck: 0.6, torso: 1.15, legLen: 0.6, legThick: 1.2, armLen: 0.7, armThick: 1.15, hands: 1.3, scale: 1.0 } as const;
 
-export const Clip = { idle: 0, walk: 1, run: 2, wave: 3 } as const;
+export const Clip = { idle: 0, walk: 1, run: 2, wave: 3, ride: 4 } as const;
+/** The static seated riding pose (one baked frame, made from the idle pose by aiming bones, see `bake`): hands on the bars, feet on the pegs. */
+export const RidePose = { seatY: 0.7, seatZ: -0.2 } as const;
+/** Size of a rider relative to a walker (seat height and the bars are tuned for this). */
+export const RiderScale = 0.85;
 const CLIP_NAMES = ['idle', 'walk', 'run', 'wave'] as const;
 
 /** Body variants in the order of the GLB (`gender` 0 = male skeleton, 1 = female skeleton). */
@@ -279,41 +283,93 @@ export class CrowdModels {
       else if (n === 'UpperArmL' || n === 'UpperArmR') limb(b, C.armLen / C.torso, C.armThick / C.torso);
       else if (uni[n] !== undefined) b.scale.multiplyScalar(uni[n]);
     });
+    const rideAt = rows;
+    rows += 1;
+    row0.push(rideAt);
+    frames.push(1);
+    dur.push(1);
     const width = bones.length * 3;
     const data = new Float32Array(width * rows * 4);
     const scene = gltf.scene;
+    const m = new THREE.Matrix4();
+    const writeRow = (row: number, dy: number, dz: number): void => {
+      for (let b = 0; b < bones.length; b++) {
+        m.multiplyMatrices(bones[b].matrixWorld, sk.boneInverses[b]);
+        const e = m.elements;
+        for (let r = 0; r < 3; r++) {
+          const o = (row * width + b * 3 + r) * 4;
+          data[o] = e[r] * C.scale;
+          data[o + 1] = e[4 + r] * C.scale;
+          data[o + 2] = e[8 + r] * C.scale;
+          data[o + 3] = (e[12 + r] - (r === 1 ? drop : 0)) * C.scale + (r === 1 ? dy : r === 2 ? dz : 0);
+        }
+      }
+    };
+    const setFrame = (c: THREE.AnimationClip, f: number): void => {
+      for (let b = 0; b < bones.length; b++) {
+        bones[b].position.copy(bindP[b]);
+        bones[b].quaternion.copy(bindQ[b]);
+      }
+      for (const tr of c.tracks) {
+        const dot = tr.name.lastIndexOf('.');
+        const bi = byName.get(tr.name.slice(0, dot));
+        if (bi === undefined) continue;
+        const prop = tr.name.slice(dot + 1);
+        const v = tr.values;
+        if (prop === 'quaternion') bones[bi].quaternion.set(v[f * 4], v[f * 4 + 1], v[f * 4 + 2], v[f * 4 + 3]);
+        else if (prop === 'position') bones[bi].position.set(v[f * 3], v[f * 3 + 1], v[f * 3 + 2]);
+      }
+      scene.updateMatrixWorld(true);
+    };
     clips.forEach((c, ci) => {
       if (!c) return;
       for (let f = 0; f < frames[ci]; f++) {
-        for (let b = 0; b < bones.length; b++) {
-          bones[b].position.copy(bindP[b]);
-          bones[b].quaternion.copy(bindQ[b]);
-        }
-        for (const tr of c.tracks) {
-          const dot = tr.name.lastIndexOf('.');
-          const bi = byName.get(tr.name.slice(0, dot));
-          if (bi === undefined) continue;
-          const prop = tr.name.slice(dot + 1);
-          const v = tr.values;
-          if (prop === 'quaternion') bones[bi].quaternion.set(v[f * 4], v[f * 4 + 1], v[f * 4 + 2], v[f * 4 + 3]);
-          else if (prop === 'position') bones[bi].position.set(v[f * 3], v[f * 3 + 1], v[f * 3 + 2]);
-        }
-        scene.updateMatrixWorld(true);
-        const row = row0[ci] + f;
-        const m = new THREE.Matrix4();
-        for (let b = 0; b < bones.length; b++) {
-          m.multiplyMatrices(bones[b].matrixWorld, sk.boneInverses[b]);
-          const e = m.elements;
-          for (let r = 0; r < 3; r++) {
-            const o = (row * width + b * 3 + r) * 4;
-            data[o] = e[r] * C.scale;
-            data[o + 1] = e[4 + r] * C.scale;
-            data[o + 2] = e[8 + r] * C.scale;
-            data[o + 3] = (e[12 + r] - (r === 1 ? drop : 0)) * C.scale;
-          }
-        }
+        setFrame(c, f);
+        writeRow(row0[ci] + f, 0, 0);
       }
     });
+    // Riding pose: idle frame 0, then aim bones (their local +Y runs along the limb) in model space (+Z forward, +X left).
+    {
+      setFrame(clips[0] as THREE.AnimationClip, 0);
+      const qa = new THREE.Quaternion();
+      const qw = new THREE.Quaternion();
+      const qp = new THREE.Quaternion();
+      const cur = new THREE.Vector3();
+      const tgt = new THREE.Vector3();
+      const aim = (name: string, x: number, y: number, z: number): void => {
+        const bi = byName.get(pfx + name);
+        if (bi === undefined) return;
+        const b = bones[bi];
+        b.updateWorldMatrix(true, false);
+        const e = b.matrixWorld.elements;
+        cur.set(e[4], e[5], e[6]).normalize();
+        qa.setFromUnitVectors(cur, tgt.set(x, y, z).normalize());
+        b.getWorldQuaternion(qw);
+        if (b.parent) b.parent.getWorldQuaternion(qp);
+        else qp.identity();
+        b.quaternion.copy(qp.invert().multiply(qa).multiply(qw));
+        b.updateWorldMatrix(false, true);
+      };
+      const R = RideAim;
+      aim('Abdomen', 0, 1, R.lean);
+      aim('Neck', 0, 1, -R.lean * 0.6);
+      for (const side of ['L', 'R']) {
+        const sx = side === 'L' ? 1 : -1;
+        // Seated, the legs get their natural length back (nobody sees the cartoon short legs here, and they must reach the pegs).
+        const ul = bones[byName.get(pfx + 'UpperLeg' + side) ?? 0];
+        limb(ul, 1 / C.legLen, 1);
+        aim('UpperLeg' + side, sx * R.thighOut, -R.thighDown, 1);
+        aim('LowerLeg' + side, sx * 0.05, -1, -R.shinBack);
+        aim('UpperArm' + side, sx * R.armOut, -R.armDown, 1);
+        aim('LowerArm' + side, sx * R.foreOut, -R.foreDown, 1);
+      }
+      scene.updateMatrixWorld(true);
+      const hb = bones[byName.get(pfx + 'Hips') ?? 0];
+      const hp = new THREE.Vector3().setFromMatrixPosition(hb.matrixWorld);
+      const dy = RidePose.seatY / RiderScale - (hp.y - drop) * C.scale;
+      const dz = RidePose.seatZ / RiderScale - hp.z * C.scale;
+      writeRow(rideAt, dy, dz);
+    }
     for (let b = 0; b < bones.length; b++) {
       bones[b].position.copy(bindP[b]);
       bones[b].quaternion.copy(bindQ[b]);
@@ -329,6 +385,9 @@ export class CrowdModels {
     return { texture, material: makeMaterial(texture), row0, frames, dur, walkSpeed: (speeds[`${gk}_walk`] || 1.4) * stride, runSpeed: (speeds[`${gk}_run`] || 3) * stride };
   }
 }
+
+/** Aim vectors (model space, not normalised) of the riding pose; tuned by eye. */
+const RideAim = { lean: 0.65, thighOut: 0.18, thighDown: 0.3, shinBack: 0.15, armOut: 0.3, armDown: 0.8, foreOut: 0.12, foreDown: 0.45 } as const;
 
 export const crowdModels = new CrowdModels();
 
