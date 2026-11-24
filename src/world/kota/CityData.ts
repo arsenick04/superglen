@@ -1042,6 +1042,21 @@ export function generateCity(seed: number = CITY.seed): CityLayout {
   for (const b of g.L.buildings) if (b.district === 'perumahan' && b.kind === 'house' && (!best || Math.hypot(b.x, b.z) < Math.hypot(best.x, best.z))) best = b;
   if (best) {
     best.glen = true;
+    // Glen's house: no awning and nothing in front of the door. The climb route is a small crate staircase on the SIDE wall
+    // (0.9 m, 1.8 m, 2.6 m: same tops as the old ac / awning route, so the roof stays reachable).
+    {
+      const [gfx, gfz] = FACE_VEC[best.face];
+      const ux = -gfz;
+      const uz = gfx;
+      const along = best.face < 2 ? best.w : best.d;
+      const t = along / 2 + 0.55;
+      best.pieces = [0.9, 1.8, 2.6].map((top, i) => {
+        const off = 1.7 - i * 1.15;
+        const x = r2(best.x + ux * t + gfx * off);
+        const z = r2(best.z + uz * t + gfz * off);
+        return { id: `${best.id}:step${i}`, type: 'crate' as const, x, z, w: 1.0, d: 1.0, top, n: i + 1 };
+      });
+    }
     best.wallColor = 0xffc36b;
     best.roofColor = 0xd9432f;
     g.L.pois.push({ id: 'rumahGlen', name: 'Rumah Glen', x: best.x, z: best.z, radius: 9 });

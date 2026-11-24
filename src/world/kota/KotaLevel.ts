@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { CityDressing } from './CityDressing';
 import { CityNature } from './CityNature';
 import { applySky } from './Sky';
+import { nightBackground, sunsetBackground, StarField } from './NightSky';
+import { NIGHT, SUNSET } from '../../config/sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
 import { makeCityMaterial } from './CityMaterial';
@@ -98,6 +100,8 @@ export class KotaLevel implements Level {
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
   private hemi!: THREE.HemisphereLight;
+  private lampPool: THREE.PointLight | null = null;
+  private stars: StarField | null = null;
   private dressing!: CityDressing;
   private trees!: CityNature;
   private follower: ShadowFollower | null = null;
@@ -201,7 +205,10 @@ export class KotaLevel implements Level {
       this.sun.color.setHex(0xffedd0);
       (scene.fog as THREE.Fog).color.setHex(0xc6e6fa);
     });
-    if (!sandbox && ctx.save.data.interlude === 'forest_home') this.setSunset();
+    const tod = new URLSearchParams(window.location.search).get('tod'); // debug: ?tod=night|sunset
+    if (tod === 'night') this.setNight();
+    else if (tod === 'sunset') this.setSunset();
+    else if (!sandbox && ctx.save.data.interlude === 'forest_home') this.setSunset();
     else if (!sandbox && this.isWalkingHome()) this.setNight();
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
@@ -407,55 +414,48 @@ export class KotaLevel implements Level {
   /** Evening lasts until Glen enters his house; a fresh city scene restores daylight in the morning. */
   private setNight(): void {
     const { scene } = this.ctx;
-    scene.background = new THREE.Color(0x172748);
-    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(0x263957);
-    scene.environmentIntensity = 0.12;
-    this.hemi.color.setHex(0x8da8d5);
-    this.hemi.groundColor.setHex(0x617a84);
-    this.hemi.intensity = 0.7;
-    this.sun.color.setHex(0xa8c8f2);
-    this.sun.intensity = 0.7;
-    this.sunOffset.set(24, 48, 32);
+    const bg = nightBackground();
+    scene.background = bg;
+    this.ctx.onDispose(() => bg.dispose());
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(NIGHT.fog);
+    scene.environmentIntensity = NIGHT.envIntensity;
+    this.hemi.color.setHex(NIGHT.hemiSky);
+    this.hemi.groundColor.setHex(NIGHT.hemiGround);
+    this.hemi.intensity = NIGHT.hemiIntensity;
+    this.sun.color.setHex(NIGHT.moonColor);
+    this.sun.intensity = NIGHT.moonIntensity;
+    this.sunOffset.set(...NIGHT.sunOffset);
+    // One warm light pool that travels with the player (a street lamp glow); no shadows.
+    if (!this.stars) {
+      this.stars = new StarField();
+      this.ctx.root.add(this.stars.group);
+      this.ctx.onDispose(() => this.stars?.dispose());
+    }
+    if (!this.lampPool) {
+      this.lampPool = new THREE.PointLight(NIGHT.lampColor, NIGHT.lampIntensity, NIGHT.lampDistance, 1.6);
+      this.ctx.root.add(this.lampPool);
+    }
   }
 
-  /** Warm late-afternoon light after the forest quiz, clearly distinct from the following morning. */
+  /** Warm late-afternoon light after the forest quiz: the sun sits low in the WEST (-x), purple-blue toward the east. */
   private setSunset(): void {
     const { scene } = this.ctx;
-    // A vertical sky gradient keeps the horizon warm without flattening every
-    // object into the same orange colour. CanvasTexture is tiny and works on
-    // the same older browsers as the rest of the city renderer.
-    const canvas = document.createElement('canvas');
-    canvas.width = 2;
-    canvas.height = 256;
-    const paint = canvas.getContext('2d');
-    if (paint) {
-      const gradient = paint.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, '#405a9d');
-      gradient.addColorStop(0.52, '#9e78a0');
-      gradient.addColorStop(0.78, '#f19a6b');
-      gradient.addColorStop(1, '#ffd29a');
-      paint.fillStyle = gradient;
-      paint.fillRect(0, 0, canvas.width, canvas.height);
-      const sky = new THREE.CanvasTexture(canvas);
-      sky.colorSpace = THREE.SRGBColorSpace;
-      scene.background = sky;
-      this.ctx.onDispose(() => sky.dispose());
-    } else scene.background = new THREE.Color(0xb27688);
+    const bg = sunsetBackground();
+    scene.background = bg;
+    this.ctx.onDispose(() => bg.dispose());
     if (scene.fog instanceof THREE.Fog) {
-      scene.fog.color.setHex(0xb88991);
+      scene.fog.color.setHex(SUNSET.fog);
       scene.fog.near *= 1.18;
       scene.fog.far *= 1.08;
     }
-    scene.environmentIntensity = 0.62;
-    this.hemi.color.setHex(0x92a7d8);
-    this.hemi.groundColor.setHex(0x6d504b);
-    this.hemi.intensity = 0.72;
-    this.sun.color.setHex(0xffb06f);
-    this.sun.intensity = 1.65;
-    // ShadowFollower rebuilds the light position each frame from this offset.
-    // A low side angle makes the sunset read in the actual world, not only in
-    // the background colour.
-    this.sunOffset.set(-58, 25, 42);
+    scene.environmentIntensity = SUNSET.envIntensity;
+    this.hemi.color.setHex(SUNSET.hemiSky);
+    this.hemi.groundColor.setHex(SUNSET.hemiGround);
+    this.hemi.intensity = SUNSET.hemiIntensity;
+    this.sun.color.setHex(SUNSET.lightColor);
+    this.sun.intensity = SUNSET.lightIntensity;
+    // ShadowFollower rebuilds the light position each frame from this offset: low warm light from the west.
+    this.sunOffset.set(...SUNSET.sunOffset);
   }
 
   /** Story pauses that require Glen to walk home before the next morning. */
@@ -687,9 +687,11 @@ export class KotaLevel implements Level {
   update(dt: number): void {
     const p = this.ctx.player.visualPosition;
     this.t += dt;
-    this.streamer.update(p.x, p.z);
-    this.dressing.update(p.x, p.z);
-    this.trees.update(p.x, p.z);
+    const PF = (n: string, t: number): number => { const w = window as any; const q = (w.__pf ??= {}); const t1 = performance.now(); q[n] = (q[n] ?? 0) + (t1 - t); return t1; };
+    let T = performance.now();
+    this.streamer.update(p.x, p.z); T = PF('streamer', T);
+    this.dressing.update(p.x, p.z); T = PF('dressing', T);
+    this.trees.update(p.x, p.z); T = PF('trees', T);
     if (this.follower) this.follower.follow(p);
     else {
       this.sun.position.copy(p).add(this.sunOffset);
@@ -697,16 +699,18 @@ export class KotaLevel implements Level {
     }
     this.hud.update(dt, p.x, p.z);
     this.crowd.begin();
-    this.d3?.update(dt);
-    this.life?.update();
+    this.d3?.update(dt); T = PF('d3', T);
+    this.life?.update(); T = PF('life', T);
     this.ch3?.update(dt);
     this.ch4?.update(dt);
     this.ch5?.update(dt);
     this.ch6?.update(dt);
-    this.crowd.end();
+    this.crowd.end(); T = PF('crowdend', T);
     this.letters?.update(dt);
     this.elangIntro?.update(dt);
     this.forestAara?.update(dt);
+    this.lampPool?.position.set(p.x, p.y + 4.5, p.z);
+    this.stars?.update(dt, p.x, p.z);
     const info = this.ctx.game.debugInfo;
     // Door glimmer: only near the old building (one tiny additive sphere).
     const door = CITY_LAYOUT.lab.door;

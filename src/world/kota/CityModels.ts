@@ -186,6 +186,7 @@ class CityModels {
           if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
+      // Only the owner's Barongsai old building and Glen's house (public/env/buildings) are Tripo models; the rest come from the Downtown kit.
       const custom = fetch(`${base}env/buildings/manifest.json`)
         .then((r) => (r.ok ? (r.json() as Promise<{ buildings: Record<string, { file: string } & BuildingHint> }>) : null))
         .then((man) => {

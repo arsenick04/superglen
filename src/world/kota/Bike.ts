@@ -3,7 +3,7 @@ import type { LevelContext } from '../Level';
 import type { StaticBodyHandle } from '../../core/Physics';
 import type { CityBike } from './CityPlaces';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
-import { BikeVisual, loadBikeTemplate } from './BikeModel';
+import { BikeVisual, bikeTemplateNow, loadBikeTemplate } from './BikeModel';
 
 /**
  * Bike tuning, in ONE place. Glen only (Superglen flies; the bike dismounts when he transforms or lifts off).
@@ -123,7 +123,7 @@ export class BikeSystem {
       });
     });
     ctx.onDispose(() => this.dispose());
-    void loadBikeTemplate().then((tpl) => {
+    const attach = (tpl: THREE.Object3D | null): void => {
       if (!tpl || this.disposed) return;
       this.bikes.forEach((b, i) => {
         const v = new BikeVisual(tpl, this.lit, BikeConfig.colors[i % BikeConfig.colors.length], ctx.player);
@@ -134,7 +134,11 @@ export class BikeSystem {
         if (this.riding === i) ctx.player.avatar.setRide(v);
         else v.rest();
       });
-    });
+    };
+    // Preloaded at boot: attach now so the shader prewarm and first upload happen at load, not as a hitch mid-walk.
+    const now = bikeTemplateNow();
+    if (now.ready) attach(now.tpl);
+    else void loadBikeTemplate().then(attach);
   }
 
   private disposed = false;

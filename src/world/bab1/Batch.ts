@@ -103,6 +103,33 @@ export class ColorBatch {
     return this;
   }
 
+  /**
+   * Add any (indexed, position/normal/uv) geometry with a world matrix and one colour. The source is cloned, so shared
+   * template geometries are fine. Used by the rounded/lathe/tube pieces of the interiors.
+   */
+  addGeometry(src: THREE.BufferGeometry, matrix: THREE.Matrix4, color: THREE.ColorRepresentation): this {
+    const g = src.clone();
+    if (!g.index) {
+      // Merging needs all parts indexed (RoundedBoxGeometry is not): add a trivial index.
+      const cnt = g.getAttribute('position').count;
+      const idx = new Uint32Array(cnt);
+      for (let i = 0; i < cnt; i++) idx[i] = i;
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+    }
+    g.applyMatrix4(matrix);
+    col.set(color);
+    const n = g.getAttribute('position').count;
+    const c = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      c[i * 3] = col.r;
+      c[i * 3 + 1] = col.g;
+      c[i * 3 + 2] = col.b;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    this.parts.push({ g, cx: matrix.elements[12], cz: matrix.elements[14], big: false });
+    return this;
+  }
+
   box(size: Vec3, pos: Vec3, color: THREE.ColorRepresentation, rot?: Vec3): this {
     return this.add('box', pos, size, color, rot);
   }

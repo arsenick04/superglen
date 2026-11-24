@@ -10,6 +10,12 @@ import type { RideRig } from '../../player/RideLayer';
  * settles when stopped. The rider (RideLayer) reads the marker nodes and follows. Nothing is allocated per frame.
  */
 let template: Promise<THREE.Object3D | null> | null = null;
+/** Set once the load settled: lets the Bike build its visuals during the level build (before the shader prewarm), not a frame later. */
+let templateNow: THREE.Object3D | null = null;
+let templateSettled = false;
+export function bikeTemplateNow(): { ready: boolean; tpl: THREE.Object3D | null } {
+  return { ready: templateSettled, tpl: templateNow };
+}
 
 /** Load the model once (null when it fails: the old blocky bike stays). */
 export function loadBikeTemplate(): Promise<THREE.Object3D | null> {
@@ -18,7 +24,12 @@ export function loadBikeTemplate(): Promise<THREE.Object3D | null> {
       .setMeshoptDecoder(MeshoptDecoder)
       .loadAsync(`${import.meta.env.BASE_URL}${C.url}`)
       .then((g) => g.scene.getObjectByName('bike') ?? null)
-      .catch(() => null);
+      .catch(() => null)
+      .then((t) => {
+        templateNow = t;
+        templateSettled = true;
+        return t;
+      });
   }
   return template;
 }

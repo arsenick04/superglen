@@ -1,3 +1,4 @@
+import { buildLionHead } from './LionHead';
 import * as THREE from 'three';
 import { Kit, C, basic } from './Kit';
 import { Z, BOUNDARY, DOOR_HALF, FENCE_GAP, FENCE_GAP_X, HALL_HALF } from './Layout';
@@ -129,16 +130,7 @@ export class BuildingExterior {
       kit.lit.cyl(0.55, 1.0, [x, 0.5, z], 0xe2cf9d);
       kit.physics.addFixedCylinder(1.05, 0.62, { x, y: 1.05, z }); // pedestal and lion together (top = the lion's head, 2.1 m)
       kit.lit.cyl(0.62, 0.15, [x, 0.08, z], C.GOLD);
-      kit.lit.sph(0.62, [x, 1.5, z], C.RED, [1, 0.9, 0.9]);
-      kit.lit.sph(0.62, [x, 1.5, z - 0.1], C.ORANGE, [1.25, 1.2, 0.5]); // mane
-      kit.lit.sph(0.22, [x - 0.45, 2.05, z], C.RED);
-      kit.lit.sph(0.22, [x + 0.45, 2.05, z], C.RED);
-      kit.lit.sph(0.17, [x - 0.22, 1.62, z + 0.52], C.WHITE);
-      kit.lit.sph(0.17, [x + 0.22, 1.62, z + 0.52], C.WHITE);
-      kit.lit.sph(0.08, [x - 0.22, 1.62, z + 0.66], 0x222222);
-      kit.lit.sph(0.08, [x + 0.22, 1.62, z + 0.66], 0x222222);
-      kit.lit.sph(0.14, [x, 1.38, z + 0.58], C.GOLD);
-      kit.lit.add('cone', [x, 2.3, z + 0.1], [0.14, 0.5, 0.14], C.GOLD);
+      buildLionHead({ batch: kit.lit, pos: [x, 1.62, z + 0.05], yaw: s * 0.12, scale: 1.05, simple: true });
       // Lantern hanging from the roof beam.
       const lx = s * 5.6;
       kit.deco.cyl(0.02, 1.2, [lx, 4.0, FACE_Z + 1.0], C.GOLD);

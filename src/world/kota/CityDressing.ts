@@ -42,6 +42,7 @@ const KIOSKS = ['com_building-c', 'com_building-e'];
 const TOWERS: Record<string, string> = { clock: 'com_building-a', bell: 'com_building-b', water: 'com_building-h', pagoda: 'com_building-d', coin: 'com_building-a' };
 /** Peach, butter, mint, sky, lilac, rose, apricot, sage. */
 const WALL_HUES = [0.06, 0.13, 0.36, 0.55, 0.74, 0.95, 0.09, 0.27];
+const DT_LANDMARKS: Record<string, string> = { school: 'dt_school', hospital: 'dt_hospital', bank: 'dt_bank', pasar: 'dt_pasar', gudang: 'dt_gudang', oldBarongsai: 'dt_barongsai' };
 const CUSTOM_KINDS = new Set(['school', 'bank', 'hospital', 'gudang', 'pasar', 'oldBarongsai']);
 
 function hsh(a: number, b: number, k = 0): number {
@@ -178,6 +179,17 @@ export function dressOf(b: CityBuilding): Dress | null {
   // Wall hue: the data's wall colour, or (white / grey walls) a pastel from the town palette, so no two neighbours match.
   const hue0 = hueOf(b.wallColor);
   const wallHue = hue0 > 0 ? hue0 : WALL_HUES[Math.floor(hsh(b.x, b.z, 9) * WALL_HUES.length) % WALL_HUES.length];
+  // Landmarks: assembled from the Downtown kit (scripts/build-downtown.mjs) at the exact footprint of the data.
+  const lmName = b.glen || b.kind === 'oldBarongsai' ? undefined : DT_LANDMARKS[b.kind];
+  const lm = lmName ? cityModels.get(lmName) : undefined;
+  if (lm?.body) {
+    // Glen's house keeps the tintable wall (data colour) and gets an orange roof; the others have fixed colours baked in.
+    const orange = new THREE.Color(0xf08a2e);
+    const color = b.glen ? new THREE.Vector4(orange.r, orange.g, orange.b, wallHue) : new THREE.Vector4(1, 1, 1, 0);
+    tmpC.setHex(b.roofColor);
+    if (!b.glen) color.set(tmpC.r, tmpC.g, tmpC.b, 0);
+    return { model: lm.name, matrix: fitExact(lm, b.x, b.base, b.z, yaw, along, b.wall, deep), color, skipBody: true, skipRoof: true, skipFacade: true };
+  }
   // Custom (owner) models first.
   const customKey = b.glen ? 'glen' : CUSTOM_KINDS.has(b.kind) ? b.kind : null;
   const cb = customKey ? cityModels.custom(customKey) : undefined;
