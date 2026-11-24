@@ -841,8 +841,16 @@ function drawProps(B: Builder, L: CityLayout): void {
     // A flower pot at one end.
     const px = b.x + (b.alongX ? 1.15 : 0);
     const pz = b.z + (b.alongX ? 0 : 1.15);
-    ch.deco.boxNB([0.3, 0.28, 0.3], [px, 0.14, pz], 0xd9632f);
-    ch.deco.ball(0.22, [px, 0.46, pz], 0x4f9f3a, [1, 0.85, 1]);
+    // Downtown City MegaKit planter (concrete box with soil) when loaded; the bush on top stays.
+    const planter = cityModels.template('dt_prop_planter');
+    const pm = cityModels.get('dt_prop_planter');
+    if (planter >= 0 && pm) {
+      ch.deco.add(planter as Sh, [px, 0, pz], [0.52 / (pm.max.x - pm.min.x), 0.3 / (pm.max.y - pm.min.y), 0.52 / (pm.max.z - pm.min.z)], 0xffffff);
+      ch.deco.ball(0.2, [px, 0.4, pz], 0x4f9f3a, [1, 0.85, 1]);
+    } else {
+      ch.deco.boxNB([0.3, 0.28, 0.3], [px, 0.14, pz], 0xd9632f);
+      ch.deco.ball(0.22, [px, 0.46, pz], 0x4f9f3a, [1, 0.85, 1]);
+    }
   }
   for (const p of L.ponds) {
     const ch = B.at(p.x, p.z);
