@@ -216,7 +216,7 @@ interface Person {
 }
 
 /** Body variant of the named residents (see Crowd.VARIANTS: 0 male casual, 1 shirt, 2 long sleeve, 3 suit, 4 female casual, 5 dress, 6 tank top, 7 alternative). */
-const BODY: Record<string, number> = { sari: 4, joko: 1, dimas: 0, guru: 3, lala: 5, pos: 2, ani: 7, bima: 1 };
+const BODY: Record<string, number> = { sari: 4, joko: 1, dimas: 0, guru: 2, lala: 5, pos: 2, ani: 7, bima: 1 };
 
 interface Active {
   m: CityMission;

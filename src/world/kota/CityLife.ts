@@ -127,6 +127,8 @@ interface Agent {
   ball: number;
   /** People: body variant and look (see Crowd), the clip wanted with its ground speed, the clip playing and its cycle fraction, the clip fading out. */
   variant: number;
+  /** Visual size factor of a person (children are drawn a bit smaller than their collider scale says). */
+  vs: number;
   look: number;
   want: number;
   spd: number;
@@ -542,7 +544,13 @@ export class CityLife {
       const pr = rngFor(CITY.seed ^ 0x9e0b);
       for (const a of this.agents) {
         if (a.kind < 3) continue;
-        a.variant = Math.min(VARIANT_COUNT - 1, Math.floor(pr() * VARIANT_COUNT));
+        // Casual, shirt, dress and tank top are common; long sleeves and the alternative look less so, suits are rare.
+        const W = [3, 3, 1.5, 0.4, 3, 3, 3, 1.5];
+        let u = pr() * W.reduce((t, w) => t + w, 0);
+        let vi = 0;
+        while (vi < VARIANT_COUNT - 1 && u >= W[vi]) u -= W[vi++];
+        a.variant = vi;
+        a.vs = a.kind === 4 && a.mode !== 3 ? 0.87 : 1;
         a.look = randomLook(pr);
         a.ct = pr();
       }
@@ -690,7 +698,7 @@ export class CityLife {
   }
 
   private blank(kind: number): Agent {
-    return { kind, roll: 0, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, variant: 0, look: 0, want: 0, spd: 0, clip: 0, ct: 0, pclip: 0, pct: 0, bl: 0, ryaw: 99, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
+    return { kind, roll: 0, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, variant: 0, vs: 1, look: 0, want: 0, spd: 0, clip: 0, ct: 0, pclip: 0, pct: 0, bl: 0, ryaw: 99, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
   }
 
   /** World position and yaw of a lane agent. */
@@ -724,7 +732,7 @@ export class CityLife {
       a.clip = want;
     }
     const scale = a.sy;
-    const cps = want === Clip.walk || want === Clip.run ? this.crowd.cps(a.variant, want, a.spd, scale) : this.crowd.natural(a.variant, want);
+    const cps = want === Clip.walk || want === Clip.run ? this.crowd.cps(a.variant, want, a.spd, scale * a.vs) : this.crowd.natural(a.variant, want);
     a.ct += Math.min(cps, 4) * d;
     if (a.ct >= 1) a.ct -= Math.floor(a.ct);
     if (a.bl > 0) a.bl = Math.max(0, a.bl - d / CrowdConfig.fade);
@@ -930,7 +938,7 @@ export class CityLife {
       const k = a.kind === 4 ? 3 : a.kind === 0 && a.model > 0 ? 4 + a.model : a.kind;
       if (k === 3) {
         const gb = a.bl > 0;
-        if (this.crowd.add(a.variant, a.look, a.x, a.y, a.z, a.ryaw, a.sy, this.crowd.row(a.variant, a.clip, a.ct), gb ? this.crowd.row(a.variant, a.pclip, a.pct) : 0, a.bl)) n[3]++;
+        if (this.crowd.add(a.variant, a.look, a.x, a.y, a.z, a.ryaw, a.sy * a.vs, this.crowd.row(a.variant, a.clip, a.ct), gb ? this.crowd.row(a.variant, a.pclip, a.pct) : 0, a.bl)) n[3]++;
         continue;
       }
       const idx = n[k];

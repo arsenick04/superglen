@@ -23,6 +23,13 @@ export const CrowdConfig = {
   fade: 0.2,
 } as const;
 
+/**
+ * Cartoon proportions applied while baking (to match Glen): bigger head, shorter neck, wider torso, shorter legs and arms, rounder
+ * hands, then everything scaled up by `scale` (adults about 2 m = 1.7 x Glen). Bone scales act on the bind pose too, so the mesh is
+ * deformed; the whole body is lowered by `legShort` of the hip height so the feet keep the ground.
+ */
+export const Cartoon = { head: 1.6, neck: 0.7, torso: 1.12, legs: 0.8, arms: 0.8, hands: 1.3, scale: 1.25 } as const;
+
 export const Clip = { idle: 0, walk: 1, run: 2, wave: 3 } as const;
 const CLIP_NAMES = ['idle', 'walk', 'run', 'wave'] as const;
 
@@ -244,6 +251,28 @@ class CrowdModels {
       dur.push(c.duration);
       rows += n;
     });
+    // Cartoon proportions (bone scales multiply down the chain, so the head scale compensates torso and neck).
+    const C = Cartoon;
+    const scaleOf: Record<string, number> = {
+      Torso: C.torso,
+      Neck: C.neck,
+      Head: C.head / (C.torso * C.neck),
+      UpperArmL: C.arms,
+      UpperArmR: C.arms,
+      UpperLegL: C.legs,
+      UpperLegR: C.legs,
+      PalmL: C.hands,
+      PalmR: C.hands,
+    };
+    // Shoulders hang off the torso: undo its widening for the arm chain so arms stay at the arms factor.
+    scaleOf.UpperArmL = scaleOf.UpperArmR = C.arms / C.torso;
+    scaleOf.PalmL = scaleOf.PalmR = C.hands;
+    const hips = bones.findIndex((b) => b.name === pfx + 'Hips');
+    const drop = (1 - C.legs) * (hips >= 0 ? new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(sk.boneInverses[hips]).invert()).y : 0.85);
+    bones.forEach((b) => {
+      const k = scaleOf[b.name.slice(pfx.length)];
+      b.scale.setScalar(k ?? 1);
+    });
     const width = bones.length * 3;
     const data = new Float32Array(width * rows * 4);
     const scene = gltf.scene;
@@ -271,10 +300,10 @@ class CrowdModels {
           const e = m.elements;
           for (let r = 0; r < 3; r++) {
             const o = (row * width + b * 3 + r) * 4;
-            data[o] = e[r];
-            data[o + 1] = e[4 + r];
-            data[o + 2] = e[8 + r];
-            data[o + 3] = e[12 + r];
+            data[o] = e[r] * C.scale;
+            data[o + 1] = e[4 + r] * C.scale;
+            data[o + 2] = e[8 + r] * C.scale;
+            data[o + 3] = (e[12 + r] - (r === 1 ? drop : 0)) * C.scale;
           }
         }
       }
@@ -282,6 +311,7 @@ class CrowdModels {
     for (let b = 0; b < bones.length; b++) {
       bones[b].position.copy(bindP[b]);
       bones[b].quaternion.copy(bindQ[b]);
+      bones[b].scale.setScalar(1);
     }
     scene.updateMatrixWorld(true);
     const texture = new THREE.DataTexture(data, width, rows, THREE.RGBAFormat, THREE.FloatType);
@@ -289,7 +319,8 @@ class CrowdModels {
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
     const gk = pfx === 'm_' ? 'm' : 'f';
-    return { texture, material: makeMaterial(texture), row0, frames, dur, walkSpeed: speeds[`${gk}_walk`] || 1.4, runSpeed: speeds[`${gk}_run`] || 3 };
+    const stride = Cartoon.legs * Cartoon.scale;
+    return { texture, material: makeMaterial(texture), row0, frames, dur, walkSpeed: (speeds[`${gk}_walk`] || 1.4) * stride, runSpeed: (speeds[`${gk}_run`] || 3) * stride };
   }
 }
 
