@@ -192,6 +192,42 @@ function block(B: Builder, p: CityPiece, base: number, color: number, cap = ligh
   edge(B, p.x, p.z, p.w, p.d, p.top);
 }
 
+/** HSL (all 0..1) to 0xrrggbb. */
+function hslHex(h: number, sat: number, l: number): number {
+  const hh = ((h % 1) + 1) % 1;
+  const f = (n: number): number => {
+    const k = (n + hh * 12) % 12;
+    const a = sat * Math.min(l, 1 - l);
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return (Math.round(f(0) * 255) << 16) | (Math.round(f(8) * 255) << 8) | Math.round(f(4) * 255);
+}
+
+interface Palette {
+  /** Pastel of the wall hue (balcony body). */
+  body: number;
+  /** Strong pastel accent (balcony apron, crate label). */
+  accent: number;
+  /** Second accent (sign board, awning valance). */
+  accent2: number;
+  trim: number;
+  /** Awning post / railing paint. */
+  rail: number;
+}
+
+/** Piece colours that follow the building's own pastel: the wall hue of its Downtown model, else a hash of the position. */
+function palette(b: CityBuilding): Palette {
+  const dress = dressOf(b);
+  const h = dress && dress.color.w > 0 ? dress.color.w : hsh(b.x, b.z, 9);
+  return {
+    body: hslHex(h, 0.62, 0.88),
+    accent: hslHex(h + 0.5, 0.58, 0.66),
+    accent2: hslHex(h + 0.14, 0.7, 0.68),
+    trim: 0xfff4e0,
+    rail: 0xfffaf0,
+  };
+}
+
 function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
   const [fx, fz] = FACE_VEC[b.face];
   const along = b.face < 2; // piece long side along x
@@ -214,7 +250,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
         const x = p.x + (along ? s * (p.w / 2 - 0.12) : fx * (p.w / 2 - 0.12));
         const z = p.z + (along ? fz * (p.d / 2 - 0.12) : s * (p.d / 2 - 0.12));
         const h = p.top - (p.thick ?? 0.25) - b.base;
-        B.ch.deco.boxNB([0.09, h, 0.09], [x, b.base + h / 2, z], old ? 0x81684d : 0xeee4cb);
+        B.ch.deco.boxNB([0.09, h, 0.09], [x, b.base + h / 2, z], old ? 0x81684d : palette(b).rail);
       }
     }
   }
@@ -222,34 +258,60 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
     case 'crate': {
       const n = p.n ?? 1;
       const sz = (p.top - b.base) / n;
+      const pal = palette(b);
       for (let i = 0; i < n; i++) {
         B.ch.deco.boxNB([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + i * sz + 0.04, p.z], 0x8a5a2c);
         B.ch.deco.box([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + (i + 1) * sz - 0.04, p.z], 0x8a5a2c);
+        // Corner posts, a painted label plate and a cross brace on the outward face: reads as a real shipping crate.
+        for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) B.ch.deco.boxNB([0.09, sz, 0.09], [p.x + sx * (p.w / 2 + 0.01), b.base + i * sz + sz / 2, p.z + sz2 * (p.d / 2 + 0.01)], 0x7a4c22);
+        const cx = p.x + fx * (p.w / 2 + 0.04);
+        const cz = p.z + fz * (p.d / 2 + 0.04);
+        const cy = b.base + i * sz + sz / 2;
+        const span = Math.hypot(sz - 0.2, along ? p.w : p.d);
+        const ang = Math.atan2(sz - 0.2, along ? p.w : p.d);
+        B.ch.deco.boxNB(along ? [span, 0.07, 0.04] : [0.04, 0.07, span], [cx, cy, cz], 0x7a4c22, along ? [0, 0, ang] : [ang, 0, 0]);
+        B.ch.deco.boxNB(along ? [0.34, 0.24, 0.05] : [0.05, 0.24, 0.34], [cx + fx * 0.01, cy, cz + fz * 0.01], pal.accent);
       }
-      block(B, p, b.base, 0xe6b27a, 0xf0c690, T.wood, T.wood);
+      block(B, p, b.base, 0xeac08a, 0xf5d09c, T.wood, T.wood);
       break;
     }
     case 'ac': {
-      block(B, p, b.base, 0xd8e0ea, 0xf3f6fa);
+      const pal = palette(b);
+      block(B, p, b.base, 0xf4f7fb, 0xffffff);
       const t = p.thick ?? 0.8;
-      if (along) B.ch.deco.box([p.w * 0.8, t * 0.5, 0.04], [p.x, p.top - t / 2, p.z + fz * (p.d / 2 + 0.02)], 0x6f8296);
-      else B.ch.deco.box([0.04, t * 0.5, p.d * 0.8], [p.x + fx * (p.w / 2 + 0.02), p.top - t / 2, p.z], 0x6f8296);
+      const ox = along ? 0 : fx * (p.w / 2 + 0.02);
+      const oz = along ? fz * (p.d / 2 + 0.02) : 0;
+      const wide = (along ? p.w : p.d) * 0.82;
+      // Grille slats, a round fan guard and a coloured stripe on top: a cute split-unit outdoor box.
+      for (let i = 0; i < 4; i++) B.ch.deco.boxNB(along ? [wide, 0.04, 0.04] : [0.04, 0.04, wide], [p.x + ox, p.top - t * 0.28 - i * t * 0.12, p.z + oz], 0x8fa3ba);
+      B.ch.deco.cyl(t * 0.2, 0.05, [p.x + ox + (along ? 0 : fx * 0.03), p.top - t * 0.5, p.z + oz + (along ? fz * 0.03 : 0)], 0xb9c8d8, along ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]);
+      B.ch.deco.boxNB(along ? [p.w + 0.05, 0.09, p.d + 0.05] : [p.w + 0.05, 0.09, p.d + 0.05], [p.x, p.top - 0.2, p.z], pal.accent2);
+      // Two wall brackets under the unit.
+      for (const sx of [-1, 1]) B.ch.deco.boxNB(along ? [0.1, 0.1, p.d * 0.7] : [p.w * 0.7, 0.1, 0.1], [p.x + (along ? sx * (p.w / 2 - 0.25) : 0), p.top - t - 0.05, p.z + (along ? 0 : sx * (p.d / 2 - 0.25))], 0x7b8ea3);
       break;
     }
     case 'awning': {
       // Stripes come from the texture (no more 6 boxes per awning).
       const st = old ? 0 : stripeTile(b.district);
       block(B, p, b.base, old ? 0x9c8a74 : 0xffffff, old ? 0xb5a58c : 0xffffff, st, st);
+      if (!old) {
+        // Coloured valance hanging off the outer edge (canopy edge).
+        const pal = palette(b);
+        const t = p.thick ?? 0.25;
+        B.ch.deco.boxNB(along ? [p.w + 0.04, 0.13, 0.05] : [0.05, 0.13, p.d + 0.04], [p.x + fx * (p.w / 2 + 0.01), p.top - t - 0.05, p.z + fz * (p.d / 2 + 0.01)], pal.accent2);
+      }
       break;
     }
     case 'bay': {
       // L18: next to a Kenney / owner model the bay takes the kit's look (pale wall, slate trim and rails).
       const kit = dressOf(b) !== null;
-      const col = kit ? (old ? 0xb08a6a : 0xf3ece0) : old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
-      block(B, p, b.base, old ? 0x985347 : col, old ? 0xb59a62 : kit ? 0x5a5f70 : C.GOLD, old ? T.wood : T.plaster, old ? T.wood : 0);
-      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : kit ? 0x4a4f5e : C.RED, undefined, old ? T.wood : 0);
+      const pal = palette(b);
+      const col = kit ? (old ? 0xb08a6a : pal.body) : old ? 0x9c8a74 : b.wallColor === 0xffffff ? 0xbfeee8 : C.YELLOW;
+      block(B, p, b.base, old ? 0x985347 : col, old ? 0xb59a62 : kit ? pal.trim : C.GOLD, old ? T.wood : T.plaster, old ? T.wood : 0);
+      // Painted apron band under the deck (was a dark slab).
+      B.ch.deco.box([p.w + 0.04, 0.5, p.d + 0.04], [p.x, p.top - 0.45, p.z], old ? 0x7a5048 : kit ? pal.accent : C.RED, undefined, old ? T.wood : 0);
       // Railing: two rails and thin posts (boxes: a round post is 24 triangles).
-      const rc = old ? 0x9c8052 : kit ? 0x4a4f5e : C.GOLD;
+      const rc = old ? 0x9c8052 : kit ? pal.rail : C.GOLD;
       if (along) {
         B.ch.deco.boxNB([p.w, 0.07, 0.07], [p.x, p.top + 0.5, p.z + fz * (p.d / 2 - 0.1)], rc);
         B.ch.deco.boxNB([p.w, 0.05, 0.05], [p.x, p.top + 0.2, p.z + fz * (p.d / 2 - 0.1)], rc);
@@ -261,6 +323,18 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
         if (old && i % 2 === 1) continue; // missing rail posts
         if (along) B.ch.deco.boxNB([0.06, 0.5, 0.06], [p.x - p.w / 2 + 0.2 + i * ((p.w - 0.4) / 5), p.top + 0.27, p.z + fz * (p.d / 2 - 0.1)], rc);
         else B.ch.deco.boxNB([0.06, 0.5, 0.06], [p.x + fx * (p.w / 2 - 0.1), p.top + 0.27, p.z - p.d / 2 + 0.2 + i * ((p.d - 0.4) / 5)], rc);
+      }
+      if (kit && !old) {
+        // Flower box on the front rail: terracotta tub with round blooms (outside the standing area of the deck).
+        const px = p.x + (along ? 0 : fx * (p.w / 2 - 0.1 + 0.1));
+        const pz = p.z + (along ? fz * (p.d / 2 - 0.1 + 0.1) : 0);
+        const len = (along ? p.w : p.d) * 0.55;
+        B.ch.deco.box(along ? [len, 0.22, 0.2] : [0.2, 0.22, len], [px, p.top + 0.5, pz], 0xd98a5f);
+        for (let i = 0; i < 4; i++) {
+          const k = (i - 1.5) * (len / 4);
+          B.ch.deco.ball(0.13, [px + (along ? k : 0), p.top + 0.7 + (i % 2) * 0.03, pz + (along ? 0 : k)], i % 2 ? 0xff8fb1 : 0xffd45c);
+        }
+        B.ch.deco.boxNB(along ? [len, 0.06, 0.16] : [0.16, 0.06, len], [px, p.top + 0.63, pz], 0x5fae5a);
       }
       if (old) {
         // Weathered red timber pillars and gold collars match the owner's old temple, without a modern shop entrance.
@@ -296,7 +370,16 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
           B.ch.deco.boxNB([Math.abs(bay.x - p.x) + 0.24, 0.16, 0.2], [(bay.x + p.x) / 2, bay.top + 0.08, p.z], 0x825442, undefined, T.wood);
           B.ch.deco.boxNB([0.2, h, 0.2], [p.x, bay.top + h / 2, p.z], 0x9d5544, undefined, T.wood);
         }
-      } else if (dressOf(b) !== null) block(B, p, b.base, 0x4a4f5e, 0xf2b632);
+      } else if (dressOf(b) !== null) {
+        // Painted shop sign board with a cream rim and two little hanger posts (was a dark slab).
+        const pal = palette(b);
+        block(B, p, b.base, pal.accent2, pal.trim);
+        const t = p.thick ?? 0.5;
+        const ox = along ? 0 : fx * (p.w / 2 + 0.03);
+        const oz = along ? fz * (p.d / 2 + 0.03) : 0;
+        B.ch.deco.box(along ? [p.w * 0.8, t * 0.55, 0.04] : [0.04, t * 0.55, p.d * 0.8], [p.x + ox, p.top - t / 2, p.z + oz], pal.trim);
+        B.ch.deco.box(along ? [p.w * 0.5, t * 0.22, 0.05] : [0.05, t * 0.22, p.d * 0.5], [p.x + ox * 1.01, p.top - t / 2, p.z + oz * 1.01], pal.accent);
+      }
       else block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
       break;
     case 'podium':
@@ -304,6 +387,32 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       edge(B, p.x, p.z, p.w, p.d, p.top);
       break;
   }
+}
+
+/**
+ * Tree platform branch: bark-coloured limb (the exact walkable box), a mossy top strip, a slanted support strut to the trunk and a leaf
+ * tuft at the tip. Everything stays at or below the walkable top, or beyond the edge, so the visible top is the collider top.
+ */
+function branchLook(r: Recipe, t: { x: number; z: number; s: number; base: number }, center: Vec3, size: Vec3, leaf: number, _leafDark: number): void {
+  const alongX = size[0] >= size[2];
+  const u = Math.sign(alongX ? center[0] - t.x : center[2] - t.z) || 1;
+  const len = alongX ? size[0] : size[2];
+  const top = center[1] + size[1] / 2;
+  r.add(Sh.Body, center, size, 0x9a6a44);
+  // Moss strip: flat green quad just above the top face, inset from the bark rim.
+  r.quad(alongX ? size[0] - 0.14 : size[0] * 0.62, alongX ? size[2] * 0.62 : size[2] - 0.14, [center[0], top + 0.012, center[2]], leaf);
+  // Support strut (12 triangles), top at 0.55 of the limb, leaning in to the trunk.
+  const L = 0.8 * t.s;
+  const th = 0.6;
+  const dTop = Math.abs(alongX ? center[0] - t.x : center[2] - t.z) - len * 0.2;
+  const bx = (alongX ? t.x + u * (dTop - (L * Math.sin(th)) / 2) : center[0]);
+  const bz = (alongX ? center[2] : t.z + u * (dTop - (L * Math.sin(th)) / 2));
+  const by = center[1] - size[1] / 2 - (L * Math.cos(th)) / 2 + 0.02;
+  r.boxNB([0.1 * t.s, L, 0.1 * t.s], [bx, by, bz], 0x84583a, alongX ? [0, 0, -u * th] : [u * th, 0, 0]);
+  // Leaf tuft at the outer tip (beyond the edge).
+  const tx = alongX ? center[0] + u * (len / 2 + 0.03) : center[0];
+  const tz = alongX ? center[2] : center[2] + u * (len / 2 + 0.03);
+  r.ball(0.2 * t.s, [tx, center[1] + 0.02, tz], leaf);
 }
 
 // ---- Buildings -------------------------------------------------------------------------------------------------------------------
@@ -739,7 +848,8 @@ function drawProps(B: Builder, L: CityLayout): void {
     if (hasCityTree(t)) {
       // Imported tree supplies trunk and foliage; keep the climbable branch
       // steps explicit so their visuals remain aligned with the shared physics.
-      for (const { center, size } of platforms.slice(0, -1)) ch.lit.add(Sh.Body, center, size, 0x946140);
+      const lk = Math.floor(hv * LEAF.length) % LEAF.length;
+      for (const { center, size } of platforms.slice(0, -1)) branchLook(ch.lit, t, center, size, LEAF[lk], LEAF_DARK[lk]);
       continue;
     }
     if (platforms.length) {
@@ -751,8 +861,7 @@ function drawProps(B: Builder, L: CityLayout): void {
       const shade = hv > 0.91 ? 0xd978a3 : LEAF_DARK[k];
       ch.lit.trunk(0.23 * s, trunk, [t.x, t.base + trunk / 2, t.z], 0x946140);
       for (const { center, size } of platforms.slice(0, -1)) {
-        ch.lit.add(Sh.Body, center, size, 0x946140);
-        ch.deco.ball(0.14 * s, [center[0] * 2 - t.x, center[1], center[2] * 2 - t.z], color);
+        branchLook(ch.lit, t, center, size, color, shade);
       }
       // The forgiving flat collider stays hidden inside a layered crown. Five
       // uneven lobes produce a natural silhouette and a darker underside,
