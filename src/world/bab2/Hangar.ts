@@ -1,3 +1,4 @@
+import { column, softPool } from '../bab1/Round';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { LevelContext } from '../Level';
@@ -116,11 +117,9 @@ export class Hangar {
     }
     for (const s of [-1, 1]) {
       for (let z = minZ + 3; z < maxZ - 1; z += 8) {
-        kit.lit.box([0.8, ceil - 0.5, 0.9], [s * (maxX - 0.6), (ceil - 0.5) / 2, z], 0x8fb4e6);
+        column(kit.lit, s * (maxX - 0.6), z, 0, ceil - 0.35, 0.4, 0x8fb4e6, C.GOLD, 18); // round pillar with gold foot and capital
         // The wall pillars (with their wider gold feet) are solid: one collider as wide as the feet.
         kit.collider([1.0, ceil - 0.35, 1.1], [s * (maxX - 0.6), (ceil - 0.35) / 2, z]);
-        kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), 0.15, z], C.GOLD);
-        kit.lit.box([1.0, 0.3, 1.1], [s * (maxX - 0.6), ceil - 0.65, z], C.GOLD);
       }
     }
     // A rounded red-gold portal makes the entrance read as part of the Barongsai
@@ -152,6 +151,7 @@ export class Hangar {
       kit.deco.cyl(0.2, 0.14, [0, ceil - 1.28, z], C.GOLD);
       kit.deco.cyl(0.22, 0.12, [0, ceil - 2.43, z], C.GOLD);
       kit.glow.sph(0.2, [0, ceil - 1.85, z], 0xffb347);
+      softPool(ctx.root, 0, 0.03, z, 3.2, [0.3, 0.17, 0.05]);
     }
 
     // ---- High windows (sky-blue glass) ----

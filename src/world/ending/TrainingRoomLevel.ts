@@ -3,6 +3,7 @@ import { startGate } from '../../core/StartGate';
 import type { Level, LevelContext } from '../Level';
 import { Kit } from '../bab1/Kit';
 import { makeMaterials } from '../bab1/Batch';
+import { column, lathe, ring, tube, rbox } from '../bab1/Round';
 import { NinoActor } from '../bab2/NinoActor';
 import { enemyModels, type EnemyId } from '../kota/EnemyModels';
 import { camoBallGeo } from '../kota/SnakeBoss';
@@ -188,6 +189,23 @@ export class TrainingRoomLevel implements Level {
       kit.glow.cyl(PED.r + 0.02, 0.05, [x, PED.h + 0.01, z], 0x1bb8d8);
       kit.glow.cyl(PED.r * 0.78, 0.06, [x, PED.h + 0.03, z], 0x083a4c);
       this.slots.push({ ...o, x, z, group: new THREE.Group(), built: false });
+    });
+    // Soft, rounded dressing (visual only): coves, rounded pedestal bases and rims, round pillars, wall panels.
+    for (const sx of [-1, 1]) {
+      tube(kit.lit, [[sx * (W - 0.3), H - 0.3, D], [sx * (W - 0.3), H - 0.3, -D]], 0.3, 0x3a5a82, 1, 14);
+      tube(kit.glow, [[sx * (W - 0.7), H - 0.62, D - 0.3], [sx * (W - 0.7), H - 0.62, -D + 0.3]], 0.04, 0x39e6ff, 1, 6);
+      for (const z of [-7, 0, 7]) {
+        kit.physics.addFixedCylinder(H / 2, 0.36, { x: sx * (W - 0.55), y: H / 2, z });
+        column(kit.lit, sx * (W - 0.55), z, 0, H - 0.3, 0.34, 0x4a6a96, 0x7fd8ff, 16);
+      }
+      for (const z of [-3.5, 3.5]) rbox(kit.deco, [0.12, 2.6, 5.4], [sx * (W - 0.12), 1.7, z], 0x34507a, 0.08, undefined, 2);
+    }
+    tube(kit.lit, [[-W + 0.3, H - 0.3, -D + 0.3], [W - 0.3, H - 0.3, -D + 0.3]], 0.3, 0x3a5a82, 1, 14);
+    ORDER.forEach((_, i) => {
+      const x = (i - 2) * 5.1;
+      const z = -6.3 + 1.4 * (x / 10.2) ** 2;
+      lathe(kit.lit, [[0.001, 0], [PED.r + 0.25, 0], [PED.r + 0.3, 0.05], [PED.r + 0.12, 0.16], [PED.r - 0.05, 0.22], [0.001, 0.22]], [x, 0, z], 0x4b6c92, undefined, undefined, 28);
+      ring(kit.glow, PED.r + 0.28, 0.025, [x, 0.07, z], 0x39e6ff, [Math.PI / 2, 0, 0], Math.PI * 2, undefined, 6, 32);
     });
     kit.build(ctx.root);
 
