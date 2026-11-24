@@ -7,6 +7,7 @@ import { envModels } from './world/kota/EnvModels';
 import { cityModels } from './world/kota/CityModels';
 import { preloadSky } from './world/kota/Sky';
 import { enemyModels } from './world/kota/EnemyModels';
+import { loadBikeTemplate } from './world/kota/BikeModel';
 import { preloadCityNature } from './world/kota/CityNature';
 import { compatibilityMode, isPlayStationBrowser } from './core/Platform';
 
@@ -50,6 +51,7 @@ async function boot(): Promise<void> {
   await characterModels.load();
   await crowdModels.load();
   await preloadCityNature();
+  await loadBikeTemplate(); // never rejects; the bike visual then builds during the level build, before the shader prewarm
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
   const game = new Game(container);
