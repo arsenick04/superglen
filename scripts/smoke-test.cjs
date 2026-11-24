@@ -7514,6 +7514,56 @@ async function kotaLifeScenario(page, check, touch) {
     return { carMoved, glenMoved, rel, onTop: Math.abs(s1.feet - s1.car.y) < 0.15, half: Math.max(s1.car.halfX, s1.car.halfZ) };
   });
   check(`kota-life ${tag}: Glen on a moving car's roof is carried along (moving platform) and stays on top`, !!ride && ride.carMoved > 2 && Math.abs(ride.glenMoved - ride.carMoved) < 0.6 && ride.onTop && ride.rel < ride.half, JSON.stringify(ride));
+  // Traffic lights: the two roads of a crossing never both have go (green / yellow) at once, every lamp matches its signal, a car never
+  // crosses the stop line on a red that has lasted more than a second, and it does drive on when the light turns green.
+  const lights = await page.evaluate(() => {
+    const g = window.__superglen;
+    const L = window.__life;
+    g.placePlayer(40, 20);
+    g.advance(20, false);
+    const js = L.junctions();
+    const ix = js.findIndex((j) => Math.abs(j.x - 50) < 1 && Math.abs(j.z - 50) < 1);
+    if (ix < 0) return { junctions: js.length, ix };
+    let conflict = 0;
+    let greens = [0, 0];
+    for (let i = 0; i < 480; i++) {
+      const sx = L.signal(ix, 'x');
+      const sz = L.signal(ix, 'z');
+      if (sx < 2 && sz < 2) conflict++;
+      if (sx === 0) greens[0]++;
+      if (sz === 0) greens[1]++;
+      g.advance(6, false);
+    }
+    const mismatch = L.lights().filter((l) => l.lamp !== 2 - L.signal(l.ix, l.ax)).length;
+    // A car approaching from the south on x = 52.5 (z axis, towards +z).
+    g.placePlayer(60, 25);
+    g.advance(20, false);
+    const stopZ = 50 - L.stopLineOf();
+    const info = L.carOnLane('z', 52.5, stopZ, 22);
+    if (!info) return { junctions: js.length, ix, conflict, greens, mismatch, noCar: true };
+    const half = L.half(info.index);
+    let redRun = 0;
+    let crossedOnRed = 0;
+    let crossed = 0;
+    let prevD = null;
+    let minV = 9;
+    for (let i = 0; i < 1500; i++) {
+      g.advance(6, false);
+      const a = L.agent(info.index);
+      const sig = L.signal(ix, 'z');
+      redRun = sig === 2 ? redRun + 0.1 : 0;
+      const d = (stopZ - a.s) * info.dir - half;
+      if (prevD !== null && prevD > 0 && d <= 0 && d > -3) {
+        crossed++;
+        if (redRun > 1) crossedOnRed++;
+      }
+      if (d > 0 && d < 2.5 && sig === 2 && redRun > 4) minV = Math.min(minV, a.v);
+      prevD = d;
+    }
+    return { junctions: js.length, ix, conflict, greens, mismatch, crossed, crossedOnRed, minV };
+  });
+  check(`kota-life ${tag}: traffic lights: no crossing has go on both roads, lamps match signals, cars stop at red and go on green`, !!lights && lights.ix >= 0 && lights.junctions >= 3 && lights.conflict === 0 && lights.greens[0] > 60 && lights.greens[1] > 60 && lights.mismatch === 0 && !lights.noCar && lights.crossed >= 1 && lights.crossedOnRed === 0 && lights.minV < 0.5, JSON.stringify(lights));
+  await page.evaluate(() => window.__life.forceGreen(true));
   // A car stops for Glen standing in its lane and goes on when he leaves.
   const stop = await page.evaluate(() => {
     const g = window.__superglen;
@@ -7558,6 +7608,7 @@ async function kotaLifeScenario(page, check, touch) {
   check(`kota-life ${tag}: the car blocks Glen from the side and supports him on top`,
     !!collision && collision.sideGap > 0.6 && collision.sideGap < 1.85
       && collision.grounded && collision.feet > 1 && collision.feet < 2.1, JSON.stringify(collision));
+  await page.evaluate(() => window.__life.forceGreen(false));
   // Perf at the busiest spot and one screenshot of the busy city.
   const busy = await page.evaluate(() => {
     const g = window.__superglen;

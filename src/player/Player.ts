@@ -379,12 +379,22 @@ export class Player {
     return out.copy(this.visualPosition).setY(this.visualPosition.y - CENTER_TO_FEET);
   }
 
+  /** Displacement (m) of a moving platform under the feet for the next step (set by the level before `fixedUpdate`). */
+  private carryX = 0;
+  private carryZ = 0;
+  /** Carry the player along with a moving platform (a car roof): added to the next step's move, so the body and the platform move together. */
+  carry(dx: number, dz: number): void {
+    this.carryX = dx;
+    this.carryZ = dz;
+  }
+
   fixedUpdate(dt: number, cameraYaw: number): void {
     const T = this.tuning;
     this.simTime += dt;
     this.mantle.tick(dt);
     if (this.kickLock > 0) this.kickLock -= dt;
     if (this.mantle.active) {
+      this.carryX = this.carryZ = 0;
       this.stepMantle(dt);
       return;
     }
@@ -641,9 +651,10 @@ export class Player {
     // The kinematic body sits exactly where we last put it (currPos), so no need to ask Rapier (each translation()
     // call allocates a wrapper object).
     const p = this.currPos;
-    this.next.x = p.x + moved.x;
+    this.next.x = p.x + moved.x + this.carryX;
     this.next.y = p.y + moved.y;
-    this.next.z = p.z + moved.z;
+    this.next.z = p.z + moved.z + this.carryZ;
+    this.carryX = this.carryZ = 0;
     // Before a possible ground landing: even a fast fall can cross a rat's head and the floor in one step.
     const headBounced = sg && !wasGrounded && !flying && !this.ride && this.inputEnabled && vyAtMove < 0 && this.tryHeadStomp();
     this.body.setNextKinematicTranslation(this.next);

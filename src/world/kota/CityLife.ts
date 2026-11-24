@@ -42,6 +42,8 @@ export const LifeConfig = {
   /** Gap kept to the vehicle in front (m). */
   followGap: 4.5,
   carSpeed: [5.5, 7.5],
+  /** Traffic lights on the main crossings (s): green and yellow time of one road, then everything red for a moment, then the other road. */
+  lights: { green: 9, yellow: 1.6, allRed: 1.2, /** stop line before the crossing centre (m) = main road half width + this */ stopLine: 1.2, /** car brakes to rest this far before the line (m) */ margin: 0.4 },
   motoSpeed: [7, 9],
   bikeSpeed: [2.8, 3.8],
   walkSpeed: [1.0, 1.6],
@@ -75,6 +77,8 @@ interface Lane {
   a1: number;
   dir: 1 | -1;
   main: boolean;
+  /** Signalised crossings on this lane: position along the lane axis and the junction index. */
+  stops: { pos: number; ix: number }[];
 }
 
 interface Agent {
@@ -82,6 +86,10 @@ interface Agent {
   kind: number;
   /** Cars: index into CAR_MODELS (which InstancedMesh draws it, whose box is its collider). */
   model: number;
+  /** Distance rolled (m): turns the wheels. */
+  roll: number;
+  /** True while Glen rides on the roof (set by the collider sync): the car does not brake for him then. */
+  carrying?: boolean;
   /** Half length (m) of a vehicle: followers and the stop in front of Glen keep this much more room for long buses. */
   half: number;
   body?: RAPIER.RigidBody;
@@ -398,6 +406,14 @@ export class CityLife {
   private readonly meshes: THREE.InstancedMesh[];
   /** Bounding box of every car model (index = Agent.model); the first one is the old single car. */
   private readonly carBoxes: THREE.Box3[] = [];
+  /** Main crossings with traffic lights, and one light per approach (position, yaw, the junction and the axis of the traffic it serves). */
+  private readonly junctions: { x: number; z: number }[] = [];
+  private readonly lightDefs: { x: number; z: number; yaw: number; ix: number; ax: 'x' | 'z' }[] = [];
+  private lampState: THREE.InstancedBufferAttribute | null = null;
+  /** Test hook: every signal shows green (other tests of the traffic should not wait at a red light). */
+  private testGreen = false;
+  /** Rolled-distance attribute per car mesh (same index as `meshes`); null where the mesh has no spinning wheels. */
+  private readonly rollOf: (THREE.InstancedBufferAttribute | null)[] = [];
   private readonly frustum = new THREE.Frustum();
   private readonly pv = new THREE.Matrix4();
   private readonly sphere = new THREE.Sphere();
@@ -442,9 +458,30 @@ export class CityLife {
     const lanes: Lane[] = [];
     for (const l of lines) {
       const off = l.main ? SIDE.main.off : SIDE.local.off;
-      for (const dir of [1, -1] as const) lanes.push({ ax: l.ax, c: l.ax === 'x' ? l.c - dir * off : l.c + dir * off, a0: l.a0, a1: l.a1, dir, main: l.main });
+      for (const dir of [1, -1] as const) lanes.push({ ax: l.ax, c: l.ax === 'x' ? l.c - dir * off : l.c + dir * off, a0: l.a0, a1: l.a1, dir, main: l.main, stops: [] });
     }
     this.lanes.push(...lanes);
+    // Signalised crossings: every main x line meets every main z line (within both ranges).
+    const mainLines = lines.filter((l) => l.main);
+    for (const xl of mainLines.filter((l) => l.ax === 'x')) {
+      for (const zl of mainLines.filter((l) => l.ax === 'z')) {
+        if (zl.c > xl.a0 && zl.c < xl.a1 && xl.c > zl.a0 && xl.c < zl.a1) this.junctions.push({ x: zl.c, z: xl.c });
+      }
+    }
+    const roadHalf = CITY.main.road;
+    this.junctions.forEach((j, ix) => {
+      for (const l of lanes) {
+        if (!l.main) continue;
+        const lineC = l.ax === 'x' ? l.c + l.dir * SIDE.main.off : l.c - l.dir * SIDE.main.off;
+        if (l.ax === 'x' && Math.abs(j.z - lineC) < 0.5) l.stops.push({ pos: j.x, ix });
+        if (l.ax === 'z' && Math.abs(j.x - lineC) < 0.5) l.stops.push({ pos: j.z, ix });
+      }
+      for (const dir of [1, -1] as const) {
+        // A light on the kerb of each approach, before the crossing, its lamps facing the oncoming traffic.
+        this.lightDefs.push({ x: j.x - dir * (roadHalf + 0.9), z: j.z - dir * (roadHalf + 0.7), yaw: -dir * Math.PI / 2, ix, ax: 'x' });
+        this.lightDefs.push({ x: j.x + dir * (roadHalf + 0.7), z: j.z - dir * (roadHalf + 0.9), yaw: dir > 0 ? Math.PI : 0, ix, ax: 'z' });
+      }
+    });
     const mainLanes = lanes.filter((l) => l.main);
     const byLane = new Map<Lane, number[]>();
     const addVehicle = (kind: number, lane: Lane): void => {
@@ -508,7 +545,7 @@ export class CityLife {
     const sideLanes: Lane[] = [];
     for (const l of lines) {
       const w = l.main ? SIDE.main.walk : SIDE.local.walk;
-      for (const side of [-1, 1] as const) sideLanes.push({ ax: l.ax, c: l.c + side * w, a0: l.a0 + 4, a1: l.a1 - 4, dir: side > 0 ? 1 : -1, main: l.main });
+      for (const side of [-1, 1] as const) sideLanes.push({ ax: l.ax, c: l.c + side * w, a0: l.a0 + 4, a1: l.a1 - 4, dir: side > 0 ? 1 : -1, main: l.main, stops: [] });
     }
     for (let i = 0; i < LifeConfig.walkers; i++) {
       const a = this.blank(3);
@@ -632,9 +669,17 @@ export class CityLife {
     // Prefer the rounded toy car from the local env library.
     const envCar = envModels.geometry('car');
     const kCar = envCar ? null : cityModels.carGeometry();
-    const paint = useModels ? paintMaterial() : null;
+    const rolls: Map<THREE.BufferGeometry, THREE.InstancedBufferAttribute> = new Map();
+    const withRoll = (g: THREE.BufferGeometry, max: number): THREE.BufferGeometry => {
+      const r = new THREE.InstancedBufferAttribute(new Float32Array(max), 1);
+      r.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('aRoll', r);
+      rolls.set(g, r);
+      return g;
+    };
+    const paint = useModels ? paintMaterial(true) : null;
     this.cars = paint
-      ? mk((carGeos[0] as THREE.BufferGeometry).clone(), paint, CAR_MODELS[0].max)
+      ? mk(withRoll((carGeos[0] as THREE.BufferGeometry).clone(), CAR_MODELS[0].max), paint, CAR_MODELS[0].max)
       : envCar ? mk(envCar.clone(), carMat, 70) : kCar ? mk(kCar, paintMaterial(), 70) : mk(carGeo(), carMat, 70);
     const moto = motoGeo();
     const bike = bikeGeo();
@@ -644,10 +689,57 @@ export class CityLife {
     for (let i = 0; i < this.balls.length; i++) this.ballMesh.setColorAt(i, this.tc.setHex(0xff7a59));
     this.meshes = [this.cars, this.motos, this.bikes, this.peds, this.ballMesh];
     // Other car models: meshes 5.. (index 4 + Agent.model); all share one paint material (one program).
-    if (paint) for (let i = 1; i < CAR_MODELS.length; i++) this.meshes.push(mk((carGeos[i] as THREE.BufferGeometry).clone(), paint, CAR_MODELS[i].max));
-    for (const m of this.meshes) m.geometry.computeBoundingBox();
+    if (paint) for (let i = 1; i < CAR_MODELS.length; i++) this.meshes.push(mk(withRoll((carGeos[i] as THREE.BufferGeometry).clone(), CAR_MODELS[i].max), paint, CAR_MODELS[i].max));
+    for (const m of this.meshes) {
+      m.geometry.computeBoundingBox();
+      this.rollOf.push(rolls.get(m.geometry) ?? null);
+    }
     this.carBoxes.push(this.cars.geometry.boundingBox as THREE.Box3);
     for (let i = 1; paint && i < CAR_MODELS.length; i++) this.carBoxes.push(this.meshes[4 + i].geometry.boundingBox as THREE.Box3);
+    // Traffic lights: one instanced mesh for the poles, one for the lamps (the lit lamp is chosen per instance in the shader).
+    const poleGeo = cityModels.get('light_pole')?.geo;
+    const lampGeo = cityModels.get('light_lamp')?.geo;
+    if (poleGeo && lampGeo && this.lightDefs.length > 0) {
+      const n = this.lightDefs.length;
+      const poles = new THREE.InstancedMesh(poleGeo.clone(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), n);
+      const lampMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+      lampMat.onBeforeCompile = (sh) => {
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aLamp;\nattribute float aState;').replace(
+          '#include <color_vertex>',
+          '#include <color_vertex>\nvColor.rgb *= abs(aLamp - aState) < 0.5 ? 1.0 : 0.14;',
+        );
+      };
+      lampMat.customProgramCacheKey = () => 'sg-light-lamp';
+      const lampGeoI = lampGeo.clone();
+      this.lampState = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
+      this.lampState.setUsage(THREE.DynamicDrawUsage);
+      lampGeoI.setAttribute('aState', this.lampState);
+      const lamps = new THREE.InstancedMesh(lampGeoI, lampMat, n);
+      const m4 = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      const up = new THREE.Vector3(0, 1, 0);
+      const one = new THREE.Vector3(1, 1, 1);
+      this.lightDefs.forEach((d, i) => {
+        m4.compose(new THREE.Vector3(d.x, 0, d.z), q.setFromAxisAngle(up, d.yaw), one);
+        poles.setMatrixAt(i, m4);
+        lamps.setMatrixAt(i, m4);
+      });
+      for (const m of [poles, lamps]) {
+        m.frustumCulled = false;
+        m.castShadow = false;
+        m.receiveShadow = false;
+        ctx.root.add(m);
+        m.instanceMatrix.needsUpdate = true;
+      }
+      this.updateLights();
+      ctx.onDispose(() => {
+        for (const m of [poles, lamps]) {
+          m.geometry.dispose();
+          (m.material as THREE.Material).dispose();
+          m.dispose();
+        }
+      });
+    }
     ctx.onDispose(() => {
       for (const m of this.meshes) {
         m.geometry.dispose();
@@ -675,6 +767,20 @@ export class CityLife {
           for (const o of this.agents) if (o.leader >= 0 && this.agents[o.leader] === car) o.leader = -1;
           return { dir: lane.dir, c: lane.c, s: car.s, index: this.agents.indexOf(car) };
         },
+        signal: (ix: number, ax: 'x' | 'z') => this.signal(ix, ax),
+        forceGreen: (on: boolean) => {
+          this.testGreen = on;
+        },
+        stopLineOf: () => CITY.main.road + LifeConfig.lights.stopLine,
+        half: (i: number) => this.agents[i].half,
+        junctions: () => this.junctions.slice(),
+        lights: () => this.lightDefs.map((d, i) => ({ ...d, lamp: this.lampState ? (this.lampState.array as Float32Array)[i] : -1 })),
+        /** Roof of car `i`: centre x, z, the roof height and half sizes (smoke test of the moving platform). */
+        carTop: (i: number) => {
+          const a = this.agents[i];
+          const b = this.carBoxes[a.model];
+          return { x: a.x, y: a.y + b.max.y * a.sy, z: a.z, halfX: (b.max.x - b.min.x) * a.sx / 2, halfZ: (b.max.z - b.min.z) * a.sz / 2, yaw: a.yaw, v: a.v };
+        },
         agent: (i: number) => {
           const a = this.agents[i];
           return { s: a.s, v: a.v, x: a.x, z: a.z };
@@ -687,7 +793,7 @@ export class CityLife {
   }
 
   private blank(kind: number): Agent {
-    return { kind, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
+    return { kind, roll: 0, model: 0, half: 1.75, lane: null, s: 0, v: 0, cruise: 0, leader: -1, x: 0, z: 0, yaw: 0, y: 0, phase: 0, amp: 0, color: 0xffffff, sx: 1, sy: 1, sz: 1, jit: 0, mode: 0, cx: 0, cz: 0, r: 0, w: 0, a0: 0, ball: -1, flee: 0, ox: 0, oz: 0, ux: 0, uz: 0, off: 0 };
   }
 
   /** World position and yaw of a lane agent. */
@@ -706,6 +812,7 @@ export class CityLife {
 
   fixedUpdate(d: number): void {
     this.t += d;
+    this.updateLights();
     const p = this.ctx.player.position;
     const onGround = p.y < 2.3;
     const sim2 = LifeConfig.simRadius * LifeConfig.simRadius;
@@ -752,6 +859,7 @@ export class CityLife {
   private readonly colliderRotation = { x: 0, y: 0, z: 0, w: 1 };
 
   private syncCollider(a: Agent, p: THREE.Vector3, placed: boolean, oldX: number, oldY: number, oldZ: number, oldS: number): void {
+    a.carrying = false;
     const limit = a.body ? 18 : 14;
     if ((a.x - p.x) ** 2 + (a.z - p.z) ** 2 > limit ** 2) {
       if (a.body) this.ctx.physics.removeBody(a.body);
@@ -777,6 +885,21 @@ export class CityLife {
       a.z = oldZ;
       a.s = oldS;
       a.v = a.amp = 0;
+    }
+
+    // Moving platform: Glen standing on the roof is carried along with the car (the move is added to his next step, so his body and
+    // the car body move together; a wall or post in the way cancels the carry).
+    if (a.kind === 0 && a.body && placed && !overlaps) {
+      const roof = a.y + halfY * 2;
+      const lat = Math.abs(dx * cos - dz * sin);
+      const lon = Math.abs(dx * sin + dz * cos);
+      if (this.ctx.player.grounded && lat < halfX && lon < halfZ && feet > roof - 0.12 && feet < roof + 0.12) {
+        a.carrying = true;
+        const mx = a.x - oldX;
+        const mz = a.z - oldZ;
+        const dist = Math.hypot(mx, mz);
+        if (dist > 1e-5 && dist < 1.5 && !this.carryBlocked(a, p, mx / dist, mz / dist, dist)) this.ctx.player.carry(mx, mz);
+      }
     }
 
     const zone = this.clearZone;
@@ -807,6 +930,49 @@ export class CityLife {
       const desc = a.kind < 3 ? RAPIER.ColliderDesc.cuboid(halfX, halfY, halfZ) : RAPIER.ColliderDesc.cylinder(halfY, Math.max(halfX, halfZ));
       this.ctx.physics.world.createCollider(desc, a.body);
     }
+  }
+
+  /** Signal of junction `ix` for traffic along `ax`: 0 green, 1 yellow, 2 red. Two phases, offset per junction (deterministic). */
+  signal(ix: number, ax: 'x' | 'z'): 0 | 1 | 2 {
+    if (this.testGreen) return 0;
+    const c = LifeConfig.lights;
+    const half = c.green + c.yellow + c.allRed;
+    let u = (this.t + (ix * half * 0.5) / Math.max(1, this.junctions.length / 2)) % (2 * half);
+    if (ax === 'z') u = (u + half) % (2 * half);
+    if (u < c.green) return 0;
+    if (u < c.green + c.yellow) return 1;
+    return 2;
+  }
+
+  /** Light the lamp that matches the signal (0 red, 1 yellow, 2 green): only written when it changes. */
+  private updateLights(): void {
+    if (!this.lampState) return;
+    const arr = this.lampState.array as Float32Array;
+    let changed = false;
+    for (let i = 0; i < this.lightDefs.length; i++) {
+      const d = this.lightDefs[i];
+      const lamp = 2 - this.signal(d.ix, d.ax);
+      if (arr[i] !== lamp) {
+        arr[i] = lamp;
+        changed = true;
+      }
+    }
+    if (changed) this.lampState.needsUpdate = true;
+  }
+
+  private readonly carryRay = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
+  /** A solid thing (not this car) right ahead of Glen in the carry direction: skip the carry so it never pushes him through it. */
+  private carryBlocked(a: Agent, p: THREE.Vector3, ux: number, uz: number, dist: number): boolean {
+    const o = this.carryRay.origin;
+    o.x = p.x;
+    o.y = p.y;
+    o.z = p.z;
+    const dir = this.carryRay.dir;
+    dir.x = ux;
+    dir.y = 0;
+    dir.z = uz;
+    const hit = this.ctx.physics.world.castRay(this.carryRay, dist + PlayerConfig.radius + 0.05, true, undefined, undefined, this.ctx.player.collider, a.body);
+    return hit !== null;
   }
 
   update(): void {
@@ -855,6 +1021,8 @@ export class CityLife {
       m[o + 14] = a.z;
       m[o + 15] = 1;
       const mesh = this.meshes[k];
+      const roll = this.rollOf[k];
+      if (roll) roll.array[idx] = a.roll;
       mesh.setColorAt(idx, this.tc.setHex(a.color));
       if (k === 3) {
         this.anim.array[idx * 2] = a.phase;
@@ -885,6 +1053,8 @@ export class CityLife {
       mesh.visible = n[k] > 0;
       if (n[k] > 0) {
         mesh.instanceMatrix.needsUpdate = true;
+        const rl = this.rollOf[k];
+        if (rl) rl.needsUpdate = true;
         if (mesh.instanceColor && k !== 4) mesh.instanceColor.needsUpdate = true;
       }
     }
@@ -909,11 +1079,22 @@ export class CityLife {
       const ahead = (along - a.s) * l.dir;
       const side = Math.abs(across - l.c);
       const stop = LifeConfig.carStopGap + Math.max(0, a.half - 1.75);
-      if (ahead > -1.5 && ahead < LifeConfig.brakeDist + stop && side < LifeConfig.laneHalf) {
+      if (!a.carrying && ahead > -1.5 && ahead < LifeConfig.brakeDist + stop && side < LifeConfig.laneHalf) {
         const k = Math.max(0, Math.min(1, (ahead - stop) / LifeConfig.brakeDist));
         target = Math.min(target, a.cruise * k * k);
         if (ahead < stop + 0.2) target = 0;
       }
+    }
+    // Traffic lights: brake for a red (or a yellow that can still be stopped for) before the stop line, never after passing it.
+    for (const st of l.stops) {
+      const d = (st.pos - l.dir * (CITY.main.road + LifeConfig.lights.stopLine) - a.s) * l.dir - a.half;
+      if (d < -0.3 || d > 70) continue;
+      const state = this.signal(st.ix, l.ax);
+      if (state === 0) continue;
+      if (state === 1 && d < a.v * a.v / 8 + 0.5) continue;
+      const k = Math.max(0, Math.min(1, (d - LifeConfig.lights.margin) / LifeConfig.brakeDist));
+      target = Math.min(target, a.cruise * k * k);
+      if (d < LifeConfig.lights.margin + 0.15) target = 0;
     }
     const bt = this.battle;
     if (bt && (a.x - bt.x) * (a.x - bt.x) + (a.z - bt.z) * (a.z - bt.z) < bt.stopR * bt.stopR) target = 0;
@@ -930,6 +1111,7 @@ export class CityLife {
     const acc = target > a.v ? 3.5 : 9;
     a.v += Math.max(-acc * dt, Math.min(acc * dt, target - a.v));
     a.s += l.dir * a.v * dt;
+    a.roll += a.v * dt;
     if (l.dir > 0 && a.s > l.a1) a.s = l.a0;
     else if (l.dir < 0 && a.s < l.a0) a.s = l.a1;
     this.lanePlace(a);
