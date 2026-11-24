@@ -186,40 +186,9 @@ class CityModels {
           if (!finished) ingest(gltf);
         })
         .catch(() => undefined);
-      const custom = fetch(`${base}env/buildings/manifest.json`)
-        .then((r) => (r.ok ? (r.json() as Promise<{ buildings: Record<string, { file: string } & BuildingHint> }>) : null))
-        .then((man) => {
-          if (!man) return;
-          return Promise.all(
-            Object.entries(man.buildings).map(([name, e]) =>
-              loader
-                .loadAsync(`${base}env/${e.file}`)
-                .then((gltf) => {
-                  if (finished) return;
-                  const bb = new THREE.Box3().setFromObject(gltf.scene);
-                  gltf.scene.traverse((o) => {
-                    const m = o as THREE.Mesh;
-                    if (!m.isMesh) return;
-                    m.castShadow = true;
-                    m.receiveShadow = true;
-                    const mat = m.material as THREE.MeshStandardMaterial;
-                    if (mat.map) {
-                      mat.map.anisotropy = 8;
-                      mat.map.generateMipmaps = true;
-                      mat.map.minFilter = THREE.LinearMipmapLinearFilter;
-                    }
-                    mat.metalness = 0;
-                    mat.envMapIntensity = 0.65;
-                    // A back-facing scan triangle should not turn a cheek or roof into a see-through opening.
-                    mat.side = THREE.DoubleSide;
-                  });
-                  this.buildings.set(name, { name, scene: gltf.scene, min: bb.min.clone(), max: bb.max.clone(), hint: e });
-                })
-                .catch(() => undefined),
-            ),
-          );
-        })
-        .catch(() => undefined);
+      // The owner's Tripo buildings (public/env/buildings, had holes in walls / roofs) are no longer loaded: every landmark is built from
+      // the Downtown kit (dt_school, dt_bank, dt_hospital, dt_pasar, dt_gudang, dt_glen, dt_barongsai). `buildings` stays as an empty hook.
+      const custom = Promise.resolve();
       void Promise.all([kenney, downtown, cars, custom]).then(() => {
         if (!finished) this.ready = this.models.size > 0 || this.buildings.size > 0;
         done();
