@@ -28,7 +28,7 @@ export const CrowdConfig = {
  * hands, then everything scaled up by `scale` (adults about 2 m = 1.7 x Glen). Bone scales act on the bind pose too, so the mesh is
  * deformed; the whole body is lowered by `legShort` of the hip height so the feet keep the ground.
  */
-export const Cartoon = { head: 1.6, neck: 0.7, torso: 1.12, legs: 0.8, arms: 0.8, hands: 1.3, scale: 1.25 } as const;
+export const Cartoon = { head: 1.7, neck: 0.6, torso: 1.15, legLen: 0.6, legThick: 1.2, armLen: 0.7, armThick: 1.15, hands: 1.3, scale: 1.25 } as const;
 
 export const Clip = { idle: 0, walk: 1, run: 2, wave: 3 } as const;
 const CLIP_NAMES = ['idle', 'walk', 'run', 'wave'] as const;
@@ -174,7 +174,7 @@ function makeMaterial(texture: THREE.DataTexture): THREE.MeshStandardMaterial {
   return m;
 }
 
-class CrowdModels {
+export class CrowdModels {
   private loading: Promise<void> | null = null;
   ready = false;
   failed = false;
@@ -232,7 +232,7 @@ class CrowdModels {
   }
 
   /** Bake all clips of one skeleton: row = clip frame, three texels per bone (the first three rows of its skin matrix). */
-  private bake(gltf: { animations: THREE.AnimationClip[]; scene: THREE.Group }, sk: THREE.Skeleton, pfx: string, speeds: Record<string, number>): GenderBake {
+  bake(gltf: { animations: THREE.AnimationClip[]; scene: THREE.Group }, sk: THREE.Skeleton, pfx: string, speeds: Record<string, number>): GenderBake {
     const bones = sk.bones;
     const bindP = bones.map((b) => b.position.clone());
     const bindQ = bones.map((b) => b.quaternion.clone());
@@ -251,27 +251,33 @@ class CrowdModels {
       dur.push(c.duration);
       rows += n;
     });
-    // Cartoon proportions (bone scales multiply down the chain, so the head scale compensates torso and neck).
+    // Cartoon proportions. Bone scales multiply down the chain, so children compensate their parents. Legs and arms are scaled
+    // non-uniformly: `len` along the bone (found from the child's offset), `thick` across it.
     const C = Cartoon;
-    const scaleOf: Record<string, number> = {
-      Torso: C.torso,
-      Neck: C.neck,
-      Head: C.head / (C.torso * C.neck),
-      UpperArmL: C.arms,
-      UpperArmR: C.arms,
-      UpperLegL: C.legs,
-      UpperLegR: C.legs,
-      PalmL: C.hands,
-      PalmR: C.hands,
+    const axisOf = (b: THREE.Object3D): number => {
+      let best = 1;
+      let bv = -1;
+      for (const c of b.children) {
+        if (!(c as THREE.Bone).isBone) continue;
+        const v = [Math.abs(c.position.x), Math.abs(c.position.y), Math.abs(c.position.z)];
+        for (let i = 0; i < 3; i++) if (v[i] > bv) { bv = v[i]; best = i; }
+      }
+      return best;
     };
-    // Shoulders hang off the torso: undo its widening for the arm chain so arms stay at the arms factor.
-    scaleOf.UpperArmL = scaleOf.UpperArmR = C.arms / C.torso;
-    scaleOf.PalmL = scaleOf.PalmR = C.hands;
+    const limb = (b: THREE.Bone, len: number, thick: number): void => {
+      const ax = axisOf(b);
+      b.scale.multiply(new THREE.Vector3(ax === 0 ? len : thick, ax === 1 ? len : thick, ax === 2 ? len : thick));
+    };
+    const uni: Record<string, number> = { Torso: C.torso, Neck: C.neck, Head: C.head / (C.torso * C.neck), PalmL: C.hands, PalmR: C.hands };
+    const bindS = bones.map((b) => b.scale.clone());
     const hips = bones.findIndex((b) => b.name === pfx + 'Hips');
-    const drop = (1 - C.legs) * (hips >= 0 ? new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(sk.boneInverses[hips]).invert()).y : 0.85);
+    const hipY = hips >= 0 ? new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(sk.boneInverses[hips]).invert()).y : 0.85;
+    const drop = (1 - C.legLen) * Math.max(0, hipY);
     bones.forEach((b) => {
-      const k = scaleOf[b.name.slice(pfx.length)];
-      b.scale.setScalar(k ?? 1);
+      const n = b.name.slice(pfx.length);
+      if (n === 'UpperLegL' || n === 'UpperLegR') limb(b, C.legLen, C.legThick);
+      else if (n === 'UpperArmL' || n === 'UpperArmR') limb(b, C.armLen / C.torso, C.armThick / C.torso);
+      else if (uni[n] !== undefined) b.scale.multiplyScalar(uni[n]);
     });
     const width = bones.length * 3;
     const data = new Float32Array(width * rows * 4);
@@ -311,7 +317,7 @@ class CrowdModels {
     for (let b = 0; b < bones.length; b++) {
       bones[b].position.copy(bindP[b]);
       bones[b].quaternion.copy(bindQ[b]);
-      bones[b].scale.setScalar(1);
+      bones[b].scale.copy(bindS[b]);
     }
     scene.updateMatrixWorld(true);
     const texture = new THREE.DataTexture(data, width, rows, THREE.RGBAFormat, THREE.FloatType);
@@ -319,7 +325,7 @@ class CrowdModels {
     texture.generateMipmaps = false;
     texture.needsUpdate = true;
     const gk = pfx === 'm_' ? 'm' : 'f';
-    const stride = Cartoon.legs * Cartoon.scale;
+    const stride = Cartoon.legLen * Cartoon.scale;
     return { texture, material: makeMaterial(texture), row0, frames, dur, walkSpeed: (speeds[`${gk}_walk`] || 1.4) * stride, runSpeed: (speeds[`${gk}_run`] || 3) * stride };
   }
 }

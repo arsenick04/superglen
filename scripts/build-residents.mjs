@@ -168,6 +168,11 @@ function footSpeed(ex, clip) {
 
 function buildMesh(ex) {
   const { verts, mat, mats, si, sw } = ex;
+  // The foot bones are IK targets outside the leg chain: shoes follow the shin instead, so the runtime can reshape the legs.
+  const jmap = ex.bones.map((b, i) => {
+    const m = /^Foot([LR])$/.exec(b.name);
+    return m ? ex.bones.findIndex((x) => x.name === `LowerLeg${m[1]}`) : i;
+  });
   const key = new Map();
   const P = [], C = [], Z = [], J = [], W = [];
   const remap = new Uint32Array(verts.length);
@@ -184,7 +189,7 @@ function buildMesh(ex) {
       Z.push(zone);
       const w = [sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)];
       const s = w[0] + w[1] + w[2] + w[3] || 1;
-      J.push(si.getX(i), si.getY(i), si.getZ(i), si.getW(i));
+      J.push(jmap[si.getX(i)], jmap[si.getY(i)], jmap[si.getZ(i)], jmap[si.getW(i)]);
       W.push(w[0] / s, w[1] / s, w[2] / s, w[3] / s);
     }
     remap[i] = id;
