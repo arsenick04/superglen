@@ -8,6 +8,7 @@ import { QuizIcons } from '../../ui/QuizIcons';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { box, cone, cyl, merge, sph, type Part } from './ColorMesh';
 import { personGeo } from './CityPeople';
+import { Clip, type Crowd, type PoseState, crowdColor, drawPose, newPose, packLook, stepPose } from './Crowd';
 import { CITY_LAYOUT } from './CityData';
 
 type CareKind = 'stall' | 'rs';
@@ -28,7 +29,8 @@ function heartParts(x: number, y: number, z: number, k: number): Part[] {
   ];
 }
 
-function careGeo(): THREE.BufferGeometry {
+/** `withDoctor`: the old low-poly doctor is part of the mesh (only when the animated models did not load). */
+function careGeo(withDoctor: boolean): THREE.BufferGeometry {
   const C = CITY_LAYOUT.places.care;
   const out: THREE.BufferGeometry[] = [];
   const place = (g: THREE.BufferGeometry, x: number, z: number, yaw: number): void => {
@@ -58,7 +60,7 @@ function careGeo(): THREE.BufferGeometry {
     C.stall.yaw,
   );
   // The doctor in white with a little red-cross stand.
-  place(personGeo(0xffffff, 0x3a2a22), C.doctor.x, C.doctor.z, C.doctor.yaw);
+  if (withDoctor) place(personGeo(0xffffff, 0x3a2a22), C.doctor.x, C.doctor.z, C.doctor.yaw);
   place(
     merge([
       { g: cyl(0.04, 0.04, 1.3, 6), c: 0xdfe6f2, p: [0, 0.65, 0] },
@@ -98,8 +100,11 @@ export class CityCare {
   purchases = 0;
   refused = 0;
 
-  constructor(private readonly ctx: LevelContext, lit: THREE.Material) {
-    const geo = careGeo();
+  private readonly doctorPose: PoseState = newPose(0.3);
+  private readonly doctorLook = packLook(0, crowdColor(0xffffff), crowdColor(0x3b5b92), crowdColor(0x3a2a22));
+
+  constructor(private readonly ctx: LevelContext, lit: THREE.Material, private readonly crowd: Crowd) {
+    const geo = careGeo(!crowd.ready);
     this.mesh = new THREE.Mesh(geo, lit);
     this.mesh.castShadow = false;
     ctx.root.add(this.mesh);
@@ -228,6 +233,17 @@ export class CityCare {
     ctx.fx.sparkles.burst(h.x, h.y, h.z, 18, 3, 0xff6b8b, { gravity: -0.5, life: 1, up: 1.2 });
     ctx.fx.flashes.spawn(h.x, h.y, h.z, 1.4, 0.5, 0xff8fb1);
     void ctx.dialog.say(kind === 'stall' ? HealLines.kiosTerima : HealLines.rsSehat);
+  }
+
+  /** The doctor (animated): waves when Glen is near, idles otherwise. */
+  update(dt: number): void {
+    if (!this.crowd.ready) return;
+    const C = CITY_LAYOUT.places.care.doctor;
+    const p = this.ctx.player.visualPosition;
+    const d2 = (p.x - C.x) ** 2 + (p.z - C.z) ** 2;
+    if (d2 > 90 * 90) return;
+    stepPose(this.crowd, 7, this.doctorPose, d2 < 36 ? Clip.wave : Clip.idle, dt);
+    drawPose(this.crowd, 7, this.doctorLook, C.x, 0, C.z, C.yaw, 0.98, this.doctorPose);
   }
 
   fixedUpdate(): void {

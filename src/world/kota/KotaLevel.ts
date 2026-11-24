@@ -17,6 +17,7 @@ import { Chapter1Walk } from './Chapter1Walk';
 import { sandboxActive, HILL_DOOR_SPOT, marketBattleSpawn, setArrival, takeArrival, travel } from '../progress';
 import { CityD3 } from './CityD3';
 import { CityLife } from './CityLife';
+import { Crowd } from './Crowd';
 import { Chapter3 } from './Chapter3';
 import { MARKET } from './Bab3Data';
 import { Chapter4 } from './Chapter4';
@@ -74,6 +75,8 @@ export class KotaLevel implements Level {
   d3: CityD3 | null = null;
   /** D6 L14: ambient pedestrians, children and traffic (always, also during the Chapter 1 walk). */
   life: CityLife | null = null;
+  /** The animated people (residents, pedestrians, children, the doctor): packed once per frame in `update`. */
+  crowd!: Crowd;
   /** Package D4: Chapter 3 (the market) while it is on: Chapter 2 done, Chapter 3 not (null otherwise). */
   ch3: Chapter3 | null = null;
   /** Package D5: Chapter 4 (Aara, the park clues, the figure) while it is on: Chapter 3 done, Chapter 4 not (null otherwise). */
@@ -284,9 +287,11 @@ export class KotaLevel implements Level {
     });
 
     // D3: the city fills up once Chapter 1 is done (and in the free roam). Never during the Chapter 1 walk.
-    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => ctx.save.data.interlude === '' && !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false));
+    this.crowd = new Crowd(ctx.root);
+    ctx.onDispose(() => this.crowd.dispose());
+    if (sandbox || bab1) this.d3 = new CityD3(ctx, mats.lit, this.cityMap, () => ctx.save.data.interlude === '' && !this.doorBeam && !(this.ch3?.active ?? false) && !(this.ch4?.active ?? false) && !(this.ch5?.active ?? false) && !(this.ch6?.active ?? false), this.crowd);
 
-    this.life = new CityLife(ctx);
+    this.life = new CityLife(ctx, this.crowd);
     ctx.battle.setCity(this.life);
     ctx.onDispose(() => ctx.battle.setCity(null));
     this.hud = new CityHud(ctx.ui, CITY_LAYOUT.pois);
@@ -338,7 +343,7 @@ export class KotaLevel implements Level {
           finished: () => this.d3?.people.onChange?.(),
           placePlayer: (x, z, yaw) => this.placePlayer(x, z, yaw),
           afterParty: () => this.startCh4(),
-        });
+        }, this.crowd);
         this.ch3.start();
       } catch (err) {
         // Safety net: whatever goes wrong inside the chapter, the city still finishes building and the child is pointed to the market.
@@ -691,12 +696,14 @@ export class KotaLevel implements Level {
       this.sun.target.position.copy(p);
     }
     this.hud.update(dt, p.x, p.z);
+    this.crowd.begin();
     this.d3?.update(dt);
     this.life?.update();
     this.ch3?.update(dt);
     this.ch4?.update(dt);
     this.ch5?.update(dt);
     this.ch6?.update(dt);
+    this.crowd.end();
     this.letters?.update(dt);
     this.elangIntro?.update(dt);
     this.forestAara?.update(dt);

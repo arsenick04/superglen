@@ -6,6 +6,7 @@ import { box, cone, cyl, merge, sph } from './ColorMesh';
 import { Combat, CombatRng } from '../../config/combat';
 import type { HitInfo } from '../../gameplay/Targets';
 import { personGeo } from './CityPeople';
+import { Clip, type Crowd, type PoseState, crowdColor, drawPose, newPose, packLook, stepPose } from './Crowd';
 import { enemyModels } from './EnemyModels';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { headContactTime, type FeetPoint } from '../../player/HeadStomp';
@@ -116,12 +117,15 @@ function foodGeo(): THREE.BufferGeometry {
 }
 
 /** Bu Lina (the vendor) and the storm drains, merged in world coordinates into ONE mesh. */
-function propsGeo(): THREE.BufferGeometry {
+function propsGeo(withVendor: boolean): THREE.BufferGeometry {
   const v = MARKET.vendor;
-  const pg = personGeo(0xe95b7a, 0x3a2a22);
-  pg.rotateY(v.yaw);
-  pg.translate(v.x, 0, v.z);
-  const list: THREE.BufferGeometry[] = [pg];
+  const list: THREE.BufferGeometry[] = [];
+  if (withVendor) {
+    const pg = personGeo(0xe95b7a, 0x3a2a22);
+    pg.rotateY(v.yaw);
+    pg.translate(v.x, 0, v.z);
+    list.push(pg);
+  }
   for (const d of MARKET.drains) {
     list.push(
       merge([
@@ -247,6 +251,8 @@ export class MarketRats {
     private readonly specs: readonly RatSpec[] = RATS,
     private readonly scenery = true,
     private readonly sequential = false,
+    /** The city's animated people: Bu Lina is drawn by it (a waving vendor) instead of the merged low-poly figure. */
+    private readonly crowd: Crowd | null = null,
   ) {
     const lit = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mats.push(lit);
@@ -261,7 +267,7 @@ export class MarketRats {
     this.ratModel = !!modelRat;
     const ratMat = modelRat ? (enemyModels.material('curut_cemberut_lo') as THREE.Material) : lit;
     const fg = foodGeo();
-    const pg = propsGeo();
+    const pg = propsGeo(!this.crowd?.ready);
     this.geos.push(rg, fg, pg);
     const easy = ctx.save.data.settings.easyFight;
     this.easy = easy;
@@ -920,9 +926,17 @@ export class MarketRats {
   }
 
   /** Per rendered frame: write the instance matrices. */
-  update(_dt: number): void {
+  private readonly vendorPose: PoseState = newPose(0.15);
+  private readonly vendorLook = packLook(1, crowdColor(0xe95b7a), crowdColor(0x4a4f63), crowdColor(0x3a2a22));
+
+  update(dt: number): void {
     const pv = this.ctx.player.visualPosition;
     const near = Math.hypot(pv.x - MARKET.hub.x, pv.z - MARKET.hub.z) < RatConfig.showRadius;
+    if (this.crowd?.ready && near && this.scenery) {
+      const v = MARKET.vendor;
+      stepPose(this.crowd, 5, this.vendorPose, Math.hypot(pv.x - v.x, pv.z - v.z) < 7 ? Clip.wave : Clip.idle, dt);
+      drawPose(this.crowd, 5, this.vendorLook, v.x, 0, v.z, v.yaw, 0.98, this.vendorPose);
+    }
     if (this.shown) {
       this.ratMesh.visible = near;
       this.foodMesh.visible = near && this.scenery;

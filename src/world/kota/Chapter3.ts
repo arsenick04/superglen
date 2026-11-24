@@ -5,6 +5,7 @@ import type { Question } from '../../quiz/types';
 import { BAB3_LINES as L, MARKET, MISSING, type FoodKind } from './Bab3Data';
 import { CombatRng } from '../../config/combat';
 import { MarketRats } from './MarketRats';
+import type { Crowd } from './Crowd';
 import { Celebration } from '../Celebration';
 
 const BUN_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="38" rx="25" ry="20" fill="#fff" stroke="#d9c7a8" stroke-width="3"/><circle cx="32" cy="17" r="5" fill="#f3e6d2" stroke="#d9c7a8" stroke-width="2"/></svg>';
@@ -81,6 +82,7 @@ export class Chapter3 {
   constructor(
     private readonly ctx: LevelContext,
     private readonly hooks: Chapter3Hooks,
+    crowd: Crowd | null = null,
   ) {
     this.step = ctx.save.data.bab3.step as Ch3Step;
     // Once the rats fight back, story lines are small call-outs that never stop the chase (Dialog compact mode).
@@ -105,6 +107,10 @@ export class Chapter3 {
         onCollect: (kind) => this.onCollect(kind),
       },
       ctx.save.data.bab3.tamed,
+      undefined,
+      undefined,
+      undefined,
+      crowd,
     );
     // City rats stage the chase; the actual combat belongs to the separate encounter.
     this.rats.setCombatEnabled(false);
