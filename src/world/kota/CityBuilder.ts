@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { C } from '../bab1/Kit';
 import { EDGE_COLOR } from '../kits/ParkourKit';
 import { Parkour } from '../../config/parkour';
@@ -45,13 +46,13 @@ const MARK = 0xfff3b0;
 const STONE = 0xe8d9b5;
 /** Visual heights of the flat layers (the collider ground is y = 0): small steps so nothing z-fights. */
 const Y: Record<GroundKind | 'base' | 'walk' | 'road' | 'mark', number> = {
-  base: -0.08,
-  grass: -0.05,
-  field: -0.03,
-  flowers: -0.02,
-  sand: -0.02,
-  dirt: -0.02,
-  plaza: -0.015,
+  base: -0.1,
+  grass: -0.07,
+  field: -0.05,
+  flowers: -0.035,
+  sand: -0.035,
+  dirt: -0.035,
+  plaza: -0.02,
   paving: -0.01,
   water: -0.01,
   walk: 0.0,
@@ -400,7 +401,7 @@ function branchLook(r: Recipe, t: { x: number; z: number; s: number; base: numbe
   const top = center[1] + size[1] / 2;
   r.add(Sh.Body, center, size, 0x9a6a44);
   // Moss strip: flat green quad just above the top face, inset from the bark rim.
-  r.quad(alongX ? size[0] - 0.14 : size[0] * 0.62, alongX ? size[2] * 0.62 : size[2] - 0.14, [center[0], top + 0.012, center[2]], leaf);
+  r.quad(alongX ? size[0] - 0.14 : size[0] * 0.62, alongX ? size[2] * 0.62 : size[2] - 0.14, [center[0], top + 0.03, center[2]], leaf);
   // Support strut (12 triangles), top at 0.55 of the limb, leaning in to the trunk.
   const L = 0.8 * t.s;
   const th = 0.6;
@@ -1257,9 +1258,17 @@ function drawGround(B: Builder, L: CityLayout): void {
         const u = (i + 0.5) / n;
         const x = x0 + (x1 - x0) * u;
         const z = z0 + (z1 - z0) * u;
-        const y = hillY(hill, Math.hypot(x - hill.x, z - hill.z));
+        // Tilt each strip to the slope along the path (a flat strip on the hill poked out of the ground and sank Glen's feet).
+        const ua = i / n;
+        const ub = (i + 1) / n;
+        const ya = hillY(hill, Math.hypot(x0 + (x1 - x0) * ua - hill.x, z0 + (z1 - z0) * ua - hill.z));
+        const yb = hillY(hill, Math.hypot(x0 + (x1 - x0) * ub - hill.x, z0 + (z1 - z0) * ub - hill.z));
+        const seg = len / n;
+        const pitch = Math.atan2(yb - ya, seg);
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -pitch));
+        const rot = new THREE.Euler().setFromQuaternion(q, 'XYZ');
         const ch = B.at(x, z);
-        ch.deco.box([2.6, 0.06, len / n + 0.1], [x, y + 0.03, z], 0xc9a46f, [0, yaw, 0]);
+        ch.deco.box([2.6, 0.04, Math.hypot(seg, yb - ya) + 0.1], [x, (ya + yb) / 2, z], 0xc9a46f, [rot.x, rot.y, rot.z]);
       }
     }
   }

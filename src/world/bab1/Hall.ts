@@ -7,7 +7,7 @@ import { Kit, C, basic } from './Kit';
 import { Z, HALL_HALF, DOOR_HALF, PANEL, LAB_FLOOR } from './Layout';
 import type { Sparkles } from './Fx';
 import { buildLionHead } from './LionHead';
-import { rbox, ball, ring, lathe, tube, column, softPool } from './Round';
+import { rbox, ball, ring, lathe, tube, column, PoolBatch } from './Round';
 
 const SIDE = HALL_HALF + 0.3; // centre of the side walls
 const HALL_MID = (Z.facade + Z.hallBack) / 2;
@@ -137,9 +137,11 @@ export class Hall {
       }
     }
     // Warm pools of light on the floor and drifting dust motes in the beams.
-    const hallRoot = ctx.root;
-    for (const lx of [-3.2, 3.2]) for (const lz of [-45, -50, -55]) softPool(hallRoot, lx, 0.075, lz, 2.6, [0.34, 0.19, 0.05]);
-    softPool(hallRoot, 5.5, 0.075, -50.5, 2.0, [0.3, 0.17, 0.05]);
+    // Above the rug top (0.075) and gold edge strips (0.086), merged into one draw call.
+    const pools = new PoolBatch();
+    for (const lx of [-3.2, 3.2]) for (const lz of [-45, -50, -55]) pools.add(lx, 0.1, lz, 2.4, [0.3, 0.17, 0.045]);
+    pools.add(5.5, 0.1, -50.5, 2.0, [0.3, 0.17, 0.05]);
+    pools.build(ctx.root);
     sparkles.addEmitter(0, 2.2, -48, 5.5, 3, 0xffe2a0);
     sparkles.addEmitter(0, 2.2, -54, 5.5, 3, 0xffe2a0);
     sparkles.addEmitter(-5.5, 0.4, -43.5, 1.0, 1.5, 0x5ef0e0);

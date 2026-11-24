@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { ColorBatch } from './Batch';
 import { buildLionHead } from './LionHead';
-import { rbox, ball, ring, tube, column, lathe, softPool } from './Round';
+import { rbox, ball, ring, tube, column, lathe, PoolBatch } from './Round';
 import { Kit, C, basic } from './Kit';
 import { Z, LAB, LAB_FLOOR, DOOR_HALF } from './Layout';
 import type { Sparkles } from './Fx';
@@ -479,9 +479,11 @@ export class Lab {
       dome.geometry.dispose();
       (dome.material as THREE.Material).dispose();
     });
-    softPool(root, hx, F + 0.03, hz, 2.2, [0.05, 0.3, 0.32]);
-    softPool(root, 0, F + 0.035, LAB.head.z + 1.6, 3.2, [0.1, 0.32, 0.36]);
-    softPool(root, LAB.button.x, F + 0.035, LAB.button.z, 2.4, [0.3, 0.22, 0.05]);
+    new PoolBatch()
+      .add(hx, F + 0.03, hz, 2.2, [0.05, 0.3, 0.32])
+      .add(0, F + 0.035, LAB.head.z + 1.6, 3.2, [0.1, 0.32, 0.36])
+      .add(LAB.button.x, F + 0.035, LAB.button.z, 2.4, [0.3, 0.22, 0.05])
+      .build(root);
 
     rubber.build(root);
     metal.build(root);
