@@ -219,10 +219,13 @@ export class KotaLevel implements Level {
       s.camera.right = a;
       s.camera.top = a;
       s.camera.bottom = -a;
-      s.camera.near = 1;
-      s.camera.far = 120;
-      s.bias = -0.0005;
-      s.normalBias = 0.03;
+      // Tight depth range (the light sits ~57 m from the player): bias is relative to it, so a long range means a big offset.
+      s.camera.near = 8;
+      s.camera.far = 100;
+      const texel = (a * 2) / Quality.shadowMapSize;
+      s.bias = -0.0002;
+      // Normal offset scales with the texel: kills acne / blocky shadow steps on walls seen at grazing light.
+      s.normalBias = Math.max(0.03, texel * 3);
       // Soft, light shadows (storybook look): wider PCF kernel, slightly transparent.
       s.radius = Quality.isTouch ? 2.2 : 3;
       s.intensity = 0.9;
