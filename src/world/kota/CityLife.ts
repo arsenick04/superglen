@@ -550,7 +550,7 @@ export class CityLife {
         let vi = 0;
         while (vi < VARIANT_COUNT - 1 && u >= W[vi]) u -= W[vi++];
         a.variant = vi;
-        a.vs = a.kind === 4 && a.mode !== 3 ? 0.87 : 1;
+        a.vs = a.kind === 4 && a.mode !== 3 ? 0.8 : 1;
         a.look = randomLook(pr);
         a.ct = pr();
       }

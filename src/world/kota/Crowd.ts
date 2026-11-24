@@ -25,10 +25,10 @@ export const CrowdConfig = {
 
 /**
  * Cartoon proportions applied while baking (to match Glen): bigger head, shorter neck, wider torso, shorter legs and arms, rounder
- * hands, then everything scaled up by `scale` (adults about 2 m = 1.7 x Glen). Bone scales act on the bind pose too, so the mesh is
+ * hands, then everything scaled by `scale` (adults about 1.5 m = 1.25 x Glen). Bone scales act on the bind pose too, so the mesh is
  * deformed; the whole body is lowered by `legShort` of the hip height so the feet keep the ground.
  */
-export const Cartoon = { head: 1.7, neck: 0.6, torso: 1.15, legLen: 0.6, legThick: 1.2, armLen: 0.7, armThick: 1.15, hands: 1.3, scale: 1.25 } as const;
+export const Cartoon = { head: 1.7, neck: 0.6, torso: 1.15, legLen: 0.6, legThick: 1.2, armLen: 0.7, armThick: 1.15, hands: 1.3, scale: 1.0 } as const;
 
 export const Clip = { idle: 0, walk: 1, run: 2, wave: 3 } as const;
 const CLIP_NAMES = ['idle', 'walk', 'run', 'wave'] as const;
