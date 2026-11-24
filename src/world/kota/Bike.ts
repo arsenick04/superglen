@@ -3,6 +3,7 @@ import type { LevelContext } from '../Level';
 import type { StaticBodyHandle } from '../../core/Physics';
 import type { CityBike } from './CityPlaces';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
+import { BikeVisual, loadBikeTemplate } from './BikeModel';
 
 /**
  * Bike tuning, in ONE place. Glen only (Superglen flies; the bike dismounts when he transforms or lifts off).
@@ -14,8 +15,11 @@ import { box, cyl, merge, sph, type Part } from './ColorMesh';
  */
 export const BikeConfig = {
   ride: { runSpeed: 8.5, accel: 8, decel: 12, turnSpeed: 2.8 },
-  /** The rider sits this much higher than the capsule normally stands (visual, m). */
-  lift: 0.35,
+  /**
+   * Visual lift of the rider (m). The pose itself (hips on the saddle, feet on the pedals, hands on the grips) comes from RideLayer;
+   * this only has to be above 0.01 (that marks "riding" for the animation state).
+   */
+  lift: 0.02,
   /** Reach for the "get on" prompt (m). */
   mountRadius: 2.4,
   /** After getting off, the prompt of the parked bike waits this long (s), so one press cannot mount again at once. */
@@ -62,6 +66,9 @@ function frameGeo(color: number): THREE.BufferGeometry {
 
 interface Parked {
   group: THREE.Group;
+  /** The blocky stand-in shown until bike.glb has loaded (or forever when it fails). */
+  fallback: THREE.Mesh;
+  visual: BikeVisual | null;
   parkedBody: StaticBodyHandle | null;
   x: number;
   y: number;
@@ -103,7 +110,7 @@ export class BikeSystem {
       group.position.set(s.x, s.y, s.z);
       group.rotation.y = s.yaw;
       ctx.root.add(group);
-      this.bikes.push({ group, ...s, parkedBody: this.parkedBody(s) });
+      this.bikes.push({ group, fallback: body, visual: null, ...s, parkedBody: this.parkedBody(s) });
       ctx.interactions.add({
         position: () => this.position(i, this.promptPos),
         radius: BikeConfig.mountRadius,
@@ -114,7 +121,21 @@ export class BikeSystem {
       });
     });
     ctx.onDispose(() => this.dispose());
+    void loadBikeTemplate().then((tpl) => {
+      if (!tpl || this.disposed) return;
+      this.bikes.forEach((b, i) => {
+        const v = new BikeVisual(tpl, this.lit, BikeConfig.colors[i % BikeConfig.colors.length], ctx.player);
+        this.geos.push(...v.geometries);
+        b.group.remove(b.fallback);
+        b.group.add(v.root);
+        b.visual = v;
+        if (this.riding === i) ctx.player.avatar.setRide(v);
+        else v.rest();
+      });
+    });
   }
+
+  private disposed = false;
 
   get isRiding(): boolean {
     return this.riding >= 0;
@@ -156,6 +177,24 @@ export class BikeSystem {
     }
   }
 
+  /** Test handle: the riding animation of the bike being ridden (null when not riding or the model is missing). */
+  rideInfo(): { wheel: number; crank: number; steer: number; lean: number; stand: number; footDown: number; miss: number[]; w: number; feetNearPedals: boolean } | null {
+    const v = this.riding >= 0 ? this.bikes[this.riding].visual : null;
+    if (!v) return null;
+    const rl = this.ctx.player.avatar.rig?.rideLayer;
+    return {
+      wheel: v.wheelAngle,
+      crank: v.phase,
+      steer: v.steerAngle,
+      lean: v.lean,
+      stand: v.stand,
+      footDown: v.footDown,
+      miss: rl ? Array.from(rl.miss) : [],
+      w: rl?.w ?? 0,
+      feetNearPedals: !!rl && rl.miss[0] < 0.05 && rl.miss[1] < 0.05,
+    };
+  }
+
   ring(): void {
     this.bells++;
     this.ctx.sfx.bell();
@@ -186,6 +225,11 @@ export class BikeSystem {
     player.object.add(b.group);
     player.ride = BikeConfig.ride;
     player.rideLift = BikeConfig.lift;
+    if (b.visual) {
+      b.visual.rest();
+      b.visual.footDown = 0;
+      player.avatar.setRide(b.visual);
+    }
     game.setRiding(true);
     this.ctx.sfx.pop();
     this.ctx.fx.sparkles.burst(b.x, player.visualPosition.y - SKIN + 0.3, b.z, 6, 1.8, 0xffffff, { gravity: 1, life: 0.5, up: 0.5 });
@@ -210,6 +254,8 @@ export class BikeSystem {
     this.ctx.root.add(b.group);
     b.parkedBody = this.parkedBody(b);
     this.riding = -1;
+    player.avatar.setRide(null);
+    b.visual?.rest();
     this.cooldown = BikeConfig.remountCooldown;
     this.dismounts++;
     player.ride = null;
@@ -232,6 +278,8 @@ export class BikeSystem {
       const p = this.ctx.player.visualPosition;
       SESSION[this.riding] = { x: p.x, y: 0, z: p.z, yaw: this.ctx.player.facing };
     }
+    this.disposed = true;
+    this.ctx.player.avatar.setRide(null);
     this.ctx.player.ride = null;
     this.ctx.player.rideLift = 0;
     for (const g of this.geos) g.dispose();

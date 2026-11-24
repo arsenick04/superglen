@@ -4,6 +4,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Figure, figureMaterial, type FigureKind, type FigureState } from './Figure';
 import { Quality } from '../core/Quality';
+import { RideLayer, type RideRig } from './RideLayer';
 
 /**
  * The owner's animated characters (Mixamo rig, Meshopt + WebP GLBs in public/models). One template per character is loaded once
@@ -390,6 +391,8 @@ export class CharacterRig {
   private running = false;
   private t = 0;
   readonly jumpLayer: JumpLayer;
+  /** Riding pose (bike): hips on the saddle, feet on the pedals, hands on the grips. */
+  readonly rideLayer: RideLayer;
 
   constructor(
     readonly kind: ModelKind,
@@ -425,6 +428,7 @@ export class CharacterRig {
     this.mixer = new THREE.AnimationMixer(scene);
     scene.updateMatrixWorld(true);
     this.jumpLayer = new JumpLayer(scene);
+    this.rideLayer = new RideLayer(scene);
   }
 
   hasClip(name: string): boolean {
@@ -538,6 +542,7 @@ export class CharacterRig {
     this.mixer.update(dt);
     this.jumpLayer.update(dt);
     this.jumpLayer.apply();
+    this.rideLayer.run(dt);
   }
 
   dispose(): void {
@@ -578,6 +583,7 @@ export class Avatar {
   private disposed = false;
   private waitT = 0;
   private onRig: ((rig: CharacterRig) => void) | null = null;
+  private rideRig: RideRig | null = null;
 
   constructor(
     private readonly kind: ModelKind,
@@ -616,9 +622,16 @@ export class Avatar {
     this.fallbackObj?.removeFromParent();
     this.fallbackObj = null;
     this.rig = rig;
+    rig.rideLayer.attach(this.rideRig);
     this.onRig?.(rig);
     this.root.add(rig.root);
     rig.loop('idle', 0, 1);
+  }
+
+  /** Put the rider on a bike (null: off). The pose is procedural, see RideLayer; without a bike model the old 'ride' clip plays. */
+  setRide(r: RideRig | null): void {
+    this.rideRig = r;
+    this.rig?.rideLayer.attach(r);
   }
 
   /** Run `cb` with the animated model: now when it is already here, else when it arrives (never when loading fails). */
@@ -710,7 +723,8 @@ export class Avatar {
     jl.set(!!s.airborne && !s.flying && !s.riding, s.vy, !!s.tuck);
     jl.setPower(s.power ?? 0);
     if (s.riding) {
-      if (rig.hasClip('ride')) rig.loop('ride', 0.25, 1);
+      if (rig.rideLayer.active) rig.loop('idle', 0.25, 1);
+      else if (rig.hasClip('ride')) rig.loop('ride', 0.25, 1);
       else rig.loop('idle', 0.25, 1);
       return;
     }
