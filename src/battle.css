@@ -10,6 +10,11 @@
 /* ---- BATTLE MODE (src/gameplay/BattleMode.ts): `html.battle` is on while a fight runs. The doubled class beats the older
    `html.touch-ui ...` rules of styles.css without caring about the order of the style sheets. ---- */
 
+/* Quality tier low turns the overlay off (class set by core/Quality.ts). */
+html.q-low .battle-fx {
+  display: none;
+}
+
 /* Color grade: a soft golden glow in the middle, a warm plum vignette at the corners (no post-processing: gradients only). */
 .battle-fx {
   position: absolute;

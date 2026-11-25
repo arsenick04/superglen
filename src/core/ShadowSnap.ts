@@ -16,7 +16,7 @@ export class ShadowFollower {
   /** Tests switch the snapping off to measure the shimmer it removes. */
   static snapEnabled = true;
   /** World size of one shadow-map texel (m). */
-  readonly texel: number;
+  texel: number;
 
   constructor(
     private readonly light: THREE.DirectionalLight,
@@ -29,6 +29,11 @@ export class ShadowFollower {
     const dir = offset.clone().normalize();
     this.right.set(0, 1, 0).cross(dir).normalize();
     this.up.crossVectors(dir, this.right);
+  }
+
+  /** The shadow frustum / map changed (quality tier): follow the new texel size. */
+  resize(halfSize: number, mapSize: number): void {
+    this.texel = (halfSize * 2) / mapSize;
   }
 
   /** Move the light (and its target) to follow `focus`, snapped to the shadow-map texel grid. */

@@ -4,6 +4,7 @@ import { MenuIcons } from './MenuIcons';
 import { versionGuard } from '../core/VersionGuard';
 import { getActiveSlot, readAllSlots } from '../core/Save';
 import { ModeIcons, slotCard } from './SlotCards';
+import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
 import './menu.css';
 
 export interface SettingsDeps {
@@ -69,6 +70,7 @@ export class SettingsMenu {
   private readonly card: HTMLDivElement;
   private readonly slotsView: HTMLDivElement;
   private readonly confirmQ: HTMLElement;
+  private readonly qualityBtns: { mode: QualityMode; el: HTMLButtonElement }[] = [];
   private view: 'main' | 'save' | 'load' = 'main';
   private confirmYes: () => void = () => undefined;
   private readonly confirm: HTMLDivElement;
@@ -113,6 +115,37 @@ export class SettingsMenu {
     this.music.track.dataset.padDefault = '1'; // controller focus starts on the first row
     const sliders = make('div', 'settings-sliders');
     sliders.append(this.music.row, this.sfx.row);
+
+    const quality = make('div', 'settings-quality');
+    quality.append(make('div', 'settings-quality-q', 'Kualitas grafis'));
+    const qrow = make('div', 'settings-quality-row');
+    const modes: [QualityMode, string][] = [['auto', 'Otomatis'], ['high', 'Tinggi'], ['medium', 'Sedang'], ['low', 'Rendah']];
+    for (const [mode, label] of modes) {
+      const b = make('button', 'menu-btn set-quality', '');
+      b.type = 'button';
+      b.append(make('span', 'menu-label', label));
+      b.setAttribute('aria-label', `Kualitas grafis: ${label}`);
+      b.dataset.act = `quality-${mode}`;
+      const pick = (): void => {
+        setQualityMode(mode);
+        this.refreshQuality();
+      };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      qrow.append(b);
+      this.qualityBtns.push({ mode, el: b });
+    }
+    quality.append(qrow);
+    this.refreshQuality();
 
     const grid = make('div', 'settings-grid');
     this.btnMap = this.button('menu-btn set-map', MenuIcons.map, 'Lihat peta', () => {
@@ -175,7 +208,7 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, grid, this.slotsView, this.confirm, ver);
+    card.append(head, sliders, quality, grid, this.slotsView, this.confirm, ver);
     this.panel.append(card);
     ui.appendChild(this.panel);
 
@@ -258,6 +291,7 @@ export class SettingsMenu {
     const { save } = this.deps;
     this.music.set(save.data.settings.musicVol);
     this.sfx.set(save.data.settings.sfxVol);
+    this.refreshQuality();
     const city = this.deps.inCity();
     this.btnHomeLabel.textContent = city ? 'Kembali ke tengah kota' : 'Kembali ke tempat aman';
     const ico = this.btnHome.querySelector('.menu-ico');
@@ -269,6 +303,15 @@ export class SettingsMenu {
     const has = readAllSlots().some((x) => !x.empty);
     this.btnLoad.disabled = !has;
     this.btnLoad.classList.toggle('off', !has);
+  }
+
+  /** Mark the chosen quality mode. */
+  private refreshQuality(): void {
+    for (const { mode, el } of this.qualityBtns) {
+      const on = Quality.mode === mode;
+      el.classList.toggle('on', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
   }
 
   private ask(on: boolean): void {

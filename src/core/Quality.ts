@@ -1,22 +1,32 @@
 import * as THREE from 'three';
 import { compatibilityMode } from './Platform';
+import {
+  TIERS, TIER_ORDER, QualityGovernor, guessTier, readHints, readStoredMode, storeMode, urlMode,
+  type QualityMode, type Tier, type TierSpec,
+} from '../config/quality';
 
 export type QualityLevel = 'high' | 'low';
+export type { QualityMode, Tier };
 
-export interface QualityPreset {
-  readonly level: QualityLevel;
+/**
+ * The live quality settings. Every module reads this one object (the fields change when the tier changes at runtime, so read
+ * them where they are used and do not cache them, unless the thing can only be built once: then it is a creation-time choice).
+ * Tiers and the automatic governor live in `config/quality.ts`; `Quality.onChange` tells modules that can follow a change.
+ */
+export interface QualityPreset extends TierSpec {
+  /** Legacy two-level view: 'high' only for a high tier on a non-touch device (post chain, a few lighting choices). */
+  level: QualityLevel;
+  tier: Tier;
+  /** The player's choice. In 'auto' the governor moves `tier`. */
+  mode: QualityMode;
   /** True when the primary input is touch (phones/tablets). */
   readonly isTouch: boolean;
-  readonly maxPixelRatio: number;
-  readonly antialias: boolean;
-  readonly shadows: boolean;
-  readonly shadowMapType: THREE.ShadowMapType;
-  readonly shadowMapSize: number;
-  /** Half-size (m) of the directional light's orthographic shadow frustum around the player. */
-  readonly shadowArea: number;
-  readonly cameraFar: number;
+  shadows: boolean;
+  shadowMapType: THREE.ShadowMapType;
   /** Frame rate the adaptive resolution tries to hold. */
-  readonly targetFps: number;
+  targetFps: number;
+  /** Bumped on every tier change (cheap "did it change" check without a callback). */
+  version: number;
 }
 
 function detectTouch(): boolean {
@@ -28,55 +38,104 @@ function detectTouch(): boolean {
   return coarse || ((navigator.maxTouchPoints ?? 0) > 0 && !fine);
 }
 
-function pickPreset(): QualityPreset {
-  const isTouch = detectTouch();
-  // Manual override for testing: ?quality=low or ?quality=high
-  const forced = new URLSearchParams(window.location.search).get('quality');
-  if (compatibilityMode() && forced !== 'high') {
-    return {
-      level: 'low',
-      isTouch,
-      maxPixelRatio: 1,
-      antialias: false,
-      shadows: true,
-      shadowMapType: THREE.BasicShadowMap,
-      shadowMapSize: 1024,
-      shadowArea: 18,
-      cameraFar: 150,
-      targetFps: 30,
-    };
-  }
-  const level: QualityLevel = forced === 'low' || forced === 'high' ? forced : isTouch ? 'low' : 'high';
+const isTouch = detectTouch();
+const compat = compatibilityMode();
+const fromUrl = urlMode();
+/** A URL override is for tests: fixed tier (or 'auto'), never stored. */
+const initialMode: QualityMode = fromUrl ?? (compat ? 'low' : readStoredMode());
 
-  if (level === 'high') {
-    return {
-      level,
-      isTouch,
-      maxPixelRatio: 2,
-      antialias: true,
-      shadows: true,
-      shadowMapType: THREE.PCFShadowMap, // PCFSoftShadowMap was removed in three r18x; PCF is soft-filtered now
-      shadowMapSize: 2048,
-      shadowArea: 25,
-      cameraFar: 300,
-      targetFps: 60,
-    };
-  }
-  return {
-    level,
-    isTouch,
-    // Native-app target: phones (60 fps measured) render at the full device pixel ratio (up to 3) with MSAA; the adaptive scaler
-    // in Renderer.ts only steps down when fps really drops.
-    maxPixelRatio: 3,
-    antialias: true,
-    shadows: true,
-    shadowMapType: THREE.PCFShadowMap,
-    shadowMapSize: 2048,
-    shadowArea: 18,
-    cameraFar: 150,
-    targetFps: 60,
+function initialTier(mode: QualityMode): Tier {
+  if (mode !== 'auto') return mode;
+  const hints = readHints();
+  hints.isTouch = isTouch;
+  return guessTier(hints);
+}
+
+const startTier = initialTier(initialMode);
+
+/** Picked at startup, adjusted at runtime; every module reads this object. */
+export const Quality: QualityPreset = {
+  ...TIERS[startTier],
+  level: 'low',
+  tier: startTier,
+  mode: initialMode,
+  isTouch,
+  shadows: true,
+  shadowMapType: compat ? THREE.BasicShadowMap : THREE.PCFShadowMap, // PCFSoftShadowMap was removed in three r18x; PCF is soft-filtered now
+  targetFps: compat ? 30 : 60,
+  version: 0,
+};
+if (compat) {
+  Quality.maxPixelRatio = 1;
+  Quality.antialias = false;
+  Quality.shadowMapSize = 1024;
+  Quality.shadowArea = 18;
+}
+Quality.level = Quality.tier === 'high' && !isTouch ? 'high' : 'low';
+syncDom();
+
+const governor = new QualityGovernor();
+const listeners: ((q: QualityPreset) => void)[] = [];
+
+/** Subscribe to tier changes. Returns the unsubscribe function (call it from the level's dispose). */
+export function onQualityChange(cb: (q: QualityPreset) => void): () => void {
+  listeners.push(cb);
+  return () => {
+    const i = listeners.indexOf(cb);
+    if (i >= 0) listeners.splice(i, 1);
   };
 }
 
-/** Picked once at startup; every module reads this object. */
-export const Quality: QualityPreset = pickPreset();
+function syncDom(): void {
+  document.documentElement.classList.toggle('q-low', !Quality.vignette);
+  document.documentElement.dataset.quality = Quality.tier;
+}
+
+function applyTier(tier: Tier): void {
+  if (tier === Quality.tier) return;
+  Object.assign(Quality, TIERS[tier]);
+  Quality.tier = tier;
+  Quality.level = tier === 'high' && !isTouch ? 'high' : 'low';
+  Quality.version++;
+  syncDom();
+  for (const cb of listeners.slice()) {
+    try {
+      cb(Quality);
+    } catch (err) {
+      console.warn('quality listener failed:', err);
+    }
+  }
+}
+
+/** Settings menu / tests: choose Otomatis or a fixed tier. Stored (unless the URL fixes it). */
+export function setQualityMode(mode: QualityMode): void {
+  Quality.mode = mode;
+  if (!fromUrl) storeMode(mode);
+  governor.reset();
+  if (mode === 'auto') return; // the governor takes over from the current tier
+  applyTier(mode);
+}
+
+/** True while the governor may move the tier (Otomatis). */
+export function qualityIsAuto(): boolean {
+  return Quality.mode === 'auto';
+}
+
+/** Feed one frame's dt (s). Cheap; steps the tier when the frame rate asks for it. */
+export function observeQualityFrame(dt: number): void {
+  if (Quality.mode !== 'auto') return;
+  const next = governor.observe(dt, Quality.tier);
+  if (next) applyTier(next);
+}
+
+/** Debug / smoke test hook (window.__superglen.quality). Getters only: nothing is computed per frame. */
+export function qualityDebugHandle(): { tier: Tier; mode: QualityMode; version: number; fps: number; set: (m: QualityMode) => void; order: readonly Tier[] } {
+  return {
+    get tier() { return Quality.tier; },
+    get mode() { return Quality.mode; },
+    get version() { return Quality.version; },
+    get fps() { return governor.lastFps; },
+    set: setQualityMode,
+    order: TIER_ORDER,
+  };
+}

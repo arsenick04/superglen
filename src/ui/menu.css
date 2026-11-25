@@ -386,6 +386,7 @@ html.from-title .start-overlay {
 }
 
 /* ---- Pause menu: slot picker view inside the settings card ---- */
+.settings-card.picking .settings-quality,
 .settings-card.picking .settings-sliders,
 .settings-card.picking .settings-grid,
 .settings-card.picking .settings-version {
@@ -479,4 +480,29 @@ html.from-title .start-overlay {
 }
 .slot-main {
   max-height: 320px;
+}
+
+/* Graphics quality: Otomatis / Tinggi / Sedang / Rendah */
+.settings-quality {
+  margin: 6px 0 8px;
+}
+.settings-quality-q {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #25324a;
+}
+.settings-quality-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.settings-quality-row .menu-btn {
+  min-height: 64px;
+  justify-content: center;
+}
+.settings-quality-row .menu-btn.on {
+  outline: 4px solid #ffcf3f;
+  outline-offset: 1px;
+  filter: brightness(1.08);
 }

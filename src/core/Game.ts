@@ -1,3 +1,4 @@
+import { qualityDebugHandle } from './Quality';
 import * as THREE from 'three';
 import { setSkyRenderer } from '../world/kota/Sky';
 import { Renderer } from './Renderer';
@@ -67,6 +68,8 @@ const MAX_SUBSTEPS = 5;
 
 /** Read-only debug data for automated smoke tests and the browser console. */
 export interface DebugHandle {
+  /** Graphics quality: current tier, mode (auto / fixed) and a setter (see core/Quality.ts). */
+  quality?: ReturnType<typeof qualityDebugHandle>;
   fps: number;
   player: { x: number; y: number; z: number };
   grounded: boolean;
@@ -948,6 +951,7 @@ export class Game {
     window.__superglen = this.debug;
     document.addEventListener('visibilitychange', this.onVisibility);
   }
+    this.debug.quality = qualityDebugHandle();
 
   start(): void {
     if (this.running) return;

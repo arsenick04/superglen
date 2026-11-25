@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Quality } from './Quality';
+import { Quality, observeQualityFrame } from './Quality';
 import { perfMark, PerfMark } from './PerfMarks';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -16,8 +16,13 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 /** Colour grade of the city (see render()): exposure of the neutral tone mapping. */
 export const CityLook = { exposure: 0.97 };
 
+const POST_URL_ON = new URLSearchParams(window.location.search).get('post') !== '0';
+
 export const PostConfig = {
-  enabled: Quality.level === 'high' && new URLSearchParams(window.location.search).get('post') !== '0',
+  /** Live: follows the quality tier (only the high tier on a non-touch device runs the post chain). */
+  get enabled(): boolean {
+    return Quality.post && Quality.level === 'high' && POST_URL_ON;
+  },
   aoScale: 0.5,
   aoRadius: 0.8,
   aoBlend: 0.32,
@@ -71,6 +76,7 @@ export class Renderer {
   private ratios: number[] = [1];
   private emaDt = 1 / Quality.targetFps;
   private lastObserved = -1;
+  private seenVersion = 0;
   private lowTime = 0;
   private highTime = 0;
   private lockout: number = AdaptiveConfig.lockout;
@@ -259,12 +265,24 @@ export class Renderer {
 
   /** The adaptive logic for one finished frame (public so tests can drive it with a fake clock). */
   observeFrame(nowMs: number, moving: boolean): void {
-    if (!this.adaptive) return;
     const last = this.lastObserved;
     this.lastObserved = nowMs;
+    if (Quality.version !== this.seenVersion) {
+      // The quality tier changed: new pixel ratio ceiling, fresh numbers for the resolution logic.
+      this.seenVersion = Quality.version;
+      this.stepIndex = 0;
+      this.lowTime = 0;
+      this.highTime = 0;
+      this.emaDt = 1 / Quality.targetFps;
+      this.resize();
+    }
     if (last < 0) return;
     const dt = (nowMs - last) / 1000;
     if (dt <= 0 || dt > 0.25) return; // tab switch or a one-off hitch: not a trend
+    observeQualityFrame(dt); // the tier governor (Otomatis): steps the whole tier, which also changes the pixel ratio
+    if (!this.adaptive) return;
+    // In Otomatis the tier governor owns the load: the resolution-only steps below are the last resort on the low tier.
+    if (Quality.mode === 'auto' && Quality.tier !== 'low') return;
     const A = AdaptiveConfig;
     this.emaDt += (dt - this.emaDt) * A.smoothing;
     this.sinceStepDown += dt;
