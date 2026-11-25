@@ -349,6 +349,19 @@ export class QuizPanel {
   private setBubble(text: string): void {
     this.bubble = text;
     this.bubbleEl.textContent = text;
+    this.fitBubble();
+  }
+
+  /** Long prompts: shrink the bubble text until it fits in its two lines. */
+  private fitBubble(): void {
+    const b = this.bubbleEl;
+    b.style.fontSize = '';
+    if (!this.isOpen || b.clientHeight <= 0) return;
+    let size = parseFloat(getComputedStyle(b).fontSize) || 20;
+    for (let i = 0; i < 12 && b.scrollHeight > b.clientHeight + 1 && size > 11; i++) {
+      size -= 1.5;
+      b.style.fontSize = `${size}px`;
+    }
   }
 
   private ninoSays(line: QuizLine): void {
@@ -586,6 +599,7 @@ export class QuizPanel {
     }
     this.display.replaceChildren(inner);
     this.display.classList.toggle('empty', d.kind === 'none');
+    this.element.classList.toggle('no-display', d.kind === 'none');
   }
 
   private cardContent(c: Choice): HTMLElement {
@@ -615,6 +629,7 @@ export class QuizPanel {
     this.element.style.setProperty('--dh', `${Math.max(40, dh)}px`);
     this.element.style.setProperty('--dw', `${Math.max(100, this.display.clientWidth)}px`);
     if (this.view === 'question') {
+      this.fitBubble();
       this.fit(this.display, this.display.firstElementChild as HTMLElement | null, 12);
       for (const c of this.cards) this.fit(c, c.querySelector('.qp-card-in'), 14);
     }
@@ -623,8 +638,15 @@ export class QuizPanel {
   private fit(box: HTMLElement, inner: HTMLElement | null, pad: number): void {
     if (!inner) return;
     inner.style.scale = '';
-    const w = inner.offsetWidth;
-    const h = inner.offsetHeight;
+    // An unbreakable long word overflows both sides of a centred box without growing it: measure the real text width.
+    let textW = 0;
+    const range = document.createRange();
+    for (const t of inner.querySelectorAll<HTMLElement>('.qp-ctext-t, .qp-bigtext, .qp-word-t, .qp-eq')) {
+      range.selectNodeContents(t);
+      for (const r of Array.from(range.getClientRects())) textW = Math.max(textW, r.width);
+    }
+    const w = Math.max(inner.offsetWidth, inner.scrollWidth, textW);
+    const h = Math.max(inner.offsetHeight, inner.scrollHeight);
     if (w <= 0 || h <= 0) return;
     const s = Math.min(1, (box.clientWidth - pad) / w, (box.clientHeight - pad) / h);
     if (s < 1) inner.style.scale = String(Math.max(0.2, s).toFixed(3));

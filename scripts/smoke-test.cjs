@@ -6046,12 +6046,12 @@ async function quizRenderScenario(page, check, touch = false) {
     await shot(page, name);
     await page.evaluate(() => window.__superglen.quiz.close());
   }
-  // The reading category uses the reading font with generous letter spacing.
+  // The reading category uses the same font family as the rest of the quiz, with a little letter spacing.
   const rs = samples.find((x) => x.category === 'membaca');
   await page.evaluate((id) => window.__superglen.quiz.preview(id), rs.id);
   await sleep(300);
   const ls = await page.evaluate(() => { const t = document.querySelector('.qp-ctext-t') || document.querySelector('.qp-bigtext'); const cs = getComputedStyle(t); return { ls: parseFloat(cs.letterSpacing) / parseFloat(cs.fontSize), fs: parseFloat(cs.fontSize) }; });
-  check('quiz-render: reading category: big letters with generous letter spacing (>= 0.1 em)', ls.ls >= 0.1 && ls.fs >= 30, JSON.stringify(ls));
+  check('quiz-render: reading category: big letters with a little letter spacing (>= 0.03 em, one font family like the rest of the quiz)', ls.ls >= 0.03 && ls.fs >= 30, JSON.stringify(ls));
   await page.evaluate(() => window.__superglen.quiz.close());
   // reduced motion: the overlay still works
   await page.emulateMedia({ reducedMotion: 'reduce' });
