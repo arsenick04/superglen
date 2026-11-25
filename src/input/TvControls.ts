@@ -65,6 +65,7 @@ export class TvControls implements InputSource {
 
   constructor(private readonly deps: TvControlsDeps) {
     tvMode.hook = this.onKey;
+    padHub.onCursorClash(() => this.showCursorHint());
     tvMode.onChange((on) => {
       if (on) this.raf = requestAnimationFrame(this.frame);
       else {
@@ -299,6 +300,18 @@ export class TvControls implements InputSource {
     if (this.radial && !this.deps.canPlay()) this.closeRadial();
     if (!this.hintShown && startGate.started) this.showHint();
   };
+
+  /** Real pointer input arrived while the pad is used: the TV browser is in "mouse mode". Shown once per session. */
+  private showCursorHint(): void {
+    if (!document.documentElement.classList.contains('tv-ui') && !padHub.deviceActive) return;
+    const el = document.createElement('div');
+    el.className = 'tv-hint';
+    const span = document.createElement('span');
+    span.textContent = 'Matikan mode kursor di browser TV untuk kontrol terbaik';
+    el.append(span);
+    (document.getElementById('ui') ?? document.body).appendChild(el);
+    window.setTimeout(() => el.remove(), HINT_MS);
+  }
 
   private showHint(): void {
     this.hintShown = true;

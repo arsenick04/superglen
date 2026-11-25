@@ -1,5 +1,6 @@
 import { ACTIONS, type Action, type InputSource, type Vec2 } from './Input';
 import { tvMode } from '../core/TvMode';
+import { padHub } from './GamepadHub';
 
 /** Keyboard codes (layout independent, KeyboardEvent.code) per action. */
 const KEY_ACTIONS: Readonly<Record<Action, readonly string[]>> = {
@@ -95,6 +96,7 @@ export class KeyboardMouseSource implements InputSource {
   }
 
   private readonly onWheel = (e: WheelEvent): void => {
+    if (e.isTrusted && padHub.mouseSuppressed()) return;
     const t = e.target as HTMLElement | null;
     if (t && t.closest && t.closest('.settings, .parents, .fullmap, .qp')) return; // panels scroll on their own
     this.zoomAcc += Math.max(-3, Math.min(3, e.deltaY / 100)) * 0.12;
@@ -177,6 +179,10 @@ export class KeyboardMouseSource implements InputSource {
   private readonly onBlur = (): void => this.reset();
 
   private readonly onMouseDown = (e: MouseEvent): void => {
+    if (e.isTrusted && padHub.mouseSuppressed()) {
+      e.preventDefault(); // a TV browser's cursor mode (pad / remote as a mouse): no pointer lock, no clicks for the game
+      return;
+    }
     if (this.canLock && !this.pointerLocked) {
       // First click only captures the mouse; it does not fire an action.
       e.preventDefault();
@@ -194,6 +200,7 @@ export class KeyboardMouseSource implements InputSource {
 
   private readonly onMouseMove = (e: MouseEvent): void => {
     if (!this.pointerLocked) return;
+    if (e.isTrusted && padHub.mouseSuppressed()) return;
     const dx = e.movementX || 0;
     const dy = e.movementY || 0;
     if (this.skipMoves > 0) {

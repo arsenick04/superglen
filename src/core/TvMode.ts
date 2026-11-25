@@ -9,6 +9,8 @@
  *   understands (Arrow keys, Enter, Escape), then lets the TV controls (input/TvControls.ts) look at them first.
  * The preference lives on the device (not in a save slot) and every storage access is wrapped in try/catch.
  */
+import { backState } from './BackTrap';
+
 export type TvPref = 'auto' | 'on' | 'off';
 export type TvKind = 'up' | 'down' | 'left' | 'right' | 'ok' | 'back' | 'menu';
 
@@ -44,7 +46,7 @@ export function tvKindOf(e: KeyboardEvent): TvKind | null {
     case 21: return 'left';
     case 22: return 'right';
     case 23: case 66: case 13: return 'ok';
-    case 4: case 111: case 10009: case 461: return 'back'; // Android, Tizen, webOS
+    case 4: case 8: case 111: case 10009: case 461: return 'back'; // Android, Tizen, webOS, VIDAA (Hisense: 8 or 461)
     case 82: case 1082: return 'menu';
     default: return null;
   }
@@ -144,6 +146,13 @@ class TvMode {
     const down = e.type === 'keydown';
     const t = e.target as HTMLElement | null;
     if (kind === 'back' && e.key === 'Backspace' && t && /^(input|textarea)$/i.test(t.tagName)) return; // typing
+    if (kind === 'back' && down && e.isTrusted && performance.now() - backState.lastPopAt < 350) {
+      // The browser already reported this Back as a history step (handled by BackTrap): do not handle it twice.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (kind === 'back' && down && e.isTrusted) backState.lastKeyAt = performance.now();
     const c = CANON[kind];
     // Remote aliases (keyCode 4 / 23, GoBack, Backspace ...) become the standard key, once.
     if (e.isTrusted && (e.key !== c.key || e.code !== c.code) && kind !== 'menu') {

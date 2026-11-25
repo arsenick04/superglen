@@ -10,6 +10,8 @@ import { enemyModels } from './world/kota/EnemyModels';
 import { loadBikeTemplate } from './world/kota/BikeModel';
 import { preloadCityNature } from './world/kota/CityNature';
 import { TitleMenu, shouldShowTitle } from './ui/TitleMenu';
+import { installBackTrap } from './core/BackTrap';
+import { tvMode } from './core/TvMode';
 import { compatibilityMode, isPlayStationBrowser } from './core/Platform';
 
 function showFatal(err: unknown): void {
@@ -49,6 +51,17 @@ async function loadAssets(compat: boolean): Promise<void> {
 }
 
 async function boot(): Promise<void> {
+  installBackTrap(() => {
+    // The browser said "Back": answer it as the in-game Back (Escape). tvMode.relaying lets the TV controls accept the synthetic key.
+    tvMode.relaying = true;
+    try {
+      const unhandled = window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+      if (unhandled) (window as unknown as { __sgPause?: () => void }).__sgPause?.(); // nothing took it: open the pause menu
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+    } finally {
+      tvMode.relaying = false;
+    }
+  });
   const compat = compatibilityMode();
   // No top-level await (Safari iOS 16 build target): init Rapier inside an async function. The city's environment models
   // (about 45 KB) load alongside: the city is built from them right after (primitive fallback if they fail).

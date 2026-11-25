@@ -31,14 +31,15 @@ html.tv-ui .parents {
 
 /* No pointer: hide the cursor and everything made for fingers and mice. */
 html.tv-ui,
-html.tv-ui * {
+html.tv-ui *,
+html.pad-ui,
+html.pad-ui * {
   cursor: none !important;
 }
 html.tv-ui .touch-layer,
 html.tv-ui .hud-card,
 html.tv-ui .rotate-overlay,
-html.tv-ui .zoom-buttons,
-html.tv-ui .hud-fps {
+html.tv-ui .zoom-buttons {
   display: none !important;
 }
 html.tv-ui .start-text-pc {
@@ -47,6 +48,15 @@ html.tv-ui .start-text-pc {
 html.tv-ui .start-text-pc::after {
   content: 'Tekan OK untuk mulai';
   font-size: clamp(28px, 3.4vh, 44px);
+}
+
+/* The FPS pill stays on a TV: #ui is already inset by the 5 % overscan margins, the pill is scaled like the rest of the TV HUD. */
+html.tv-ui .hud-fps {
+  top: 8px;
+  left: 8px;
+  padding: 6px 18px;
+  font-size: clamp(22px, 2.6vh, 34px);
+  z-index: 5;
 }
 
 /* Big, bright focus ring for the remote (menus, slot cards, quiz answers, the radial menu). */

@@ -43,6 +43,7 @@ import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
+import { tvPerf } from './TvPerf';
 import { TvControls, type TvRadialItem } from '../input/TvControls';
 import { MenuIcons } from '../ui/MenuIcons';
 import { PadDebug } from '../ui/PadDebug';
@@ -705,6 +706,7 @@ export class Game {
     });
     this.input.addSource(tv);
     (window as unknown as { __sgTv?: TvControls }).__sgTv = tv;
+    (window as unknown as { __sgPause?: () => void }).__sgPause = () => { if (startGate.started) this.settings.open(); };
     padHub.rumbleAllowed = () => !this.muteUrl && this.save.data.settings.sound && this.save.data.settings.sfxVol > 0;
     this.player.events.on('land', (e) => {
       if (e.impact > PadConfig.rumbleLandImpact) this.rumble(0.45, 0.25, 110);
@@ -1000,6 +1002,7 @@ export class Game {
       this.padSource.sync(); // presses made inside the panel are not game presses
       return;
     }
+    if (tvPerf.shouldSkip(now)) return; // TV 30 fps cap: physics catches up with two fixed steps next frame
     const panel = this.perfPanel;
     const t0 = panel ? performance.now() : 0;
     const steps = this.runFrame(now, true);

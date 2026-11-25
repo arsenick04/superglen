@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { compatibilityMode } from './Platform';
+import { tvMode } from './TvMode';
 import {
-  TIERS, TIER_ORDER, QualityGovernor, guessTier, readHints, readStoredMode, storeMode, urlMode,
+  TIERS, TIER_ORDER, QualityGovernor, guessTier, hasStoredMode, readHints, readStoredMode, storeMode, urlMode,
   type QualityMode, type Tier, type TierSpec,
 } from '../config/quality';
 
@@ -42,7 +43,8 @@ const isTouch = detectTouch();
 const compat = compatibilityMode();
 const fromUrl = urlMode();
 /** A URL override is for tests: fixed tier (or 'auto'), never stored. */
-const initialMode: QualityMode = fromUrl ?? (compat ? 'low' : readStoredMode());
+// TV: a TV browser is slow, so 'low' is the default (unless the player chose a mode in Settings).
+const initialMode: QualityMode = fromUrl ?? (compat ? 'low' : tvMode.active && !hasStoredMode() ? 'low' : readStoredMode());
 
 function initialTier(mode: QualityMode): Tier {
   if (mode !== 'auto') return mode;
@@ -71,8 +73,18 @@ if (compat) {
   Quality.shadowMapSize = 1024;
   Quality.shadowArea = 18;
 }
+applyTvCaps();
 Quality.level = Quality.tier === 'high' && !isTouch ? 'high' : 'low';
 syncDom();
+
+/** TV browsers: pixel ratio 1, a 1024 shadow map, smaller crowd and traffic. (Re-applied after every tier change.) */
+function applyTvCaps(): void {
+  if (!tvMode.active) return;
+  Quality.maxPixelRatio = Math.min(Quality.maxPixelRatio, 1);
+  Quality.shadowMapSize = Math.min(Quality.shadowMapSize, 1024);
+  Quality.crowdSim = Math.min(Quality.crowdSim, 0.5);
+  Quality.crowdRadius = Math.min(Quality.crowdRadius, 0.6);
+}
 
 const governor = new QualityGovernor();
 const listeners: ((q: QualityPreset) => void)[] = [];
@@ -95,6 +107,7 @@ function applyTier(tier: Tier): void {
   if (tier === Quality.tier) return;
   Object.assign(Quality, TIERS[tier]);
   Quality.tier = tier;
+  applyTvCaps();
   Quality.level = tier === 'high' && !isTouch ? 'high' : 'low';
   Quality.version++;
   syncDom();
