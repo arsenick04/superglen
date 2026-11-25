@@ -933,6 +933,8 @@ export class Game {
         // A practice fight lasts only while its own level (or the training room) is loaded.
         if (practice.level && this.levels.currentId !== practice.level && this.levels.currentId !== 'training-room') practice.level = '';
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
+        // Chapter videos download in the background now (the opening right after the title), not just before they play.
+        this.cinematics.enterLevel([...(this.openingPending ? (['open'] as const) : []), ...cinematicsForLevel(this.levels.currentId, this.save.data.chaptersDone)]);
         this.maps.setSource(this.levels.current?.map ?? null);
         this.settings.refresh();
         this.applyLayout();
@@ -953,8 +955,6 @@ export class Game {
       // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
       flow.sandbox = true;
       flow.free = new URLSearchParams(window.location.search).get('free') === '1';
-        // Chapter videos download in the background now (the opening right after the title), not just before they play.
-        this.cinematics.enterLevel([...(this.openingPending ? (['open'] as const) : []), ...cinematicsForLevel(this.levels.currentId, this.save.data.chaptersDone)]);
       this.levels.loadInstant(wanted);
     } else {
       const plan = startPlanFor(this.save);
@@ -973,10 +973,10 @@ export class Game {
       loading: { get: () => this.levels.loading, enumerable: true },
       controlsEnabled: { get: () => this.controlsEnabled, enumerable: true },
     });
+    this.debug.quality = qualityDebugHandle();
     window.__superglen = this.debug;
     document.addEventListener('visibilitychange', this.onVisibility);
   }
-    this.debug.quality = qualityDebugHandle();
 
   start(): void {
     if (this.running) return;
