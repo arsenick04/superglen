@@ -192,7 +192,7 @@ export class KotaLevel implements Level {
     // Physical fog distances keep the same colour on touch and desktop; draw distance can still follow the preset.
     // Start the atmospheric perspective before the skyline: distant blocks
     // recede while the player and nearby NPCs remain crisp.
-    scene.fog = new THREE.Fog(0xc6e6fa, 115, 285);
+    scene.fog = new THREE.Fog(0xc6e6fa, 115 * Quality.fogScale, 285 * Quality.fogScale);
     const hemi = new THREE.HemisphereLight(0xdcefff, 0xdcd8b8, 1.15);
     this.hemi = hemi;
     root.add(hemi);

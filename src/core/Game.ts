@@ -1,4 +1,4 @@
-import { qualityDebugHandle } from './Quality';
+import { qualityDebugHandle, Quality } from './Quality';
 import * as THREE from 'three';
 import { setSkyRenderer } from '../world/kota/Sky';
 import { Renderer } from './Renderer';
@@ -44,6 +44,7 @@ import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
 import { tvPerf } from './TvPerf';
+import { tvDebug } from './TvDebug';
 import { TvControls, type TvRadialItem } from '../input/TvControls';
 import { MenuIcons } from '../ui/MenuIcons';
 import { PadDebug } from '../ui/PadDebug';
@@ -482,6 +483,7 @@ export class Game {
   constructor(container: HTMLElement) {
     this.renderer = new Renderer(container);
     setSkyRenderer(this.renderer.renderer);
+    tvDebug.attach(this.renderer.renderer, () => ({ ratio: this.renderer.pixelRatio, tier: Quality.tier, mode: Quality.mode, scale: Quality.renderScale }));
     this.physics = new Physics();
 
     this.input = new Input();
@@ -1022,6 +1024,7 @@ export class Game {
    * level -> render. `now` = rAF timestamp in ms. Returns the number of fixed steps that ran.
    */
   private runFrame(now: number, render: boolean): number {
+    const tu = tvDebug.enabled ? performance.now() : 0;
     const dt = Math.min(this.clock.tick(now), MAX_FRAME_DT);
     this.frameCount++;
 
@@ -1045,7 +1048,12 @@ export class Game {
     this.rings.update(dt);
     this.frameUpdate(dt);
 
-    if (render) this.renderer.render(this.scene, this.cameraRig.camera, now, this.playerMoving());
+    if (tvDebug.enabled && render) {
+      const tr = performance.now();
+      this.renderer.render(this.scene, this.cameraRig.camera, now, this.playerMoving());
+      const te = performance.now();
+      tvDebug.frame(now, tr - tu, te - tr);
+    } else if (render) this.renderer.render(this.scene, this.cameraRig.camera, now, this.playerMoving());
     this.lastSteps = steps;
     this.updateDebug(dt);
     return steps;

@@ -1,4 +1,5 @@
 import { touchMode } from '../core/TouchMode';
+import { Quality } from '../core/Quality';
 import type { MapSource } from '../world/MapSource';
 import { MenuIcons } from './MenuIcons';
 
@@ -261,7 +262,7 @@ export class MapView {
     if (src.version !== this.miniVersion) this.drawMiniBase();
     const now = performance.now();
     const far = Math.abs(x - this.drawX) > JUMP || Math.abs(z - this.drawZ) > JUMP;
-    if (!far && now - this.lastDraw < MIN_DT) return;
+    if (!far && now - this.lastDraw < Math.max(MIN_DT, Quality.mapMs)) return;
     this.lastDraw = now;
     this.drawX = x;
     this.drawZ = z;

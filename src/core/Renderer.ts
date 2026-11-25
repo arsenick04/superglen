@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Quality, observeQualityFrame } from './Quality';
 import { perfMark, PerfMark } from './PerfMarks';
+import { cheapenMaterials } from './CheapMaterials';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
@@ -172,6 +173,7 @@ export class Renderer {
     this.observeFrame(now, moving);
   }
 
+  private cheapScanDue = 0;
   private post: { composer: EffectComposer; render: RenderPass; ao: GTAOPass; bloom: UnrealBloomPass } | null = null;
 
   /**
@@ -192,6 +194,10 @@ export class Renderer {
     // richer mid-tone contrast on characters and buildings. It is available
     // in the direct path too, so phones and desktop keep the same grade.
     this.grade(scene);
+    if (Quality.cheapMaterials && --this.cheapScanDue <= 0) {
+      this.cheapScanDue = 20; // chunks stream in all the time: look for new standard materials a few times a second
+      cheapenMaterials(scene);
+    }
     r.info.autoReset = false;
     r.info.reset();
     // City daylight uses the same direct colour pipeline on desktop and touch.
@@ -235,6 +241,7 @@ export class Renderer {
    */
   prewarm(scene: THREE.Scene, camera: THREE.Camera): void {
     try {
+      if (Quality.cheapMaterials) cheapenMaterials(scene);
       this.grade(scene); // the compile must use the very grade of the frames, or every program is built twice
       // three's compile() skips hidden objects: show them for the compile only (cars that appear later, effects, ...).
       const hidden: THREE.Object3D[] = [];
@@ -252,10 +259,15 @@ export class Renderer {
 
   /** Unique pixel ratios from the ceiling down to the floor. */
   private buildRatios(): void {
+    this.ratios.length = 0;
+    if (Quality.renderScale < 1) {
+      // Reduced internal resolution (TV tiers): the drawing buffer is a fraction of the CSS size, CSS scales it up. No further steps.
+      this.ratios.push(Math.max(0.3, Quality.renderScale));
+      return;
+    }
     // Automated browsers (Playwright / headless software GL) keep the old 1.5 cap: 3x MSAA frames exhaust their memory.
     const cap = navigator.webdriver ? Math.min(Quality.maxPixelRatio, 1.5) : Quality.maxPixelRatio;
     const ceiling = Math.min(window.devicePixelRatio || 1, cap);
-    this.ratios.length = 0;
     for (const m of AdaptiveConfig.steps) {
       const r = Math.max(AdaptiveConfig.minRatio, Math.round(ceiling * m * 100) / 100);
       if (this.ratios.length === 0 || r < this.ratios[this.ratios.length - 1] - 0.01) this.ratios.push(r);
@@ -274,6 +286,10 @@ export class Renderer {
       this.lowTime = 0;
       this.highTime = 0;
       this.emaDt = 1 / Quality.targetFps;
+      if (this.renderer.shadowMap.enabled !== Quality.shadows) {
+        this.renderer.shadowMap.enabled = Quality.shadows;
+        this.cheapScanDue = 0; // materials must be rebuilt for the new shadow setting
+      }
       this.resize();
     }
     if (last < 0) return;
@@ -283,6 +299,7 @@ export class Renderer {
     if (!this.adaptive) return;
     // In Otomatis the tier governor owns the load: the resolution-only steps below are the last resort on the low tier.
     if (Quality.mode === 'auto' && Quality.tier !== 'low') return;
+    if (this.ratios.length < 2) return; // a fixed internal resolution (TV tiers) has nothing to step
     const A = AdaptiveConfig;
     this.emaDt += (dt - this.emaDt) * A.smoothing;
     this.sinceStepDown += dt;

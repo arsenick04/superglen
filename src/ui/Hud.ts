@@ -18,7 +18,7 @@ const ROTATE_ICON =
  * DOM HUD overlay: FPS meter, PC start/help card, touch start screen, rotate-phone screen.
  * Mounted in the #ui root. All text is Indonesian. The DOM is only touched when something changes.
  */
-const TIER_LABEL = { high: 'T', medium: 'S', low: 'R' } as const;
+const TIER_LABEL = { high: 'T', medium: 'S', low: 'R', tv: 'TV' } as const;
 
 export class Hud {
   private lastTierShown = '';

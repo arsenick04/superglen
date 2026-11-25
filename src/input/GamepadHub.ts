@@ -10,6 +10,7 @@
  *   is not asked at all (only a slow scan, and only until `gamepadconnected` fires).
  * - Presses are COUNTERS, so every consumer keeps its own "seen" count and no one steals another's press.
  */
+import { tvMode } from '../core/TvMode';
 
 /** All tunables in one place. */
 export const PadConfig = {
@@ -133,6 +134,7 @@ class GamepadHub {
     window.addEventListener('gamepaddisconnected', this.onDisconnected);
     // Switch back to keyboard / mouse / touch. Synthetic events (the menu navigation dispatches some) are ignored.
     // First in line: a TV browser turns the pad's B / Circle into a Back key. The game already reads the button itself.
+    tvMode.echoGuard = (e) => this.connected && this.tvEcho(e);
     window.addEventListener('keydown', this.onKeyGuard, true);
     window.addEventListener('keyup', this.onKeyGuard, true);
     window.addEventListener('keydown', this.onOtherInput, true);
@@ -173,6 +175,34 @@ class GamepadHub {
           if (!g || !g.connected) continue;
           for (let b = 0; b < g.buttons.length; b++) {
             if (g.buttons[b].pressed) {
+              this.lastBtnAt = now;
+              return true;
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return now - this.lastBtnAt < 500;
+  }
+
+  /**
+   * TV browsers may also translate the pad into keys (D-pad / stick -> arrows, A -> Enter, B -> Back). While the Gamepad API reports a
+   * pad with a button down or a stick pushed (same moment, plus 500 ms for the key-up), a trusted key event is such an echo.
+   */
+  private tvEcho(e: KeyboardEvent): boolean {
+    if (!e.isTrusted || !document.documentElement.classList.contains('tv-ui')) return false;
+    if (this.padKeyEcho(e)) return true;
+    const now = performance.now();
+    try {
+      const list = navigator.getGamepads();
+      if (list) {
+        for (let i = 0; i < list.length; i++) {
+          const g = list[i];
+          if (!g || !g.connected) continue;
+          for (let a = 0; a < g.axes.length; a++) {
+            if (Math.abs(g.axes[a]) > 0.4) {
               this.lastBtnAt = now;
               return true;
             }
@@ -373,9 +403,10 @@ class GamepadHub {
   };
 
   private readonly onKeyGuard = (e: KeyboardEvent): void => {
-    if (!e.isTrusted || !this.connected || !isBackish(e)) return;
+    if (!e.isTrusted || !this.connected) return;
+    if (!isBackish(e) && !(document.documentElement.classList.contains('tv-ui') && this.tvEcho(e))) return;
     if (e.key === 'Backspace' && e.target instanceof HTMLElement && /^(input|textarea)$/i.test(e.target.tagName)) return;
-    if (!this.padKeyEcho(e)) return;
+    if (!this.padKeyEcho(e) && !this.tvEcho(e)) return;
     e.preventDefault();
     e.stopImmediatePropagation(); // PadUi sends its own Escape for Circle: handling both would open and close the menu
   };

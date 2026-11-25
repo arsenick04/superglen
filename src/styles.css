@@ -2066,3 +2066,20 @@ html.touch-ui .coin-hud {
     right: calc(env(safe-area-inset-right) + 168px);
   }
 }
+
+/* TV diagnostics overlay (core/TvDebug.ts) */
+.tv-debug {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 100000;
+  margin: 0;
+  padding: 8px 10px;
+  max-width: 62vw;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #9dff9d;
+  font: 15px/1.25 monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}

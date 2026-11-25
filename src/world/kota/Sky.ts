@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 
 /**
@@ -16,6 +17,7 @@ let R: THREE.WebGLRenderer | null = null;
 
 /** Boot: download both pictures (no renderer needed yet). Resolves (never rejects) when done, failed or after `timeoutMs`. */
 export function preloadSky(timeoutMs = 12000): Promise<void> {
+  if (Quality.cheapMaterials) return Promise.resolve(); // TV ringan: no environment picture
   loading ??= new Promise<void>((resolve) => {
     const base = import.meta.env.BASE_URL;
     const timer = setTimeout(resolve, timeoutMs);
@@ -77,6 +79,10 @@ export function setSkyRenderer(r: THREE.WebGLRenderer): void {
 
 /** Apply to a scene (synchronous: the pictures were preloaded at boot). `onApplied` lets the level tone its other lights down. */
 export function applySky(scene: THREE.Scene, onApplied: () => void): void {
+  if (Quality.cheapMaterials) {
+    scene.background = new THREE.Color(0x9fd8ff); // simple sky: a flat colour, no environment map (PMREM); the lights keep their full strength
+    return;
+  }
   scene.background = blueBackground();
   scene.backgroundIntensity = 1;
   if (!env && hdr && R) {

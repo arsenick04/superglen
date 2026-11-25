@@ -5,11 +5,12 @@
  *  - `QualityGovernor` watches the frame rate and steps the tier down (< ~45 fps sustained) or, carefully, up
  *    (> 58 fps for a long time). Hysteresis: windows of a few seconds, a cool-down after every change, and a tier that
  *    failed is only retried once, much later. So it never oscillates.
- *  - The player's choice (Otomatis / Tinggi / Sedang / Rendah) is stored in localStorage; `?quality=low|medium|high|auto`
+ *  - The player's choice (Otomatis / Tinggi / Sedang / Rendah) is stored in localStorage; `?quality=tv|low|medium|high|auto`
  *    overrides it for tests (not stored).
  */
-export type Tier = 'high' | 'medium' | 'low';
+export type Tier = 'high' | 'medium' | 'low' | 'tv';
 export type QualityMode = 'auto' | Tier;
+/** The tiers the automatic governor walks through. 'tv' (Sangat Rendah, TV ringan) is only entered on purpose: see Quality.ts. */
 export const TIER_ORDER: readonly Tier[] = ['high', 'medium', 'low'];
 
 export interface TierSpec {
@@ -38,27 +39,46 @@ export interface TierSpec {
   post: boolean;
   /** Soft screen vignette overlay. */
   vignette: boolean;
+  /** Sun shadows at all. */
+  shadows: boolean;
+  /** Internal render resolution as a fraction of the CSS size (1 = native). Below 1 the canvas is upscaled by CSS. */
+  renderScale: number;
+  /** Multiplier on the fog distances of the city (shorter = fewer things drawn). */
+  fogScale: number;
+  /** Swap MeshStandardMaterial for MeshLambertMaterial (no PBR) and skip the environment map. */
+  cheapMaterials: boolean;
+  /** Minimum ms between two minimap redraws. */
+  mapMs: number;
 }
 
 export const TIERS: Record<Tier, TierSpec> = {
   high: {
     maxPixelRatio: 2, antialias: true, shadowMapSize: 2048, shadowArea: 25, propShadows: true, cameraFar: 300,
     chunkScale: 1, natureRadius: 1, natureDensity: 1, crowdRadius: 1, crowdSim: 1, particleKeep: 1, fireLite: false, post: true, vignette: true,
+    shadows: true, renderScale: 1, fogScale: 1, cheapMaterials: false, mapMs: 70,
   },
   medium: {
     maxPixelRatio: 1.5, antialias: true, shadowMapSize: 1536, shadowArea: 20, propShadows: true, cameraFar: 220,
     chunkScale: 0.88, natureRadius: 0.8, natureDensity: 0.7, crowdRadius: 0.8, crowdSim: 0.7, particleKeep: 0.7, fireLite: true, post: false, vignette: true,
+    shadows: true, renderScale: 1, fogScale: 1, cheapMaterials: false, mapMs: 70,
   },
   low: {
     maxPixelRatio: 1.25, antialias: false, shadowMapSize: 1024, shadowArea: 15, propShadows: false, cameraFar: 150,
     chunkScale: 0.76, natureRadius: 0.6, natureDensity: 0.45, crowdRadius: 0.6, crowdSim: 0.5, particleKeep: 0.45, fireLite: true, post: false, vignette: false,
+    shadows: true, renderScale: 1, fogScale: 1, cheapMaterials: false, mapMs: 70,
+  },
+  /** 'TV ringan' (Sangat Rendah): for slow TV browsers. ~0.55 internal resolution, no shadows, short view, thin crowd. */
+  tv: {
+    maxPixelRatio: 1, antialias: false, shadowMapSize: 512, shadowArea: 10, propShadows: false, cameraFar: 120,
+    chunkScale: 0.5, natureRadius: 0.3, natureDensity: 0.12, crowdRadius: 0.42, crowdSim: 0.2, particleKeep: 0.2, fireLite: true, post: false, vignette: false,
+    shadows: false, renderScale: 0.55, fogScale: 0.42, cheapMaterials: true, mapMs: 200,
   },
 };
 
 const STORE_KEY = 'superglen.quality.v1';
 
 export function isMode(v: unknown): v is QualityMode {
-  return v === 'auto' || v === 'high' || v === 'medium' || v === 'low';
+  return v === 'auto' || v === 'high' || v === 'medium' || v === 'low' || v === 'tv';
 }
 
 export function readStoredMode(): QualityMode {
@@ -169,6 +189,9 @@ export const GovernorConfig = {
   window: 3,
   /** A window below this average fps is "slow"; this many slow windows in a row step the tier down. */
   slowFps: 45,
+  /** Below this fps for `tvWindows` windows on the low tier, a TV steps down to the 'TV ringan' tier. */
+  tvFps: 20,
+  tvWindows: 2,
   slowWindows: 2,
   /** A window above this is "fast"; this many in a row (and a long quiet time) step up. */
   fastFps: 58,
@@ -191,11 +214,13 @@ export class QualityGovernor {
   private slow = 0;
   private fast = 0;
   private sinceChange = 1e9;
-  private readonly fails: Record<Tier, number> = { high: 0, medium: 0, low: 0 };
-  private readonly failedAt: Record<Tier, number> = { high: -1e9, medium: -1e9, low: -1e9 };
+  private readonly fails: Record<Tier, number> = { high: 0, medium: 0, low: 0, tv: 0 };
+  private readonly failedAt: Record<Tier, number> = { high: -1e9, medium: -1e9, low: -1e9, tv: -1e9 };
   private clock = 0;
   /** Last window's average fps (diagnostics). */
   lastFps = 0;
+  /** Consecutive windows below `GovernorConfig.tvFps` (the low tier is not enough: the TV tier is next). */
+  verySlow = 0;
 
   /** Forget the window (after a level load / a manual change). */
   reset(): void {
@@ -203,6 +228,7 @@ export class QualityGovernor {
     this.frames = 0;
     this.slow = 0;
     this.fast = 0;
+    this.verySlow = 0;
   }
 
   observe(dt: number, current: Tier): Tier | null {
@@ -219,6 +245,7 @@ export class QualityGovernor {
     this.frames = 0;
     if (!enough) return null;
     this.lastFps = fps;
+    this.verySlow = fps < C.tvFps ? this.verySlow + 1 : 0;
     const i = TIER_ORDER.indexOf(current);
     if (fps < C.slowFps) {
       this.fast = 0;

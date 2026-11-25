@@ -5,6 +5,7 @@ import { MenuIcons } from './MenuIcons';
 import { versionGuard } from '../core/VersionGuard';
 import { getActiveSlot, readAllSlots } from '../core/Save';
 import { ModeIcons, slotCard } from './SlotCards';
+import { tvDebug } from '../core/TvDebug';
 import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
 import { tvMode, type TvPref } from '../core/TvMode';
 import './menu.css';
@@ -119,9 +120,17 @@ export class SettingsMenu {
     sliders.append(this.music.row, this.sfx.row);
 
     const quality = make('div', 'settings-quality');
-    quality.append(make('div', 'settings-quality-q', 'Kualitas grafis'));
+    const qLabel = make('div', 'settings-quality-q', 'Kualitas grafis');
+    // Long press (1.5 s) on the label: the TV diagnostics overlay (for the owner to photograph).
+    let lp = 0;
+    qLabel.addEventListener('pointerdown', () => {
+      window.clearTimeout(lp);
+      lp = window.setTimeout(() => tvDebug.toggle(), 1500);
+    });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) qLabel.addEventListener(ev, () => window.clearTimeout(lp));
+    quality.append(qLabel);
     const qrow = make('div', 'settings-quality-row');
-    const modes: [QualityMode, string][] = [['auto', 'Otomatis'], ['high', 'Tinggi'], ['medium', 'Sedang'], ['low', 'Rendah']];
+    const modes: [QualityMode, string][] = [['auto', 'Otomatis'], ['high', 'Tinggi'], ['medium', 'Sedang'], ['low', 'Rendah'], ['tv', 'Sangat Rendah (TV)']];
     for (const [mode, label] of modes) {
       const b = make('button', 'menu-btn set-quality', '');
       b.type = 'button';

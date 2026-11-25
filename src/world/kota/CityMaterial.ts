@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATLAS_PX, ATLAS_TILES } from './CityAtlas';
+import { Quality } from '../../core/Quality';
 
 /**
  * The lit material of the city: MeshStandardMaterial with vertex colours, multiplied by one shared texture atlas
@@ -58,7 +59,10 @@ const NT = ATLAS_TILES.length;
  */
 export function makeCityMaterial(offset?: readonly [number, number]): THREE.MeshStandardMaterial {
   loadAtlas();
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, envMapIntensity: 0.65 });
+  // 'TV ringan': Lambert (no PBR) with the same atlas injection (the shader chunks used below exist in both materials).
+  const m = (Quality.cheapMaterials
+    ? new THREE.MeshLambertMaterial({ vertexColors: true })
+    : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, envMapIntensity: 0.65 })) as THREE.MeshStandardMaterial;
   if (offset) {
     m.polygonOffset = true;
     m.polygonOffsetFactor = offset[0];
@@ -107,6 +111,6 @@ varying vec2 vAo;`,
 }`,
       );
   };
-  m.customProgramCacheKey = () => 'city-atlas-v3-depth';
+  m.customProgramCacheKey = () => (Quality.cheapMaterials ? 'city-atlas-v3-depth-lambert' : 'city-atlas-v3-depth');
   return m;
 }

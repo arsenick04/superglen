@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type Vec3 = readonly [number, number, number];
@@ -190,7 +191,7 @@ export class ColorBatch {
 /** Shared materials of the chapter (one lit vertex-coloured, one unlit "glow" vertex-coloured). */
 export function makeMaterials(): { lit: THREE.MeshStandardMaterial; glow: THREE.MeshBasicMaterial } {
   return {
-    lit: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0 }),
+    lit: (Quality.cheapMaterials ? new THREE.MeshLambertMaterial({ vertexColors: true }) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0 })) as THREE.MeshStandardMaterial,
     glow: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
   };
 }
