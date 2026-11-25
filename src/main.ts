@@ -91,9 +91,11 @@ async function boot(): Promise<void> {
       }
     });
     (window as unknown as { __sgTitleMenu?: unknown }).__sgTitleMenu = title.menu.debugHandle();
+    (window as unknown as { __sgBooted?: boolean }).__sgBooted = true; // silences the index.html boot guard
   } else {
     await assets;
     launch('plain');
+    (window as unknown as { __sgBooted?: boolean }).__sgBooted = true;
   }
 }
 

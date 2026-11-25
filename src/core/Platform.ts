@@ -5,5 +5,5 @@ export function isPlayStationBrowser(userAgent = navigator.userAgent): boolean {
 
 /** `?compat=1` lets another constrained browser use the same conservative boot path. */
 export function compatibilityMode(): boolean {
-  return isPlayStationBrowser() || new URLSearchParams(window.location.search).get('compat') === '1';
+  return isPlayStationBrowser() || /Tizen|SMART-?TV/i.test(navigator.userAgent) || new URLSearchParams(window.location.search).get('compat') === '1';
 }

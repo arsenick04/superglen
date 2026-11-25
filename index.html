@@ -15,10 +15,99 @@
     <link rel="icon" type="image/webp" href="./img/logo.webp" />
     <link rel="preload" as="image" href="./img/logo.webp" type="image/webp" />
     <link rel="stylesheet" href="./src/styles.css" />
+    <script>
+      /* Superglen boot guard: ES5 only, runs before the module. Shows a diagnostic if the game never boots. */
+      (function () {
+        /* Tiny polyfills for old Chromium (Tizen): Array/TypedArray/String.at, Object.hasOwn, String.replaceAll, globalThis. */
+        try {
+          if (typeof globalThis === 'undefined') { window.globalThis = window; }
+          var atFn = function (n) { n = Math.trunc(n) || 0; if (n < 0) n += this.length; return n < 0 || n >= this.length ? undefined : this[n]; };
+          var protos = [Array.prototype, String.prototype];
+          if (typeof Float32Array !== 'undefined') {
+            var ta = ['Int8Array', 'Uint8Array', 'Uint8ClampedArray', 'Int16Array', 'Uint16Array', 'Int32Array', 'Uint32Array', 'Float32Array', 'Float64Array'];
+            for (var i = 0; i < ta.length; i++) { if (window[ta[i]]) protos.push(window[ta[i]].prototype); }
+          }
+          for (var j = 0; j < protos.length; j++) {
+            if (!protos[j].at) { Object.defineProperty(protos[j], 'at', { value: atFn, configurable: true, writable: true }); }
+          }
+          if (!Array.prototype.flat) {
+            Object.defineProperty(Array.prototype, 'flat', { configurable: true, writable: true, value: function (d) {
+              d = d === undefined ? 1 : d;
+              var out = [];
+              (function walk(a, depth) { for (var k = 0; k < a.length; k++) { if (Array.isArray(a[k]) && depth > 0) { walk(a[k], depth - 1); } else { out.push(a[k]); } } })(this, d);
+              return out;
+            } });
+          }
+          if (!Array.prototype.flatMap) {
+            Object.defineProperty(Array.prototype, 'flatMap', { configurable: true, writable: true, value: function (f, t) { return Array.prototype.flat.call(Array.prototype.map.call(this, f, t), 1); } });
+          }
+          if (!Object.fromEntries) {
+            Object.fromEntries = function (it) { var o = {}; var a = Array.from(it); for (var k = 0; k < a.length; k++) { o[a[k][0]] = a[k][1]; } return o; };
+          }
+          if (!String.prototype.trimEnd) { String.prototype.trimEnd = function () { return this.replace(/\s+$/, ''); }; }
+          if (!String.prototype.trimStart) { String.prototype.trimStart = function () { return this.replace(/^\s+/, ''); }; }
+          if (!Object.hasOwn) { Object.hasOwn = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); }; }
+          if (!String.prototype.replaceAll) {
+            String.prototype.replaceAll = function (a, b) {
+              if (a instanceof RegExp) { return this.replace(a, b); }
+              return this.split(String(a)).join(b);
+            };
+          }
+        } catch (e) { /* diagnostics still work */ }
+        var q = window.location.search || '';
+        var forced = /[?&]bootfail=1/.test(q);
+        var errs = [];
+        var shown = false;
+        function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+        window.__sgErrors = errs;
+        window.onerror = function (msg, src, line, col) {
+          errs.push(String(msg) + ' @ ' + String(src || '').split('/').pop() + ':' + line + ':' + col);
+        };
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e && e.reason;
+          errs.push('Promise: ' + (r && r.message ? r.message : String(r)));
+        });
+        function gl(kind) {
+          try { return !!document.createElement('canvas').getContext(kind); } catch (e) { return false; }
+        }
+        window.__sgDiagnostic = function (why) {
+          if (shown || (window.__sgBooted && !forced)) return;
+          shown = true;
+          var ver = '';
+          try { ver = typeof WebAssembly === 'object' ? 'ada' : 'tidak ada'; } catch (e) { ver = '?'; }
+          var d = document.createElement('div');
+          d.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;background:#8fd3ff;color:#12324a;font-family:Arial,sans-serif;padding:48px;overflow:auto;font-size:28px;line-height:1.4';
+          d.innerHTML = '<h1 style="font-size:52px;margin:0 0 16px">Browser ini belum bisa menjalankan Superglen</h1>' +
+            '<p>Coba buka lewat Android TV / Chrome yang baru, atau pantulkan (mirroring) layar dari HP atau laptop ke TV.</p>' +
+            '<p>Mohon foto layar ini untuk pemilik game.</p>' +
+            '<pre style="white-space:pre-wrap;font-size:22px;background:#fff;padding:16px;border-radius:12px">' +
+            'Alasan: ' + esc(why) + '\n' +
+            'userAgent: ' + esc(navigator.userAgent) + '\n' +
+            'WebGL1: ' + (gl('webgl') || gl('experimental-webgl') ? 'ada' : 'TIDAK ADA') + '\n' +
+            'WebGL2: ' + (gl('webgl2') ? 'ada' : 'TIDAK ADA (game butuh WebGL2)') + '\n' +
+            'WebAssembly: ' + ver + '\n' +
+            'Layar: ' + window.innerWidth + 'x' + window.innerHeight + ' @' + (window.devicePixelRatio || 1) + '\n' +
+            'Error pertama: ' + esc(errs.length ? errs[0] : '(tidak ada)') + '\n' +
+            (errs.length > 1 ? 'Error kedua: ' + esc(errs[1]) + '\n' : '') +
+            '</pre>';
+          (document.body || document.documentElement).appendChild(d);
+        };
+        function check() {
+          if (window.__sgBooted) return;
+          window.__sgDiagnostic(errs.length ? 'Game berhenti karena error' : 'Game tidak muncul dalam 8 detik');
+        }
+        if (forced) {
+          window.addEventListener('load', function () { window.__sgDiagnostic('Uji paksa (bootfail=1)'); });
+        } else {
+          setTimeout(check, 8000);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="game"></div>
     <div id="ui"></div>
+    <script nomodule>window.__sgDiagnostic && window.__sgDiagnostic("Browser tidak mendukung modul JavaScript (script type=module)");</script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
