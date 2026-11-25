@@ -256,6 +256,7 @@ export class Chapter5 {
       isolated: true,
       stars: () => ({ left: b.stars, max: b.maxStars }),
       aura: 0x6fe08a,
+      stage: { floor: 0x7ccf5f, wall: 0xa9dcef, light: 0xfff0c0 },
     });
     ctx.game.debugInfo.ch5Engaged = true;
   }

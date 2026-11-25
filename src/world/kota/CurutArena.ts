@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Level, LevelContext } from '../Level';
 import { MarketRats } from './MarketRats';
+import { buildMarketDressing } from './CurutDressing';
 import { MARKET, RATS } from './Bab3Data';
 import { backToTraining, isPractice, travel } from '../progress';
 import { Combat, CombatRng } from '../../config/combat';
@@ -29,14 +30,13 @@ export class CurutArena implements Level {
     sun.position.set(100, 20, 12);
     sun.target.position.set(MARKET.hub.x, 0, 0);
     root.add(sun, sun.target);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(35, 48), new THREE.MeshStandardMaterial({ color: 0x86c977, roughness: 0.9 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(MARKET.hub.x, -0.01, 0);
-    root.add(floor);
-    const field = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshStandardMaterial({ color: 0xe6d3a0, roughness: 0.95 }));
-    field.rotation.x = -Math.PI / 2;
-    field.position.set(MARKET.hub.x, 0.005, 0);
-    root.add(field);
+    // Market square: tiled plaza, a medallion that marks the fight ring, stalls with awnings, bunting, lanterns, houses far behind.
+    buildMarketDressing(root, MARKET.hub.x, 0, 35);
+    // Warm rim light from behind the enemy side, so Glen and the rats get a golden edge.
+    const rim = new THREE.DirectionalLight(0xffc78a, 1.1);
+    rim.position.set(MARKET.hub.x - 14, 9, -10);
+    rim.target.position.set(MARKET.hub.x, 1, 0);
+    root.add(rim, rim.target);
     ctx.physics.addFixedCuboid({ x: 40, y: 0.5, z: 40 }, { x: MARKET.hub.x, y: -0.5, z: 0 });
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
@@ -62,6 +62,12 @@ export class CurutArena implements Level {
       onCollect: () => {},
     }, this.practice ? [] : ctx.save.data.bab3.tamed, specs, false, true);
     ctx.battle.enter({ id: 'curut_cemberut', name: 'Curut Cemberut', focus: () => this.battleFocus, arena: { x: MARKET.hub.x, z: 0, r: arena.radius }, stars: () => ({ left: this.rats.remaining, max: this.rats.n }), ownBar: true, intro: false, punchy: false });
+    // Soft blob shadows under the rats (Glen has his own) (the shared battle fx; no real shadows on the small things).
+    const fx = ctx.battle.bfx;
+    for (let i = 0; i < RATS.length; i++) {
+      const sh = { x: 0, y: 0, z: 0, r: 0.5, a: 1 };
+      fx.addShadow(() => (this.rats.shadowOf(i, sh) ? sh : null));
+    }
     const exit = document.createElement('button');
     exit.className = 'arena-return';
     exit.textContent = this.practice ? 'Kembali ke ruang latihan' : 'Kembali ke kota';

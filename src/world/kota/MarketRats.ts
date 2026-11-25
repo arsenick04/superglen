@@ -385,6 +385,18 @@ export class MarketRats {
   }
 
   /** Test helper: `{ i, state, x, z, food, fstate }`. */
+  /** Ground spot of rat `i` for a soft blob shadow (false: gone / not yet in the fight). Fills `out`. */
+  shadowOf(i: number, out: { x: number; y: number; z: number; r: number; a: number }): boolean {
+    const s = this.st[i];
+    if (s === ST_GONE || s === ST_QUEUED) return false;
+    out.x = this.rx[i];
+    out.y = GROUND;
+    out.z = this.rz[i];
+    out.r = 0.55 * Combat.rat.scale;
+    out.a = 1;
+    return true;
+  }
+
   list(): { i: number; state: number; active: boolean; queued: boolean; x: number; z: number; food: FoodKind; fstate: number; fx: number; fz: number; hp: number; kind: number }[] {
     return this.specs.map((r, i) => ({ i, state: this.st[i], active: this.st[i] < ST_DIZZY, queued: this.st[i] === ST_QUEUED, x: this.rx[i], z: this.rz[i], food: r.food, fstate: this.fs[i], fx: this.fx[i], fz: this.fz[i], hp: this.hp[i], kind: this.kind[i] }));
   }
@@ -532,6 +544,7 @@ export class MarketRats {
     ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, RatConfig.dizzyTime + 0.3, 0.3);
     ctx.fx.sparkles.burst(this.rx[i], 0.5, this.rz[i], 14, 2.6, 0xffe14d, { gravity: 2, life: 0.7, up: 0.8 });
     ctx.fx.flashes.spawn(this.rx[i], 0.6, this.rz[i], 1.2, 0.5, 0xffd23f);
+    ctx.battle?.bfx?.poof(this.rx[i], 0.5, this.rz[i], 0.7);
     // The food falls out of its arms onto the street nearby.
     const food = this.specs[i].food;
     this.f0x[i] = this.rx[i];
@@ -614,6 +627,7 @@ export class MarketRats {
       ctx.fx.stars.show(this.aim[i], 0.75 * Combat.rat.scale, Combat.rat.stun + 0.2, 0.3);
       ctx.fx.sparkles.burst(this.rx[i], 0.6, this.rz[i], 10, 2.4, 0xffe14d, { gravity: 2, life: 0.6, up: 0.8 });
       ctx.fx.flashes.spawn(this.rx[i], 0.7, this.rz[i], 1.0, 0.4, 0xffd23f);
+      ctx.battle?.bfx?.hit(this.rx[i], 0.6, this.rz[i], 0.9);
       return;
     }
     this.hp[i] = 0;

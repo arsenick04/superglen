@@ -4,6 +4,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import type { Sfx } from '../audio/Sfx';
 import { CameraConfig, type ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import type { SaveStore } from '../core/Save';
+import { BattleFx } from '../fx/BattleFx';
 import type { GroundRings } from '../fx/GroundRings';
 import type { Player } from '../player/Player';
 import type { Sparkles } from '../world/bab1/Fx';
@@ -65,6 +66,8 @@ export interface BattleSpec {
   punchy?: boolean;
   /** Aura colour (default red-orange). */
   aura?: number;
+  /** Colours of the isolated stage (default: plum floor and wall). */
+  stage?: { floor?: number; wall?: number; light?: number };
 }
 
 const RING_VERT = `
@@ -116,6 +119,8 @@ const STAR_SVG =
 export class BattleMode {
   private spec: BattleSpec | null = null;
   private readonly fx: HTMLDivElement;
+  /** Shared battle effects (stars, rings, beam, poof, dust, blob shadows). Fights may call it directly: `ctx.battle.fx.hit(x, y, z)`. */
+  readonly bfx: BattleFx;
   private readonly banner: HTMLDivElement;
   private readonly portrait: HTMLDivElement;
   private readonly nameEl: HTMLDivElement;
@@ -170,6 +175,20 @@ export class BattleMode {
   ) {
     const { ui } = deps;
     this.fx = el('div', 'battle-fx', ui);
+    this.bfx = new BattleFx(deps.scene, deps.cameraRig.camera);
+    // Juice for the player's own skills, only while a fight runs (the skills themselves are not touched).
+    const sk = deps.player.skills;
+    sk.onAlways('laserFire', (s) => {
+      if (!this.spec) return;
+      this.bfx.beam(s.fromX, s.fromY, s.fromZ, s.toX, s.toY, s.toZ, 0.22, 0.12, false);
+      if (s.hit) this.bfx.hit(s.toX, s.toY, s.toZ, 1);
+    });
+    sk.onAlways('shieldBlock', (e) => {
+      if (this.spec) this.bfx.shield(e.x, e.y, e.z);
+    });
+    sk.onAlways('ballHit', (e) => {
+      if (this.spec) this.bfx.puff(e.x, e.y, e.z, 0.8, 0xffe9b0);
+    });
     this.banner = el('div', 'battle-banner', ui);
     this.portrait = el('div', 'bb-portrait', this.banner);
     this.nameEl = el('div', 'bb-name', this.banner);
@@ -221,6 +240,13 @@ export class BattleMode {
     this.entered++;
     document.documentElement.classList.add('battle');
     this.nameEl.textContent = spec.name;
+    // Banner colours follow the enemy's aura colour (lighter on top, deeper below).
+    const ac = new THREE.Color(spec.aura ?? 0xff6a3d);
+    const top = ac.clone().lerp(new THREE.Color(0xffffff), 0.15).multiplyScalar(0.95);
+    const bot = ac.clone().multiplyScalar(0.55);
+    this.banner.style.setProperty('--bb1', '#' + top.getHexString());
+    this.banner.style.setProperty('--bb2', '#' + bot.getHexString());
+    this.banner.style.setProperty('--bbglow', `rgba(${Math.round(ac.r * 255)}, ${Math.round(ac.g * 255)}, ${Math.round(ac.b * 255)}, 0.6)`);
     this.setPortrait(spec.id);
     this.bar.hidden = !spec.ownBar;
     this.syncBar(true);
@@ -236,8 +262,14 @@ export class BattleMode {
     this.updateFocus();
     deps.cameraRig.setBattle(this.focusPos);
     if (spec.arena) this.buildRing(spec.arena);
-    if (spec.arena && spec.isolated) this.buildArenaStage(spec.arena);
+    if (spec.arena && spec.isolated) this.buildArenaStage(spec.arena, spec.stage);
     this.startCity();
+    {
+      const f = this.focusPos;
+      const gy = deps.player.position.y - 0.55;
+      this.bfx.dust(f.x, gy, f.z, 1.2);
+      this.bfx.ring(f.x, gy + 0.6, f.z, 2.4, 0.6, 0xffe3a0, 0.8);
+    }
     this.introStage = 0;
     if (spec.intro !== false) {
       this.introLeft = BattleConfig.introTime;
@@ -258,10 +290,13 @@ export class BattleMode {
     if (tamed) {
       const f = this.focusPos;
       deps.sparkles.burst(f.x, f.y + 0.8, f.z, 40, 5, -1, { up: 0.8, life: 1.4, gravity: 2 });
+      this.bfx.poof(f.x, f.y + 0.2, f.z, 1.3);
       deps.rings.spawn(f.x, f.y - 1, f.z, 6, 0.9, 0xffd23f);
       deps.sfx.fanfare();
       this.life?.cheer(deps.player.position.x, deps.player.position.z);
     }
+    if (!tamed) this.bfx.clear();
+    else this.bfx.clearShadows();
     document.documentElement.classList.remove('battle');
     this.banner.hidden = true;
     this.banner.classList.remove('intro');
@@ -296,6 +331,8 @@ export class BattleMode {
     const { sparkles } = this.deps;
     const y = this.deps.player.position.y - 0.45;
     sparkles.burst(x, y + 0.15, z, Math.round(10 + 10 * Math.min(1.5, power)), 2.2 + power * 1.8, 0xd9c7a0, { up: 0.35, life: 0.8, gravity: 1.2 });
+    this.bfx.dust(x, y, z, power);
+    if (kind === 'slam') this.bfx.ring(x, y + 0.5, z, 1.4 + power, 0.4, 0xffe3a0, 0.8);
     const c = kind === 'slam' ? BattleConfig.shakeSlam : BattleConfig.shakeLunge;
     this.shake(c.amp * Math.min(1.6, 0.6 + power * 0.6), c.time);
   }
@@ -315,6 +352,7 @@ export class BattleMode {
     const f = this.focusPos;
     const { sparkles } = this.deps;
     sparkles.burst(f.x, f.y + 0.9, f.z, 26, 4.2, 0xffd23f, { up: 0.7, life: 1.1, gravity: 1.5 });
+    this.bfx.hit(f.x, f.y + 0.6, f.z, 1.7, 0xffd23f);
     this.life?.cheer(this.deps.player.position.x, this.deps.player.position.z);
     this.hitFlash = 0.18;
     this.fx.classList.add('star');
@@ -335,6 +373,8 @@ export class BattleMode {
   update(dt: number): void {
     const spec = this.spec;
     this.t += dt;
+    this.bfx.setReduced(this.reduce);
+    this.bfx.update(dt);
     if (this.slowLeft > 0) this.slowLeft = Math.max(0, this.slowLeft - dt);
     this.updateShouts(dt);
     if (this.hitFlash > 0) {
@@ -373,6 +413,8 @@ export class BattleMode {
       this.shake(BattleConfig.shakeHit.amp, BattleConfig.shakeHit.time);
       this.hitFlash = 0.22;
       this.fx.classList.add('hit');
+      const pp = deps.player.visualPosition;
+      this.bfx.hit(pp.x, pp.y + 0.2, pp.z, 0.7, 0xff9a8a);
     }
 
     // The food counter shows only when it changes.
@@ -542,20 +584,20 @@ export class BattleMode {
   }
 
   /** A cheap isolated boss room: solid floor plus a high inward-facing wall that fades in during the entrance. */
-  private buildArenaStage(a: { x: number; z: number; r: number }): void {
+  private buildArenaStage(a: { x: number; z: number; r: number }, colors?: { floor?: number; wall?: number; light?: number }): void {
     this.removeArenaStage();
     const feet = this.deps.player.position.y - 0.55;
     const group = new THREE.Group();
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x82768f, roughness: 0.82, transparent: true, opacity: 0 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: colors?.floor ?? 0x82768f, roughness: 0.82, transparent: true, opacity: 0 });
     floorMat.userData.targetOpacity = 0.92;
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x746886, roughness: 0.78, transparent: true, opacity: 0, side: THREE.BackSide });
+    const wallMat = new THREE.MeshStandardMaterial({ color: colors?.wall ?? 0x746886, roughness: 0.78, transparent: true, opacity: 0, side: THREE.BackSide });
     wallMat.userData.targetOpacity = 0.74;
     const floor = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.2, a.r + 1.2, 0.16, 64), floorMat);
     floor.position.set(a.x, feet - 0.06, a.z);
     floor.receiveShadow = true;
     const wall = new THREE.Mesh(new THREE.CylinderGeometry(a.r + 1.15, a.r + 1.15, 6.5, 64, 1, true), wallMat);
     wall.position.set(a.x, feet + 3.2, a.z);
-    const warm = new THREE.PointLight(0xffe0b0, 1.6, a.r * 2.2, 2);
+    const warm = new THREE.PointLight(colors?.light ?? 0xffe0b0, 1.6, a.r * 2.2, 2);
     warm.position.set(a.x, feet + 4.8, a.z);
     group.add(floor, wall, warm);
     this.deps.scene.add(group);
