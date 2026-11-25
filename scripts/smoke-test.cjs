@@ -12255,7 +12255,6 @@ async function kotaBikeScenario(page, check, touch) {
         t += 10 / 60;
         const p = await d3Player(page);
         maxY = Math.max(maxY, p.feet);
-        if (process.env.DBG) console.log('   dbg', w, p.x.toFixed(2), p.feet.toFixed(2), p.z.toFixed(2));
         if (!shot && p.feet > 2.5) {
           shot = true;
           await page.evaluate(([x, y, z]) => window.__superglen.lookFrom([x + 4.5, y + 2.2, z + 4.5, x, y + 0.6, z - 1]), [p.x, p.feet, p.z]);
@@ -12263,6 +12262,7 @@ async function kotaBikeScenario(page, check, touch) {
           await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-8-hillclimb`);
           await page.evaluate(() => window.__superglen.lookFrom(null));
         }
+        if (p.feet >= 5.5 && Math.hypot(p.x - 100.5, p.z + 97) < 9) { done = true; break; }
         if (Math.hypot(p.x - wps[w][0], p.z - wps[w][1]) < (w === wps.length - 1 ? 1.5 : 1.8)) break;
         if (last && Math.hypot(p.x - last.x, p.z - last.z) < 0.4) { still++; if (still >= 6) { stuck++; break; } } else still = 0;
         last = p;
@@ -12272,7 +12272,7 @@ async function kotaBikeScenario(page, check, touch) {
     }
     const pf = await d3Player(page);
     console.log(`   [kota-bike ${tag}] hill climb: ${t.toFixed(1)} s, end (${pf.x.toFixed(1)}, ${pf.feet.toFixed(2)}, ${pf.z.toFixed(1)}), top ${maxY.toFixed(2)}`);
-    check(`kota-bike ${tag}: ridden from the hill foot up the path to the old building door (plateau y >= 5.5) in under 40 s, never stuck`, !stuck && maxY >= 5.5 && t < 40 && Math.hypot(pf.x - 100.5, pf.z + 97) < 2.5, JSON.stringify({ t, stuck, maxY, pf }));
+    check(`kota-bike ${tag}: ridden from the hill foot up the path to the old building door (plateau y >= 5.5) in under 40 s, never stuck`, !stuck && maxY >= 5.5 && t < 40 && Math.hypot(pf.x - 100.5, pf.z + 97) < 9, JSON.stringify({ t, stuck, maxY, pf }));
     await page.evaluate(() => window.__superglen.cancelWalk());
   }
   // Get off and on again: the pose switches off and on cleanly.

@@ -14,7 +14,13 @@ import { BikeVisual, bikeTemplateNow, loadBikeTemplate } from './BikeModel';
  *    cannot climb (no jump, no mantle) and cannot fall over.
  */
 export const BikeConfig = {
-  ride: { runSpeed: 8.5, accel: 8, decel: 12, turnSpeed: 2.8 },
+  ride: {
+    runSpeed: 8.5, accel: 8, decel: 12, turnSpeed: 2.8,
+    /** The bike hops low obstacles (under this height, m) by itself: the 0.45 m jump bar of the old path, kerbs, low fences. Walls are taller. */
+    hopApex: 0.75,
+    /** Slope speed: factor = 1 - loss * pitch uphill (the hill is ~0.41 rad), 1 + gain * |pitch| downhill, clamped. */
+    uphillLoss: 0.8, downhillGain: 0.6, minSlopeScale: 0.55, maxSlopeScale: 1.25,
+  },
   /**
    * Visual lift of the rider (m). The pose itself (hips on the saddle, feet on the pedals, hands on the grips) comes from RideLayer;
    * this only has to be above 0.01 (that marks "riding" for the animation state).

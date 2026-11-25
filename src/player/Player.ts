@@ -134,7 +134,11 @@ export class Player {
    * Riding a bike (city): faster, gentler start and stop, wide smooth turns, and no jumping (the jump button is the bell).
    * Set by the city's bike system, null on foot. The numbers are `BikeConfig.ride`.
    */
-  ride: { runSpeed: number; accel: number; decel: number; turnSpeed: number } | null = null;
+  ride: { runSpeed: number; accel: number; decel: number; turnSpeed: number; hopApex: number; uphillLoss: number; downhillGain: number; minSlopeScale: number; maxSlopeScale: number } | null = null;
+  /** Slope under the bike (rad, + uphill), measured from the last physics step; smoothed for the visual tilt. */
+  private ridePitchTarget = 0;
+  private ridePitch = 0;
+  private readonly hopRay = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
   /** Visual only: the body sits this much higher (m) on the saddle. */
   rideLift = 0;
 
@@ -419,7 +423,7 @@ export class Player {
       const dx = mx / len;
       const dy = my / len;
       const t = Math.min(1, len / C.analogFullAt);
-      const speed = (flyingNow ? FlightConfig.flySpeed : (this.ride ? this.ride.runSpeed : T.runSpeed)) * this.speedScale * this.levelSpeedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
+      const speed = (flyingNow ? FlightConfig.flySpeed : (this.ride ? this.ride.runSpeed * this.rideSlopeScale() : T.runSpeed)) * this.speedScale * this.levelSpeedScale * (C.analogMinSpeed + (1 - C.analogMinSpeed) * t);
       this.wishDir.set(dx * cosY - dy * sinY, 0, -dx * sinY - dy * cosY);
       this.targetVel.copy(this.wishDir).multiplyScalar(speed);
     } else {
@@ -588,6 +592,9 @@ export class Player {
         this.verticalVelocity = F.vy;
       } else if (this.headBouncePending) {
         // The contact step stopped at the head; this first rising step uses the full launch speed.
+        jumped = true;
+      } else if (this.ride && wasGrounded && this.verticalVelocity <= 0 && this.rideNeedsHop()) {
+        this.verticalVelocity = Math.sqrt(2 * Parkour.gravityUp * this.ride.hopApex); // the bike hops a low obstacle by itself
         jumped = true;
       } else if (this.hopPending > 0 && wasGrounded && this.verticalVelocity <= 0) {
         this.verticalVelocity = this.hopPending; // cosmetic hop: no jump counters, same step skips gravity
@@ -1066,6 +1073,47 @@ export class Player {
   postStep(): void {
     this.prevPos.copy(this.currPos);
     this.currPos.set(this.next.x, this.next.y, this.next.z);
+    if (this.ride && this.grounded) {
+      const hx = this.currPos.x - this.prevPos.x;
+      const hz = this.currPos.z - this.prevPos.z;
+      const hd = Math.hypot(hx, hz);
+      // Only real, steady slopes (not single curb steps): clamp to the steepest climbable hill.
+      const dyStep = this.currPos.y - this.prevPos.y;
+      if (hd > 0.02 && Math.abs(dyStep) < 0.1) this.ridePitchTarget = Math.max(-0.6, Math.min(0.6, Math.atan2(this.currPos.y - this.prevPos.y, hd)));
+    } else this.ridePitchTarget = 0;
+  }
+
+  /**
+   * Riding toward a low obstacle (its top is under the hop height, like the jump bar of the old path or a kerb): true when something
+   * is in the way at wheel height but the way is free just above `ride.hopApex`. Walls and buildings are taller, so no hop there.
+   */
+  private rideNeedsHop(): boolean {
+    const r = this.ride;
+    const sp = Math.hypot(this.velocity.x, this.velocity.z);
+    if (!r || sp < 2 || !this.inputEnabled) return false;
+    const ray = this.hopRay;
+    const dx = this.velocity.x / sp;
+    const dz = this.velocity.z / sp;
+    const reach = C.radius + 0.25 + sp * 0.1;
+    const feet = this.currPos.y - CENTER_TO_FEET;
+    ray.dir.x = dx;
+    ray.dir.y = 0;
+    ray.dir.z = dz;
+    ray.origin.x = this.currPos.x;
+    ray.origin.z = this.currPos.z;
+    ray.origin.y = feet + 0.2;
+    if (!this.world.castRay(ray, reach, true, undefined, undefined, this.collider)) return false;
+    ray.origin.y = feet + r.hopApex * 0.85;
+    return !this.world.castRay(ray, reach + 0.3, true, undefined, undefined, this.collider);
+  }
+
+  /** Speed factor on the current slope while riding: slower uphill, a little faster downhill, capped (BikeConfig.ride). */
+  private rideSlopeScale(): number {
+    const r = this.ride;
+    if (!r) return 1;
+    const p = this.ridePitch;
+    const k = p > 0 ? 1 - r.uphillLoss * p : 1 - r.downhillGain * p;
+    return Math.max(r.minSlopeScale, Math.min(r.maxSlopeScale, k));
   }
 
   /** Interpolate the visual between the last two physics states and run the cosmetic springs. */
@@ -1073,6 +1121,15 @@ export class Player {
     this.visualPosition.lerpVectors(this.prevPos, this.currPos, alpha);
     this.object.position.copy(this.visualPosition);
     this.object.rotation.y = this.prevFacing + angleDelta(this.prevFacing, this.facing) * alpha;
+    // Riding on a slope: the bike and rider pitch with the ground (the pivot is the capsule centre; the wheels stay on the surface).
+    {
+      const k = 1 - Math.exp(-Math.max(dt, 1 / 60) * 8);
+      this.ridePitch += ((this.ride ? this.ridePitchTarget : 0) - this.ridePitch) * k;
+      if (Math.abs(this.ridePitch) < 0.002 && !this.ride) this.ridePitch = 0;
+      this.object.rotation.order = 'YXZ';
+      this.object.rotation.x = -this.ridePitch;
+      if (this.ridePitch !== 0) this.object.position.y -= CENTER_TO_FEET * (1 - Math.cos(this.ridePitch));
+    }
 
     if (dt > 0) {
       const h = Math.min(dt, 0.05);
