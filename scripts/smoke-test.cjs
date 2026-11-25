@@ -12595,6 +12595,12 @@ async function tvModeScenario(page, check) {
   await sleep(600);
   t = await info();
   check('tv-mode: New Game starts with the first dialog on screen', t.dlg && !t.screen, JSON.stringify(t));
+  check('tv-mode: the FPS pill is visible and inside the viewport (1920x1080)', await page.evaluate(() => {
+    const e = document.querySelector('.hud-fps');
+    if (!e) return false;
+    const r = e.getBoundingClientRect();
+    return getComputedStyle(e).display !== 'none' && r.width > 20 && r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && /FPS/.test(e.textContent);
+  }));
   check('tv-mode: the touch controls are hidden', await page.evaluate(() => { const e = document.querySelector('.touch-layer'); return !e || getComputedStyle(e).display === 'none'; }));
   check('tv-mode: one-time hint "Pakai gamepad untuk pengalaman terbaik" is shown', await page.evaluate(() => { const h = document.querySelector('.tv-hint'); return !!h && /Pakai gamepad untuk pengalaman terbaik/.test(h.textContent); }));
   await page.evaluate(() => window.__superglen.pause(true));
@@ -12669,6 +12675,31 @@ async function tvModeScenario(page, check) {
   await rawKey('Unidentified', '', 10009); // Samsung Tizen Back
   await adv(5);
   check('tv-mode: Tizen Back (keyCode 10009) closes the pause menu', !(await info()).menu);
+
+  // 4b. Back-navigation trap: the browser "Back" (popstate) and Backspace never leave the game page.
+  const url0 = await page.evaluate(() => { window.__backMarker = 1; return location.href; });
+  await sleep(700); // a Back key just before a popstate counts as the same press (de-duplicated for 450 ms)
+  await page.evaluate(() => history.back());
+  await sleep(400);
+  await adv(5);
+  const afterBack = await page.evaluate(() => ({ href: location.href, marker: window.__backMarker }));
+  check('tv-mode: history back keeps the game page (location unchanged)', afterBack.href === url0 && afterBack.marker === 1, JSON.stringify(afterBack));
+  check('tv-mode: history back opens the pause menu', (await info()).menu);
+  await pad('Escape');
+  await adv(5);
+  await sleep(700);
+  await page.evaluate(() => history.back());
+  await sleep(400);
+  await adv(5);
+  check('tv-mode: a second history back still keeps the page and opens the pause menu', (await page.evaluate(() => window.__backMarker === 1 && location.href)) === url0 && (await info()).menu);
+  await pad('Escape');
+  await adv(5);
+  const bsPrevented = await page.evaluate(() => { const ev = new KeyboardEvent('keydown', { key: 'Backspace', code: 'Backspace', keyCode: 8, bubbles: true, cancelable: true }); return !window.dispatchEvent(ev); });
+  check('tv-mode: Backspace keydown is cancelled (no browser back)', bsPrevented);
+  await pad('Backspace');
+  await adv(5);
+  check('tv-mode: Backspace stays on the game page', (await page.evaluate(() => window.__backMarker === 1 && location.href)) === url0);
+  if ((await info()).menu) { await pad('Escape'); await adv(5); }
 
   // 5. Radial action menu: Menu key and long press on OK; arrows pick, Back closes.
   await page.evaluate(() => { const g = window.__superglen.game; g.setPlayerMode('superglen', false); g.setSkills({ laser: true, shield: true }, false); });
@@ -12807,7 +12838,7 @@ async function main() {
     }
     results.push(await runScenario(browser, 'save-slots-desktop', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, false), '?menu=1&fps=0'));
     results.push(await runScenario(browser, 'save-slots-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, true), '?menu=1&fps=0'));
-    results.push(await runScenario(browser, 'tv-mode', { viewport: { width: 1920, height: 1080 }, initScript: tvInit }, tvModeScenario, '?tv=1&menu=1&fps=0&quizseed=1'));
+    results.push(await runScenario(browser, 'tv-mode', { viewport: { width: 1920, height: 1080 }, initScript: tvInit }, tvModeScenario, '?tv=1&menu=1&quizseed=1'));
     results.push(await runScenario(browser, 'save-slots-debug', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, saveSlotsDebugScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
     const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };

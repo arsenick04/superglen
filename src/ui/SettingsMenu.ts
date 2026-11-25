@@ -1,4 +1,5 @@
 import type { SaveStore } from '../core/Save';
+import { fpsPref } from '../core/FpsPref';
 import { QuizIcons } from './QuizIcons';
 import { MenuIcons } from './MenuIcons';
 import { versionGuard } from '../core/VersionGuard';
@@ -184,6 +185,41 @@ export class SettingsMenu {
     tvBox.append(trow);
     paintTv();
 
+    // "Tampilkan FPS": Nyala / Mati.
+    const fpsBox = make('div', 'settings-quality settings-fps');
+    fpsBox.append(make('div', 'settings-quality-q', 'Tampilkan FPS'));
+    const frow = make('div', 'settings-quality-row');
+    const fpsBtns: { v: boolean; el: HTMLButtonElement }[] = [];
+    const paintFps = (): void => {
+      for (const f of fpsBtns) f.el.classList.toggle('on', f.v === fpsPref.on);
+    };
+    for (const [v, label] of [[true, 'Nyala'], [false, 'Mati']] as [boolean, string][]) {
+      const b = make('button', 'menu-btn set-quality set-fps', '');
+      b.type = 'button';
+      b.append(make('span', 'menu-label', label));
+      b.setAttribute('aria-label', `Tampilkan FPS: ${label}`);
+      b.dataset.act = v ? 'fps-on' : 'fps-off';
+      const pick = (): void => {
+        fpsPref.set(v);
+        paintFps();
+      };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      frow.append(b);
+      fpsBtns.push({ v, el: b });
+    }
+    fpsBox.append(frow);
+    paintFps();
+
     const grid = make('div', 'settings-grid');
     this.btnMap = this.button('menu-btn set-map', MenuIcons.map, 'Lihat peta', () => {
       if (!deps.hasMap()) return;
@@ -245,7 +281,7 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, quality, tvBox, grid, this.slotsView, this.confirm, ver);
+    card.append(head, sliders, quality, tvBox, fpsBox, grid, this.slotsView, this.confirm, ver);
     this.panel.append(card);
     ui.appendChild(this.panel);
 

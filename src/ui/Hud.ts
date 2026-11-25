@@ -1,4 +1,5 @@
 import { Quality } from '../core/Quality';
+import { fpsPref } from '../core/FpsPref';
 import { startGate } from '../core/StartGate';
 import { touchMode } from '../core/TouchMode';
 import { QuizIcons } from './QuizIcons';
@@ -49,6 +50,8 @@ export class Hud {
     if (showFps) {
       this.fpsEl = el('div', 'hud-fps', 'FPS --');
       root.appendChild(this.fpsEl);
+      const pill = this.fpsEl;
+      fpsPref.onChange((v) => { pill.style.display = v ? '' : 'none'; });
     } else {
       this.fpsEl = null;
     }

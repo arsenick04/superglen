@@ -70,6 +70,15 @@ export function readStoredMode(): QualityMode {
   }
 }
 
+/** True when the player (or Settings) already chose a quality mode on this device. */
+export function hasStoredMode(): boolean {
+  try {
+    return isMode(window.localStorage.getItem(STORE_KEY));
+  } catch {
+    return false;
+  }
+}
+
 export function storeMode(mode: QualityMode): void {
   try {
     window.localStorage.setItem(STORE_KEY, mode);
@@ -127,7 +136,7 @@ export function readHints(): DeviceHints {
     isTouch: false, // filled by the caller (Quality.ts owns touch detection)
     isIOS,
     isAndroid,
-    isTvBox: /Android.*(TV|AFT|BRAVIA|MiBox|SHIELD)|SmartTV|GoogleTV|Tizen|Web0S/i.test(ua),
+    isTvBox: /Android.*(TV|AFT|BRAVIA|MiBox|SHIELD)|SmartTV|GoogleTV|Tizen|Web0S|VIDAA|Hisense|HbbTV/i.test(ua),
     dpr,
     screenW: window.screen?.width || window.innerWidth,
     screenH: window.screen?.height || window.innerHeight,

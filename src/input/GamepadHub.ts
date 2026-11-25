@@ -33,6 +33,8 @@ export const PadConfig = {
   navRepeat: 0.16,
   /** Seconds between scans for a pad when the browser never fired `gamepadconnected`. */
   idleScanSeconds: 0.25,
+  /** Pointer input is ignored for gameplay this long (ms) after the last pad input. */
+  mouseIgnoreMs: 3000,
   /** Rumble: land harder than this (m/s) to feel it. */
   rumbleLandImpact: 8,
 } as const;
@@ -110,6 +112,11 @@ class GamepadHub {
   /** Rumble gate set by the game (sound effects on and volume above 0). */
   rumbleAllowed: () => boolean = () => true;
 
+  /** performance.now() of the last real pad input (button press or a clear stick tilt). */
+  lastPadAt = -1e9;
+  private lastBtnAt = -1e9;
+  private clashSent = false;
+  private readonly clashListeners: (() => void)[] = [];
   private watch = false;
   private lastScan = -1e9;
   private lastNow = -1;
@@ -125,6 +132,9 @@ class GamepadHub {
     window.addEventListener('gamepadconnected', this.onConnected);
     window.addEventListener('gamepaddisconnected', this.onDisconnected);
     // Switch back to keyboard / mouse / touch. Synthetic events (the menu navigation dispatches some) are ignored.
+    // First in line: a TV browser turns the pad's B / Circle into a Back key. The game already reads the button itself.
+    window.addEventListener('keydown', this.onKeyGuard, true);
+    window.addEventListener('keyup', this.onKeyGuard, true);
     window.addEventListener('keydown', this.onOtherInput, true);
     window.addEventListener('mousedown', this.onOtherInput, true);
     window.addEventListener('touchstart', this.onOtherInput, { capture: true, passive: true });
@@ -135,6 +145,50 @@ class GamepadHub {
   /** Calls `cb` when the active-device flag changes. */
   onActiveChange(cb: (on: boolean) => void): void {
     this.activeListeners.push(cb);
+  }
+
+  /** Calls `cb` once when real pointer input arrives while the pad is in use (TV browser cursor mode). */
+  onCursorClash(cb: () => void): void {
+    this.clashListeners.push(cb);
+  }
+
+  /**
+   * Synthetic / cursor pointer input must not drive gameplay: always in TV mode, and for a few seconds after any pad input.
+   * (A TV browser's "mouse mode" turns the pad and remote into a cursor.)
+   */
+  mouseSuppressed(): boolean {
+    if (document.documentElement.classList.contains('tv-ui')) return true;
+    return this.connected && performance.now() - this.lastPadAt < PadConfig.mouseIgnoreMs;
+  }
+
+  /** A trusted key event that is just the browser echoing a pad button press (read live: the poll may lag a frame). */
+  private padKeyEcho(e: Event): boolean {
+    if (!e.isTrusted || !this.connected) return false;
+    const now = performance.now();
+    try {
+      const list = navigator.getGamepads();
+      if (list) {
+        for (let i = 0; i < list.length; i++) {
+          const g = list[i];
+          if (!g || !g.connected) continue;
+          for (let b = 0; b < g.buttons.length; b++) {
+            if (g.buttons[b].pressed) {
+              this.lastBtnAt = now;
+              return true;
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return now - this.lastBtnAt < 500;
+  }
+
+  private clash(): void {
+    if (this.clashSent || !this.connected || performance.now() - this.lastPadAt > PadConfig.mouseIgnoreMs) return;
+    this.clashSent = true;
+    for (const l of this.clashListeners) l();
   }
 
   /** Calls `cb` when a pad appears / disappears. */
@@ -297,6 +351,7 @@ class GamepadHub {
     shape(rx, ry, PadConfig.lookDeadZone, PadConfig.lookCurve, this.look);
     if (PadConfig.invertY) this.look.y = -this.look.y;
 
+    if (pressedNow || Math.hypot(lx, ly) > 0.3 || Math.hypot(rx, ry) > 0.3) this.lastPadAt = performance.now();
     if (pressedNow || Math.hypot(lx, ly) > PadConfig.activateAxis || Math.hypot(rx, ry) > PadConfig.activateAxis) this.setActive(true);
   }
 
@@ -317,14 +372,43 @@ class GamepadHub {
     this.watch = true;
   };
 
+  private readonly onKeyGuard = (e: KeyboardEvent): void => {
+    if (!e.isTrusted || !this.connected || !isBackish(e)) return;
+    if (e.key === 'Backspace' && e.target instanceof HTMLElement && /^(input|textarea)$/i.test(e.target.tagName)) return;
+    if (!this.padKeyEcho(e)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation(); // PadUi sends its own Escape for Circle: handling both would open and close the menu
+  };
+
   private readonly onOtherInput = (e: Event): void => {
-    if (e.isTrusted && this.deviceActive) this.setActive(false);
+    if (!e.isTrusted || !this.deviceActive) return;
+    if (e.type === 'keydown' && this.padKeyEcho(e)) return; // the browser echoing a pad button as a key
+    if (e.type === 'mousedown' && this.mouseSuppressed()) {
+      this.clash();
+      return;
+    }
+    this.setActive(false);
   };
 
   private readonly onMouseMove = (e: MouseEvent): void => {
-    if (!e.isTrusted || !this.deviceActive) return;
-    if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) this.setActive(false);
+    if (!e.isTrusted) return;
+    if (Math.abs(e.movementX) + Math.abs(e.movementY) <= 6) return;
+    if (this.mouseSuppressed()) {
+      this.clash();
+      return;
+    }
+    if (this.deviceActive) this.setActive(false);
   };
+}
+
+/** Keys a TV browser sends for Back (and the ones its pad B / Circle button may be mapped to). */
+export function isBackish(e: KeyboardEvent): boolean {
+  switch (e.key) {
+    case 'GoBack': case 'BrowserBack': case 'XF86Back': case 'Backspace': case 'Escape': return true;
+    default:
+  }
+  const k = e.keyCode;
+  return k === 4 || k === 8 || k === 27 || k === 10009 || k === 461;
 }
 
 /** Radial dead zone + curve: out = dir * curve(rescaled magnitude). */
