@@ -156,6 +156,26 @@ export class Chapter4 {
     return list.find((q) => q.id === id) ?? list.find((q) => q.level === 1) ?? list[0];
   }
 
+  /** Ids already asked by Aara in this session, per set; a set resets once its pool is exhausted (no repeats until then). */
+  private readonly asked = new Map<string, Set<string>>();
+
+  /** A random question of Aara's own `set` (aara_sekolah / aara_taman), never repeating one within the session until the pool runs out. */
+  private pickAara(cat: 'inggris' | 'membaca', set: string, fallbackId?: string): Question {
+    const all = this.ctx.quiz.bank.byCategory[cat];
+    const pool = all.filter((q) => q.set === set);
+    if (pool.length === 0) return fallbackId ? this.english(fallbackId) : all[0];
+    let used = this.asked.get(set);
+    if (!used) this.asked.set(set, (used = new Set()));
+    let fresh = pool.filter((q) => !used.has(q.id));
+    if (fresh.length === 0) {
+      used.clear();
+      fresh = pool;
+    }
+    const q = fresh[Math.floor(Math.random() * fresh.length)];
+    used.add(q.id);
+    return q;
+  }
+
   /**
    * Aara's translator test: she greets Glen, asks three English words (the quiz panel, bank questions "Apa bahasa Inggrisnya
    * buku / bola / kucing?"); every right answer makes the translator more advanced (bigger, brighter orb, sparkles, a ring).
@@ -181,7 +201,8 @@ export class Chapter4 {
       ctx.game.setControlsEnabled(false);
       const after = [L.aaraBenar1, L.aaraBenar2, L.aaraBenar3];
       for (let i = 0; i < AARA_QUESTIONS.length; i++) {
-        const q = this.english(AARA_QUESTIONS[i]);
+        // Three random English questions from Aara's school set (the story only needs three right answers).
+        const q = this.pickAara('inggris', 'aara_sekolah', AARA_QUESTIONS[i]);
         let done = false;
         while (!done) {
           this.quizRuns++;
@@ -272,23 +293,12 @@ export class Chapter4 {
     this.ctx.game.debugInfo.ch4Phase = 'place';
   }
 
-  /** The reading question of clue `i`: the written word, three picture cards (the speaker button reads the word aloud). */
-  private clueQuestion(i: number): Question {
-    const ids = CLUES.map((c) => c.word);
-    return {
-      id: `bab4_clue_${CLUES[i].word}`,
-      category: 'membaca',
-      level: 1,
-      prompt: 'Baca katanya. Tempat apa?',
-      audio_id: `bab4_kata_${CLUES[i].word}`,
-      display: { kind: 'text', text: CLUES[i].word },
-      choices: [
-        { id: 'a', item: ids[0] },
-        { id: 'b', item: ids[1] },
-        { id: 'c', item: ids[2] },
-      ],
-      answer: (['a', 'b', 'c'] as const)[i],
-    };
+  /**
+   * The reading question at a board: drawn at random from the bank set "aara_taman" (varies each play). It is decoupled from the
+   * place: the story flow (3 fixed map spots, each glowing after a right answer) is unchanged, and Aara's praise names the place.
+   */
+  private clueQuestion(): Question {
+    return this.pickAara('membaca', 'aara_taman');
   }
 
   /** Read the board: the word big on a card with the speaker button; the right picture makes the place glow. */
@@ -304,10 +314,11 @@ export class Chapter4 {
         this.saidBaca = true;
         await dialog.say(L.aaraBaca, { lockControls: true });
       }
+      const q = this.clueQuestion();
       let done = false;
       while (!done) {
         this.quizRuns++;
-        const res = await ctx.quiz.runQuestion(this.clueQuestion(i));
+        const res = await ctx.quiz.runQuestion(q);
         done = res.completed;
         if (!done) await seq.wait(0.4);
       }

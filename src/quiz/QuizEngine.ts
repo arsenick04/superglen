@@ -268,7 +268,8 @@ export class QuizEngine {
   /** A question for `cat` at the child's current level, avoiding the recently asked ones and the ones already in this challenge. */
   choose(cat: Category, taken: ReadonlySet<string>, questionSet?: string): Question {
     const all = this.bank.byCategory[cat];
-    const pool = questionSet ? all.filter((q) => q.set === questionSet) : all;
+    // Aara's own sets (aara_*) stay special: the generic Tantangan Pintar pool never draws them.
+    const pool = questionSet ? all.filter((q) => q.set === questionSet) : all.filter((q) => !q.set?.startsWith('aara_'));
     if (pool.length === 0) throw new Error(`Quiz: no questions for ${cat} in set ${questionSet}`);
     const level = this.data.cats[cat].level;
     const recent = new Set([...this.data.recent, ...this.previewRecent]);
