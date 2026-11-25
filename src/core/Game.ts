@@ -85,6 +85,8 @@ export interface DebugHandle {
   /** Feet height above the ground below (m). */
   airHeight: number;
   feetY: number;
+  /** Collider ground height under the player (world Y; NaN when nothing below). */
+  groundY: number;
   /** Highest feet Y since the last first-jump takeoff. */
   peakFeetY: number;
   verticalVelocity: number;
@@ -375,6 +377,7 @@ export class Game {
     airborne: false,
     airHeight: 0,
     feetY: 0,
+    groundY: 0,
     peakFeetY: 0,
     verticalVelocity: 0,
     jumps: 0,
@@ -1543,6 +1546,7 @@ export class Game {
     this.debug.airborne = !pl.grounded;
     this.debug.airHeight = pl.airHeight;
     this.debug.feetY = p.y - 0.55;
+    this.debug.groundY = pl.hasGroundBelow ? pl.groundBelowY : Number.NaN;
     this.debug.peakFeetY = pl.peakFeetY;
     this.debug.verticalVelocity = pl.verticalVelocity;
     this.debug.jumps = pl.jumps;

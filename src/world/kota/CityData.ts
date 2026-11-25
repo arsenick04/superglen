@@ -983,6 +983,28 @@ export function hillY(h: CityHill, r: number): number {
   return (h.h * (h.rBottom - r)) / (h.rBottom - h.rTop);
 }
 
+/**
+ * Height of the hill's physical (and drawn) surface at a world point: the 14-sided frustum, not the round cone of `hillY`.
+ * The flat sides lie up to ~2.5 % of the radius inside the round cone, so `hillY` is up to 0.2 m too high at the middle of a side.
+ */
+export function hillSurfaceY(h: CityHill, x: number, z: number): number {
+  const dx = x - h.x;
+  const dz = z - h.z;
+  const step = (Math.PI * 2) / HILL_SIDES;
+  const apo = Math.cos(step / 2);
+  const rb = h.rBottom * apo;
+  const rt = h.rTop * apo;
+  // Side k has its outward normal at angle (k + 0.5) * step (three.js: x = sin, z = cos); the surface is the lowest of all side planes.
+  let y = h.h;
+  for (let k = 0; k < HILL_SIDES; k++) {
+    const am = (k + 0.5) * step;
+    const rho = dx * Math.sin(am) + dz * Math.cos(am);
+    const yk = (h.h * (rb - rho)) / (rb - rt);
+    if (yk < y) y = yk;
+  }
+  return Math.max(0, y);
+}
+
 function roads(g: Gen): void {
   const P = CITY.playHalf;
   for (const c of [-50, 50]) {

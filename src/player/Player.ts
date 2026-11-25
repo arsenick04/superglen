@@ -56,6 +56,8 @@ const FILL_COLOR = 0x4a3a2e;
 /** Strength of the dark fill light on the animated model (the textured model needs far less than the flat figure). */
 const RIG_FILL = 0.3;
 const CENTER_TO_FEET = C.height / 2;
+/** How far the figure's soles sit below the capsule bottom (skinOffset minus the 1 cm they keep above the floor). */
+const FEET_DROP = Math.max(0, C.skinOffset - 0.01);
 
 /** Shortest signed difference between two angles (radians). */
 function angleDelta(from: number, to: number): number {
@@ -1292,8 +1294,10 @@ export class Player {
       if (this._mode === 'superglen') this.superFig.shoot();
     });
     this.superFig.root.visible = false;
-    this.glenFig.root.position.y = -CENTER_TO_FEET;
-    this.superFig.root.position.y = -CENTER_TO_FEET;
+    // The capsule hovers skinOffset above the floor; the figure's soles are lowered to 1 cm above the floor surface (ground layers and
+    // the hill path lie within +-1.6 cm of the collider, so the feet are never inside them and never float).
+    this.glenFig.root.position.y = -CENTER_TO_FEET - FEET_DROP;
+    this.superFig.root.position.y = -CENTER_TO_FEET - FEET_DROP;
     this.spinGroup.add(this.glenFig.root, this.superFig.root);
 
     // Golden aura: a slightly larger translucent shell, thicker per rhythm level (Superglen only).

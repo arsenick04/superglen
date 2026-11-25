@@ -8,7 +8,7 @@ import { envModels } from './EnvModels';
 import { dressedBody, dressOf, type Dress } from './CityDressing';
 import { cityModels } from './CityModels';
 import { GREEN_PLAN, hasCityTree, natureReady, natureSize, type NatureId } from './CityNature';
-import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
+import { CHUNKS, CITY, FACE_VEC, chunkIndex, districtById, hillSurfaceY, treePlatforms, isEdgeHill, type CityBuilding, type CityLayout, type CityPiece, type GroundKind, type Solid } from './CityData';
 
 /**
  * Turns the city data (CityData.ts) into geometry recipes and collider lists:
@@ -37,6 +37,8 @@ export interface BuiltCity {
   /** Far layer split per 100 m district cell (plus one for everything outside the city): culled per cell, camera and shadow. */
   far: Recipe[];
   flat: Recipe;
+  /** Flat ground items of level 1.. (index = level; [0] unused): same height band, each level its own mesh with a depth bias (see FLAT_STEP). */
+  flatLayers: Recipe[];
   chunks: ChunkRecipes[];
   globalSolids: Solid[];
 }
@@ -45,13 +47,18 @@ const SIDEWALK = 0xeadcbf;
 const MARK = 0xfff3b0;
 const STONE = 0xe8d9b5;
 /**
- * Visual heights of the flat layers (the collider ground is y = 0). Every flat item that overlaps an item of a different look gets
- * its own step of FLAT_STEP (2.5 cm: several depth-buffer steps at 100 m even on a 24-bit buffer, see scripts/check-zfight.mjs), so
- * ground tints, plazas, sidewalks, asphalt and markings never share a plane. Items are stacked by class (later classes lie above
+ * Visual heights of the flat layers (the collider ground is y = 0, the feet stand on it: every flat layer stays within +-1 cm of it).
+ * Every flat item that overlaps an item of a different look gets its own level: a 2.5 mm height step plus a polygonOffset of
+ * FLAT_BIAS_UNITS per level (each level is its own mesh/material, see ChunkStreamer), so ground tints, plazas, sidewalks, asphalt and
+ * markings never z-fight at any distance, without lifting them off the collider. Items are stacked by class (later classes lie above
  * earlier ones, see `FLAT_CLASS`); an item's height is `FLAT_Y0 + level * FLAT_STEP` (see `layerFlat`).
  */
-const FLAT_STEP = 0.025;
-const FLAT_Y0 = -0.06;
+const FLAT_STEP = 0.0025;
+const FLAT_Y0 = -0.005;
+/** Depth bias per flat level (polygonOffset units; the real layering, the 2.5 mm height steps only keep planes apart). */
+export const FLAT_BIAS_UNITS = 3;
+/** Height of the dirt path quads above the collider surface (just over the z-fight tolerance of the ground layers, under the 2 cm target). */
+const PATH_LIFT = 0.016;
 const FLAT_CLASS: Record<GroundKind, number> = { grass: 1, field: 2, flowers: 3, sand: 4, dirt: 5, plaza: 6, paving: 7, water: 8 };
 const FLAT_WALK = 9;
 const FLAT_ROAD = 10;
@@ -73,6 +80,11 @@ class Builder {
   readonly farCells: Recipe[] = Array.from({ length: 10 }, () => new Recipe());
   far: Recipe = this.farCells[4];
   readonly flat = new Recipe();
+  readonly flatLayers: Recipe[] = [new Recipe()];
+  flatAt(level: number): Recipe {
+    while (this.flatLayers.length <= level) this.flatLayers.push(new Recipe());
+    return this.flatLayers[level];
+  }
   readonly chunks: ChunkRecipes[] = [];
   readonly globalSolids: Solid[] = [];
   /** Current target chunk (set per object). */
@@ -1133,14 +1145,14 @@ interface FlatItem {
   z1: number;
   look: string;
   level: number;
-  emit: (y: number) => void;
+  emit: (y: number, R: Recipe) => void;
 }
 
 /**
  * Give every flat item the lowest step such that it lies above every earlier-class item it overlaps (one extra step when the look
  * differs: identical looks may share a plane, nothing to fight over). The base quad is level 0. Returns the highest level.
  */
-function layerFlat(items: FlatItem[]): number {
+function layerFlat(B: Builder, items: FlatItem[]): number {
   items.sort((a, b) => a.cls - b.cls);
   let top = 0;
   for (let i = 0; i < items.length; i++) {
@@ -1154,7 +1166,7 @@ function layerFlat(items: FlatItem[]): number {
     }
     e.level = lv;
     if (lv > top) top = lv;
-    e.emit(FLAT_Y0 + lv * FLAT_STEP);
+    e.emit(FLAT_Y0 + lv * FLAT_STEP, B.flatAt(lv));
   }
   return top;
 }
@@ -1172,7 +1184,7 @@ function drawGround(B: Builder, L: CityLayout): void {
       z1: cz + d / 2,
       look: `${color}:${tile}`,
       level: 0,
-      emit: (y) => (rot ? F.quad(d, w, [cx, y, cz], color, tile, rot) : F.quad(w, d, [cx, y, cz], color, tile)),
+      emit: (y, R) => (rot ? R.quad(d, w, [cx, y, cz], color, tile, rot) : R.quad(w, d, [cx, y, cz], color, tile)),
     });
   };
   const roadKit = cityModels.template('road_road-straight');
@@ -1249,7 +1261,7 @@ function drawGround(B: Builder, L: CityLayout): void {
       z1: t.z + t.width / 2,
       look: 'kenney-road',
       level: 0,
-      emit: (y) => F.add(roadKit as Sh, [t.x, y, t.z], [t.width, t.width, t.width], 0xffffff, t.ax ? undefined : [0, Math.PI / 2, 0]),
+      emit: (y, R) => R.add(roadKit as Sh, [t.x, y, t.z], [t.width, t.width, t.width], 0xffffff, t.ax ? undefined : [0, Math.PI / 2, 0]),
     });
   }
   // Centre-line dashes, skipped where another road crosses.
@@ -1274,7 +1286,7 @@ function drawGround(B: Builder, L: CityLayout): void {
       addFlat(FLAT_MARK, x, z, alongX ? 1.6 : 0.2, alongX ? 0.2 : 1.6, MARK, 0);
     }
   }
-  layerFlat(flat);
+  layerFlat(B, flat);
   // L18: raised kerbs along the asphalt (Kenney roads look; visual only, 12 cm), broken at the crossings.
   for (const r of L.roads) {
     const alongX = r.x1 - r.x0 > r.z1 - r.z0;
@@ -1323,23 +1335,45 @@ function drawGround(B: Builder, L: CityLayout): void {
       const x1 = (a.x1 + b.x1) / 2;
       const z1 = (a.z1 + b.z1) / 2;
       const len = Math.hypot(x1 - x0, z1 - z0);
-      const n = Math.max(1, Math.ceil(len / 1.2));
       const yaw = Math.atan2(x1 - x0, z1 - z0);
-      for (let i = 0; i < n; i++) {
-        const u = (i + 0.5) / n;
-        const x = x0 + (x1 - x0) * u;
-        const z = z0 + (z1 - z0) * u;
-        // Tilt each strip to the slope along the path (a flat strip on the hill poked out of the ground and sank Glen's feet).
-        const ua = i / n;
-        const ub = (i + 1) / n;
-        const ya = hillY(hill, Math.hypot(x0 + (x1 - x0) * ua - hill.x, z0 + (z1 - z0) * ua - hill.z));
-        const yb = hillY(hill, Math.hypot(x0 + (x1 - x0) * ub - hill.x, z0 + (z1 - z0) * ub - hill.z));
-        const seg = len / n;
-        const pitch = Math.atan2(yb - ya, seg);
-        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -pitch));
-        const rot = new THREE.Euler().setFromQuaternion(q, 'XYZ');
-        const ch = B.at(x, z);
-        ch.deco.box([2.6, 0.04, Math.hypot(seg, yb - ya) + 0.1], [x, (ya + yb) / 2, z], 0xc9a46f, [rot.x, rot.y, rot.z]);
+      const dxn = (x1 - x0) / len;
+      const dzn = (z1 - z0) / len;
+      // Dirt quads draped on the physical hill (the same 14-sided frustum as the collider), each tilted to the local surface and
+      // lifted PATH_LIFT: the path lies on the collider within a centimetre or two, never inside the feet. Coarse cells on flat ground.
+      const COLS = 4;
+      const PATH_W = 2.6;
+      const up = new THREE.Vector3(0, 1, 0);
+      const qYaw = new THREE.Quaternion().setFromAxisAngle(up, yaw);
+      let t = 0;
+      while (t < len) {
+        const midX = x0 + dxn * (t + 0.3);
+        const midZ = z0 + dzn * (t + 0.3);
+        const onHill = hillSurfaceY(hill, midX, midZ) > 0.001 || hillSurfaceY(hill, x0 + dxn * (t + 1.5), z0 + dzn * (t + 1.5)) > 0.001;
+        const cell = onHill ? 0.45 : 1.2;
+        const seg = Math.min(cell, len - t);
+        for (let c = 0; c < COLS; c++) {
+          const off = ((c + 0.5) / COLS - 0.5) * PATH_W;
+          const cx = x0 + dxn * (t + seg / 2) + dzn * off;
+          const cz = z0 + dzn * (t + seg / 2) - dxn * off;
+          const e = 0.15;
+          const sx = (hillSurfaceY(hill, cx + e, cz) - hillSurfaceY(hill, cx - e, cz)) / (2 * e);
+          const sz = (hillSurfaceY(hill, cx, cz + e) - hillSurfaceY(hill, cx, cz - e)) / (2 * e);
+          const nrm = new THREE.Vector3(-sx, 1, -sz).normalize();
+          const q = new THREE.Quaternion().setFromUnitVectors(up, nrm).multiply(qYaw);
+          const rot = new THREE.Euler().setFromQuaternion(q, 'XYZ');
+          const ch = B.at(cx, cz);
+          // A tilted quad covers less ground: grow it a little so neighbours overlap (same colour, no seam).
+          // Over a ridge between two sides of the hill the tangent plane lies above the surface: split that error (+- half).
+          const yc = hillSurfaceY(hill, cx, cz);
+          let excess = 0;
+          for (const [ox, oz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+            const px = cx + ox * (PATH_W / COLS / 2) * dzn + oz * (seg / 2) * dxn;
+            const pz = cz - ox * (PATH_W / COLS / 2) * dxn + oz * (seg / 2) * dzn;
+            excess = Math.max(excess, yc + sx * (px - cx) + sz * (pz - cz) - hillSurfaceY(hill, px, pz));
+          }
+          ch.deco.quad(PATH_W / COLS + 0.06, seg * (onHill ? 1.15 : 1.02) + 0.04, [cx, yc + PATH_LIFT - excess / 2, cz], 0xc9a46f, 0, [rot.x, rot.y, rot.z]);
+        }
+        t += seg;
       }
     }
   }
@@ -1471,5 +1505,6 @@ export function buildCity(L: CityLayout): BuiltCity {
   for (const c of B.chunks) for (const r of [c.lit, c.deco, c.glow]) r.trim();
   for (const r of B.farCells) r.trim();
   B.flat.trim();
-  return { far: B.farCells, flat: B.flat, chunks: B.chunks, globalSolids: B.globalSolids };
+  for (const r of B.flatLayers) r.trim();
+  return { far: B.farCells, flat: B.flat, flatLayers: B.flatLayers, chunks: B.chunks, globalSolids: B.globalSolids };
 }
