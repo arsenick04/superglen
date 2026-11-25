@@ -70,11 +70,12 @@ class QuotaDone extends Error {}
 async function callApi(prompt) {
   const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['AUDIO'], temperature: TEMP, speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE } } } } };
   const headers = { 'content-type': 'application/json' };
-  if (process.env.GEMINI_API_KEY) headers['x-goog-api-key'] = process.env.GEMINI_API_KEY;
+  // A local key (env GEMINI_API_KEY) goes in the query so a proxy-injected header cannot replace it.
+  const url = process.env.GEMINI_API_KEY ? `${URL_}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}` : URL_;
   for (let attempt = 0; attempt < 6; attempt++) {
     let r, txt;
     await pace();
-    try { r = await fetch(URL_, { method: 'POST', headers, body: JSON.stringify(body) }); txt = await r.text(); }
+    try { r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }); txt = await r.text(); }
     catch (e) { await sleep(2000 * 2 ** attempt); continue; }
     if (r.status === 429 || r.status >= 500) {
       if (r.status === 429 && /"quotaId":\s*"[^"]*PerDay/.test(txt)) throw new QuotaDone('daily quota (' + (txt.match(/"quotaValue":\s*"(\d+)/)?.[1] ?? '?') + ' requests/day on this key/tier)');
