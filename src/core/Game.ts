@@ -58,7 +58,7 @@ import { SettingsMenu } from '../ui/SettingsMenu';
 import { MapView } from '../ui/MapView';
 import { BattleMode } from '../gameplay/BattleMode';
 import { ZoomButtons } from '../ui/ZoomButtons';
-import { CinematicPlayer } from '../ui/CinematicPlayer';
+import { CinematicPlayer, cinematicsForLevel } from '../ui/CinematicPlayer';
 import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -933,6 +933,8 @@ export class Game {
       // Debug URL: that level, and the city as free roam (see progress.ts `flow.sandbox`).
       flow.sandbox = true;
       flow.free = new URLSearchParams(window.location.search).get('free') === '1';
+        // Chapter videos download in the background now (the opening right after the title), not just before they play.
+        this.cinematics.enterLevel([...(this.openingPending ? (['open'] as const) : []), ...cinematicsForLevel(this.levels.currentId, this.save.data.chaptersDone)]);
       this.levels.loadInstant(wanted);
     } else {
       const plan = startPlanFor(this.save);

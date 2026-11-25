@@ -391,3 +391,8 @@ html.touch-ui .battle-banner.intro {
 .credit-line.credit-title { font: 700 clamp(36px, 7.6vw, 110px)/1.05 'Cinzel', 'Palatino Linotype', Georgia, serif; letter-spacing: .2em; padding-left: .2em; color: #f6dc9b;
   text-shadow: 0 3px 18px rgba(0,0,0,.65), 0 0 40px rgba(255,214,120,.35); }
 .credit-line.credit-title::after { content: ''; display: block; width: min(60%, 420px); height: 2px; margin: .35em auto 0; background: linear-gradient(90deg, transparent, #f6dc9b, transparent); }
+
+.cinematic-loading { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff; font: 800 20px system-ui, sans-serif; pointer-events: none; }
+.cinematic-loading[hidden] { display: none; }
+.cinematic-spinner { width: 44px; height: 44px; border: 5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: cinspin .9s linear infinite; }
+@keyframes cinspin { to { transform: rotate(360deg); } }

@@ -11765,7 +11765,7 @@ async function forestCinScenario(page, check) {
     const g = window.__superglen;
     g.save.markChapterDone('forest-rescue-canopy-intro');
     const v = document.querySelector('video');
-    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    new MutationObserver(() => { const s = v.dataset.cin; if (s) window.__cinLog.push('cin_' + s + '.mp4|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['data-cin'] });
     g.pause(true);
   });
   const off = [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0];
@@ -12110,7 +12110,7 @@ async function gorillaWinScenario(page, check) {
     window.__cinLog = [];
     const g = window.__superglen;
     const v = document.querySelector('video');
-    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    new MutationObserver(() => { const s = v.dataset.cin; if (s) window.__cinLog.push('cin_' + s + '.mp4|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['data-cin'] });
     g.pause(true);
   });
   // Win through the story hook: the arena marks the chapter and runs its win sequence when its last star goes; here the save flag is set
