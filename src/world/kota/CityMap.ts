@@ -4,7 +4,15 @@ import { CITY, CITY_LAYOUT, DISTRICTS, type DistrictId } from './CityData';
 const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
 
 /** Landmark kinds that get an icon (the old Barongsai building is separate: only after it was found). */
-type Glyph = 'tower' | 'school' | 'bank' | 'hospital' | 'gudang' | 'home' | 'secret';
+type Glyph = 'tower' | 'school' | 'bank' | 'hospital' | 'gudang' | 'home' | 'secret' | 'pasar';
+/** One big emoji per landmark: a child recognises a picture long before a symbol. */
+const EMOJI: Record<Glyph, string> = { tower: '\u{1F5FC}', school: '\u{1F3EB}', bank: '\u{1F3E6}', hospital: '\u{1F3E5}', gudang: '\u{1F4E6}', home: '\u{1F3E0}', secret: '\u{1F3EF}', pasar: '\u{1F6D2}' };
+/** Landmarks the child needs on the small map; towers and the warehouse only show on the big one. */
+const MINI_GLYPHS: ReadonlySet<Glyph> = new Set<Glyph>(['school', 'bank', 'hospital', 'home', 'secret', 'pasar']);
+/** Landmarks that get a name label on the big map. */
+const LABELLED: ReadonlySet<Glyph> = new Set<Glyph>(['school', 'bank', 'hospital', 'home', 'secret', 'pasar', 'gudang']);
+/** Where each district name goes on the big map (world x, z). */
+const NAME_AT: Record<DistrictId, readonly [number, number]> = { perumahan: [-100, 126], sekolah: [-80, -136], alun: [0, -38], pasar: [108, 22], bank: [0, 140], bukit: [100, -138] };
 interface Mark {
   x: number;
   z: number;
@@ -20,7 +28,7 @@ function buildMarks(): Mark[] {
   const out: Mark[] = [];
   for (const b of L.buildings) {
     if (b.kind === 'oldBarongsai') continue;
-    const glyph: Glyph | null = b.kind === 'tower' ? 'tower' : b.kind === 'school' ? 'school' : b.kind === 'bank' ? 'bank' : b.kind === 'hospital' ? 'hospital' : b.kind === 'gudang' ? 'gudang' : null;
+    const glyph: Glyph | null = b.kind === 'tower' ? 'tower' : b.kind === 'school' ? 'school' : b.kind === 'bank' ? 'bank' : b.kind === 'hospital' ? 'hospital' : b.kind === 'gudang' ? 'gudang' : b.kind === 'pasar' ? 'pasar' : null;
     if (!glyph) continue;
     out.push({ x: b.x, z: b.z, glyph, color: color(b.district), name: poiName.get(b.id) ?? '' });
   }
@@ -66,12 +74,12 @@ export class CityMap implements MapSource {
     const Z = (z: number): number => (z + CITY.half) * k;
     g.clearRect(0, 0, px, px);
 
-    // Ground, then each district's cells tinted in its colour.
-    g.fillStyle = '#9fd98a';
+    // Soft ground (parchment on the big map, pale meadow on the small one), then each district in its own pastel.
+    g.fillStyle = big ? '#fbf1d3' : '#eaf3d2';
     g.fillRect(0, 0, px, px);
     for (const d of DISTRICTS) {
       g.fillStyle = hex(d.color);
-      g.globalAlpha = 0.5;
+      g.globalAlpha = big ? 0.34 : 0.4;
       for (const [ci, cj] of d.cells) {
         const x0 = ci === -1 ? -CITY.half : ci * 100 - 50;
         const x1 = ci === 1 ? CITY.half : ci * 100 + 50;
@@ -81,9 +89,10 @@ export class CityMap implements MapSource {
       }
     }
     g.globalAlpha = 1;
-    // Cell borders (thin white lines) so the districts read as areas.
-    g.strokeStyle = 'rgba(255,255,255,0.55)';
-    g.lineWidth = Math.max(1, px / 160);
+    // Dashed district borders.
+    g.strokeStyle = 'rgba(255,255,255,0.8)';
+    g.lineWidth = Math.max(1.5, px / 200);
+    g.setLineDash([px / 60, px / 90]);
     for (const v of [-50, 50]) {
       g.beginPath();
       g.moveTo(X(v), 0);
@@ -92,72 +101,85 @@ export class CityMap implements MapSource {
       g.lineTo(px, Z(v));
       g.stroke();
     }
+    g.setLineDash([]);
 
-    // Plazas, fields, sand and ponds.
+    // Hills (the old building sits on one), plazas, fields, sand and ponds.
+    for (const h of L.hills) {
+      g.beginPath();
+      g.arc(X(h.x), Z(h.z), h.rBottom * k, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(120,190,100,0.55)';
+      g.fill();
+      g.beginPath();
+      g.arc(X(h.x), Z(h.z), h.rTop * k, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(95,170,85,0.6)';
+      g.fill();
+    }
     for (const r of L.ground) {
       if (r.kind !== 'plaza' && r.kind !== 'field' && r.kind !== 'sand') continue;
-      g.fillStyle = r.kind === 'plaza' ? '#f3e1b6' : r.kind === 'sand' ? '#f1d9a0' : '#c6ee9a';
+      g.fillStyle = r.kind === 'plaza' ? '#fff0c8' : r.kind === 'sand' ? '#f6e0a8' : '#b9e88f';
       g.fillRect(X(r.x0), Z(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k);
     }
-    g.fillStyle = '#6ec6ff';
+    g.fillStyle = '#7fcdf5';
     for (const p of L.ponds) {
       g.beginPath();
       g.arc(X(p.x), Z(p.z), Math.max(1.5, p.r * k), 0, Math.PI * 2);
       g.fill();
     }
 
-    // Roads: asphalt-grey, avenues a bit wider and lighter edges.
+    // Roads as light ribbons with a soft edge (two passes: edge, then the ribbon).
+    const edge = Math.max(1.5, px / 160);
+    g.fillStyle = 'rgba(150,130,100,0.55)';
+    for (const r of L.roads) g.fillRect(X(r.x0) - edge, Z(r.z0) - edge, Math.max(1, (r.x1 - r.x0) * k) + edge * 2, Math.max(1, (r.z1 - r.z0) * k) + edge * 2);
     for (const r of L.roads) {
-      g.fillStyle = r.main ? '#7c7f8c' : '#9a9da8';
+      g.fillStyle = r.main ? '#fffdf5' : '#f4eedd';
       g.fillRect(X(r.x0), Z(r.z0), Math.max(1, (r.x1 - r.x0) * k), Math.max(1, (r.z1 - r.z0) * k));
     }
 
     // Landmark icons (and names on the big map).
-    const R = viewportPx * (big ? 0.016 : 0.03);
-    for (const m of this.marks) this.glyph(g, X(m.x), Z(m.z), R, m.glyph, m.color);
+    const R = viewportPx * (big ? 0.036 : 0.105);
     const sec = this.shownSecret();
+    if (big) for (const b of this.d3?.bikes() ?? []) this.bikeGlyph(g, X(b.x), Z(b.z), R * 0.6);
+    for (const m of this.marks) if (big || MINI_GLYPHS.has(m.glyph)) this.glyph(g, X(m.x), Z(m.z), big && m.glyph === 'tower' ? R * 0.75 : R, m.glyph, m.color);
     if (sec) this.glyph(g, X(sec.x), Z(sec.z), R * 1.1, 'secret', 0xffc928);
 
     if (this.d3) {
-      for (const b of big ? this.d3.bikes() : []) this.bikeGlyph(g, X(b.x), Z(b.z), R * 0.9);
-      for (const q of this.d3.residents()) this.questGlyph(g, X(q.x), Z(q.z), R * (big ? 0.95 : 0.8));
-      for (const c of this.d3.care?.() ?? []) this.careGlyph(g, X(c.x), Z(c.z), R * (big ? 1.0 : 0.85), c.kind);
+      for (const q of this.d3.residents()) this.questGlyph(g, X(q.x), Z(q.z), R * (big ? 0.6 : 0.5));
+      for (const c of this.d3.care?.() ?? []) this.careGlyph(g, X(c.x), Z(c.z), R * (big ? 0.7 : 0.55), c.kind);
     }
 
     if (big) {
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      const small = Math.round(px * 0.022);
-      g.font = `700 ${small}px system-ui, sans-serif`;
+      const small = Math.round(px * 0.03);
+      g.font = `800 ${small}px system-ui, sans-serif`;
       g.lineJoin = 'round';
-      g.lineWidth = small * 0.28;
-      g.strokeStyle = 'rgba(255,255,255,0.92)';
-      g.fillStyle = '#2d2a26';
+      g.lineWidth = small * 0.3;
+      g.strokeStyle = 'rgba(255,255,255,0.95)';
+      g.fillStyle = '#3b2f22';
       const label = (t: string, x: number, y: number): void => {
         g.strokeText(t, x, y);
         g.fillText(t, x, y);
       };
-      for (const m of this.marks) if (m.name) label(m.name, X(m.x), Z(m.z) + R * 1.9);
-      if (sec) label('Gedung Barongsai Tua', X(sec.x), Z(sec.z) + R * 2.1);
-      const big2 = Math.round(px * 0.034);
-      g.font = `800 ${big2}px system-ui, sans-serif`;
-      g.lineWidth = big2 * 0.3;
+      for (const m of this.marks) if (m.name && LABELLED.has(m.glyph)) label(m.glyph === 'school' ? 'Sekolah Glen' : m.name, X(m.x), Z(m.z) + R * 1.65);
+      if (sec) label('Gedung Tua', X(sec.x), Z(sec.z) + R * 1.8);
+      // District names at fixed spots away from the landmarks; long ones shrink to fit.
+      g.fillStyle = '#6b4a2a';
+      g.lineJoin = 'round';
       for (const d of DISTRICTS) {
-        let cx = 0;
-        let cz = 0;
-        for (const [ci, cj] of d.cells) {
-          cx += ci * 100;
-          cz += cj * 100;
+        const at = NAME_AT[d.id];
+        const text = d.id === 'bank' ? 'Bank & RS' : d.name;
+        let size = Math.round(px * 0.042);
+        g.font = `900 ${size}px system-ui, sans-serif`;
+        const maxW = px * 0.27;
+        const w = g.measureText(text).width;
+        if (w > maxW) {
+          size = Math.floor((size * maxW) / w);
+          g.font = `900 ${size}px system-ui, sans-serif`;
         }
-        cx /= d.cells.length;
-        cz /= d.cells.length;
-        // Lift the name off the landmark in the middle of a cell.
-        label(d.name, X(cx), Z(cz + (d.id === 'bank' ? 36 : d.cells.length === 1 ? -36 : -30)));
+        g.lineWidth = size * 0.28;
+        label(text, X(at[0]), Z(at[1]));
       }
     }
-    g.strokeStyle = 'rgba(40,40,40,0.5)';
-    g.lineWidth = Math.max(2, px / 100);
-    g.strokeRect(0, 0, px, px);
   }
 
   /** A resident with a mission: an orange disc with a white "!" (no words needed). */
@@ -217,65 +239,19 @@ export class CityMap implements MapSource {
     g.stroke();
   }
 
-  /** One landmark icon: a white disc with a coloured ring and a tiny picture. (x, y) is the centre, r the radius. */
+  /** One landmark icon: a white disc with a coloured ring and a big emoji. (x, y) is the centre, r the radius. */
   private glyph(g: CanvasRenderingContext2D, x: number, y: number, r: number, kind: Glyph, color: number): void {
     g.beginPath();
     g.arc(x, y, r, 0, Math.PI * 2);
     g.fillStyle = '#fff';
     g.fill();
-    g.lineWidth = Math.max(1.5, r * 0.28);
+    g.lineWidth = Math.max(2, r * 0.22);
     g.strokeStyle = hex(color);
     g.stroke();
-    g.fillStyle = kind === 'hospital' ? '#e53935' : '#3a3a48';
-    const s = r * 0.55;
-    switch (kind) {
-      case 'tower':
-        g.fillRect(x - s * 0.35, y - s, s * 0.7, s * 2);
-        g.beginPath();
-        g.moveTo(x - s * 0.7, y - s);
-        g.lineTo(x, y - s * 1.5);
-        g.lineTo(x + s * 0.7, y - s);
-        g.fill();
-        break;
-      case 'school':
-        g.fillRect(x - s * 0.1, y - s, s * 0.2, s * 2);
-        g.fillStyle = '#4dabf7';
-        g.fillRect(x, y - s, s, s * 0.9);
-        break;
-      case 'bank':
-        g.fillStyle = '#e0a020';
-        g.beginPath();
-        g.arc(x, y, s, 0, Math.PI * 2);
-        g.fill();
-        break;
-      case 'hospital':
-        g.fillRect(x - s * 0.3, y - s, s * 0.6, s * 2);
-        g.fillRect(x - s, y - s * 0.3, s * 2, s * 0.6);
-        break;
-      case 'gudang':
-        g.fillRect(x - s, y - s * 0.6, s * 2, s * 1.2);
-        break;
-      case 'home':
-        g.fillStyle = '#e8453c';
-        g.beginPath();
-        g.moveTo(x - s * 1.1, y);
-        g.lineTo(x, y - s * 1.1);
-        g.lineTo(x + s * 1.1, y);
-        g.fill();
-        g.fillStyle = '#3a3a48';
-        g.fillRect(x - s * 0.7, y, s * 1.4, s * 0.9);
-        break;
-      case 'secret':
-        g.fillStyle = '#e8a000';
-        g.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = (i * Math.PI) / 5 - Math.PI / 2;
-          const rr = i % 2 === 0 ? s * 1.25 : s * 0.55;
-          if (i === 0) g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-          else g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-        }
-        g.fill();
-        break;
-    }
+    g.font = `${Math.round(r * 1.35)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#000';
+    g.fillText(EMOJI[kind], x, y + r * 0.06);
   }
 }

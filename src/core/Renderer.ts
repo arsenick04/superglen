@@ -96,6 +96,9 @@ export class Renderer {
     this.renderer = new THREE.WebGLRenderer({
       antialias: Quality.antialias,
       powerPreference: 'high-performance',
+      // Diagnostic only (`?logdepth=1`): a logarithmic depth buffer to rule the depth precision of a device in or out when
+      // surfaces flicker (scripts/check-zfight.mjs measures the geometry; this tells whether the device's buffer is the limit).
+      logarithmicDepthBuffer: new URLSearchParams(window.location.search).get('logdepth') === '1',
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;

@@ -2,6 +2,9 @@ import type { SaveStore } from '../core/Save';
 import { QuizIcons } from './QuizIcons';
 import { MenuIcons } from './MenuIcons';
 import { versionGuard } from '../core/VersionGuard';
+import { getActiveSlot, readAllSlots } from '../core/Save';
+import { ModeIcons, slotCard } from './SlotCards';
+import './menu.css';
 
 export interface SettingsDeps {
   ui: HTMLElement;
@@ -19,9 +22,14 @@ export interface SettingsDeps {
   /** The level is the city (respawn button says "tengah kota"), else "tempat aman". */
   inCity: () => boolean;
   respawn: () => void;
-  /** Write the manual slot. Returns false when it could not be made. */
-  saveSlot: () => boolean;
+  /** Write the manual slot (position snapshot) and, for another slot than the active one, copy the progress there. False = failed. */
+  saveSlot: (slot: number) => boolean;
+  /** Back to the saved spot of the slot being played (no reload). */
   loadSlot: () => void;
+  /** Play another slot: the game saves, then reloads on it. */
+  loadFromSlot: (slot: number) => void;
+  /** Back to the title menu (the game saves first). */
+  toMainMenu: () => void;
   restart: () => void;
   /** Camera zoom back to the default distance. */
   resetZoom: () => void;
@@ -57,6 +65,12 @@ export class SettingsMenu {
   private readonly btnSave: HTMLButtonElement;
   private readonly btnLoad: HTMLButtonElement;
   private readonly btnRestart: HTMLButtonElement;
+  private readonly btnMenu: HTMLButtonElement;
+  private readonly card: HTMLDivElement;
+  private readonly slotsView: HTMLDivElement;
+  private readonly confirmQ: HTMLElement;
+  private view: 'main' | 'save' | 'load' = 'main';
+  private confirmYes: () => void = () => undefined;
   private readonly confirm: HTMLDivElement;
   private readonly btnNo: HTMLButtonElement;
   private isOpen = false;
@@ -82,6 +96,7 @@ export class SettingsMenu {
     this.panel.hidden = true;
     for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.panel.addEventListener(ev, stop);
     const card = make('div', 'settings-card');
+    this.card = card;
     const head = make('div', 'settings-head');
     head.append(make('h1', '', 'Pengaturan'));
     const x = this.button('menu-btn settings-close', MenuIcons.close, 'Tutup', () => this.close());
@@ -113,35 +128,42 @@ export class SettingsMenu {
     });
     this.btnHome.dataset.act = 'home';
     this.btnHomeLabel = this.btnHome.querySelector('.menu-label') as HTMLElement;
-    this.btnSave = this.button('menu-btn set-save', MenuIcons.save, 'Simpan', () => {
-      this.toastText(deps.saveSlot() ? 'Tersimpan' : 'Gagal menyimpan');
-      this.refresh();
-    });
+    this.btnSave = this.button('menu-btn set-save', MenuIcons.save, 'Simpan', () => this.openSlots('save'));
     this.btnSave.dataset.act = 'save';
-    this.btnLoad = this.button('menu-btn set-load', MenuIcons.load, 'Muat', () => {
-      if (!deps.save.data.slot) return;
-      this.close();
-      deps.loadSlot();
-      this.toastText('Dimuat');
-    });
+    this.btnLoad = this.button('menu-btn set-load', MenuIcons.load, 'Muat', () => this.openSlots('load'));
     this.btnLoad.dataset.act = 'load';
-    this.btnRestart = this.button('menu-btn set-restart warn', MenuIcons.restart, 'Ulang dari awal level', () => this.ask(true));
+    this.btnRestart = this.button('menu-btn set-restart warn', MenuIcons.restart, 'Ulang dari awal level', () =>
+      this.askQ('Ulang dari awal?', () => {
+        this.close();
+        deps.restart();
+      }),
+    );
     this.btnRestart.dataset.act = 'restart';
     const btnZoom = this.button('menu-btn set-zoom', MenuIcons.zoom, 'Atur ulang zoom kamera', () => {
       deps.resetZoom();
       this.toastText('Zoom kembali normal');
     });
     btnZoom.dataset.act = 'zoom';
-    grid.append(this.btnMap, this.btnHome, this.btnRestart, this.btnSave, this.btnLoad, btnZoom);
+    this.btnMenu = this.button('menu-btn set-menu', MenuIcons.home, 'Kembali ke Menu Utama', () =>
+      this.askQ('Kembali ke menu utama? Permainan tersimpan.', () => {
+        this.close();
+        deps.toMainMenu();
+      }),
+    );
+    this.btnMenu.dataset.act = 'menu';
+    grid.append(this.btnMap, this.btnHome, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
+
+    this.slotsView = make('div', 'settings-slots');
 
     this.confirm = make('div', 'settings-confirm');
     this.confirm.hidden = true;
     const q = make('div', 'settings-confirm-box');
-    q.append(make('div', 'settings-confirm-q', 'Ulang dari awal?'));
+    this.confirmQ = make('div', 'settings-confirm-q', 'Ulang dari awal?');
+    q.append(this.confirmQ);
     const yes = this.button('menu-btn settings-yes', MenuIcons.yes, 'Ya', () => {
       this.confirming = false;
-      this.close();
-      deps.restart();
+      this.confirm.hidden = true;
+      this.confirmYes();
     });
     yes.dataset.act = 'yes';
     this.btnNo = this.button('menu-btn settings-no', MenuIcons.no, 'Tidak', () => this.ask(false));
@@ -153,7 +175,7 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, grid, this.confirm, ver);
+    card.append(head, sliders, grid, this.slotsView, this.confirm, ver);
     this.panel.append(card);
     ui.appendChild(this.panel);
 
@@ -165,6 +187,7 @@ export class SettingsMenu {
       e.preventDefault();
       if (this.mapOpen) this.deps.closeMap();
       else if (this.confirming) this.ask(false);
+      else if (this.view !== 'main') this.showView('main');
       else this.close();
     });
   }
@@ -182,6 +205,7 @@ export class SettingsMenu {
     this.isOpen = true;
     this.confirming = false;
     this.mapOpen = false;
+    this.showView('main');
     this.refresh();
     this.panel.hidden = false;
     this.deps.onOpenChange(true);
@@ -242,7 +266,7 @@ export class SettingsMenu {
     const map = this.deps.hasMap();
     this.btnMap.hidden = !map;
     this.btnMap.disabled = !map;
-    const has = save.data.slot !== null;
+    const has = readAllSlots().some((x) => !x.empty);
     this.btnLoad.disabled = !has;
     this.btnLoad.classList.toggle('off', !has);
   }
@@ -251,6 +275,68 @@ export class SettingsMenu {
     this.confirming = on;
     this.confirm.hidden = !on;
     if (on) this.btnNo.focus();
+  }
+
+  /** The Ya / Tidak question with its own text and action. */
+  private askQ(text: string, yes: () => void): void {
+    this.confirmQ.textContent = text;
+    this.confirmYes = yes;
+    this.ask(true);
+  }
+
+  private showView(v: 'main' | 'save' | 'load'): void {
+    this.view = v;
+    this.card.classList.toggle('picking', v !== 'main');
+    if (v === 'main') this.slotsView.replaceChildren();
+  }
+
+  /** "Simpan" / "Muat": three slot cards (the slot being played is highlighted and has the controller focus). */
+  private openSlots(v: 'save' | 'load'): void {
+    this.showView(v);
+    this.slotsView.replaceChildren();
+    const active = getActiveSlot();
+    const head = make('div', 'settings-slots-head');
+    const back = this.button('menu-btn set-back', ModeIcons.back, 'Kembali', () => this.showView('main'));
+    back.dataset.act = 'slots-back';
+    head.append(back, make('div', 'settings-slots-q', v === 'save' ? 'Simpan di slot mana?' : 'Muat slot mana?'));
+    const row = make('div', 'slot-row');
+    for (const s of readAllSlots()) {
+      const c = slotCard(s, {
+        evt: 'pointerdown',
+        active: s.slot === active,
+        disableEmpty: v === 'load',
+        onSelect: () => (v === 'save' ? this.pickSave(s.slot, s.empty, active) : this.pickLoad(s.slot, active)),
+      });
+      const main = c.querySelector<HTMLElement>('.slot-main');
+      if (main && s.slot === active) main.dataset.padDefault = '1';
+      row.append(c);
+    }
+    this.slotsView.append(head, row);
+  }
+
+  private pickSave(slot: number, empty: boolean, active: number): void {
+    const go = (): void => {
+      const ok = this.deps.saveSlot(slot);
+      this.showView('main');
+      this.toastText(ok ? 'Tersimpan' : 'Gagal menyimpan');
+      this.refresh();
+    };
+    if (empty || slot === active) go();
+    else this.askQ(`Timpa slot ${slot}? Isinya diganti.`, go);
+  }
+
+  private pickLoad(slot: number, active: number): void {
+    const { deps } = this;
+    if (slot === active && deps.save.data.slot) {
+      this.close();
+      deps.loadSlot();
+      this.toastText('Dimuat');
+      return;
+    }
+    this.askQ(slot === active ? 'Muat ulang slot ini?' : `Pindah ke slot ${slot}? Permainan ini tetap tersimpan.`, () => {
+      this.close();
+      deps.loadFromSlot(slot);
+    });
   }
 
   private toastText(text: string): void {
@@ -381,6 +467,9 @@ export class SettingsMenu {
       },
       get toast() {
         return self.toast.classList.contains('show') ? (self.toast.textContent ?? '') : '';
+      },
+      get view() {
+        return self.view;
       },
       get homeLabel() {
         return self.btnHomeLabel.textContent ?? '';

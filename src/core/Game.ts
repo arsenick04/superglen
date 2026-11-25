@@ -36,7 +36,8 @@ import { LevelManager } from '../world/LevelManager';
 import type { LevelGame } from '../world/Level';
 import { LEVELS } from '../world/levels';
 import { flow, migrateSave, practice, setArrival, startPlanFor } from '../world/progress';
-import { SaveStore } from './Save';
+import { SaveStore, setActiveSlot } from './Save';
+import { skipTitleOnce } from '../ui/TitleMenu';
 import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
@@ -657,8 +658,10 @@ export class Game {
       closeMap: () => this.maps.closeFull(),
       inCity: () => this.levels.currentId === 'kota',
       respawn: () => this.respawnHome(),
-      saveSlot: () => this.saveSlot(),
+      saveSlot: (n) => this.saveSlot(n),
       loadSlot: () => this.loadSlot(),
+      loadFromSlot: (n) => this.reloadOnSlot(n),
+      toMainMenu: () => this.toMainMenu(),
       restart: () => {
         void this.levels.load(this.levels.currentId);
       },
@@ -1077,6 +1080,7 @@ export class Game {
   /** Per rendered frame, after the camera moved: level visuals, prompt icon and objective marker. */
   private frameUpdate(dt: number): void {
     this.cameraRig.camera.updateMatrixWorld(); // projections below must use this frame's camera, not last render's
+    if (startGate.started) this.save.tickPlay(dt);
     this.skillFrame(dt);
     this.battle.update(dt);
     this.levels.update(dt);
@@ -1406,13 +1410,48 @@ export class Game {
   }
 
   /** "Simpan": level, safe ground under the player, facing and mode go into the manual slot. */
-  private saveSlot(): boolean {
+  private saveSlot(slot: number): boolean {
     const lv = this.levels.current;
     if (!lv || this.levels.loading) return false;
     this.player.getSafeFeet(this.tmpFeet);
     const f = this.tmpFeet;
     this.save.setSlot({ level: lv.id, x: f.x, y: f.y, z: f.z, yaw: this.player.facing, mode: this.player.mode, t: Date.now() });
-    return true;
+    return slot === this.save.activeSlot || this.save.previewChapter !== null ? true : this.save.saveToSlot(slot);
+  }
+
+  /** "Muat" of another slot: that slot becomes the active one and the page restarts on it (the start screen asks for one tap). */
+  private reloadOnSlot(slot: number): void {
+    this.save.persist();
+    setActiveSlot(slot);
+    skipTitleOnce();
+    this.leaveFullscreen();
+    window.location.reload();
+  }
+
+  private leaveFullscreen(): void {
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen?.()?.catch?.(() => undefined);
+    } catch {
+      // ignore
+    }
+  }
+
+  /** "Kembali ke Menu Utama": progress is saved, the page restarts on the title menu. */
+  private toMainMenu(): void {
+    this.save.persist();
+    this.leaveFullscreen();
+    window.location.assign(`${window.location.pathname}?menu=1`);
+  }
+
+  /** The title menu picked a game: start it inside that tap (audio unlock, pointer lock, fullscreen on touch). */
+  startFromMenu(): void {
+    document.documentElement.classList.add('from-title');
+    this.hud?.startFromMenu();
+  }
+
+  /** The title menu's long-press on the logo: the parents' page. */
+  openParents(): void {
+    this.parents.show();
   }
 
   /** "Muat": back to the saved level and spot (the level is loaded first when it is another one). */

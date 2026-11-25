@@ -146,6 +146,11 @@ function lotRect(b: CityBuilding, yard: number): THREE.Vector4 {
 /** Copy of a custom building material that discards fragments outside the lot rectangle (world x / z). */
 function lotMaterial(src: THREE.MeshStandardMaterial, lot: THREE.Vector4, groundOnly = -1e6): THREE.MeshStandardMaterial {
   const mat = src.clone();
+  // The model's own yard plate lies within a centimetre of the city's ground layers (CityBuilder.drawGround): a small depth bias
+  // settles it (the plate wins, as it is meant to be the yard) at every distance and angle.
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = -1;
+  mat.polygonOffsetUnits = -4;
   const uLot = { value: lot };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uLot = uLot;

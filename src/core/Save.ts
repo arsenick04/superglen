@@ -16,6 +16,132 @@ import { CATEGORIES, isCategory, type Category } from '../quiz/types';
 export const SAVE_KEY = 'superglen.save.v1';
 export const SAVE_VERSION = 1;
 
+/**
+ * Three save slots. Slot 1 IS the original single save (`superglen.save.v1`), so an existing save is "migrated" without
+ * copying anything and can never be lost; slots 2 and 3 have their own keys. `ACTIVE_KEY` remembers which slot autosave
+ * writes to (missing = slot 1).
+ */
+export const SLOT_COUNT = 3;
+export const ACTIVE_KEY = 'superglen.save.active';
+const PREFS_KEY = 'superglen.prefs.v1';
+export const slotKey = (n: number): string => (n === 1 ? SAVE_KEY : `superglen.save.slot${n}`);
+const validSlot = (n: number): boolean => Number.isInteger(n) && n >= 1 && n <= SLOT_COUNT;
+
+function lsGet(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function lsSet(key: string, value: string): boolean {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** What a slot card shows. */
+export interface SlotSummary {
+  slot: number;
+  empty: boolean;
+  /** 1..8 (the chapter being played; the last one after the story ended). */
+  chapter: number;
+  ended: boolean;
+  /** Human place name: Kota, Lab, Hangar, Hutan, ... */
+  place: string;
+  mode: PlayerMode;
+  coins: number;
+  playSec: number;
+  /** Date.now() of the last save (0 = unknown, older save). */
+  savedAt: number;
+}
+
+const PLACES: Record<string, string> = { kota: 'Kota', lab: 'Lab', bab2: 'Hangar Lab', ending: 'Kota', 'forest-training': 'Hutan', 'forest-rescue': 'Hutan', 'forest-firefight': 'Hutan', 'battle-gorilla': 'Hutan' };
+
+function summarize(slot: number, d: SaveData): SlotSummary {
+  let chapter = 1;
+  while (chapter < 8 && d.chaptersDone.includes(`bab${chapter}`)) chapter++;
+  const times = [d.meta.savedAt, d.slot?.t ?? 0, ...Object.values(d.doneAt)];
+  return {
+    slot,
+    empty: false,
+    chapter,
+    ended: d.chaptersDone.includes('ending'),
+    place: PLACES[d.where] ?? 'Kota',
+    mode: d.lastMode,
+    coins: d.quiz.coins,
+    playSec: d.meta.playSec,
+    savedAt: d.meta.savedAt || Math.max(...times),
+  };
+}
+
+/** Summary of one slot (`empty: true` when nothing is stored there). Never throws. */
+export function readSlotSummary(slot: number): SlotSummary {
+  const empty: SlotSummary = { slot, empty: true, chapter: 1, ended: false, place: '', mode: 'glen', coins: 0, playSec: 0, savedAt: 0 };
+  if (!validSlot(slot)) return empty;
+  const txt = lsGet(slotKey(slot));
+  if (!txt) return empty;
+  try {
+    return summarize(slot, sanitize(JSON.parse(txt)));
+  } catch {
+    return empty;
+  }
+}
+
+export function readAllSlots(): SlotSummary[] {
+  const out: SlotSummary[] = [];
+  for (let i = 1; i <= SLOT_COUNT; i++) out.push(readSlotSummary(i));
+  return out;
+}
+
+export function getActiveSlot(): number {
+  const n = Number(lsGet(ACTIVE_KEY));
+  return validSlot(n) ? n : 1;
+}
+
+export function setActiveSlot(n: number): void {
+  if (validSlot(n)) lsSet(ACTIVE_KEY, String(n));
+}
+
+/** Empty a slot for good (the caller confirmed with the child / parent first). */
+export function deleteSlot(n: number): void {
+  if (!validSlot(n)) return;
+  try {
+    window.localStorage.removeItem(slotKey(n));
+  } catch {
+    // ignore
+  }
+}
+
+/** A brand new game in slot `n`: the slot is written empty-but-valid and becomes the active one. */
+export function startNewSlot(n: number): void {
+  if (!validSlot(n)) return;
+  const d = defaults();
+  d.meta.savedAt = Date.now();
+  deleteSlot(n);
+  lsSet(slotKey(n), JSON.stringify(d));
+  setActiveSlot(n);
+}
+
+/** Volumes chosen on the title screen apply to every slot (stored apart from the slots). */
+export function readPrefs(): { musicVol?: number; sfxVol?: number } {
+  try {
+    const raw = JSON.parse(lsGet(PREFS_KEY) ?? 'null') as Record<string, unknown> | null;
+    const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+    return raw ? { musicVol: ok(raw.musicVol) ? Math.max(0, Math.min(1, raw.musicVol)) : undefined, sfxVol: ok(raw.sfxVol) ? Math.max(0, Math.min(1, raw.sfxVol)) : undefined } : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writePrefs(musicVol: number, sfxVol: number): void {
+  lsSet(PREFS_KEY, JSON.stringify({ musicVol, sfxVol }));
+}
+
 export type PreviewChapter = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /** Only an unambiguous, exact chapter number enables a temporary play session. */
@@ -84,6 +210,8 @@ export interface SaveData {
   bab6: { step: string };
   /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
   hearts: number;
+  /** Shown on the slot card: when this was last written and how long the child has played (seconds). */
+  meta: { savedAt: number; playSec: number };
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -158,6 +286,7 @@ function defaults(): SaveData {
     bab5: { step: '' },
     bab6: { step: '' },
     hearts: Combat.hearts.max,
+    meta: { savedAt: 0, playSec: 0 },
   };
 }
 
@@ -228,6 +357,11 @@ function sanitize(raw: unknown): SaveData {
     const b = r.bab6 as Record<string, unknown>;
     if (typeof b.step === 'string' && ['', 'city', 'fight'].includes(b.step)) out.bab6.step = b.step;
   }
+  if (typeof r.meta === 'object' && r.meta !== null) {
+    const m = r.meta as Record<string, unknown>;
+    out.meta.savedAt = nat(m.savedAt, 1e15);
+    out.meta.playSec = nat(m.playSec, 1e9);
+  }
   if (typeof r.hearts === 'number' && Number.isInteger(r.hearts) && r.hearts >= 1 && r.hearts <= Combat.hearts.max) out.hearts = r.hearts;
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
@@ -271,6 +405,9 @@ export class SaveStore {
   readonly previewLetters: boolean;
   /** `?lab=1&done=1`: the finished story in the Lab, held in memory only (the real save is never touched). */
   readonly previewLabDone: boolean;
+  /** The slot (1..3) autosave writes to. */
+  activeSlot = getActiveSlot();
+  private playSinceSave = 0;
 
   constructor() {
     const query = new URLSearchParams(window.location.search);
@@ -325,20 +462,54 @@ export class SaveStore {
       return;
     }
     try {
-      const txt = window.localStorage.getItem(SAVE_KEY);
+      const txt = window.localStorage.getItem(slotKey(this.activeSlot));
       if (txt) this.data = sanitize(JSON.parse(txt));
     } catch {
       // Storage blocked or JSON corrupt: keep what we have in memory.
     }
+    const prefs = readPrefs();
+    if (prefs.musicVol !== undefined) this.data.settings.musicVol = prefs.musicVol;
+    if (prefs.sfxVol !== undefined) this.data.settings.sfxVol = prefs.sfxVol;
+  }
+
+  /** Count play time (only while the child is really playing); written out with the next save and at least every 30 s. */
+  tickPlay(dt: number): void {
+    if (this.previewChapter || this.previewLabDone) return;
+    this.playSinceSave += dt;
+    const whole = Math.floor(this.playSinceSave);
+    if (whole <= 0) return;
+    this.playSinceSave -= whole;
+    this.data.meta.playSec += whole;
+    if (this.data.meta.playSec % 30 === 0) this.persist();
+  }
+
+  /** Save the current progress into slot `n` ("Simpan" in the pause menu) and make it the slot autosave writes to. */
+  saveToSlot(n: number): boolean {
+    if (!validSlot(n) || this.previewChapter || this.previewLabDone) return false;
+    const old = this.activeSlot;
+    this.activeSlot = n;
+    if (!this.writeNow()) {
+      this.activeSlot = old;
+      return false;
+    }
+    setActiveSlot(n);
+    return true;
   }
 
   /** Write to storage. Failure is silent: progress stays in memory for this session. */
   persist(): void {
     if (this.previewChapter || this.previewLabDone) return;
+    this.writeNow();
+  }
+
+  private writeNow(): boolean {
+    this.data.meta.savedAt = Date.now();
     try {
-      window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      window.localStorage.setItem(slotKey(this.activeSlot), JSON.stringify(this.data));
+      return true;
     } catch {
       // Safari private mode / quota: ignore.
+      return false;
     }
   }
 
@@ -346,11 +517,7 @@ export class SaveStore {
   reset(): void {
     this.data = this.freshData();
     if (this.previewChapter || this.previewLabDone) return;
-    try {
-      window.localStorage.removeItem(SAVE_KEY);
-    } catch {
-      // ignore
-    }
+    deleteSlot(this.activeSlot);
   }
 
   /** Parents' page: forget the story and quiz progress but keep the settings (easy jump, sound). */
@@ -455,6 +622,7 @@ export class SaveStore {
     if (this.data.settings.musicVol === m && this.data.settings.sfxVol === f) return;
     this.data.settings.musicVol = m;
     this.data.settings.sfxVol = f;
+    writePrefs(m, f);
     this.persist();
   }
 

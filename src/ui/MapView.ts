@@ -5,9 +5,12 @@ import { MenuIcons } from './MenuIcons';
 /** Backing resolution of the mini map is this many canvas px per CSS px (capped: it is a small picture). */
 const MINI_DPR = 2;
 /** Width of the local view in world metres. */
-const MINI_SPAN = 72;
+const MINI_SPAN = 100;
 /** The marker (arrow) size as a fraction of the map. */
-const ARROW = 0.045;
+const ARROW = 0.075;
+/** Moving markers redraw at most this often (ms); a jump of more than JUMP metres redraws at once. */
+const MIN_DT = 70;
+const JUMP = 1.5;
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -15,19 +18,23 @@ function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string): HTMLE
   return e;
 }
 
-/** Player arrow with a white rim, pointing along `heading` (body yaw, 0 = +Z). No allocation: only canvas state calls. */
+/** Player arrow with a white rim and a soft halo, pointing along `heading` (body yaw, 0 = +Z). No allocation: only canvas state calls. */
 function drawArrow(g: CanvasRenderingContext2D, x: number, y: number, size: number, heading: number): void {
+  g.beginPath();
+  g.arc(x, y, size * 1.5, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255,255,255,0.45)';
+  g.fill();
   g.save();
   g.translate(x, y);
   g.rotate(Math.PI - heading); // north-up map: facing -Z points up
   g.beginPath();
   g.moveTo(0, -size * 1.25);
-  g.lineTo(size * 0.85, size);
+  g.lineTo(size * 0.95, size);
   g.lineTo(0, size * 0.45);
-  g.lineTo(-size * 0.85, size);
+  g.lineTo(-size * 0.95, size);
   g.closePath();
   g.lineJoin = 'round';
-  g.lineWidth = Math.max(2, size * 0.3);
+  g.lineWidth = Math.max(2.5, size * 0.34);
   g.strokeStyle = '#fff';
   g.stroke();
   g.fillStyle = '#e8453c';
@@ -55,7 +62,39 @@ function drawGoal(g: CanvasRenderingContext2D, x: number, y: number, size: numbe
   g.restore();
 }
 
-/** North-up local map centred on Glen, with a cached city layer and a separate full map. */
+/** Gold arrow head on the rim of the round map, pointing at an objective that is off the map. */
+function drawEdgeArrow(g: CanvasRenderingContext2D, cx: number, cy: number, rim: number, ang: number, size: number): void {
+  g.save();
+  g.translate(cx + Math.cos(ang) * rim, cy + Math.sin(ang) * rim);
+  g.rotate(ang);
+  g.beginPath();
+  g.moveTo(size * 0.9, 0);
+  g.lineTo(-size * 0.6, size * 0.8);
+  g.lineTo(-size * 0.25, 0);
+  g.lineTo(-size * 0.6, -size * 0.8);
+  g.closePath();
+  g.lineJoin = 'round';
+  g.lineWidth = Math.max(2, size * 0.3);
+  g.strokeStyle = '#fff';
+  g.stroke();
+  g.fillStyle = '#ffb800';
+  g.fill();
+  g.restore();
+}
+
+/** Legend rows of the big map: [picture, words]. */
+const LEGEND: readonly (readonly [string, string])[] = [
+  ['\u{1F53A}', 'Kamu'],
+  ['\u2B50', 'Tujuan'],
+  ['\u{1F3EB}', 'Sekolah'],
+  ['\u{1F6D2}', 'Pasar'],
+  ['\u{1F3E5}', 'Rumah Sakit'],
+  ['\u{1F3E6}', 'Bank'],
+  ['\u{1F3E0}', 'Rumah Glen'],
+  ['\u{1F6B2}', 'Sepeda'],
+];
+
+/** Round north-up local map centred on Glen (cached city layer, throttled markers) and a separate illustrated full map. */
 export class MapView {
   private readonly mini: HTMLButtonElement;
   private readonly miniBase: HTMLCanvasElement;
@@ -67,6 +106,10 @@ export class MapView {
   private readonly full: HTMLDivElement;
   private readonly fullBase: HTMLCanvasElement;
   private readonly fullMark: HTMLCanvasElement;
+  private fullBox!: HTMLDivElement;
+  private lastDraw = -1e9;
+  private drawX = 1e9;
+  private drawZ = 1e9;
   private source: MapSource | null = null;
   private miniVersion = -1;
   private fullVersion = -1;
@@ -98,10 +141,7 @@ export class MapView {
     this.mini.hidden = true;
     this.miniBase = make('canvas', 'minimap-base');
     this.miniMark = make('canvas', 'minimap-mark');
-    const north = make('span', 'minimap-north');
-    north.textContent = 'U';
-    north.setAttribute('aria-hidden', 'true');
-    this.mini.append(this.miniBase, this.miniMark, north);
+    this.mini.append(this.miniBase, this.miniMark);
     root.appendChild(this.mini);
     this.miniBaseG = this.miniBase.getContext('2d');
     this.miniMarkG = this.miniMark.getContext('2d');
@@ -111,7 +151,24 @@ export class MapView {
     const frame = make('div', 'fullmap-frame');
     this.fullBase = make('canvas', 'fullmap-base');
     this.fullMark = make('canvas', 'fullmap-mark');
-    frame.append(this.fullBase, this.fullMark);
+    const mapBox = make('div', 'fullmap-box');
+    mapBox.append(this.fullBase, this.fullMark);
+    const side = make('div', 'fullmap-side');
+    const title = make('div', 'fullmap-title');
+    title.textContent = 'Peta Kota Botanica';
+    side.appendChild(title);
+    for (const [pic, words] of LEGEND) {
+      const row = make('div', 'fullmap-row');
+      const i = make('span', 'fullmap-pic');
+      i.textContent = pic;
+      if (pic === '\u{1F53A}') i.classList.add('me');
+      const w = make('span', 'fullmap-words');
+      w.textContent = words;
+      row.append(i, w);
+      side.appendChild(row);
+    }
+    frame.append(mapBox, side);
+    this.fullBox = mapBox;
     const close = make('button', 'menu-btn fullmap-close');
     close.setAttribute('aria-label', 'Tutup peta');
     close.innerHTML = MenuIcons.close;
@@ -153,7 +210,7 @@ export class MapView {
   }
 
   private sizeMini(): void {
-    const css = touchMode.active ? 80 : 180;
+    const css = touchMode.active ? 96 : 180;
     const px = css * MINI_DPR;
     if (px === this.miniPx) return;
     this.miniPx = px;
@@ -194,7 +251,7 @@ export class MapView {
     if (this.fullOpen) this.drawFullMarks();
   }
 
-  /** Per frame. Cheap: an integer compare unless the arrow moved by a pixel or turned by ~3 degrees. */
+  /** Per frame. Cheap: moving markers redraw at most ~14 Hz (a jump redraws at once); a pulsing goal star animates at the same rate. */
   update(x: number, z: number, heading: number): void {
     this.lastX = x;
     this.lastZ = z;
@@ -202,6 +259,12 @@ export class MapView {
     const src = this.source;
     if (!src || !this.shown) return;
     if (src.version !== this.miniVersion) this.drawMiniBase();
+    const now = performance.now();
+    const far = Math.abs(x - this.drawX) > JUMP || Math.abs(z - this.drawZ) > JUMP;
+    if (!far && now - this.lastDraw < MIN_DT) return;
+    this.lastDraw = now;
+    this.drawX = x;
+    this.drawZ = z;
     this.drawMini(x, z, heading, false);
   }
 
@@ -217,9 +280,10 @@ export class MapView {
     const x0 = Math.round((x + src.half) * k);
     const z0 = Math.round((z + src.half) * k);
     const moved = x0 !== this.mx || z0 !== this.my;
-    if (!force && !moved && !this.goalDirty && Math.abs(heading - this.mh) < 0.05) return;
+    const pulsing = this.goal !== null;
+    if (!force && !moved && !pulsing && !this.goalDirty && Math.abs(heading - this.mh) < 0.05) return;
     if (moved || force) {
-      bg.fillStyle = '#a8c58b';
+      bg.fillStyle = '#cfe6f2';
       bg.fillRect(0, 0, px, px);
       bg.drawImage(this.miniCache, mid - x0, mid - z0);
     }
@@ -227,8 +291,16 @@ export class MapView {
     if (this.goal) {
       const gx = (this.goal.x + src.half) * k - x0;
       const gz = (this.goal.z + src.half) * k - z0;
-      const scale = Math.min(1, (mid - px * 0.11) / (Math.max(Math.abs(gx), Math.abs(gz)) || 1));
-      drawGoal(g, mid + gx * scale, mid + gz * scale, px * 0.05);
+      const rim = mid - px * 0.14;
+      const d = Math.hypot(gx, gz);
+      const pulse = 1 + 0.18 * Math.sin(performance.now() * 0.008);
+      if (d > rim) {
+        const ang = Math.atan2(gz, gx);
+        drawGoal(g, mid + Math.cos(ang) * (rim - px * 0.11), mid + Math.sin(ang) * (rim - px * 0.11), px * 0.075 * pulse);
+        drawEdgeArrow(g, mid, mid, rim + px * 0.02, ang, px * 0.09);
+      } else {
+        drawGoal(g, mid + gx, mid + gz, px * 0.085 * pulse);
+      }
     }
     this.goalDirty = false;
     this.mx = x0;
@@ -249,12 +321,14 @@ export class MapView {
     if (!src) return;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const cssPx = Math.floor(Math.min(vw - 24, vh - 24));
+    // The map is a square; on a wide screen the legend sits beside it, on a narrow one the map shrinks to leave room.
+    const cssPx = Math.floor(Math.min(vw - 24 - (vw >= 560 ? 190 : 0), vh - 48));
     const px = Math.round(cssPx * Math.min(2, window.devicePixelRatio || 1));
     this.full.hidden = false;
     this.fullOpen = true;
     for (const c of [this.fullBase, this.fullMark]) c.style.width = c.style.height = `${cssPx}px`;
-    (this.fullBase.parentElement as HTMLElement).style.width = (this.fullBase.parentElement as HTMLElement).style.height = `${cssPx}px`;
+    this.fullBox.style.width = this.fullBox.style.height = `${cssPx}px`;
+    this.full.classList.toggle('narrow', vw < 560);
     if (px !== this.fullPx) {
       this.fullPx = px;
       this.fullBase.width = this.fullBase.height = this.fullMark.width = this.fullMark.height = px;
@@ -275,8 +349,8 @@ export class MapView {
     const px = this.fullPx;
     gm.clearRect(0, 0, px, px);
     const k = px / (src.half * 2);
-    if (this.goal) drawGoal(gm, (this.goal.x + src.half) * k, (this.goal.z + src.half) * k, px * 0.03);
-    drawArrow(gm, (this.lastX + src.half) * k, (this.lastZ + src.half) * k, px * 0.022, this.lastHeading);
+    if (this.goal) drawGoal(gm, (this.goal.x + src.half) * k, (this.goal.z + src.half) * k, px * 0.045);
+    drawArrow(gm, (this.lastX + src.half) * k, (this.lastZ + src.half) * k, px * 0.034, this.lastHeading);
   }
 
   closeFull(): void {

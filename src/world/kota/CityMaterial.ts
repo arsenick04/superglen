@@ -51,9 +51,19 @@ function loadAtlas(): void {
 
 const NT = ATLAS_TILES.length;
 
-export function makeCityMaterial(): THREE.MeshStandardMaterial {
+/**
+ * `offset`: depth bias [factor, units] for layers that lie ON other surfaces (the chunk "deco" layer: door / window decals, awning trims,
+ * crate straps ...). Negative = nearer. It is the safety net behind the real 2-3 cm separations of CityBuilder: slope-scaled, so it
+ * also holds at grazing angles, and in depth-buffer units, so it grows with the distance like the depth resolution does.
+ */
+export function makeCityMaterial(offset?: readonly [number, number]): THREE.MeshStandardMaterial {
   loadAtlas();
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, envMapIntensity: 0.65 });
+  if (offset) {
+    m.polygonOffset = true;
+    m.polygonOffsetFactor = offset[0];
+    m.polygonOffsetUnits = offset[1];
+  }
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uAtlas = uniforms.uAtlas;
     shader.uniforms.uRect = uniforms.uRect;
