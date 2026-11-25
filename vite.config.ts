@@ -14,7 +14,7 @@ export default defineConfig({
   preview: { host: true },
   build: {
     // Safari 16 on iOS is the oldest browser we support. No top-level await is used.
-    target: ['es2022', 'safari16'],
+    target: ['es2019', 'chrome63', 'safari13'],
     // rapier3d-compat inlines its WASM as base64 (~4.3 MB raw, ~1.7 MB gzip): expected.
     chunkSizeWarningLimit: 6000,
   },
