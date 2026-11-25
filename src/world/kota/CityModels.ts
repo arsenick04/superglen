@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { registerTemplate, type Sh } from './CityMesher';
@@ -201,7 +202,7 @@ class CityModels {
                   gltf.scene.traverse((o) => {
                     const m = o as THREE.Mesh;
                     if (!m.isMesh) return;
-                    m.castShadow = true;
+                    m.castShadow = Quality.propShadows;
                     m.receiveShadow = true;
                     const mat = m.material as THREE.MeshStandardMaterial;
                     if (mat.map) {

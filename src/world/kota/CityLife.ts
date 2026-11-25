@@ -3,6 +3,7 @@ import { PlayerConfig } from '../../player/PlayerConfig';
 import { envModels } from './EnvModels';
 import { cityModels, paintMaterial } from './CityModels';
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import type { LevelContext } from '../Level';
 import { CITY, CITY_LAYOUT, districtAt, FACE_VEC } from './CityData';
 import { box, merge, sph } from './ColorMesh';
@@ -702,7 +703,9 @@ export class CityLife {
     this.updateLights();
     const p = this.ctx.player.position;
     const onGround = p.y < 2.3;
-    const sim2 = LifeConfig.simRadius * LifeConfig.simRadius;
+    const simR = LifeConfig.simRadius * Quality.crowdRadius;
+    const sim2 = simR * simR;
+    const maxSim = Math.round(LifeConfig.maxSim * Quality.crowdSim);
     this.cheerLeft = Math.max(0, this.cheerLeft - d);
     this.shoutGap = Math.max(0, this.shoutGap - d);
     this.fleeing = 0;
@@ -717,7 +720,7 @@ export class CityLife {
       const dx = (ln ? (ln.ax === 'x' ? a.s : ln.c) : a.cx) - p.x;
       const dz = (ln ? (ln.ax === 'x' ? ln.c : a.s) : a.cz) - p.z;
       const d2 = dx * dx + dz * dz;
-      if ((d2 > sim2 + 400 || sim >= LifeConfig.maxSim) && !a.body) {
+      if ((d2 > sim2 + 400 || sim >= maxSim) && !a.body) {
         a.placed = false;
         continue;
       }
@@ -867,7 +870,8 @@ export class CityLife {
 
   update(): void {
     const p = this.ctx.player.visualPosition;
-    const show2 = LifeConfig.showRadius * LifeConfig.showRadius;
+    const showR = LifeConfig.showRadius * Quality.crowdRadius;
+    const show2 = showR * showR;
     const cam = this.ctx.cameraRig.camera;
     this.frustum.setFromProjectionMatrix(this.pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     const n = this.counts;

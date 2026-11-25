@@ -11765,7 +11765,7 @@ async function forestCinScenario(page, check) {
     const g = window.__superglen;
     g.save.markChapterDone('forest-rescue-canopy-intro');
     const v = document.querySelector('video');
-    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    new MutationObserver(() => { const s = v.dataset.cin; if (s) window.__cinLog.push('cin_' + s + '.mp4|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['data-cin'] });
     g.pause(true);
   });
   const off = [0.6, 1.4, 2.2, 1.6, 2.6, 3.4, 2.8, 3.8, 4.6, 4.0];
@@ -11781,7 +11781,8 @@ async function forestCinScenario(page, check) {
   const log = await page.evaluate(() => window.__cinLog);
   check('forest-cin: gorilla-meet is requested while still in the rescue level', log.length === 1 && /cin_gorilla-meet\.mp4\|forest-rescue$/.test(log[0]), JSON.stringify(log));
   await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
-  await page.waitForFunction(() => window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  for (let i = 0; i < 60 && (await page.evaluate(() => window.__superglen.level)) !== 'battle-gorilla'; i++) await sleep(500);
+  if ((await page.evaluate(() => window.__superglen.level)) !== 'battle-gorilla') throw new Error('battle-gorilla never loaded');
   check('forest-cin: battle loads after the cinematic ends', true);
 }
 
@@ -12110,7 +12111,7 @@ async function gorillaWinScenario(page, check) {
     window.__cinLog = [];
     const g = window.__superglen;
     const v = document.querySelector('video');
-    new MutationObserver(() => { const s = v.getAttribute('src'); if (s) window.__cinLog.push(s + '|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['src'] });
+    new MutationObserver(() => { const s = v.dataset.cin; if (s) window.__cinLog.push('cin_' + s + '.mp4|' + g.level); }).observe(v, { attributes: true, attributeFilter: ['data-cin'] });
     g.pause(true);
   });
   // Win through the story hook: the arena marks the chapter and runs its win sequence when its last star goes; here the save flag is set
@@ -12129,7 +12130,8 @@ async function gorillaWinScenario(page, check) {
   const log = await page.evaluate(() => window.__cinLog);
   check('gorilla-win: the cinematic is requested in the gorilla arena after the win dialog', log.length === 1 && /cin_gorilla-win\.mp4\|battle-gorilla$/.test(log[0]), JSON.stringify(log));
   await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
-  await page.waitForFunction(() => window.__superglen.level === 'forest-firefight', null, { timeout: 30000 });
+  for (let i = 0; i < 60 && (await page.evaluate(() => window.__superglen.level)) !== 'forest-firefight'; i++) await sleep(500);
+  if ((await page.evaluate(() => window.__superglen.level)) !== 'forest-firefight') throw new Error('forest-firefight never loaded');
   check('gorilla-win: the fire hose level loads after the cinematic', true);
 }
 
@@ -12236,6 +12238,45 @@ async function kotaBikeScenario(page, check, touch) {
   await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-6-stopped-again`);
   check(`kota-bike ${tag}: stopped again: left foot down, straight handlebar, crank settled`, st.footDown > 0.9 && Math.abs(st.steer) < 0.05 && Math.abs(Math.atan2(Math.sin(st.crank - Math.PI), Math.cos(st.crank - Math.PI))) < 0.1, JSON.stringify(st));
   await page.evaluate(() => window.__superglen.lookFrom(null));
+  // Hill climb: ride from the foot of the old path (past the Chapter 1 jump bar) up to the old building's door; never stuck.
+  {
+    const poly = [[78, -62], [78, -76], [90, -82], [100, -88], [100.5, -97]];
+    const wps = [];
+    for (let i = 0; i + 1 < poly.length; i++) {
+      const n = Math.max(1, Math.round(Math.hypot(poly[i + 1][0] - poly[i][0], poly[i + 1][1] - poly[i][1]) / 3));
+      for (let k = 0; k < n; k++) wps.push([poly[i][0] + ((poly[i + 1][0] - poly[i][0]) * k) / n, poly[i][1] + ((poly[i + 1][1] - poly[i][1]) * k) / n]);
+    }
+    wps.push(poly[poly.length - 1]);
+    await page.evaluate(([x, z]) => { const g = window.__superglen; g.teleportFeet(x, 0, z + 6); g.advance(30, false); }, wps[0]);
+    let stuck = 0, minSpeed = 99, maxY = 0, maxPitch = 0, t = 0, shot = false, done = false;
+    for (let w = 0; w < wps.length && !done; w++) {
+      let last = null, still = 0;
+      await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), wps[w]);
+      for (let k = 0; k < 200; k++) {
+        await d3Adv(page, 10);
+        t += 10 / 60;
+        const p = await d3Player(page);
+        maxY = Math.max(maxY, p.feet);
+        if (!shot && p.feet > 2.5) {
+          shot = true;
+          await page.evaluate(([x, y, z]) => window.__superglen.lookFrom([x + 4.5, y + 2.2, z + 4.5, x, y + 0.6, z - 1]), [p.x, p.feet, p.z]);
+          await page.evaluate(() => window.__superglen.advance(1, true));
+          await uiShot(page, `bike-${touch ? 'touch' : 'desktop'}-8-hillclimb`);
+          await page.evaluate(() => window.__superglen.lookFrom(null));
+        }
+        if (p.feet >= 5.5 && Math.hypot(p.x - 100.5, p.z + 97) < 9) { done = true; break; }
+        if (Math.hypot(p.x - wps[w][0], p.z - wps[w][1]) < (w === wps.length - 1 ? 1.5 : 1.8)) break;
+        if (last && Math.hypot(p.x - last.x, p.z - last.z) < 0.4) { still++; if (still >= 6) { stuck++; break; } } else still = 0;
+        last = p;
+        if (t > 60) break;
+      }
+      if (stuck || t > 60) break;
+    }
+    const pf = await d3Player(page);
+    console.log(`   [kota-bike ${tag}] hill climb: ${t.toFixed(1)} s, end (${pf.x.toFixed(1)}, ${pf.feet.toFixed(2)}, ${pf.z.toFixed(1)}), top ${maxY.toFixed(2)}`);
+    check(`kota-bike ${tag}: ridden from the hill foot up the path to the old building door (plateau y >= 5.5) in under 40 s, never stuck`, !stuck && maxY >= 5.5 && t < 40 && Math.hypot(pf.x - 100.5, pf.z + 97) < 9, JSON.stringify({ t, stuck, maxY, pf }));
+    await page.evaluate(() => window.__superglen.cancelWalk());
+  }
   // Get off and on again: the pose switches off and on cleanly.
   if (!touch) await d3Press(page, 'e', 6);
   else {
@@ -12498,6 +12539,192 @@ async function saveSlotsDebugScenario(page, check) {
   check('slots debug: autosave of the debug level writes slot 1 only', JSON.parse(await slotRaw(page, 1)).quiz.coins === 43 && !(await slotRaw(page, 2)));
 }
 
+// ---- TV mode (Android TV / Google TV remote, ?tv=1): group `tv-mode` ----------------------------------------------------------------
+// Only arrow keys, Enter (OK) and Escape (Back) drive everything: title menu -> New Game -> first dialog -> walk -> pause menu -> back,
+// the radial action menu, a quiz answered with the arrows. 1920x1080, screenshots tv-*.png in test-results/ (or UI_SHOTS).
+const tvInit = `(() => { try { localStorage.setItem('superglen.opening-seen.v1', '1'); } catch (e) {} })();`;
+
+async function tvModeScenario(page, check) {
+  const adv = (n) => page.evaluate((n) => window.__superglen.advanceAsync(n, false), n);
+  const info = () => page.evaluate(() => {
+    const d = document.querySelector('.dlg');
+    const s = document.querySelector('.settings');
+    const foc = document.querySelector('.pad-focus');
+    return {
+      tv: document.documentElement.classList.contains('tv-ui'),
+      touch: document.documentElement.classList.contains('touch-ui'),
+      screen: document.querySelector('.title-menu') ? document.querySelector('.title-menu').dataset.screen : null,
+      dlg: !!d && !d.hidden,
+      menu: !!s && !s.hidden,
+      focusAct: foc ? foc.dataset.act || foc.getAttribute('aria-label') || foc.className : '',
+      focusCls: foc ? foc.className : '',
+      radial: !!document.querySelector('.tv-radial'),
+    };
+  });
+  const pad = (k) => page.keyboard.press(k);
+  const settle = () => sleep(1600); // CSS pop-in animations run in real time
+
+  // 1. Title: TV class on, no touch UI, focus ring on "Main Baru" (no save yet).
+  let t = await info();
+  check('tv-mode: ?tv=1 turns TV mode on (html.tv-ui) and the touch UI off', t.tv && !t.touch, JSON.stringify(t));
+  check('tv-mode: the title menu starts with a clear focus on "Main Baru"', t.screen === 'main' && /new/.test(t.focusAct), t.focusAct);
+  await settle();
+  await uiShot(page, 'tv-title');
+  const safe = await page.evaluate(() => { const r = document.getElementById('ui').getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight }; });
+  check('tv-mode: 5% overscan margins (HUD area is inset by 5% of the screen)', Math.abs(safe.l - safe.vw * 0.05) < 1.5 && Math.abs(safe.t - safe.vh * 0.05) < 1.5, JSON.stringify(safe));
+  check('tv-mode: the cursor is hidden', await page.evaluate(() => getComputedStyle(document.body).cursor === 'none'));
+
+  // 2. Title keys: OK opens the slot list, Back returns, OK + OK starts a new game in slot 1.
+  await pad('Enter');
+  await sleep(300);
+  check('tv-mode: OK on "Main Baru" opens the slot list', (await info()).screen === 'new');
+  await pad('Escape');
+  await sleep(300);
+  check('tv-mode: Back returns to the main title buttons', (await info()).screen === 'main');
+  await pad('ArrowDown');
+  await pad('ArrowDown');
+  await pad('Enter'); // Pengaturan
+  await sleep(300);
+  check('tv-mode: the title settings have "Mode TV" with Otomatis / Nyala / Mati', await page.evaluate(() => ['tv-auto', 'tv-on', 'tv-off'].every((a) => !!document.querySelector(`.title-menu [data-act=${a}]`))));
+  await pad('Escape');
+  await sleep(300);
+  await pad('Enter');
+  await sleep(300);
+  await pad('Enter'); // slot 1 is focused
+  await page.waitForFunction(() => window.__superglen && window.__superglen.started, null, { timeout: 90000 });
+  await sleep(600);
+  t = await info();
+  check('tv-mode: New Game starts with the first dialog on screen', t.dlg && !t.screen, JSON.stringify(t));
+  check('tv-mode: the touch controls are hidden', await page.evaluate(() => { const e = document.querySelector('.touch-layer'); return !e || getComputedStyle(e).display === 'none'; }));
+  check('tv-mode: one-time hint "Pakai gamepad untuk pengalaman terbaik" is shown', await page.evaluate(() => { const h = document.querySelector('.tv-hint'); return !!h && /Pakai gamepad untuk pengalaman terbaik/.test(h.textContent); }));
+  await page.evaluate(() => window.__superglen.pause(true));
+  await adv(20);
+  await settle();
+  await uiShot(page, 'tv-dialog');
+  const dl = await page.evaluate(() => { const c = document.querySelector('.dlg-card').getBoundingClientRect(); const x = document.querySelector('.dlg-text'); return { fs: parseFloat(getComputedStyle(x).fontSize), bottom: c.bottom, vh: innerHeight, scrolls: x.scrollHeight > x.clientHeight + 1 }; });
+  check('tv-mode: dialog text is large (>= 30 px), inside the screen, not cut', dl.fs >= 30 && dl.bottom <= dl.vh * 0.97 && !dl.scrolls, JSON.stringify(dl));
+
+  // 3. OK advances the dialog; arrows walk.
+  for (let i = 0; i < 8 && (await info()).dlg; i++) {
+    await pad('Enter');
+    await adv(40);
+  }
+  check('tv-mode: OK (Enter) advances the dialog to its end', !(await info()).dlg);
+  const a = await page.evaluate(state);
+  await page.keyboard.down('ArrowUp');
+  await adv(90);
+  await page.keyboard.up('ArrowUp');
+  await adv(10);
+  const b = await page.evaluate(state);
+  check('tv-mode: the arrow keys walk Glen (>= 2 m in 1.5 s)', Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z) >= 2, `${Math.hypot(b.player.x - a.player.x, b.player.z - a.player.z).toFixed(2)} m`);
+  const j0 = b.jumps;
+  await pad('Enter');
+  await adv(20);
+  check('tv-mode: OK with nothing to talk to jumps', (await page.evaluate(state)).jumps > j0);
+  await adv(60);
+  await settle();
+  await uiShot(page, 'tv-hud');
+  const hud = await page.evaluate(() => { const g = document.querySelector('.set-gear').getBoundingClientRect(); return { gear: g.width }; });
+  check('tv-mode: the HUD is larger (gear button >= 66 px instead of 52)', hud.gear >= 66, JSON.stringify(hud));
+
+  // 4. Pause menu with Back, focus ring, arrows, Back closes it. Remote aliases (keyCode 4 / 23) work too.
+  await pad('Escape');
+  await adv(5);
+  t = await info();
+  check('tv-mode: Back in play opens the pause menu with a focus ring already on a control', t.menu && /pad-focus/.test(t.focusCls), JSON.stringify(t));
+  await settle();
+  await uiShot(page, 'tv-pause');
+  const f0 = t.focusAct;
+  await pad('ArrowDown');
+  await adv(3);
+  check('tv-mode: arrows move the focus ring inside the pause menu', (await info()).focusAct !== f0, `${f0} -> ${(await info()).focusAct}`);
+  const trail = [];
+  for (let i = 0; i < 10 && !/^tv-/.test((await info()).focusAct); i++) {
+    await pad('ArrowDown');
+    await adv(2);
+    trail.push((await info()).focusAct);
+  }
+  trail.push('|');
+  for (let i = 0; i < 3 && (await info()).focusAct !== 'tv-off'; i++) {
+    await pad('ArrowRight');
+    await adv(2);
+    trail.push((await info()).focusAct);
+  }
+  check('tv-mode: the pause menu has the "Mode TV: Otomatis / Nyala / Mati" choice and the ring can reach "Mati"', (await info()).focusAct === 'tv-off', trail.join(), (await info()).focusAct);
+  await pad('Enter');
+  await adv(3);
+  check('tv-mode: OK on "Mati" saves the choice on this device', (await page.evaluate(() => localStorage.getItem('superglen.tv.v1'))) === 'off');
+  await page.evaluate(() => localStorage.setItem('superglen.tv.v1', 'auto'));
+  const cdp = await page.context().newCDPSession(page);
+  const rawKey = async (key, code, vk) => {
+    await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk });
+    await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk });
+  };
+  await rawKey('GoBack', 'BrowserBack', 4); // the Back key of an Android TV remote
+  await adv(5);
+  check('tv-mode: the remote Back key (keyCode 4 / GoBack) closes the pause menu', !(await info()).menu);
+  await pad('Escape');
+  await adv(5);
+  check('tv-mode: Back opens the pause menu again', (await info()).menu);
+  await rawKey('Unidentified', '', 10009); // Samsung Tizen Back
+  await adv(5);
+  check('tv-mode: Tizen Back (keyCode 10009) closes the pause menu', !(await info()).menu);
+
+  // 5. Radial action menu: Menu key and long press on OK; arrows pick, Back closes.
+  await page.evaluate(() => { const g = window.__superglen.game; g.setPlayerMode('superglen', false); g.setSkills({ laser: true, shield: true }, false); });
+  await adv(10);
+  await pad('ContextMenu');
+  await adv(3);
+  let d = await page.evaluate(() => window.__sgTv.debug);
+  check('tv-mode: the Menu key opens the radial menu with laser and shield (and the map)', d.radialOpen && d.radialActions.includes('laser') && d.radialActions.includes('shield'), JSON.stringify(d));
+  await pad('ArrowRight');
+  await adv(2);
+  await settle();
+  await uiShot(page, 'tv-radial');
+  d = await page.evaluate(() => window.__sgTv.debug);
+  check('tv-mode: arrows move the choice in the radial menu', d.radialIndex === 1, JSON.stringify(d));
+  await pad('Escape');
+  await adv(2);
+  check('tv-mode: Back closes the radial menu', !(await page.evaluate(() => window.__sgTv.debug)).radialOpen);
+  await page.keyboard.down('Enter');
+  await sleep(900);
+  await page.keyboard.up('Enter');
+  await adv(2);
+  check('tv-mode: a long press on OK opens the radial menu', (await page.evaluate(() => window.__sgTv.debug)).radialOpen);
+  await pad('Escape');
+  await adv(2);
+
+  // 6. Cinematic skip with OK (a stand-in layer: the film itself needs codecs that headless Chromium lacks).
+  await page.evaluate(() => {
+    const l = document.createElement('div');
+    l.className = 'cinematic-layer';
+    const s = document.createElement('button');
+    s.className = 'cinematic-skip';
+    s.addEventListener('click', () => { window.__skipped = true; l.remove(); });
+    l.append(s);
+    document.getElementById('ui').append(l);
+  });
+  await pad('Enter'); // keyCode 23 cannot be sent by headless Chromium; the alias path is covered by Back (keyCode 4) above
+  await sleep(200);
+  check('tv-mode: OK skips a cinematic', await page.evaluate(() => window.__skipped === true));
+
+  // 7. Quiz: arrows move between the answer cards, OK answers.
+  await page.evaluate(() => window.__superglen.quiz.start('berhitung', 3, 'terminal'));
+  await adv(30);
+  await settle();
+  await uiShot(page, 'tv-quiz');
+  t = await info();
+  check('tv-mode: a quiz opens with the focus ring on the first answer card', /qp-card/.test(t.focusCls), t.focusCls);
+  await pad('ArrowRight');
+  await adv(3);
+  check('tv-mode: right arrow moves the focus to the next answer card', /c2/.test((await info()).focusCls), (await info()).focusCls);
+  const q0 = await quizSt(page);
+  await pad('Enter');
+  await adv(40);
+  const q1 = await quizSt(page);
+  check('tv-mode: OK answers the quiz', q1.index > q0.index || q1.wrong > q0.wrong || q1.state !== q0.state || q1.view !== q0.view, JSON.stringify({ q0: [q0.index, q0.wrong, q0.state], q1: [q1.index, q1.wrong, q1.state] }));
+}
+
 async function main() {
   if (!fs.existsSync(path.join(ROOT, 'dist', 'index.html'))) {
     console.error('dist/ not found. Run `npm run build` first.');
@@ -12580,6 +12807,7 @@ async function main() {
     }
     results.push(await runScenario(browser, 'save-slots-desktop', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, false), '?menu=1&fps=0'));
     results.push(await runScenario(browser, 'save-slots-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, true), '?menu=1&fps=0'));
+    results.push(await runScenario(browser, 'tv-mode', { viewport: { width: 1920, height: 1080 }, initScript: tvInit }, tvModeScenario, '?tv=1&menu=1&fps=0&quizseed=1'));
     results.push(await runScenario(browser, 'save-slots-debug', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, saveSlotsDebugScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
     const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };

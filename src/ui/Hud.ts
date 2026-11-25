@@ -1,3 +1,4 @@
+import { Quality } from '../core/Quality';
 import { startGate } from '../core/StartGate';
 import { touchMode } from '../core/TouchMode';
 import { QuizIcons } from './QuizIcons';
@@ -16,7 +17,10 @@ const ROTATE_ICON =
  * DOM HUD overlay: FPS meter, PC start/help card, touch start screen, rotate-phone screen.
  * Mounted in the #ui root. All text is Indonesian. The DOM is only touched when something changes.
  */
+const TIER_LABEL = { high: 'T', medium: 'S', low: 'R' } as const;
+
 export class Hud {
+  private lastTierShown = '';
   private readonly fpsEl: HTMLDivElement | null;
   private readonly card: HTMLDivElement;
   private readonly canLock: boolean;
@@ -128,9 +132,12 @@ export class Hud {
 
   /** Call whenever the game's fps value is refreshed; the DOM is only written when it changed. */
   setFps(fps: number): void {
-    if (!this.fpsEl || fps === this.lastFpsShown) return;
+    if (!this.fpsEl) return;
+    const tier = Quality.tier;
+    if (fps === this.lastFpsShown && tier === this.lastTierShown) return;
     this.lastFpsShown = fps;
-    this.fpsEl.textContent = `FPS ${fps}`;
+    this.lastTierShown = tier;
+    this.fpsEl.textContent = `FPS ${fps} ${TIER_LABEL[tier]}`;
   }
 
   private syncMode(): void {

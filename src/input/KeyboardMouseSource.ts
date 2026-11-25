@@ -1,4 +1,5 @@
 import { ACTIONS, type Action, type InputSource, type Vec2 } from './Input';
+import { tvMode } from '../core/TvMode';
 
 /** Keyboard codes (layout independent, KeyboardEvent.code) per action. */
 const KEY_ACTIONS: Readonly<Record<Action, readonly string[]>> = {
@@ -29,6 +30,9 @@ const RIGHT = ['KeyD', 'ArrowRight'];
  */
 const MAX_MOUSE_EVENT_DELTA = 250;
 const SKIP_EVENTS_AFTER_LOCK = 2;
+
+/** TV mode: OK (Enter) is "jump, or talk when something can be talked to" and is decided by input/TvControls.ts, not here. */
+const tvOwnsKey = (code: string): boolean => (code === 'Enter' || code === 'NumpadEnter') && tvMode.active;
 
 const PREVENT_DEFAULT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
@@ -105,7 +109,7 @@ export class KeyboardMouseSource implements InputSource {
 
   isDown(action: Action): boolean {
     const codes = KEY_ACTIONS[action];
-    for (let i = 0; i < codes.length; i++) if (this.keys.has(codes[i])) return true;
+    for (let i = 0; i < codes.length; i++) if (this.keys.has(codes[i]) && !tvOwnsKey(codes[i])) return true;
     const btn = MOUSE_ACTIONS[action];
     return btn !== undefined && this.mouseButtons.has(btn);
   }
@@ -143,6 +147,7 @@ export class KeyboardMouseSource implements InputSource {
   }
 
   private actionForKey(code: string): Action | null {
+    if (tvOwnsKey(code)) return null;
     for (const a of ACTIONS) if (KEY_ACTIONS[a].includes(code)) return a;
     return null;
   }

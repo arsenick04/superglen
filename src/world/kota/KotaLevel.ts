@@ -7,11 +7,11 @@ import { NIGHT, SUNSET } from '../../config/sky';
 import type { Level, LevelContext } from '../Level';
 import { makeMaterials } from '../bab1/Batch';
 import { makeCityMaterial } from './CityMaterial';
-import { Quality } from '../../core/Quality';
+import { Quality, onQualityChange } from '../../core/Quality';
 import { ShadowFollower } from '../../core/ShadowSnap';
 import { CITY, CITY_LAYOUT, FACE_VEC, KOTA_REACH, districtAt } from './CityData';
-import { buildCity, type BuiltCity } from './CityBuilder';
-import { ChunkStreamer, STREAM } from './ChunkStreamer';
+import { buildCity, FLAT_BIAS_UNITS, type BuiltCity } from './CityBuilder';
+import { ChunkStreamer, STREAM, applyStreamQuality } from './ChunkStreamer';
 import { CityHud } from './CityHud';
 import { CityMap } from './CityMap';
 import type { MapSource } from '../MapSource';
@@ -214,23 +214,16 @@ export class KotaLevel implements Level {
     this.sun.castShadow = Quality.shadows;
     if (Quality.shadows) {
       const s = this.sun.shadow;
-      const a = Quality.shadowArea;
-      s.mapSize.set(Quality.shadowMapSize, Quality.shadowMapSize);
-      s.camera.left = -a;
-      s.camera.right = a;
-      s.camera.top = a;
-      s.camera.bottom = -a;
       // Tight depth range (the light sits ~57 m from the player): bias is relative to it, so a long range means a big offset.
       s.camera.near = 8;
       s.camera.far = 100;
-      const texel = (a * 2) / Quality.shadowMapSize;
-      // Normal offset scales with the texel: kills acne / blocky shadow steps on walls seen at grazing light.
-      s.normalBias = Math.max(0.03, texel * 3);
-      this.fitShadowBias();
       // Soft, light shadows (storybook look): wider PCF kernel, slightly transparent.
       s.radius = Quality.isTouch ? 2.2 : 3;
       s.intensity = 0.9;
-      this.follower = new ShadowFollower(this.sun, this.sunOffset, a, Quality.shadowMapSize);
+      this.applyShadowQuality();
+      this.follower = new ShadowFollower(this.sun, this.sunOffset, Quality.shadowArea, Quality.shadowMapSize);
+      // The quality tier can change while playing (Otomatis): a new map size and shadow distance.
+      ctx.onDispose(onQualityChange(() => this.applyShadowQuality()));
     }
     root.add(this.sun, this.sun.target);
 
@@ -243,7 +236,11 @@ export class KotaLevel implements Level {
     mats.glow.polygonOffset = true;
     mats.glow.polygonOffsetFactor = -2;
     mats.glow.polygonOffsetUnits = -8;
-    this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow, this.cityDeco);
+    // Flat ground levels: same heights as the collider (+-1 cm), layered by depth bias instead of by lifting.
+    const flatMats = BUILT.flatLayers.map((_, lv) => (lv === 0 ? this.cityLit : makeCityMaterial([-0.5 * lv, -lv * FLAT_BIAS_UNITS])));
+    applyStreamQuality();
+    ctx.onDispose(onQualityChange(applyStreamQuality));
+    this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow, this.cityDeco, flatMats);
     // L18: buildings dressed with Kenney / owner models (one batched draw call + the custom buildings).
     this.dressing = new CityDressing(CITY_LAYOUT, root);
     ctx.onDispose(() => this.dressing.dispose());
@@ -390,7 +387,7 @@ export class KotaLevel implements Level {
     info.labZ = door.z;
     info.labDist = Math.round(Math.hypot(door.x, door.z) * 10) / 10;
     info.labFound = false;
-    info.farTris = Math.round((BUILT.far.reduce((a, r) => a + r.indices, 0) + BUILT.flat.indices) / 3);
+    info.farTris = Math.round((BUILT.far.reduce((a, r) => a + r.indices, 0) + BUILT.flat.indices + BUILT.flatLayers.reduce((a, r) => a + r.indices, 0)) / 3);
     info.slotVerts = this.streamer.slotCapacity.join(',');
     let maxChunkTris = 0;
     for (const c of BUILT.chunks) maxChunkTris = Math.max(maxChunkTris, (c.lit.indices + c.deco.indices + c.glow.indices) / 3);
@@ -445,6 +442,27 @@ export class KotaLevel implements Level {
       this.lampPool = new THREE.PointLight(NIGHT.lampColor, NIGHT.lampIntensity, NIGHT.lampDistance, 1.6);
       this.ctx.root.add(this.lampPool);
     }
+  }
+
+  /** Shadow map size and distance of the current quality tier (also runs when the tier changes: the old map is released). */
+  private applyShadowQuality(): void {
+    const s = this.sun.shadow;
+    const a = Quality.shadowArea;
+    if (s.mapSize.x !== Quality.shadowMapSize) {
+      s.mapSize.set(Quality.shadowMapSize, Quality.shadowMapSize);
+      s.map?.dispose();
+      s.map = null;
+    }
+    s.camera.left = -a;
+    s.camera.right = a;
+    s.camera.top = a;
+    s.camera.bottom = -a;
+    s.camera.updateProjectionMatrix();
+    const texel = (a * 2) / Quality.shadowMapSize;
+    // Normal offset scales with the texel: kills acne / blocky shadow steps on walls seen at grazing light.
+    s.normalBias = Math.max(0.03, texel * 3);
+    this.fitShadowBias();
+    this.follower?.resize(a, Quality.shadowMapSize);
   }
 
   /**

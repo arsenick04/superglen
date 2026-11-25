@@ -1,3 +1,4 @@
+import { qualityDebugHandle } from './Quality';
 import * as THREE from 'three';
 import { setSkyRenderer } from '../world/kota/Sky';
 import { Renderer } from './Renderer';
@@ -42,6 +43,8 @@ import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
+import { TvControls, type TvRadialItem } from '../input/TvControls';
+import { MenuIcons } from '../ui/MenuIcons';
 import { PadDebug } from '../ui/PadDebug';
 import { startGate } from './StartGate';
 import { versionGuard } from './VersionGuard';
@@ -57,7 +60,7 @@ import { SettingsMenu } from '../ui/SettingsMenu';
 import { MapView } from '../ui/MapView';
 import { BattleMode } from '../gameplay/BattleMode';
 import { ZoomButtons } from '../ui/ZoomButtons';
-import { CinematicPlayer } from '../ui/CinematicPlayer';
+import { CinematicPlayer, cinematicsForLevel } from '../ui/CinematicPlayer';
 import type { SlotSave } from './Save';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
@@ -67,6 +70,8 @@ const MAX_SUBSTEPS = 5;
 
 /** Read-only debug data for automated smoke tests and the browser console. */
 export interface DebugHandle {
+  /** Graphics quality: current tier, mode (auto / fixed) and a setter (see core/Quality.ts). */
+  quality?: ReturnType<typeof qualityDebugHandle>;
   fps: number;
   player: { x: number; y: number; z: number };
   grounded: boolean;
@@ -82,6 +87,8 @@ export interface DebugHandle {
   /** Feet height above the ground below (m). */
   airHeight: number;
   feetY: number;
+  /** Collider ground height under the player (world Y; NaN when nothing below). */
+  groundY: number;
   /** Highest feet Y since the last first-jump takeoff. */
   peakFeetY: number;
   verticalVelocity: number;
@@ -372,6 +379,7 @@ export class Game {
     airborne: false,
     airHeight: 0,
     feetY: 0,
+    groundY: 0,
     peakFeetY: 0,
     verticalVelocity: 0,
     jumps: 0,
@@ -679,6 +687,24 @@ export class Game {
       },
     });
     Object.defineProperty(this.debug.pad, 'focus', { get: () => this.padUi.focusInfo, enumerable: true });
+    // TV mode: remote-only play, radial action menu, panel navigation (see input/TvControls.ts; inert unless tvMode.active).
+    const tv = new TvControls({
+      input: this.input,
+      settings: this.settings,
+      padUi: this.padUi,
+      canPlay: () => startGate.started && this.controlsEnabled && !this.menuOpen && !this.quizLocked && !this.fading,
+      radialItems: () => {
+        const items: TvRadialItem[] = getLayout(this.player.mode, this.profile)
+          .filter((d) => d.action !== 'jump' && d.action !== 'interact')
+          .map((d) => ({ action: d.action, icon: d.icon, color: d.color }));
+        if (this.maps.hasMap) items.push({ action: 'map', icon: MenuIcons.map, color: '#2a9d8f' });
+        return items;
+      },
+      toggleMap: () => this.settings.toggleMap(),
+      start: () => this.hud?.startFromMenu(),
+    });
+    this.input.addSource(tv);
+    (window as unknown as { __sgTv?: TvControls }).__sgTv = tv;
     padHub.rumbleAllowed = () => !this.muteUrl && this.save.data.settings.sound && this.save.data.settings.sfxVol > 0;
     this.player.events.on('land', (e) => {
       if (e.impact > PadConfig.rumbleLandImpact) this.rumble(0.45, 0.25, 110);
@@ -907,6 +933,8 @@ export class Game {
         // A practice fight lasts only while its own level (or the training room) is loaded.
         if (practice.level && this.levels.currentId !== practice.level && this.levels.currentId !== 'training-room') practice.level = '';
         this.hud?.setStoryHelp(this.levels.currentId !== 'test');
+        // Chapter videos download in the background now (the opening right after the title), not just before they play.
+        this.cinematics.enterLevel([...(this.openingPending ? (['open'] as const) : []), ...cinematicsForLevel(this.levels.currentId, this.save.data.chaptersDone)]);
         this.maps.setSource(this.levels.current?.map ?? null);
         this.settings.refresh();
         this.applyLayout();
@@ -945,6 +973,7 @@ export class Game {
       loading: { get: () => this.levels.loading, enumerable: true },
       controlsEnabled: { get: () => this.controlsEnabled, enumerable: true },
     });
+    this.debug.quality = qualityDebugHandle();
     window.__superglen = this.debug;
     document.addEventListener('visibilitychange', this.onVisibility);
   }
@@ -1539,6 +1568,7 @@ export class Game {
     this.debug.airborne = !pl.grounded;
     this.debug.airHeight = pl.airHeight;
     this.debug.feetY = p.y - 0.55;
+    this.debug.groundY = pl.hasGroundBelow ? pl.groundBelowY : Number.NaN;
     this.debug.peakFeetY = pl.peakFeetY;
     this.debug.verticalVelocity = pl.verticalVelocity;
     this.debug.jumps = pl.jumps;

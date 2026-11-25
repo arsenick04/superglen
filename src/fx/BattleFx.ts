@@ -1,3 +1,4 @@
+import { Quality } from '../core/Quality';
 import * as THREE from 'three';
 
 /**
@@ -264,6 +265,7 @@ export class BattleFx {
   private readonly v2 = new THREE.Vector3();
   private readonly sz = new THREE.Vector2();
   private reduced = false;
+  private keepAcc = 0;
 
   constructor(
     scene: THREE.Object3D,
@@ -368,6 +370,12 @@ export class BattleFx {
   // ---- particles ---------------------------------------------------------------------------------------------------
 
   private emit(x: number, y: number, z: number, vx: number, vy: number, vz: number, cell: number, color: number, life: number, s0: number, s1: number, grav = 0, drag = 0, spin = 0, a = 1): void {
+    // Quality tier: thin the bursts out (an accumulator, so the kept share is exact and nothing is allocated).
+    if (Quality.particleKeep < 1) {
+      this.keepAcc += Quality.particleKeep;
+      if (this.keepAcc < 1) return;
+      this.keepAcc -= 1;
+    }
     const i = this.next;
     this.next = (this.next + 1) % this.n;
     if (this.life[i] <= 0) this.alive++;

@@ -214,6 +214,9 @@ export class ThirdPersonCamera {
   private readonly dir = new THREE.Vector3();
   private readonly desiredTarget = new THREE.Vector3();
 
+  /** Quality tier the far plane was set for. */
+  private farVersion = 0;
+
   constructor(
     private readonly physics: Physics,
     private readonly input: Input,
@@ -225,6 +228,7 @@ export class ThirdPersonCamera {
       CameraConfig.near,
       Quality.cameraFar,
     );
+    this.farVersion = Quality.version;
     this.ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
     this.reducedMotion =
       typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -343,6 +347,12 @@ export class ThirdPersonCamera {
 
   /** Call once per frame after the player visual was interpolated. `focus` = capsule center. */
   update(dt: number, focus: THREE.Vector3, subject?: CameraSubject): void {
+    if (this.farVersion !== Quality.version) {
+      // Quality tier changed: new far plane (draw distance).
+      this.farVersion = Quality.version;
+      this.camera.far = Quality.cameraFar;
+      this.camera.updateProjectionMatrix();
+    }
     if (this.arenaPose) {
       const p = this.arenaPose;
       // Respawn/load may call snapBehind after the level has selected this

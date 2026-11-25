@@ -30,14 +30,7 @@ function showFatal(err: unknown): void {
   ui.replaceChildren(box);
 }
 
-async function boot(): Promise<void> {
-  const compat = compatibilityMode();
-  // No top-level await (Safari iOS 16 build target): init Rapier inside an async function. The city's environment models
-  // (about 45 KB) load alongside: the city is built from them right after (primitive fallback if they fail).
-  // The owner's enemy models (about 2.5 MB for the chapters that exist) load alongside; each enemy keeps its procedural figure if they fail.
-  // L18: the Kenney city kit and the owner's buildings (about 6 MB) as well; each building keeps its procedural look if they fail.
-  // Initialise the large WASM module alone. Decoding every GLB/HDR at the same time caused a high peak-memory failure in the
-  // PlayStation browser. Console compatibility mode loads the optional libraries sequentially; all have procedural fallbacks.
+async function loadAssets(compat: boolean): Promise<void> {
   await RAPIER.init();
   if (compat) {
     await envModels.load();
@@ -53,6 +46,22 @@ async function boot(): Promise<void> {
   await crowdModels.load();
   await preloadCityNature();
   await loadBikeTemplate(); // never rejects; the bike visual then builds during the level build, before the shader prewarm
+}
+
+async function boot(): Promise<void> {
+  const compat = compatibilityMode();
+  // No top-level await (Safari iOS 16 build target): init Rapier inside an async function. The city's environment models
+  // (about 45 KB) load alongside: the city is built from them right after (primitive fallback if they fail).
+  // The owner's enemy models (about 2.5 MB for the chapters that exist) load alongside; each enemy keeps its procedural figure if they fail.
+  // L18: the Kenney city kit and the owner's buildings (about 6 MB) as well; each building keeps its procedural look if they fail.
+  // Initialise the large WASM module alone. Decoding every GLB/HDR at the same time caused a high peak-memory failure in the
+  // PlayStation browser. Console compatibility mode loads the optional libraries sequentially; all have procedural fallbacks.
+  // The title menu does not wait for the assets: they load while it is on screen (the pick waits for them if still running).
+  const assets = loadAssets(compat);
+  let assetsReady = false;
+  void assets.then(() => {
+    assetsReady = true;
+  });
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
   const ui = document.getElementById('ui');
@@ -67,12 +76,23 @@ async function boot(): Promise<void> {
   if (ui && shouldShowTitle()) {
     // Title menu first (Main Baru / Lanjutkan / Pengaturan). The pick creates the Game inside the tap, so audio can unlock.
     const title: { menu: TitleMenu | null } = { menu: null };
+    let picked = false;
     title.menu = new TitleMenu(ui, (choice) => {
-      title.menu?.remove();
-      launch(choice.mode);
+      if (assetsReady) {
+        // Synchronous path keeps the tap gesture alive for the audio unlock.
+        title.menu?.remove();
+        launch(choice.mode);
+      } else if (!picked) {
+        picked = true;
+        void assets.then(() => {
+          title.menu?.remove();
+          launch(choice.mode);
+        }).catch((err: unknown) => showFatal(err));
+      }
     });
     (window as unknown as { __sgTitleMenu?: unknown }).__sgTitleMenu = title.menu.debugHandle();
   } else {
+    await assets;
     launch('plain');
   }
 }

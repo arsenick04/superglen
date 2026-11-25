@@ -22,6 +22,7 @@ import type { Solid } from './CityData';
  * Steady state (no chunk changing) allocates nothing: distances are plain numbers in typed arrays.
  */
 export const STREAM = {
+  /** Detail draw distance (m); scaled by the quality tier (see `applyStreamQuality`). */
   visIn: 40,
   visOut: 62,
   colIn: 24,
@@ -32,7 +33,16 @@ export const STREAM = {
   vertsPerFrame: Quality.level === 'low' ? 7000 : 14000,
   collidersPerFrame: 40,
   removalsPerFrame: 80,
-} as const;
+};
+
+const VIS_IN = STREAM.visIn;
+const VIS_OUT = STREAM.visOut;
+
+/** Chunk detail radius of the current quality tier (call at level start and on every tier change). Colliders are not scaled. */
+export function applyStreamQuality(): void {
+  STREAM.visIn = Math.round(VIS_IN * Quality.chunkScale);
+  STREAM.visOut = Math.round(VIS_OUT * Quality.chunkScale);
+}
 
 const NONE = 0;
 const LOADING = 1;
@@ -59,6 +69,7 @@ export class ChunkStreamer {
   readonly stats: StreamStats = { visLoaded: 0, visLoading: 0, colLoaded: 0, colBodies: 0, visLoads: 0, visUnloads: 0, colLoads: 0, colUnloads: 0, syncLoads: 0, maxVisLoaded: 0, maxColBodies: 0, chunkTris: 0 };
   readonly farMeshes: THREE.Mesh[] = [];
   readonly flatMesh: THREE.Mesh | null;
+  readonly flatLayerMeshes: THREE.Mesh[] = [];
   private readonly n: number;
   private readonly dist: Float32Array;
   private readonly vis: Uint8Array;
@@ -80,6 +91,8 @@ export class ChunkStreamer {
     glow: THREE.Material,
     /** Material of the deco layer (decorations lying on the lit layer): same look as `lit`, with a depth bias. */
     deco: THREE.Material = lit,
+    /** Materials of the flat ground levels (index = level, with a growing depth bias); missing = `lit`. */
+    flatMats: THREE.Material[] = [],
   ) {
     const n = city.chunks.length;
     this.n = n;
@@ -99,6 +112,13 @@ export class ChunkStreamer {
     }
     this.flatMesh = bakeStatic(city.flat, lit, false, true);
     if (this.flatMesh) root.add(this.flatMesh);
+    city.flatLayers.forEach((r, lv) => {
+      const m = lv > 0 ? bakeStatic(r, flatMats[lv] ?? lit, false, true) : null;
+      if (m) {
+        root.add(m);
+        this.flatLayerMeshes.push(m);
+      }
+    });
     // Slot pools sized for the biggest chunk of each layer.
     const pick = (c: ChunkRecipes, l: number): Recipe => (l === 0 ? c.lit : l === 1 ? c.deco : c.glow);
     this.layers = [0, 1, 2].map((l) => {

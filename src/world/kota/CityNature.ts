@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { LevelContext } from '../Level';
 import { CITY_LAYOUT, treePlatforms, type CityTree } from './CityData';
@@ -141,7 +142,7 @@ export class CityNature {
       const mesh = new THREE.InstancedMesh(a.geometry, material, Math.min(list.length, CAP[id]));
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.setColorAt(0, this.tint.set(0xffffff));
-      mesh.castShadow = CASTS.has(id);
+      mesh.castShadow = CASTS.has(id) && Quality.propShadows;
       mesh.receiveShadow = true;
       mesh.frustumCulled = false;
       mesh.count = 0;
@@ -152,15 +153,20 @@ export class CityNature {
     }
   }
 
+  private seenVersion = Quality.version;
+
   update(x: number, z: number): void {
+    // A quality tier change redraws the lists at once (radius, density, tree shadows).
+    const shadowFlip = this.seenVersion !== Quality.version;
+    if (shadowFlip) { this.seenVersion = Quality.version; this.lastX = 1e9; }
     if (Math.hypot(x - this.lastX, z - this.lastZ) < 3) return;
     this.lastX = x;
     this.lastZ = z;
     const d = this.dummy;
     for (const { id, items, mesh } of this.groups) {
-      const R = RADIUS[id];
+      const R = RADIUS[id] * Quality.natureRadius;
       const R2 = R * R;
-      const cap = mesh.instanceMatrix.count;
+      const cap = Math.max(1, Math.round(mesh.instanceMatrix.count * Quality.natureDensity));
       let n = 0;
       for (let i = 0; i < items.length && n < cap; i++) {
         const p = items[i];
@@ -179,6 +185,7 @@ export class CityNature {
         n++;
       }
       mesh.count = n;
+      if (shadowFlip) mesh.castShadow = CASTS.has(id) && Quality.propShadows;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }

@@ -1,0 +1,194 @@
+/* TV mode (html.tv-ui, see core/TvMode.ts): remote control, sofa distance, overscan margins. Nothing here applies on other devices. */
+
+/* 5 % overscan margins: the HUD lives inside #ui; full-bleed screens stay full-bleed and pad their own content. */
+html.tv-ui #ui {
+  inset: 5vh 5vw;
+  padding: 0;
+}
+html.tv-ui .start-overlay,
+html.tv-ui .fade,
+html.tv-ui .bab1-flash,
+html.tv-ui .battle-fx,
+html.tv-ui .qp-fx,
+html.tv-ui .title-menu,
+html.tv-ui .title-confirm,
+html.tv-ui .settings,
+html.tv-ui .settings-confirm,
+html.tv-ui .fullmap,
+html.tv-ui .qp,
+html.tv-ui .parents {
+  position: fixed;
+  inset: 0;
+}
+html.tv-ui .title-menu,
+html.tv-ui .settings,
+html.tv-ui .fullmap,
+html.tv-ui .qp,
+html.tv-ui .parents {
+  box-sizing: border-box;
+  padding: 5vh 5vw;
+}
+
+/* No pointer: hide the cursor and everything made for fingers and mice. */
+html.tv-ui,
+html.tv-ui * {
+  cursor: none !important;
+}
+html.tv-ui .touch-layer,
+html.tv-ui .hud-card,
+html.tv-ui .rotate-overlay,
+html.tv-ui .zoom-buttons,
+html.tv-ui .hud-fps {
+  display: none !important;
+}
+html.tv-ui .start-text-pc {
+  font-size: 0;
+}
+html.tv-ui .start-text-pc::after {
+  content: 'Tekan OK untuk mulai';
+  font-size: clamp(28px, 3.4vh, 44px);
+}
+
+/* Big, bright focus ring for the remote (menus, slot cards, quiz answers, the radial menu). */
+html.tv-ui .pad-focus,
+html.tv-ui .title-btn:focus-visible,
+html.tv-ui .slot-main:focus-visible {
+  outline: 10px solid #ffd23f !important;
+  outline-offset: 6px;
+  box-shadow: 0 0 0 5px #e8453c, 0 0 34px 14px rgba(255, 210, 63, 0.9) !important;
+  scale: 1.08;
+  position: relative;
+  z-index: 3;
+}
+html.tv-ui .settings-quality-row .menu-btn.on,
+html.tv-ui .title-btn.tv-pref.on {
+  outline: 6px solid #2fa84f;
+  outline-offset: 1px;
+}
+html.tv-ui .title-btn.tv-pref {
+  flex: 1 1 0;
+}
+html.tv-ui .title-tv {
+  gap: 14px;
+}
+
+/* Larger HUD: roughly 1.35x. */
+html.tv-ui .hearts,
+html.tv-ui .minimap,
+html.tv-ui .set-gear,
+html.tv-ui .ch3-count,
+html.tv-ui .ch5-stars,
+html.tv-ui .city-toast,
+html.tv-ui .letters-progress,
+html.tv-ui .set-toast,
+html.tv-ui .dlg.compact,
+html.tv-ui .battle-banner,
+html.tv-ui .arena-return {
+  zoom: 1.35;
+}
+html.tv-ui .prompt-icon,
+html.tv-ui .prompt-key {
+  zoom: 1.4;
+}
+html.tv-ui .title-body {
+  zoom: 1.15;
+}
+
+/* Dialog bubble: readable from the sofa, centred at the bottom. */
+html.tv-ui .dlg {
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 24px;
+}
+html.tv-ui .dlg:not(.compact) .dlg-card {
+  width: min(1180px, 100%);
+  gap: 22px;
+  padding: 16px 26px 16px 16px;
+  border-radius: 44px;
+}
+html.tv-ui .dlg:not(.compact) .dlg-text {
+  font-size: clamp(30px, 3.4vh, 44px);
+  line-height: 1.3;
+}
+html.tv-ui .dlg:not(.compact) .dlg-face {
+  zoom: 1.5;
+}
+html.tv-ui .dlg:not(.compact) .dlg-name {
+  font-size: 24px;
+}
+html.tv-ui .dlg:not(.compact) .dlg-next {
+  width: 46px;
+  height: 46px;
+}
+
+/* Quiz: bigger answers and text. */
+html.tv-ui .qp-bubble,
+html.tv-ui .qp-q,
+html.tv-ui .qp-text {
+  font-size: clamp(28px, 3.6vh, 42px);
+}
+
+/* Radial action menu (long press OK, or the Menu key). */
+.tv-radial {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(10, 20, 50, 0.55), rgba(10, 20, 50, 0.8));
+  pointer-events: auto;
+}
+.tv-radial-ring {
+  position: relative;
+  width: min(54vh, 480px);
+  height: min(54vh, 480px);
+  border-radius: 50%;
+  border: 8px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.12);
+  box-sizing: border-box;
+}
+.tv-radial-item {
+  position: absolute;
+  left: calc(50% + var(--x));
+  top: calc(50% + var(--y));
+  width: min(20vh, 170px);
+  height: min(20vh, 170px);
+  margin: calc(min(20vh, 170px) / -2) 0 0 calc(min(20vh, 170px) / -2);
+  padding: 22px;
+  box-sizing: border-box;
+  border: 6px solid #fff;
+  border-radius: 50%;
+  background: var(--c, #3b82f6);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+}
+.tv-radial-item svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* One-time "use a gamepad" hint. */
+.tv-hint {
+  position: absolute;
+  left: 50%;
+  top: 3vh;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 30px 12px 22px;
+  border-radius: 999px;
+  background: rgba(30, 50, 100, 0.88);
+  border: 4px solid #fff;
+  color: #fff;
+  font: 800 clamp(26px, 3.2vh, 38px) / 1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tv-hint svg {
+  width: 84px;
+  height: 52px;
+  flex: none;
+}

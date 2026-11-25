@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Quality } from '../../core/Quality';
 import { FACE_VEC, type CityBuilding, type CityLayout } from './CityData';
 import { cityModels, type CustomBuilding, type KModel } from './CityModels';
 import { Parkour } from '../../config/parkour';
@@ -338,7 +339,7 @@ export class CityDressing {
         const m = c as THREE.Mesh;
         if (!m.isMesh) return;
         const inst = new THREE.InstancedMesh(m.geometry, lotMaterial(m.material as THREE.MeshStandardMaterial, lot, b.kind === 'oldBarongsai' ? b.base + 0.5 : undefined), count);
-        inst.castShadow = true;
+        inst.castShadow = Quality.propShadows;
         inst.receiveShadow = true;
         for (let i = 0; i < count; i++) {
           const offset = (i - (count - 1) / 2) * bodyWidth;
@@ -369,7 +370,7 @@ export class CityDressing {
     }
     const mesh = new THREE.BatchedMesh(kd.length, verts, idx, material());
     mesh.sortObjects = false; // opaque; sorting would allocate per frame
-    mesh.castShadow = true;
+    mesh.castShadow = Quality.propShadows;
     mesh.receiveShadow = true;
     mesh.name = 'cityDressing';
     const ids = new Map<string, [number, number]>();

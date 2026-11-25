@@ -1,3 +1,4 @@
+import { Quality } from '../../core/Quality';
 import type { LevelContext } from '../Level';
 import { FireSystem, type FireSpotDef } from '../../fx/Fire';
 
@@ -15,7 +16,7 @@ export class ForestFireEffects {
       spots.push({ x: Math.cos(angle) * radius, y: 0, z: 18 + Math.sin(angle) * radius, scale: 1.6 + (i % 4) * 0.2, ambient: true });
     }
     this.ringCount = spots.length;
-    this.system = new FireSystem(ctx.root, [...spots, ...extra], false);
+    this.system = new FireSystem(ctx.root, [...spots, ...extra], Quality.fireLite);
     ctx.onDispose(() => this.system.dispose());
   }
   update(dt: number): void { this.system.update(dt, this.ctx.cameraRig.camera); }

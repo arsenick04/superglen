@@ -1,5 +1,6 @@
 import { padHub, PadBtn, PadConfig, PAD_BUTTONS } from './GamepadHub';
 import { startGate } from '../core/StartGate';
+import { tvMode, type TvKind } from '../core/TvMode';
 import type { SettingsMenu } from '../ui/SettingsMenu';
 import type { MapView } from '../ui/MapView';
 
@@ -44,8 +45,10 @@ export class PadUi {
   update(): void {
     const h = padHub;
     if (!h.connected) {
-      this.clearFocus();
-      this.scope = null;
+      if (!tvMode.active) {
+        this.clearFocus();
+        this.scope = null;
+      }
       return;
     }
     let any = false;
@@ -90,6 +93,37 @@ export class PadUi {
 
     if (f[PadBtn.cross]) this.activate();
     else if (f[PadBtn.circle]) this.back();
+  }
+
+  /**
+   * TV mode: keep the focus ring in step with the open panel (called every frame by input/TvControls). Returns the open
+   * panel, or null. The first focus is the same safe default a controller gets.
+   */
+  tvSync(): HTMLElement | null {
+    const scope = this.findScope();
+    if (scope !== this.scope) {
+      this.clearFocus();
+      this.scope = scope;
+      this.dir = DIR_NONE;
+    }
+    if (!scope) return null;
+    if (!this.focus || !this.usable(this.focus, scope)) this.setFocus(this.pickDefault(scope));
+    return scope;
+  }
+
+  /** TV remote / keyboard: arrows move the focus (or a slider), OK presses it. True when a panel took the key. */
+  tvKey(kind: TvKind): boolean {
+    const scope = this.tvSync();
+    if (!scope) return false;
+    if (kind === 'up') this.step(DIR_UP);
+    else if (kind === 'down') this.step(DIR_DOWN);
+    else if (kind === 'left') this.step(DIR_LEFT);
+    else if (kind === 'right') this.step(DIR_RIGHT);
+    else if (kind === 'ok') {
+      if (!this.focus) return false; // nothing to press: the panel's own key handling may use Enter
+      this.activate();
+    } else return false; // back / menu: the panel's own Escape handling
+    return true;
   }
 
   /** Test hook: what has focus. */
