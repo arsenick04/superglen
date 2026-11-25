@@ -6,7 +6,7 @@
  * wall shows blocky, flickering patches (worst on phones). This script finds every pair of overlapping, same-facing triangles
  * closer than TOL metres and lifts the later one along its normal in steps of STEP metres (the layer on top is stable).
  *
- *   node scripts/fix-downtown-coplanar.mjs [file.glb]      (idempotent: lifted layers are no longer closer than TOL)
+ *   node scripts/fix-downtown-coplanar.mjs [file.glb] [--tol=0.015] [--step=0.02] [--layers=5]   (idempotent: lifted layers are no longer closer than TOL)
  *
  * Lifted triangles get their own vertices (attributes copied). Positions are int16 normalised, so the whole mesh is shrunk a little
  * and the node scale enlarged by the same factor to leave head-room for the lift.
@@ -15,10 +15,13 @@ import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 
-const FILE = process.argv[2] ?? 'public/env/downtown/downtown.glb';
-const TOL = 0.004; // m: closer than this and overlapping = z-fight
-const STEP = 0.006; // m per layer
-const MAX_LAYERS = 6;
+const argv = process.argv.slice(2);
+const opt = (k, d) => Number(argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3) ?? d);
+const FILE = argv.find((a) => !a.startsWith('--')) ?? 'public/env/downtown/downtown.glb';
+// Matches scripts/check-zfight.mjs (1.5 cm). A layer is lifted 2 cm: at least 8 depth-buffer steps at 100 m on a 24-bit buffer.
+const TOL = opt('tol', 0.015); // m: closer than this and overlapping = z-fight
+const STEP = opt('step', 0.02); // m per layer
+const MAX_LAYERS = opt('layers', 5);
 await MeshoptDecoder.ready;
 await MeshoptEncoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });

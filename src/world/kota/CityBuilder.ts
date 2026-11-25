@@ -44,21 +44,19 @@ export interface BuiltCity {
 const SIDEWALK = 0xeadcbf;
 const MARK = 0xfff3b0;
 const STONE = 0xe8d9b5;
-/** Visual heights of the flat layers (the collider ground is y = 0): small steps so nothing z-fights. */
-const Y: Record<GroundKind | 'base' | 'walk' | 'road' | 'mark', number> = {
-  base: -0.1,
-  grass: -0.07,
-  field: -0.05,
-  flowers: -0.035,
-  sand: -0.035,
-  dirt: -0.035,
-  plaza: -0.02,
-  paving: -0.01,
-  water: -0.01,
-  walk: 0.0,
-  road: 0.025,
-  mark: 0.05,
-};
+/**
+ * Visual heights of the flat layers (the collider ground is y = 0). Every flat item that overlaps an item of a different look gets
+ * its own step of FLAT_STEP (2.5 cm: several depth-buffer steps at 100 m even on a 24-bit buffer, see scripts/check-zfight.mjs), so
+ * ground tints, plazas, sidewalks, asphalt and markings never share a plane. Items are stacked by class (later classes lie above
+ * earlier ones, see `FLAT_CLASS`); an item's height is `FLAT_Y0 + level * FLAT_STEP` (see `layerFlat`).
+ */
+const FLAT_STEP = 0.025;
+const FLAT_Y0 = -0.06;
+const FLAT_CLASS: Record<GroundKind, number> = { grass: 1, field: 2, flowers: 3, sand: 4, dirt: 5, plaza: 6, paving: 7, water: 8 };
+const FLAT_WALK = 9;
+const FLAT_ROAD = 10;
+const FLAT_TILE = 11;
+const FLAT_MARK = 12;
 const GROUND_COLOR: Record<GroundKind, number> = {
   grass: 0x69bc61,
   field: 0x5bb04f,
@@ -184,12 +182,21 @@ function paint(c: number, a: number, b: number): number {
   return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(bl);
 }
 
+/**
+ * Visual push (m) of the blocks of the pieces of a building that wears a model: the data's footholds end flush with the facade, which
+ * is also where the model's wall is, so the block's front face would share the wall's plane. 3 cm outward (towards the street)
+ * separates them; the collider (and so the walkable top) is unchanged. Set per piece by `drawPiece`.
+ */
+const blockShift: [number, number] = [0, 0];
+
 function block(B: Builder, p: CityPiece, base: number, color: number, cap = lighten(color), tile = 0, capTile = 0): void {
   const t = p.thick ?? p.top - base;
   const bottom = p.top - t;
   const capH = Math.min(0.16, t * 0.3);
-  B.ch.lit.box([p.w, t - capH, p.d], [p.x, bottom + (t - capH) / 2, p.z], color, undefined, tile);
-  B.ch.lit.box([p.w + 0.04, capH, p.d + 0.04], [p.x, p.top - capH / 2, p.z], capTile ? 0xffffff : cap, undefined, capTile);
+  const px = p.x + blockShift[0];
+  const pz = p.z + blockShift[1];
+  B.ch.lit.box([p.w, t - capH, p.d], [px, bottom + (t - capH) / 2, pz], color, undefined, tile);
+  B.ch.lit.box([p.w + 0.04, capH, p.d + 0.04], [px, p.top - capH / 2, pz], capTile ? 0xffffff : cap, undefined, capTile);
   edge(B, p.x, p.z, p.w, p.d, p.top);
 }
 
@@ -234,6 +241,8 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
   const along = b.face < 2; // piece long side along x
   const old = b.abandoned === true;
   const dress = dressOf(b);
+  blockShift[0] = dress ? fx * 0.03 : 0;
+  blockShift[1] = dress ? fz * 0.03 : 0;
   if (dress && p.type !== 'crate' && p.type !== 'podium') {
     const body = dressedBody(dress);
     const face = fz > 0 ? body.max.z : fz < 0 ? body.min.z : fx > 0 ? body.max.x : body.min.x;
@@ -262,7 +271,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       const pal = palette(b);
       for (let i = 0; i < n; i++) {
         B.ch.deco.boxNB([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + i * sz + 0.04, p.z], 0x8a5a2c);
-        B.ch.deco.box([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + (i + 1) * sz - 0.04, p.z], 0x8a5a2c);
+        B.ch.deco.box([p.w + 0.06, 0.07, p.d + 0.06], [p.x, b.base + (i + 1) * sz - 0.075, p.z], 0x8a5a2c); // lid top 4 cm under the block's cap
         // Corner posts, a painted label plate and a cross brace on the outward face: reads as a real shipping crate.
         for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) B.ch.deco.boxNB([0.09, sz, 0.09], [p.x + sx * (p.w / 2 + 0.01), b.base + i * sz + sz / 2, p.z + sz2 * (p.d / 2 + 0.01)], 0x7a4c22);
         const cx = p.x + fx * (p.w / 2 + 0.04);
@@ -271,7 +280,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
         const span = Math.hypot(sz - 0.2, along ? p.w : p.d);
         const ang = Math.atan2(sz - 0.2, along ? p.w : p.d);
         B.ch.deco.boxNB(along ? [span, 0.07, 0.04] : [0.04, 0.07, span], [cx, cy, cz], 0x7a4c22, along ? [0, 0, ang] : [ang, 0, 0]);
-        B.ch.deco.boxNB(along ? [0.34, 0.24, 0.05] : [0.05, 0.24, 0.34], [cx + fx * 0.01, cy, cz + fz * 0.01], pal.accent);
+        B.ch.deco.boxNB(along ? [0.34, 0.24, 0.1] : [0.1, 0.24, 0.34], [cx + fx * 0.01, cy, cz + fz * 0.01], pal.accent); // label front 4 cm proud of the brace
       }
       block(B, p, b.base, 0xeac08a, 0xf5d09c, T.wood, T.wood);
       break;
@@ -286,7 +295,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       // Grille slats, a round fan guard and a coloured stripe on top: a cute split-unit outdoor box.
       for (let i = 0; i < 4; i++) B.ch.deco.boxNB(along ? [wide, 0.04, 0.04] : [0.04, 0.04, wide], [p.x + ox, p.top - t * 0.28 - i * t * 0.12, p.z + oz], 0x8fa3ba);
       B.ch.deco.cyl(t * 0.2, 0.05, [p.x + ox + (along ? 0 : fx * 0.03), p.top - t * 0.5, p.z + oz + (along ? fz * 0.03 : 0)], 0xb9c8d8, along ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]);
-      B.ch.deco.boxNB(along ? [p.w + 0.05, 0.09, p.d + 0.05] : [p.w + 0.05, 0.09, p.d + 0.05], [p.x, p.top - 0.2, p.z], pal.accent2);
+      B.ch.deco.boxNB([p.w + 0.05, 0.09, p.d + 0.05], [p.x, p.top - 0.6, p.z], pal.accent2); // stripe wholly inside the body height, clear of the cap and of the grille slats
       // Two wall brackets under the unit.
       for (const sx of [-1, 1]) B.ch.deco.boxNB(along ? [0.1, 0.1, p.d * 0.7] : [p.w * 0.7, 0.1, 0.1], [p.x + (along ? sx * (p.w / 2 - 0.25) : 0), p.top - t - 0.05, p.z + (along ? 0 : sx * (p.d / 2 - 0.25))], 0x7b8ea3);
       break;
@@ -358,7 +367,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
       const oz = p.z + fz * (p.d / 2 + 0.04);
       const yaw = facadeYaw(b);
       B.ch.deco.decal(old ? T.door0 : b.wallColor === 0xffffff ? T.door1 : T.door0, 1.0, 2.1, [ox, b.base + 1.05, oz], yaw);
-      B.ch.deco.decal(T.window0, 1.0, 1.2, [ox + fx * 0.01, b.base + 3.2, oz + fz * 0.01], yaw);
+      B.ch.deco.decal(T.window0, 1.0, 1.2, [ox + fx * 0.03, b.base + 3.2, oz + fz * 0.03], yaw);
       break;
     }
     case 'sign':
@@ -379,7 +388,7 @@ function drawPiece(B: Builder, b: CityBuilding, p: CityPiece): void {
         const ox = along ? 0 : fx * (p.w / 2 + 0.03);
         const oz = along ? fz * (p.d / 2 + 0.03) : 0;
         B.ch.deco.box(along ? [p.w * 0.8, t * 0.55, 0.04] : [0.04, t * 0.55, p.d * 0.8], [p.x + ox, p.top - t / 2, p.z + oz], pal.trim);
-        B.ch.deco.box(along ? [p.w * 0.5, t * 0.22, 0.05] : [0.05, t * 0.22, p.d * 0.5], [p.x + ox * 1.01, p.top - t / 2, p.z + oz * 1.01], pal.accent);
+        B.ch.deco.box(along ? [p.w * 0.5, t * 0.22, 0.1] : [0.1, t * 0.22, p.d * 0.5], [p.x + ox, p.top - t / 2, p.z + oz], pal.accent); // 3 cm proud of the trim board
       }
       else block(B, p, b.base, old ? 0xa08a5a : C.GOLD, old ? 0xc9b48a : C.CREAM);
       break;
@@ -748,7 +757,7 @@ function drawTower(B: Builder, b: CityBuilding, dressed = false): void {
     const [fx, fz] = FACE_VEC[side];
     const yaw = Math.atan2(fx, fz);
     for (const a of [-3.8, 0, 3.8]) {
-      B.far.decal(T.window2, 1.8, Math.min(2.3, pod - 0.8), [b.x + fx * 6.015 - fz * a, b.base + pod * 0.5, b.z + fz * 6.015 + fx * a], yaw);
+      B.far.decal(T.window2, 1.8, Math.min(2.3, pod - 0.8), [b.x + fx * 6.03 - fz * a, b.base + pod * 0.5, b.z + fz * 6.03 + fx * a], yaw);
       B.far.box(fz !== 0 ? [0.24, pod - 0.4, 0.16] : [0.16, pod - 0.4, 0.24], [b.x + fx * 6.03 - fz * (a + 1.1), b.base + pod / 2, b.z + fz * 6.03 + fx * (a + 1.1)], 0xffedcc);
     }
     B.far.box(fz !== 0 ? [12.12, 0.16, 0.16] : [0.16, 0.16, 12.12], [b.x + fx * 6, b.base + pod - 0.48, b.z + fz * 6], 0xfff1d9);
@@ -1115,8 +1124,57 @@ const GROUND_TILE: Record<GroundKind, number> = {
   water: 0,
 };
 
+/** One flat item of the ground / road layers: its footprint on XZ, its look and how to emit it at a given height. */
+interface FlatItem {
+  cls: number;
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  look: string;
+  level: number;
+  emit: (y: number) => void;
+}
+
+/**
+ * Give every flat item the lowest step such that it lies above every earlier-class item it overlaps (one extra step when the look
+ * differs: identical looks may share a plane, nothing to fight over). The base quad is level 0. Returns the highest level.
+ */
+function layerFlat(items: FlatItem[]): number {
+  items.sort((a, b) => a.cls - b.cls);
+  let top = 0;
+  for (let i = 0; i < items.length; i++) {
+    const e = items[i];
+    let lv = 1;
+    for (let j = 0; j < i; j++) {
+      const f = items[j];
+      if (f.x1 <= e.x0 + 0.01 || f.x0 >= e.x1 - 0.01 || f.z1 <= e.z0 + 0.01 || f.z0 >= e.z1 - 0.01) continue;
+      const l = f.level + (f.look === e.look ? 0 : 1);
+      if (l > lv) lv = l;
+    }
+    e.level = lv;
+    if (lv > top) top = lv;
+    e.emit(FLAT_Y0 + lv * FLAT_STEP);
+  }
+  return top;
+}
+
 function drawGround(B: Builder, L: CityLayout): void {
   const F = B.flat;
+  const flat: FlatItem[] = [];
+  /** Axis-aligned flat quad (footprint w x d centred on cx, cz); `rot` turns a strip tile (the footprint stays w x d in the world). */
+  const addFlat = (cls: number, cx: number, cz: number, w: number, d: number, color: number, tile: number, rot?: Vec3): void => {
+    flat.push({
+      cls,
+      x0: cx - w / 2,
+      x1: cx + w / 2,
+      z0: cz - d / 2,
+      z1: cz + d / 2,
+      look: `${color}:${tile}`,
+      level: 0,
+      emit: (y) => (rot ? F.quad(d, w, [cx, y, cz], color, tile, rot) : F.quad(w, d, [cx, y, cz], color, tile)),
+    });
+  };
   const roadKit = cityModels.template('road_road-straight');
   const roadTiles: { x: number; z: number; ax: boolean; half: number; width: number }[] = [];
   if (roadKit >= 0) {
@@ -1139,12 +1197,12 @@ function drawGround(B: Builder, L: CityLayout): void {
     }
   }
   const onRoadTile = (x: number, z: number): boolean => roadTiles.some((t) => Math.abs(x - t.x) < (t.ax ? t.half : t.width / 2) + 0.01 && Math.abs(z - t.z) < (t.ax ? t.width / 2 : t.half) + 0.01);
-  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, Y.base, 0], 0x6eb85a, T.grass);
+  F.quad(CITY.half * 2 + 140, CITY.half * 2 + 140, [0, FLAT_Y0, 0], 0x6eb85a, T.grass);
   for (const g of L.ground) {
     const w = g.x1 - g.x0;
     const d = g.z1 - g.z0;
     if (w <= 0 || d <= 0) continue;
-    F.quad(w, d, [(g.x0 + g.x1) / 2, Y[g.kind], (g.z0 + g.z1) / 2], g.color ?? GROUND_COLOR[g.kind], GROUND_TILE[g.kind]);
+    addFlat(FLAT_CLASS[g.kind], (g.x0 + g.x1) / 2, (g.z0 + g.z1) / 2, w, d, g.color ?? GROUND_COLOR[g.kind], GROUND_TILE[g.kind]);
   }
   // Zebra crossings sit just outside every intersection. Paint and road stay in the same flat batch.
   const crossingKeys = new Set<string>();
@@ -1165,7 +1223,7 @@ function drawGround(B: Builder, L: CityLayout): void {
         const key = `${ax}:${x.toFixed(2)}:${z.toFixed(2)}`;
         if (crossingKeys.has(key)) continue;
         crossingKeys.add(key);
-        for (let a = -half + 0.55; a < half - 0.2; a += 1.05) F.quad(ax ? 2.2 : 0.58, ax ? 0.58 : 2.2, [x + (ax ? 0 : a), Y.mark + 0.005, z + (ax ? a : 0)], 0xfff9df);
+        for (let a = -half + 0.55; a < half - 0.2; a += 1.05) addFlat(FLAT_MARK, x + (ax ? 0 : a), z + (ax ? a : 0), ax ? 2.2 : 0.58, ax ? 0.58 : 2.2, 0xfff9df, 0);
       }
     }
   }
@@ -1174,14 +1232,26 @@ function drawGround(B: Builder, L: CityLayout): void {
     const cz = (r.z0 + r.z1) / 2;
     const w = r.x1 - r.x0;
     const d = r.z1 - r.z0;
-    F.quad(w, d, [cx, Y.walk, cz], SIDEWALK, T.paving);
+    addFlat(FLAT_WALK, cx, cz, w, d, SIDEWALK, T.paving);
     const half = r.main ? CITY.main.road : CITY.local.road;
     const alongX = w > d;
     // Same vertex-colour asphalt as the Kenney surface: no near/far or tile/intersection colour seams.
-    if (alongX) F.quad(half * 2, w, [cx, Y.road, cz], 0x6f7683, 0, [0, Math.PI / 2, 0]);
-    else F.quad(half * 2, d, [cx, Y.road, cz], 0x6f7683);
+    if (alongX) addFlat(FLAT_ROAD, cx, cz, w, half * 2, 0x6f7683, 0, [0, Math.PI / 2, 0]);
+    else addFlat(FLAT_ROAD, cx, cz, half * 2, d, 0x6f7683, 0);
   }
-  for (const t of roadTiles) F.add(roadKit as Sh, [t.x, 0.035, t.z], [t.width, t.width, t.width], 0xffffff, t.ax ? undefined : [0, Math.PI / 2, 0]);
+  for (const t of roadTiles) {
+    // The Kenney tile (flat model, its asphalt is as wide as the corridor): its own step above the procedural asphalt.
+    flat.push({
+      cls: FLAT_TILE,
+      x0: t.x - t.width / 2,
+      x1: t.x + t.width / 2,
+      z0: t.z - t.width / 2,
+      z1: t.z + t.width / 2,
+      look: 'kenney-road',
+      level: 0,
+      emit: (y) => F.add(roadKit as Sh, [t.x, y, t.z], [t.width, t.width, t.width], 0xffffff, t.ax ? undefined : [0, Math.PI / 2, 0]),
+    });
+  }
   // Centre-line dashes, skipped where another road crosses.
   for (const r of L.roads) {
     const alongX = r.x1 - r.x0 > r.z1 - r.z0;
@@ -1201,9 +1271,10 @@ function drawGround(B: Builder, L: CityLayout): void {
         if (x > o.x0 - 1 && x < o.x1 + 1 && z > o.z0 - 1 && z < o.z1 + 1) skip = true;
       }
       if (skip) continue;
-      F.quad(alongX ? 1.6 : 0.2, alongX ? 0.2 : 1.6, [x, Y.mark, z], MARK);
+      addFlat(FLAT_MARK, x, z, alongX ? 1.6 : 0.2, alongX ? 0.2 : 1.6, MARK, 0);
     }
   }
+  layerFlat(flat);
   // L18: raised kerbs along the asphalt (Kenney roads look; visual only, 12 cm), broken at the crossings.
   for (const r of L.roads) {
     const alongX = r.x1 - r.x0 > r.z1 - r.z0;
@@ -1306,8 +1377,8 @@ function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
       if (side === b.face) continue;
       const [nx, nz] = FACE_VEC[side];
       const len = nz !== 0 ? w : deep;
-      const px = cx + nx * (w / 2 + 0.022);
-      const pz = cz + nz * (deep / 2 + 0.022);
+      const px = cx + nx * (w / 2 + 0.03);
+      const pz = cz + nz * (deep / 2 + 0.03);
       for (let a = -len / 2 + 1; a < len / 2 - 0.4; a += 2) {
         for (const y of b.floors > 1 ? [1.5, Math.min(4.1, wallH - 0.8)] : [1.7]) B.far.decal(T.window0, 1, 1.25, [px - nz * a, b.base + y, pz + nx * a], Math.atan2(nx, nz));
       }
@@ -1332,17 +1403,19 @@ function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
         const [nx, nz] = FACE_VEC[side];
         const len = nz !== 0 ? w : deep;
         for (let a = -len / 2 + 1; a < len / 2 - 0.4; a += 2) {
-          for (const y of [1.6, 4.5]) B.far.decal(T.window0, 1.05, 1.5, [cx + nx * (w / 2 + 0.02) - nz * a, b.base + y, cz + nz * (deep / 2 + 0.02) + nx * a], Math.atan2(nx, nz));
+          for (const y of [1.6, 4.5]) B.far.decal(T.window0, 1.05, 1.5, [cx + nx * (w / 2 + 0.03) - nz * a, b.base + y, cz + nz * (deep / 2 + 0.03) + nx * a], Math.atan2(nx, nz));
         }
         for (const y of [0.3, 3.2, b.wall - 0.3]) B.far.box(nz !== 0 ? [w, 0.14, 0.12] : [0.12, 0.14, deep], [cx + nx * w / 2, b.base + y, cz + nz * deep / 2], 0xfff1d5);
       }
     }
   }
   const modelBase = Math.max(b.base, body.min.y);
-  if (modelBase > b.base + 0.08) {
+  // (A tower's podium is a closed 12 x 12 body already: a plinth inside it would only share the podium's top plane.)
+  if (modelBase > b.base + 0.08 && b.kind !== 'tower') {
     B.far.box([Math.min(b.w, body.max.x - body.min.x), modelBase - b.base, Math.min(b.d, body.max.z - body.min.z)], [(body.min.x + body.max.x) / 2, (modelBase + b.base) / 2, (body.min.z + body.max.z) / 2], 0xe5d3b4, undefined, T.brick);
   }
-  if (!custom && b.roof === 'flat' && b.kind !== 'tower') B.far.box([b.w, 0.12, b.d], [b.x, top - 0.06, b.z], 0xf3e6ce);
+  // Flat-roof slab: kept 3 cm under the model's own roof plane and 4 cm inside its walls (it only closes gaps), so it never shares a plane.
+  if (!custom && b.roof === 'flat' && b.kind !== 'tower') B.far.box([b.w - 0.08, 0.12, b.d - 0.08], [b.x, top - 0.09, b.z], 0xf3e6ce);
   if (b.kind === 'oldBarongsai') {
     // Keep the owner's original carved door and complete lion face; the step marks CityData's interaction axis.
     B.ch.deco.boxNB([1.8, 0.12, 0.9], [b.x - 1.5, b.base + 0.06, b.z + b.d / 2 + 0.45], 0xbba780);
@@ -1355,9 +1428,8 @@ function drawDressed(B: Builder, b: CityBuilding, d: Dress): void {
   if (b.kind === 'tower' && b.tower) {
     drawTowerDressed(B, b);
     const t = b.tower;
-    const h = b.wall - t.podium;
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B.far.box([0.38, h, 0.38], [b.x + sx * (t.size / 2 - 0.19), b.base + t.podium + h / 2, b.z + sz * (t.size / 2 - 0.19)], 0xf3e6c9);
-    B.far.box([t.size, 0.18, t.size], [b.x, top - 0.09, b.z], 0xf3e6c9);
+    // (No corner posts: the Downtown tower models carry their own corner trims, and any post would share their wall planes.)
+    B.far.box([t.size - 0.08, 0.18, t.size - 0.08], [b.x, top - 0.12, b.z], 0xf3e6c9);
   }
   if (b.kind === 'kiosk' && !d.skipFacade) {
     const fruit = [0xff6b6b, 0xffd23f, 0x7bd389, 0xff9f43];

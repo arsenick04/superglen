@@ -96,6 +96,7 @@ export class KotaLevel implements Level {
   /** The city's shared lit material (small story models use it: no new shader). */
   private lit!: THREE.Material;
   private cityLit!: THREE.Material;
+  private cityDeco!: THREE.Material;
   private streamer!: ChunkStreamer;
   private hud!: CityHud;
   private sun!: THREE.DirectionalLight;
@@ -223,9 +224,9 @@ export class KotaLevel implements Level {
       s.camera.near = 8;
       s.camera.far = 100;
       const texel = (a * 2) / Quality.shadowMapSize;
-      s.bias = -0.0002;
       // Normal offset scales with the texel: kills acne / blocky shadow steps on walls seen at grazing light.
       s.normalBias = Math.max(0.03, texel * 3);
+      this.fitShadowBias();
       // Soft, light shadows (storybook look): wider PCF kernel, slightly transparent.
       s.radius = Quality.isTouch ? 2.2 : 3;
       s.intensity = 0.9;
@@ -237,7 +238,12 @@ export class KotaLevel implements Level {
     const mats = makeMaterials();
     this.lit = mats.lit;
     this.cityLit = makeCityMaterial();
-    this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow);
+    // Depth bias (see CityMaterial): decorations (deco) lie on the lit parts, the bright climbing edges (glow) on top of both.
+    this.cityDeco = makeCityMaterial([-1, -4]);
+    mats.glow.polygonOffset = true;
+    mats.glow.polygonOffsetFactor = -2;
+    mats.glow.polygonOffsetUnits = -8;
+    this.streamer = new ChunkStreamer(BUILT, physics, root, this.cityLit, mats.glow, this.cityDeco);
     // L18: buildings dressed with Kenney / owner models (one batched draw call + the custom buildings).
     this.dressing = new CityDressing(CITY_LAYOUT, root);
     ctx.onDispose(() => this.dressing.dispose());
@@ -428,6 +434,7 @@ export class KotaLevel implements Level {
     this.sun.color.setHex(NIGHT.moonColor);
     this.sun.intensity = NIGHT.moonIntensity;
     this.sunOffset.set(...NIGHT.sunOffset);
+    this.fitShadowBias();
     // One warm light pool that travels with the player (a street lamp glow); no shadows.
     if (!this.stars) {
       this.stars = new StarField();
@@ -438,6 +445,20 @@ export class KotaLevel implements Level {
       this.lampPool = new THREE.PointLight(NIGHT.lampColor, NIGHT.lampIntensity, NIGHT.lampDistance, 1.6);
       this.ctx.root.add(this.lampPool);
     }
+  }
+
+  /**
+   * Depth bias of the sun's shadow for the current light direction. On flat ground the shadow-map depth changes by `texel / tan(elevation)`
+   * from one texel to the next: ~1.4 cm at noon but ~7 cm in the sunset's 13 degree light, where the old fixed bias (1.8 cm) left striped
+   * acne on the ground. The bias follows that slope (never below the old value), so day looks the same.
+   */
+  private fitShadowBias(): void {
+    if (!Quality.shadows) return;
+    const s = this.sun.shadow;
+    const texel = (Quality.shadowArea * 2) / Quality.shadowMapSize;
+    const el = Math.asin(this.sunOffset.y / this.sunOffset.length());
+    const slope = texel / Math.max(0.15, Math.tan(el));
+    s.bias = -Math.max(0.0002, (slope * 1.1) / (s.camera.far - s.camera.near));
   }
 
   /** Warm late-afternoon light after the forest quiz: the sun sits low in the WEST (-x), purple-blue toward the east. */
@@ -459,6 +480,7 @@ export class KotaLevel implements Level {
     this.sun.intensity = SUNSET.lightIntensity;
     // ShadowFollower rebuilds the light position each frame from this offset: low warm light from the west.
     this.sunOffset.set(...SUNSET.sunOffset);
+    this.fitShadowBias();
   }
 
   /** Story pauses that require Glen to walk home before the next morning. */
