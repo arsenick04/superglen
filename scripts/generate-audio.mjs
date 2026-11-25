@@ -114,6 +114,7 @@ const voiceReady = (v) => v && v.voice_id && !v.voice_id.startsWith('ISI_');
 function status(j) {
   const m = manifest[j.id];
   if (j.recorded || m?.source === 'recorded') return 'recorded';
+  if (m?.source === 'gemini' && fs.existsSync(mp3(j.id))) return 'current'; // made by scripts/generate-gemini.mjs
   const exists = fs.existsSync(mp3(j.id));
   if (exists && !m) return 'handmade';
   if (!exists) return 'new';

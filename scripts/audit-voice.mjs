@@ -165,6 +165,7 @@ for (const l of lines.values()) {
   else if (recorded && mp3) status = 'ok';
   else if (!mp3) status = 'missing-clip';
   else if (!m) status = 'ok'; // handmade clip
+  else if (m.source === 'gemini') status = m.hash === hash(job.text) ? 'ok' : 'stale-text'; // scripts/generate-gemini.mjs
   else {
     const v = voices[job.speaker];
     const srcTextDiffers = !l.fromDialog && !l.quiz && !l.variasi && dj && dj.text !== l.text;

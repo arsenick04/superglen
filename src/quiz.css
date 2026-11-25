@@ -6,8 +6,8 @@
 .coin-hud,
 .parents {
   --font-round: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Varela Round', 'Baloo 2', 'Comic Sans MS', 'Chalkboard SE', 'Trebuchet MS', system-ui, sans-serif;
-  --font-read: 'Andika', 'Comic Neue', 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', ui-rounded, 'Trebuchet MS', system-ui, sans-serif;
-  --font-han: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', sans-serif;
+  --font-read: var(--font-round);
+  --font-han: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', var(--font-round);
   font-family: var(--font-round);
 }
 
@@ -80,7 +80,8 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
   font-size: clamp(15px, 5vh, 28px);
   font-weight: 800;
-  line-height: 1.12;
+  line-height: 1.15;
+  letter-spacing: 0;
   overflow: hidden;
 }
 .qp-bubble::before {
@@ -94,6 +95,8 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
   border-right-color: #fff;
 }
 .qp-bubble-text {
+  min-width: 0;
+  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -336,12 +339,12 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
   padding: 0 0.1em;
 }
 .qp-eq {
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 .qp-bigtext {
   font-family: var(--font-read);
-  letter-spacing: 0.12em;
-  font-size: 1.05em;
+  letter-spacing: 0.04em;
+  font-size: 1em;
 }
 .qp-sound {
   display: block;
@@ -374,22 +377,48 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
 }
 .qp-word-t {
   font-weight: 900;
-  letter-spacing: 0.06em;
-  font-size: 0.95em;
+  letter-spacing: 0.04em;
+  font-size: 1em;
+  line-height: 1.05;
 }
 .qp-word.lang-zh .qp-word-t {
   font-family: var(--font-han);
-  font-size: 1.02em;
-  letter-spacing: 0.1em;
+  font-size: 1em;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
 }
 .qp-pinyin {
-  font-size: 0.4em;
+  font-size: 0.38em;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
   color: #3a6ea5;
 }
 .qp-word .qp-pinyin {
   font-size: 0.38em;
+  margin-top: 0.04em;
+}
+
+/* Questions without a picture or word: no empty box; the speaker sits centred and the cards grow. */
+.qp.no-display {
+  --card-h: clamp(110px, 52vh, 330px);
+}
+@media (max-height: 340px) {
+  .qp.no-display {
+    --card-h: 110px;
+  }
+}
+.qp.no-display .qp-display {
+  display: none;
+}
+.qp.no-display[data-view='question'] .qp-stage {
+  flex: none;
+  grid-template-columns: 80px 80px;
+  justify-content: center;
+}
+.qp.no-display .qp-body {
+  justify-content: center;
+  gap: clamp(8px, 3vh, 24px);
 }
 
 /* ---- Cards ---- */
@@ -439,6 +468,7 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
 .qp-card-in {
   flex: none;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -458,34 +488,28 @@ html.quiz-open #ui > :not(.qp):not(.fade) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.62em;
+  max-width: 100%;
+  font-size: min(0.42em, 56px);
   font-weight: 900;
-  line-height: 1.05;
-  overflow-wrap: anywhere;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .qp-ctext.under {
-  font-size: 0.34em;
+  font-size: min(0.3em, 30px);
 }
 .qp-ctext.zh .qp-ctext-t {
   font-family: var(--font-han);
-  font-size: 1.2em;
-  letter-spacing: 0.06em;
+  font-size: 1.1em;
+  letter-spacing: 0.02em;
 }
 .qp-ctext .qp-pinyin {
-  font-size: 0.42em;
-  margin-top: 0.1em;
+  font-size: 0.5em;
+  margin-top: 0.05em;
 }
 .qp[data-cat='membaca'] .qp-ctext-t {
-  font-family: var(--font-read);
-  letter-spacing: 0.14em;
-}
-.qp[data-cat='membaca'] .qp-bubble-text {
-  font-family: var(--font-read);
-  letter-spacing: 0.05em;
-}
-.qp[data-cat='membaca'] .qp-word-t,
-.qp[data-cat='membaca'] .qp-bigtext {
-  font-family: var(--font-read);
+  letter-spacing: 0.04em;
 }
 .qp-key {
   position: absolute;
