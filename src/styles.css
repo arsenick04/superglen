@@ -1484,33 +1484,24 @@ html.game-started .set-gear {
   transform: translate(-50%, 0);
 }
 
-/* ---- Mini map (kota): top-left under the gear and the drum icons ---- */
+/* ---- Mini map (kota): top-left under the gear and the drum icons; round, with a soft border ---- */
 .minimap {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 108px);
   left: calc(env(safe-area-inset-left) + 8px);
   width: 180px;
   height: 180px;
-  opacity: 0.88;
-  border-radius: 14px;
+  opacity: 0.94;
+  border-radius: 50%;
   overflow: hidden;
-  border: 0;
+  border: 4px solid rgba(255, 255, 255, 0.92);
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px rgba(110, 84, 50, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
   padding: 0;
-  background: #a8c58b;
+  background: #cfe6f2;
   cursor: pointer;
   pointer-events: auto;
   z-index: 1;
-}
-.minimap-north {
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0 5px;
-  border-radius: 8px;
-  background: #26384a;
-  color: white;
-  font-weight: 700;
 }
 html.touch-ui .minimap {
   /* The top-left strip beside the gear clears the joystick below and all
@@ -1518,9 +1509,9 @@ html.touch-ui .minimap {
   top: calc(env(safe-area-inset-top) + 8px);
   left: calc(env(safe-area-inset-left) + 164px);
   right: auto;
-  width: 80px;
-  height: 80px;
-  border-radius: 9px;
+  width: 96px;
+  height: 96px;
+  border-width: 3px;
 }
 /* A full dialog already owns the usable top strip on a phone. */
 html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
@@ -1547,22 +1538,80 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
 }
 .fullmap-frame {
   position: relative;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 20px;
+  background: #f3dfb0;
+  border: 4px solid #a9793f;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 0 0 3px #fff3cf;
 }
-.fullmap-frame canvas {
+.fullmap-box {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: none;
+  box-shadow: 0 0 0 3px #a9793f;
+}
+.fullmap-box canvas {
   position: absolute;
   inset: 0;
   display: block;
+}
+.fullmap-side {
+  width: 150px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding-right: 4px;
+  font-family: system-ui, sans-serif;
+  color: #4a3320;
+}
+.fullmap-title {
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1.15;
+  margin-bottom: 4px;
+  text-align: center;
+  color: #7a4a1c;
+}
+.fullmap-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+}
+.fullmap-pic {
+  width: 30px;
+  text-align: center;
+  font-size: 21px;
+  line-height: 1.1;
+}
+.fullmap-pic.me {
+  color: #e8453c;
+  font-size: 18px;
+}
+.fullmap.narrow .fullmap-side {
+  display: none;
 }
 .fullmap-close {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 8px);
   right: calc(env(safe-area-inset-right) + 8px);
-  width: 64px;
+  width: 72px;
+  height: 72px;
   background: #e8453c;
-  padding: 8px;
+  padding: 10px;
+}
+@media (max-height: 500px) {
+  .fullmap-side { width: 128px; gap: 1px; }
+  .fullmap-title { font-size: 14px; }
+  .fullmap-row { font-size: 14px; }
+  .fullmap-pic { width: 26px; font-size: 19px; }
 }
 
 /* ---- Game controller (html.pad-ui = the child is playing with a pad right now) ---- */
@@ -2003,10 +2052,17 @@ html.touch-ui:has(.dlg:not([hidden])) .city-toast {
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.24);
   pointer-events: auto;
 }
-/* The coin counter sits under the star button (top right), not on it. */
+/* Touch: the coin counter sits left of the star button (top right); the zoom pair sits under the star (zoom.css). */
 html.touch-ui .coin-hud {
-  top: calc(env(safe-area-inset-top) + 100px);
-  right: calc(env(safe-area-inset-right) + 20px);
+  top: calc(env(safe-area-inset-top) + 24px);
+  right: calc(env(safe-area-inset-right) + 112px);
   font-size: 20px;
   padding: 1px 12px 1px 4px;
+}
+/* Short screen (Safari with bars): the Flight button sits under the star, so the zoom column stays left of the star and the coins move left of it. */
+@media (max-height: 359px) {
+  html.touch-ui .coin-hud {
+    top: calc(env(safe-area-inset-top) + 24px);
+    right: calc(env(safe-area-inset-right) + 168px);
+  }
 }

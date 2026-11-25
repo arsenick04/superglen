@@ -7839,7 +7839,7 @@ async function minimapScenario(page, check, touch) {
     return { w: r.width, h: r.height, op: parseFloat(cs.opacity), pe: cs.pointerEvents, hidden: e.hidden, canvases: e.querySelectorAll('canvas').length, d: window.__superglen.map };
   });
   check(`minimap ${tag}: visible and accepts clicks or taps`, !m.hidden && m.op < 1 && m.op >= 0.4 && m.pe === 'auto', JSON.stringify({ op: m.op, pe: m.pe }));
-  check(`minimap ${tag}: two canvases and correct display size`, m.canvases === 2 && (touch ? m.w === 80 : m.w === 180), JSON.stringify({ w: m.w, h: m.h }));
+  check(`minimap ${tag}: two canvases and correct display size`, m.canvases === 2 && (touch ? m.w === 96 : m.w === 180), JSON.stringify({ w: m.w, h: m.h }));
   await uiShot(page, `minimap-${touch ? 'touch' : 'desktop'}`);
   const mk = () => page.evaluate(() => {
     const d = window.__superglen.map;
@@ -7852,7 +7852,7 @@ async function minimapScenario(page, check, touch) {
     game.advance(1, false);
   });
   const b = await mk();
-  check(`minimap ${tag}: 72 m view follows Glen with a fixed centre marker`, b.span === 72 && Math.hypot(b.cx - a.cx, b.cz - a.cz) > 20 && b.x === b.size / 2 && b.y === b.size / 2, JSON.stringify({ a, b }));
+  check(`minimap ${tag}: 100 m view follows Glen with a fixed centre marker`, b.span === 100 && Math.hypot(b.cx - a.cx, b.cz - a.cz) > 20 && b.x === b.size / 2 && b.y === b.size / 2, JSON.stringify({ a, b }));
   await sleep(800);
   const c = await mk();
   check(`minimap ${tag}: idle frames reuse the cached map and marker`, c.md - b.md <= 2 && c.st === b.st, JSON.stringify({ b, c }));
@@ -10658,6 +10658,9 @@ async function hudLayoutScenario(page, check, touch) {
   check(`hud-layout ${tag}: exploration map, joystick, zoom and buttons overlap nothing and stay on screen`,
     v.bad.length === 0 && v.out.length === 0 && ['map', 'gear'].every((n) => v.names.includes(n)) &&
       (!touch || (v.names.includes('joy') && v.counts.zoom === 2 && v.names.includes('btn'))), JSON.stringify(v));
+  // The zoom pair hugs the far right edge, clear of the star, coins and minimap (the overlap check above already covers those).
+  const farRight = await page.evaluate((vw) => [...document.querySelectorAll('.zoom-btn')].map((e) => vw - e.getBoundingClientRect().right), vw);
+  check(`hud-layout ${tag}: the touch zoom buttons sit at the far right edge`, !touch || (farRight.length === 2 && Math.min(...farRight) >= 0 && Math.min(...farRight) <= 12), JSON.stringify(farRight));
   // Chapter 3 shows the food row during ordinary exploration, without a
   // dialog. Open that real saved state so the test covers its actual DOM.
   await ch3Open(page, ch3Save({ bab3: { step: 'chase', tamed: [0] } }), touch);

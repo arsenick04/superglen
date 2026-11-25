@@ -1,11 +1,10 @@
-/* Camera zoom buttons (touch only). Right of the star button, top; hidden while a full dialog bubble is up. */
+/* Camera zoom buttons (touch only). Far right edge, in a pair right under the star button; hidden while a full dialog bubble is up. */
 .zoom-col {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 8px);
-  right: calc(env(safe-area-inset-right) + 106px);
-  width: 48px;
+  top: calc(env(safe-area-inset-top) + 100px);
+  right: calc(env(safe-area-inset-right) + 4px);
   display: none;
-  flex-direction: column;
+  flex-direction: row;
   gap: 4px;
   z-index: 7;
 }
@@ -40,4 +39,14 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .zoom-col {
 }
 .set-zoom {
   background: #1fa8b8;
+}
+
+/* Short screen: the Flight button sits under the star, so the pair stands left of the star instead. */
+@media (max-height: 359px) {
+  .zoom-col {
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: calc(env(safe-area-inset-right) + 106px);
+    width: 48px;
+    flex-direction: column;
+  }
 }
