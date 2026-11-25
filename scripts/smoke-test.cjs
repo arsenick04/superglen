@@ -9241,6 +9241,11 @@ async function bab4AaraScenario(page, check, touch) {
   h = await ch4Handle(page);
   check(`bab4-aara ${tag}: arriving starts the meeting (step "aara", controls locked)`, h.step === 'aara' && (await page.evaluate(() => window.__superglen.controlsEnabled === false)), JSON.stringify(h));
   await d3Adv(page, 90);
+  // The real aara-meet film plays in real time and holds the story: skip it like a player would.
+  await page.waitForSelector('.cinematic-skip', { state: 'visible', timeout: 8000 }).catch(() => undefined);
+  if (await page.locator('.cinematic-skip:visible').count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => !document.querySelector('.cinematic-layer:not([hidden])'), null, { timeout: 8000 }).catch(() => undefined);
+  await d3Adv(page, 30);
   await page.evaluate(() => window.__superglen.advance(1, true));
   fs.mkdirSync(OUT, { recursive: true });
   await page.screenshot({ path: path.join(OUT, `bab4-aara-meet${touch ? '-touch' : ''}.png`) });
