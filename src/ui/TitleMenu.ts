@@ -1,4 +1,5 @@
 import { deleteSlot, getActiveSlot, readAllSlots, readPrefs, setActiveSlot, startNewSlot, writePrefs, type SlotSummary } from '../core/Save';
+import { tvMode, type TvPref } from '../core/TvMode';
 import { MenuIcons } from './MenuIcons';
 import { QuizIcons } from './QuizIcons';
 import { ModeIcons, bindPress, make, slotCard } from './SlotCards';
@@ -260,6 +261,24 @@ export class TitleMenu {
       row('music', MenuIcons.music, 'Musik', () => music, (v) => (music = v)),
       row('sfx', MenuIcons.speaker, 'Suara efek', () => sfx, (v) => (sfx = v)),
     );
+    // "Mode TV: Otomatis / Nyala / Mati": the first thing a TV owner needs when the box is not detected.
+    const tvRow = make('div', 'title-vol title-tv');
+    tvRow.append(make('div', 'title-vol-label', 'Mode TV'));
+    const tvBtns: { pref: TvPref; el: HTMLButtonElement }[] = [];
+    const paintTv = (): void => {
+      for (const t of tvBtns) t.el.classList.toggle('on', t.pref === tvMode.pref);
+    };
+    const tvModes: [TvPref, string][] = [['auto', 'Otomatis'], ['on', 'Nyala'], ['off', 'Mati']];
+    for (const [pref, label] of tvModes) {
+      const b = this.button('title-btn tv-pref', '', label, `tv-${pref}`, () => {
+        tvMode.setPref(pref);
+        paintTv();
+      });
+      tvBtns.push({ pref, el: b });
+      tvRow.append(b);
+    }
+    paintTv();
+    rows.append(tvRow);
     this.body.append(head, rows);
     this.setFocus(this.body.querySelector<HTMLElement>('[data-act="music-up"]'));
   }

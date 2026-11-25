@@ -5,6 +5,7 @@ import { versionGuard } from '../core/VersionGuard';
 import { getActiveSlot, readAllSlots } from '../core/Save';
 import { ModeIcons, slotCard } from './SlotCards';
 import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
+import { tvMode, type TvPref } from '../core/TvMode';
 import './menu.css';
 
 export interface SettingsDeps {
@@ -147,6 +148,42 @@ export class SettingsMenu {
     quality.append(qrow);
     this.refreshQuality();
 
+    // "Mode TV: Otomatis / Nyala / Mati" (saved on this device; ?tv=1 in the address overrides it for that visit).
+    const tvBox = make('div', 'settings-quality settings-tv');
+    tvBox.append(make('div', 'settings-quality-q', 'Mode TV'));
+    const trow = make('div', 'settings-quality-row');
+    const tvBtns: { pref: TvPref; el: HTMLButtonElement }[] = [];
+    const paintTv = (): void => {
+      for (const t of tvBtns) t.el.classList.toggle('on', t.pref === tvMode.pref);
+    };
+    const tvModes: [TvPref, string][] = [['auto', 'Otomatis'], ['on', 'Nyala'], ['off', 'Mati']];
+    for (const [pref, label] of tvModes) {
+      const b = make('button', 'menu-btn set-quality set-tv', '');
+      b.type = 'button';
+      b.append(make('span', 'menu-label', label));
+      b.setAttribute('aria-label', `Mode TV: ${label}`);
+      b.dataset.act = `tv-${pref}`;
+      const pick = (): void => {
+        tvMode.setPref(pref);
+        paintTv();
+      };
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        pick();
+      });
+      trow.append(b);
+      tvBtns.push({ pref, el: b });
+    }
+    tvBox.append(trow);
+    paintTv();
+
     const grid = make('div', 'settings-grid');
     this.btnMap = this.button('menu-btn set-map', MenuIcons.map, 'Lihat peta', () => {
       if (!deps.hasMap()) return;
@@ -208,7 +245,7 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, quality, grid, this.slotsView, this.confirm, ver);
+    card.append(head, sliders, quality, tvBox, grid, this.slotsView, this.confirm, ver);
     this.panel.append(card);
     ui.appendChild(this.panel);
 

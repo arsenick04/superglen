@@ -43,6 +43,8 @@ import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
+import { TvControls, type TvRadialItem } from '../input/TvControls';
+import { MenuIcons } from '../ui/MenuIcons';
 import { PadDebug } from '../ui/PadDebug';
 import { startGate } from './StartGate';
 import { versionGuard } from './VersionGuard';
@@ -685,6 +687,24 @@ export class Game {
       },
     });
     Object.defineProperty(this.debug.pad, 'focus', { get: () => this.padUi.focusInfo, enumerable: true });
+    // TV mode: remote-only play, radial action menu, panel navigation (see input/TvControls.ts; inert unless tvMode.active).
+    const tv = new TvControls({
+      input: this.input,
+      settings: this.settings,
+      padUi: this.padUi,
+      canPlay: () => startGate.started && this.controlsEnabled && !this.menuOpen && !this.quizLocked && !this.fading,
+      radialItems: () => {
+        const items: TvRadialItem[] = getLayout(this.player.mode, this.profile)
+          .filter((d) => d.action !== 'jump' && d.action !== 'interact')
+          .map((d) => ({ action: d.action, icon: d.icon, color: d.color }));
+        if (this.maps.hasMap) items.push({ action: 'map', icon: MenuIcons.map, color: '#2a9d8f' });
+        return items;
+      },
+      toggleMap: () => this.settings.toggleMap(),
+      start: () => this.hud?.startFromMenu(),
+    });
+    this.input.addSource(tv);
+    (window as unknown as { __sgTv?: TvControls }).__sgTv = tv;
     padHub.rumbleAllowed = () => !this.muteUrl && this.save.data.settings.sound && this.save.data.settings.sfxVol > 0;
     this.player.events.on('land', (e) => {
       if (e.impact > PadConfig.rumbleLandImpact) this.rumble(0.45, 0.25, 110);

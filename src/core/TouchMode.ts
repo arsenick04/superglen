@@ -3,16 +3,21 @@
  * or when the first real `touchstart` arrives (hybrid laptops), or with `?touch=1` (debugging).
  * Toggles the `touch-ui` class on <html> so CSS can show/hide things.
  */
+import { tvMode } from './TvMode';
+
 type Listener = (on: boolean) => void;
 
 class TouchMode {
   private _active = false;
   private readonly listeners: Listener[] = [];
+  private readonly forced: boolean;
 
   constructor() {
-    const forced = new URLSearchParams(window.location.search).get('touch') === '1';
-    if (forced || window.matchMedia('(pointer: coarse)').matches) this.set(true);
+    this.forced = new URLSearchParams(window.location.search).get('touch') === '1';
+    this.evaluate();
     window.addEventListener('touchstart', () => this.set(true), { capture: true, passive: true });
+    // TV mode (a remote, no finger): the touch UI never shows; switching TV mode off lets the device decide again.
+    tvMode.onChange(() => this.evaluate());
   }
 
   get active(): boolean {
@@ -25,7 +30,13 @@ class TouchMode {
     cb(this._active);
   }
 
+  private evaluate(): void {
+    if (tvMode.active && !this.forced) this.set(false);
+    else if (this.forced || window.matchMedia('(pointer: coarse)').matches) this.set(true);
+  }
+
   private set(on: boolean): void {
+    if (on && tvMode.active && !this.forced) return;
     if (on === this._active) return;
     this._active = on;
     document.documentElement.classList.toggle('touch-ui', on);
