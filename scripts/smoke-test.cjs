@@ -12129,7 +12129,7 @@ async function gorillaWinScenario(page, check) {
   const log = await page.evaluate(() => window.__cinLog);
   check('gorilla-win: the cinematic is requested in the gorilla arena after the win dialog', log.length === 1 && /cin_gorilla-win\.mp4\|battle-gorilla$/.test(log[0]), JSON.stringify(log));
   await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
-  await page.waitForFunction(() => window.__superglen.level === 'forest-firefight', null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__superglen.level === 'forest-firefight', null, { timeout: 30000, polling: 250 });
   check('gorilla-win: the fire hose level loads after the cinematic', true);
 }
 
@@ -12661,6 +12661,12 @@ async function tvModeScenario(page, check) {
   await rawKey('GoBack', 'BrowserBack', 4); // the Back key of an Android TV remote
   await adv(5);
   check('tv-mode: the remote Back key (keyCode 4 / GoBack) closes the pause menu', !(await info()).menu);
+  await pad('Escape');
+  await adv(5);
+  check('tv-mode: Back opens the pause menu again', (await info()).menu);
+  await rawKey('Unidentified', '', 10009); // Samsung Tizen Back
+  await adv(5);
+  check('tv-mode: Tizen Back (keyCode 10009) closes the pause menu', !(await info()).menu);
 
   // 5. Radial action menu: Menu key and long press on OK; arrows pick, Back closes.
   await page.evaluate(() => { const g = window.__superglen.game; g.setPlayerMode('superglen', false); g.setSkills({ laser: true, shield: true }, false); });

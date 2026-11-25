@@ -13,7 +13,7 @@ export type TvPref = 'auto' | 'on' | 'off';
 export type TvKind = 'up' | 'down' | 'left' | 'right' | 'ok' | 'back' | 'menu';
 
 const PREF_KEY = 'superglen.tv.v1';
-const TV_UA = /Android[^)]*\bTV\b|Android ?TV|GoogleTV|Google TV|\bAFT[A-Z0-9]{1,6}\b|BRAVIA|SmartTV|SMART-TV|HbbTV|Hisense|VIDAA|Web0S|WebOS|NetCast|CrKey|\bTV Safari|Large Screen/i;
+const TV_UA = /Android[^)]*\bTV\b|Android ?TV|GoogleTV|Google TV|\bAFT[A-Z0-9]{1,6}\b|BRAVIA|SmartTV|SMART-TV|HbbTV|Hisense|VIDAA|Tizen|Web0S|WebOS|NetCast|CrKey|\bTV Safari|Large Screen/i;
 
 /** Standard replacement for each kind (what the rest of the game listens for). */
 const CANON: Readonly<Record<TvKind, { key: string; code: string; keyCode: number }>> = {
@@ -39,12 +39,12 @@ export function tvKindOf(e: KeyboardEvent): TvKind | null {
     default:
   }
   switch (e.keyCode) {
-    case 19: return 'up';
+    // keyCode 19 is Pause on Samsung Tizen (media/colour keys 403-406, 412, 413, 415, 417, 10252 are left alone); Android TV also sends key 'ArrowUp'.
     case 20: return 'down';
     case 21: return 'left';
     case 22: return 'right';
     case 23: case 66: case 13: return 'ok';
-    case 4: case 111: return 'back';
+    case 4: case 111: case 10009: case 461: return 'back'; // Android, Tizen, webOS
     case 82: case 1082: return 'menu';
     default: return null;
   }
