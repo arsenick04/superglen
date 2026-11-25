@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { enemyModels } from './EnemyModels';
+import { addRimFlash, type RimFlash } from './BossLook';
 
 /** One visual for the Bank sighting and the night battle. The simple figure covers a slow or missing GLB. */
 export class EagleVisual {
@@ -10,6 +11,11 @@ export class EagleVisual {
   private readonly redLight = new THREE.PointLight(0xff6e4a, 0, 5);
 
   private readonly flap = { value: 0 };
+  /** Hit flash (0..1, decays in `update`); the cool rim light is always on. */
+  rim: RimFlash | null = null;
+  private body: THREE.Object3D | null = null;
+  private hit = 0;
+  private lastT = 0;
 
   constructor() {
     const model = enemyModels.geometry('elang_belang', 3.4, true);
@@ -29,8 +35,10 @@ export class EagleVisual {
         `);
       };
       animated.customProgramCacheKey = () => 'eagle-wing-flap-v1';
+      this.rim = addRimFlash(animated, 0x9ad8ff, 0.7);
       const mesh = new THREE.Mesh(model, animated);
       mesh.frustumCulled = false;
+      this.body = mesh;
       this.group.add(mesh);
     }
     else {
@@ -51,7 +59,23 @@ export class EagleVisual {
     this.group.add(this.blueLight, this.redLight);
   }
 
+  /** A small squash and flash (a laser touch): no violence, just a bonk. */
+  bonk(): void {
+    this.hit = 1;
+  }
+
   update(t: number, warning: 'ice' | 'fire' | null, heading = Math.sin(t * 0.65) * 0.35, bank = 0): void {
+    const dt = Math.min(0.1, Math.max(0, t - this.lastT));
+    this.lastT = t;
+    this.hit = Math.max(0, this.hit - dt * 3.2);
+    if (this.rim) this.rim.flash.value = this.hit;
+    if (this.body) {
+      // Idle polish: a gentle float, a slow breathing swell and a small squash after a hit.
+      const sq = this.hit * this.hit;
+      this.body.position.y = Math.sin(t * 2.3) * 0.14;
+      this.body.rotation.x = Math.sin(t * 1.7) * 0.05;
+      this.body.scale.set(1 + sq * 0.14 + Math.sin(t * 2.3) * 0.012, 1 - sq * 0.16 + Math.sin(t * 2.3 + 1) * 0.015, 1 + sq * 0.14);
+    }
     this.group.rotation.y = heading;
     this.group.rotation.z = bank;
     this.flap.value = Math.sin(t * 6) * 0.28;

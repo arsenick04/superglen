@@ -5,6 +5,8 @@ import type { HitInfo, Target } from '../../gameplay/Targets';
 import { box, cone, cyl, merge, sph } from './ColorMesh';
 import { enemyModels } from './EnemyModels';
 import { RAKUS_GUDANG } from './Bab6Data';
+import { PuffPool, addRimFlash, type RimFlash } from './BossLook';
+import { RakusDressing } from './RakusDressing';
 
 const FUR = 0x8d7a93;
 const FUR_LIGHT = 0xa896ae;
@@ -188,6 +190,11 @@ export class RakusBoss {
   private readonly flyT: number[] = [];
   private readonly group = new THREE.Group();
   private readonly body: THREE.Mesh;
+  private readonly rim: RimFlash;
+  private readonly puffs: PuffPool;
+  private readonly dressing: RakusDressing;
+  private crumbT = 0;
+  private hitFlash = 0;
   private readonly geoAngry: THREE.BufferGeometry;
   private readonly geoHappy: THREE.BufferGeometry;
   private readonly glow: THREE.Mesh;
@@ -238,7 +245,11 @@ export class RakusBoss {
     this.geoHappy = model ?? rakusGeo(true);
     const pg = pileGeo();
     this.geos.push(this.geoAngry, ...(this.geoHappy === this.geoAngry ? [] : [this.geoHappy]), pg);
-    this.body = new THREE.Mesh(this.geoAngry, model ? (enemyModels.material('tikus_rakus') as THREE.Material) : lit);
+    // Own copy of the material: a warm rim light and a hit flash (the shared one stays untouched).
+    const bodyMat = (model ? (enemyModels.material('tikus_rakus') as THREE.Material) : lit).clone();
+    this.mats.push(bodyMat);
+    this.rim = addRimFlash(bodyMat, 0xffc98a, 0.5);
+    this.body = new THREE.Mesh(this.geoAngry, bodyMat);
     this.glowMat = new THREE.MeshBasicMaterial({ color: 0xfff08a, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
     this.pileGlowMat = this.glowMat.clone();
     this.pileGlowMat.opacity = 0.45;
@@ -275,6 +286,8 @@ export class RakusBoss {
     }
     this.group.add(this.body, this.glow, this.pileMesh, this.pileGlow, this.ringOut, this.ringFill);
     ctx.root.add(this.group);
+    this.puffs = new PuffPool(ctx.root, 96, false);
+    this.dressing = new RakusDressing(ctx.root, cx, cz);
 
     // Piles on a ring around the arena centre (diagonals of the road).
     for (let i = 0; i < C.pileCount; i++) {
@@ -328,6 +341,8 @@ export class RakusBoss {
     this.paintHud();
     ctx.onDispose(() => {
       this.disposed = true;
+      this.puffs.dispose();
+      this.dressing.dispose();
       this.hud.remove();
       this.pileMesh.dispose();
       this.pileGlow.dispose();
@@ -365,6 +380,7 @@ export class RakusBoss {
 
   showHud(on: boolean): void {
     this.hud.classList.toggle('show', on);
+    this.dressing.show(on);
   }
 
   private paintHud(): void {
@@ -543,6 +559,7 @@ export class RakusBoss {
     this.respawn[i] = this.C.pileRespawn;
     this.pk[i] = 0;
     for (let k = 0; k < FOOD_COLORS.length; k++) ctx.fx.sparkles.burst(this.px[i], 0.7, this.pz[i], 7, 3.2, FOOD_COLORS[k], { gravity: 2, life: 0.9, up: 1.2 });
+    this.foodPuff(this.px[i], 0.6, this.pz[i], 10, 0.7);
     ctx.fx.flashes.spawn(this.px[i], 0.6, this.pz[i], 1.6, 0.4, 0xffe14d);
     ctx.sfx.bling();
     ctx.synth.boing();
@@ -567,6 +584,7 @@ export class RakusBoss {
     ctx.sfx.pop();
     ctx.synth.boing();
     this.squash = 1;
+    this.foodPuff(this.x, 1.1 * this.scaleNow, this.z, 14, 0.9);
     if (this.level < this.C.maxLevel) this.level++;
     this.pile = -1;
     this.syncTargets();
@@ -597,6 +615,8 @@ export class RakusBoss {
     const { ctx } = this;
     this.partialHits++;
     this.squash = 1;
+    this.hitFlash = 1;
+    this.foodPuff(this.aimPt.x, this.aimPt.y, this.aimPt.z, 6, 0.5);
     this.dizzyLeft = Math.max(this.dizzyLeft, this.C.partialKeep);
     this.paintHud();
     ctx.synth.boing();
@@ -612,6 +632,8 @@ export class RakusBoss {
     this.hitsGot = 0;
     this.vulnerable = false;
     this.squash = 1;
+    this.hitFlash = 1;
+    this.foodPuff(this.x, 1.3 * this.scaleNow, this.z, 16, 1);
     this.paintHud();
     const sc = this.scaleNow;
     ctx.synth.boing();
@@ -807,8 +829,19 @@ export class RakusBoss {
   }
 
   update(dt: number): void {
-    if (this.disposed || this.phase === 'gone') return;
+    if (this.disposed) return;
+    this.puffs.update(dt);
+    this.dressing.update(dt);
+    this.hitFlash = Math.max(0, this.hitFlash - dt * 3.2);
+    this.rim.flash.value = this.hitFlash;
+    if (this.phase === 'gone') return;
     this.layout(dt);
+  }
+
+  /** A little cloud of crumbs and food bits (normal blending), plus a soft puff. */
+  private foodPuff(x: number, y: number, z: number, n: number, size: number): void {
+    this.puffs.burst(x, y, z, n, 2.6 * size, FOOD_COLORS, 'crumb', 0.2 * size, 0.9, 1.6, 1.2);
+    this.puffs.burst(x, y, z, 3, 1.0 * size, [0xffffff, 0xfff1d8], 'soft', 0.9 * size, 0.6, 0, 0.2, 1.4);
   }
 
   // ---- drawing -----------------------------------------------------------------------------------------------
@@ -845,6 +878,12 @@ export class RakusBoss {
         sxz = 1 - ch * 0.03;
         pitch = 0.22 + Math.sin(t * 7) * 0.05;
         this.y = 0;
+        this.crumbT -= _dt;
+        if (this.crumbT <= 0) {
+          this.crumbT = 0.09;
+          // crumbs fly from the mouth, in front of him
+          this.puffs.emit(this.x + Math.sin(this.yaw) * 0.55 * sc, (0.95 + Math.random() * 0.2) * sc, this.z + Math.cos(this.yaw) * 0.55 * sc, Math.sin(this.yaw) * 1.2 + (Math.random() - 0.5) * 1.8, 1.4 + Math.random() * 1.2, Math.cos(this.yaw) * 1.2 + (Math.random() - 0.5) * 1.8, 0.7, 0.16 + Math.random() * 0.1, FOOD_COLORS[Math.floor(Math.random() * FOOD_COLORS.length)], 'crumb', 1.4);
+        }
         break;
       }
       case 'pout':
@@ -977,6 +1016,7 @@ export class RakusBoss {
     this.ctx.synth.boing();
     await seq.wait(this.C.grow + 0.5);
     this.ctx.fx.stars.show(this.aimPt, 1.0 * this.scaleNow, 1.6, 0.8);
+    this.puffs.poof(this.aimPt.x, this.aimPt.y, this.aimPt.z, 1.1 * this.scaleNow);
     this.ctx.sfx.bling();
   }
 

@@ -3,6 +3,7 @@ import { Combat } from '../../config/combat';
 import type { Target } from '../../gameplay/Targets';
 import type { LevelContext } from '../Level';
 import { EagleVisual } from './EagleVisual';
+import { PuffPool } from './BossLook';
 
 type Wing = 'ice' | 'fire';
 type Phase = 'cooldown' | 'warning' | 'resolve' | 'recover' | 'tamed';
@@ -41,6 +42,17 @@ export class EagleBoss {
   private starHits = 0;
   private attackHits = 0;
   private readonly easy: boolean;
+  /** Pooled trail and burst particles (glow, frost stars, embers, hearts). */
+  private readonly fx: PuffPool;
+  /** Ground telegraph: a glowing ring + disc under the locked spot and a faint column up to it. */
+  private readonly marker = new THREE.Group();
+  private readonly markerRing: THREE.Mesh;
+  private readonly markerDisc: THREE.Mesh;
+  private readonly markerBeam: THREE.Mesh;
+  private readonly markerMats: THREE.MeshBasicMaterial[] = [];
+  private readonly markerGeos: THREE.BufferGeometry[] = [];
+  private trailT = 0;
+  private chargeT = 0;
 
   constructor(private readonly ctx: LevelContext, private readonly onTamed: () => void) {
     const c = Combat.eagle;
@@ -61,6 +73,35 @@ export class EagleBoss {
     this.alert.scale.set(1.7, 1.7, 1);
     this.alert.visible = false;
     ctx.root.add(this.alert);
+    this.fx = new PuffPool(ctx.root, 220, true);
+    const mkMat = (opacity: number, double = false): THREE.MeshBasicMaterial => {
+      const m = new THREE.MeshBasicMaterial({ color: 0x5cd6ff, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false, side: double ? THREE.DoubleSide : THREE.FrontSide });
+      m.polygonOffset = true;
+      m.polygonOffsetFactor = -6;
+      m.polygonOffsetUnits = -6;
+      this.markerMats.push(m);
+      return m;
+    };
+    const rg = new THREE.RingGeometry(0.82, 1, 40);
+    rg.rotateX(-Math.PI / 2);
+    const dg = new THREE.CircleGeometry(1, 32);
+    dg.rotateX(-Math.PI / 2);
+    const bg = new THREE.CylinderGeometry(0.5, 0.5, 1, 14, 1, true);
+    bg.translate(0, 0.5, 0);
+    this.markerGeos.push(rg, dg, bg);
+    this.markerRing = new THREE.Mesh(rg, mkMat(0.9));
+    this.markerDisc = new THREE.Mesh(dg, mkMat(0.3));
+    this.markerBeam = new THREE.Mesh(bg, mkMat(0.12, true));
+    this.markerRing.renderOrder = this.markerDisc.renderOrder = 5;
+    this.markerBeam.renderOrder = 5;
+    for (const m of [this.markerRing, this.markerDisc, this.markerBeam]) { m.frustumCulled = false; this.marker.add(m); }
+    this.marker.visible = false;
+    ctx.root.add(this.marker);
+    ctx.onDispose(() => {
+      this.fx.dispose();
+      for (const g of this.markerGeos) g.dispose();
+      for (const m of this.markerMats) m.dispose();
+    });
     const geo = new THREE.ConeGeometry(0.4, 1.35, 7);
     const auraGeo = new THREE.ConeGeometry(0.67, 1.65, 7);
     for (let i = 0; i < c.featherPool; i++) {
@@ -88,11 +129,13 @@ export class EagleBoss {
     this.wing = 'ice';
     this.target.enabled = false;
     this.alert.visible = false;
+    this.marker.visible = false;
     for (const f of this.feathers) { f.active = false; f.mesh.visible = false; }
   }
 
   fixedUpdate(dt: number, attacking: boolean): void {
     const c = Combat.eagle;
+    this.fx.update(dt);
     if (!attacking || this.phase === 'tamed') return;
     this.time += dt;
     const bird = this.visual.group.position;
@@ -119,7 +162,9 @@ export class EagleBoss {
       this.alert.visible = this.timer <= c.alertSeconds;
       this.alert.position.copy(this.ctx.player.position).add(this.up);
       this.alert.scale.setScalar(1.7 + Math.sin(this.time * 20) * 0.18);
+      this.updateTelegraph(dt, duration);
       if (this.timer <= 0) {
+        this.marker.visible = false;
         this.fire();
         this.volleys++;
         this.wing = this.wing === 'ice' ? 'fire' : 'ice';
@@ -152,11 +197,45 @@ export class EagleBoss {
     this.phase = 'tamed';
     this.target.enabled = false;
     this.alert.visible = false;
+    this.marker.visible = false;
     for (const f of this.feathers) { f.active = false; f.mesh.visible = false; }
+    // Tamed 'poof': a soft cloud with sparkles and hearts.
+    this.fx.poof(this.aim.x, this.aim.y, this.aim.z, 1.5);
   }
 
   private get stage(): number {
     return Math.min(2, Math.floor((this.maxStars - this.stars) * 3 / this.maxStars));
+  }
+
+  /** Ground marker that shrinks onto the locked spot (the last part of the warning shows where the feathers will pass). */
+  private updateTelegraph(dt: number, duration: number): void {
+    const ice = this.wing === 'ice';
+    const col = ice ? 0x5cd6ff : 0xff6a3a;
+    const u = 1 - Math.max(0, this.timer) / duration;
+    const locked = this.timer <= duration * Combat.eagle.lockShare;
+    const pulse = 0.5 + 0.5 * Math.sin(this.time * (locked ? 26 : 12));
+    const r = (locked ? 1.7 : 2.6 - u * 1.0) + pulse * 0.12;
+    this.marker.visible = true;
+    this.marker.position.set(this.locked.x, 0.06, this.locked.z);
+    this.markerRing.scale.set(r, 1, r);
+    this.markerDisc.scale.set(r * 0.92, 1, r * 0.92);
+    this.markerBeam.scale.set(r * 0.7, Math.max(0.1, this.locked.y - 0.06), r * 0.7);
+    for (const m of this.markerMats) m.color.setHex(col);
+    this.markerMats[0].opacity = 0.55 + 0.4 * pulse;
+    this.markerMats[1].opacity = 0.12 + 0.2 * u + 0.1 * pulse;
+    this.markerMats[2].opacity = locked ? 0.1 + 0.08 * pulse : 0.05;
+    // The wing charges up: glints gather into it.
+    this.chargeT -= dt;
+    if (this.chargeT <= 0) {
+      this.chargeT = 0.035;
+      const b = this.visual.group.position;
+      const wx = b.x + (ice ? -Combat.eagle.wingOffset : Combat.eagle.wingOffset) * 1.4;
+      const a = Math.random() * Math.PI * 2;
+      const rr = 1.0 + Math.random() * 0.9;
+      const ox = Math.cos(a) * rr;
+      const oy = Math.sin(a) * rr;
+      this.fx.emit(wx + ox, b.y + 0.3 + oy, b.z + (Math.random() - 0.5) * 0.8, -ox * 2.2, -oy * 2.2, 0, 0.42, 0.22 + Math.random() * 0.12, ice ? 0xbfeeff : 0xffc27a, ice ? 'star' : 'soft', 0);
+    }
   }
 
   private beginWarning(): void {
@@ -192,15 +271,29 @@ export class EagleBoss {
       f.mesh.visible = true;
     }
     this.ctx.fx.sparkles.burst(from.x, from.y, from.z, 32, 5, this.wing === 'ice' ? 0x6deaff : 0xffae32, { up: 0, life: 0.9, gravity: 0 });
+    this.fx.burst(from.x + (this.wing === 'ice' ? -c.wingOffset : c.wingOffset), from.y, from.z, 10, 3.2, this.wing === 'ice' ? [0xd8f7ff, 0x7fdcff] : [0xffd27a, 0xff7a3a], this.wing === 'ice' ? 'star' : 'soft', 0.4, 0.6, 0, 0, 1);
   }
 
   private updateFeathers(dt: number): void {
     const p = this.ctx.player.position;
+    this.trailT -= dt;
+    const trailNow = this.trailT <= 0;
     for (const f of this.feathers) {
       if (!f.active) continue;
       f.age += dt;
       f.pos.addScaledVector(f.velocity, dt);
       f.mesh.position.copy(f.pos);
+      // Glowing trail: frosty sparkles for ice, rising warm embers for fire.
+      if (f.active && trailNow) {
+        const v = f.velocity;
+        if (f.wing === 'ice') {
+          this.fx.emit(f.pos.x, f.pos.y, f.pos.z, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, 0.55, 0.26 + Math.random() * 0.14, Math.random() < 0.5 ? 0xe6fbff : 0x7fdcff, 'star', 0, -0.4);
+          this.fx.emit(f.pos.x - v.x * 0.03, f.pos.y - v.y * 0.03, f.pos.z - v.z * 0.03, 0, 0, 0, 0.3, 0.7, 0x4fb8ff, 'soft', 0, -0.6);
+        } else {
+          this.fx.emit(f.pos.x, f.pos.y, f.pos.z, (Math.random() - 0.5) * 0.8, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.8, 0.65, 0.22 + Math.random() * 0.14, Math.random() < 0.5 ? 0xffb347 : 0xff5a2a, 'soft', -0.2, -0.5);
+          this.fx.emit(f.pos.x - v.x * 0.03, f.pos.y - v.y * 0.03, f.pos.z - v.z * 0.03, 0, 0, 0, 0.3, 0.75, 0xff7a3a, 'soft', 0, -0.6);
+        }
+      }
       if (f.age > Combat.eagle.featherLife || f.pos.y < 0.2) {
         f.active = false;
         f.mesh.visible = false;
@@ -209,14 +302,17 @@ export class EagleBoss {
         if (result === 'hit') { this.hits++; this.attackHits++; }
         if (result === 'blocked') this.blocks++;
         this.ctx.fx.sparkles.burst(f.pos.x, f.pos.y, f.pos.z, 18, 2, f.wing === 'ice' ? 0x6deaff : 0xffae32);
+        this.fx.burst(f.pos.x, f.pos.y, f.pos.z, 8, 2.4, f.wing === 'ice' ? [0xe6fbff, 0x7fdcff] : [0xffd27a, 0xff6a3a], f.wing === 'ice' ? 'star' : 'soft', 0.3, 0.5, 0, 0, 0.5);
         f.active = false;
         f.mesh.visible = false;
       }
     }
+    if (trailNow) this.trailT = 0.03;
   }
 
   private onLaser(): void {
     if (this.phase !== 'recover') return;
+    this.visual.bonk();
     if (!this.ctx.player.flight.isFlying) {
       if (!this.warnedGround) {
         this.warnedGround = true;
