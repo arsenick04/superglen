@@ -9241,6 +9241,11 @@ async function bab4AaraScenario(page, check, touch) {
   h = await ch4Handle(page);
   check(`bab4-aara ${tag}: arriving starts the meeting (step "aara", controls locked)`, h.step === 'aara' && (await page.evaluate(() => window.__superglen.controlsEnabled === false)), JSON.stringify(h));
   await d3Adv(page, 90);
+  // The real aara-meet film plays in real time and holds the story: skip it like a player would.
+  await page.waitForSelector('.cinematic-skip', { state: 'visible', timeout: 8000 }).catch(() => undefined);
+  if (await page.locator('.cinematic-skip:visible').count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => !document.querySelector('.cinematic-layer:not([hidden])'), null, { timeout: 8000 }).catch(() => undefined);
+  await d3Adv(page, 30);
   await page.evaluate(() => window.__superglen.advance(1, true));
   fs.mkdirSync(OUT, { recursive: true });
   await page.screenshot({ path: path.join(OUT, `bab4-aara-meet${touch ? '-touch' : ''}.png`) });
@@ -9260,7 +9265,7 @@ async function bab4AaraScenario(page, check, touch) {
       prompts.push(q.prompt + '|' + lvl);
     }
   }
-  check(`bab4-aara ${tag}: Aara asks "Apa bahasa Inggrisnya buku / bola / kucing?" (three questions, bank clips)`, prompts.length === 3 && /buku/.test(prompts[0]) && /bola/.test(prompts[1]) && /kucing/.test(prompts[2]), JSON.stringify(prompts));
+  check(`bab4-aara ${tag}: Aara asks three different random questions (set aara_sekolah)`, prompts.length === 3 && new Set(prompts).size === 3, JSON.stringify(prompts));
   check(`bab4-aara ${tag}: the translator is more advanced after each right answer (level 0, 1, 2 at the asks; 3 at the end)`, prompts.map((p) => p.split('|')[1]).join() === '0,1,2' && h.aara.level === 3, JSON.stringify([prompts, h.aara]));
   const order = ['alat penerjemah', 'Aku siap', 'mulai menyala', 'makin canggih', 'canggih sekali', 'taman kota', 'taman, kita'].map((t) => seen.findIndex((l) => l.indexOf(t) >= 0));
   check(`bab4-aara ${tag}: the lines come in order (hello, three praises, signal to the park)`, order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]), JSON.stringify([order, seen]));
@@ -9314,7 +9319,7 @@ async function bab4CluesScenario(page, check, touch) {
     // Aara's "Baca katanya" the first time, then the question.
     for (let k = 0; k < 40 && !(await page.evaluate(() => window.__superglen.quiz.open)); k++) await d3Adv(page, 15);
     const q = await page.evaluate(() => ({ id: window.__superglen.quiz.questionId, kind: window.__superglen.quiz.kind, cat: window.__superglen.quiz.category, state: window.__superglen.quiz.state, big: (document.querySelector('.qp-bigtext') || {}).textContent, cards: document.querySelectorAll('.qp-card').length, say: !!document.querySelector('.qp-say') }));
-    check(`bab4-clues ${tag}: clue ${i + 1}: the board word "${words[i]}" is shown big as a reading card with three picture cards and the speaker button`, q.id === `bab4_clue_${words[i]}` && q.kind === 'text' && q.cat === 'membaca' && q.big === words[i] && q.cards === 3 && q.say, JSON.stringify(q));
+    check(`bab4-clues ${tag}: clue ${i + 1}: a random aara_taman word is shown big as a reading card with three picture cards and the speaker button`, /^baca_(1[7-9]\d)$/.test(q.id) && q.kind === 'text' && q.cat === 'membaca' && !!q.big && q.cards === 3 && q.say, JSON.stringify(q));
     if (i === 0) { await page.evaluate(() => window.__superglen.advance(1, true)); await page.screenshot({ path: path.join(OUT, `bab4-clues-card${touch ? '-touch' : ''}.png`) }); }
     await d3Adv(page, 40);
     await ch4Answer(page, i === 0);

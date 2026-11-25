@@ -4,6 +4,7 @@ import { Combat } from '../../config/combat';
 import type { Level, LevelContext } from '../Level';
 import { backToTraining, isPractice, travel } from '../progress';
 import { EagleBoss } from './EagleBoss';
+import { EAGLE_SKY, EagleScenery } from './EagleScenery';
 
 /** Separate night sky arena: the city is unloaded and Glen starts inside the fight. */
 export class EagleArena implements Level {
@@ -15,18 +16,22 @@ export class EagleArena implements Level {
   /** Practice fight from the Lab training room: no story progress, back to the room at the end. */
   private practice = false;
   private lastExhaustions = 0;
+  private scenery: EagleScenery | null = null;
 
   build(ctx: LevelContext): void {
     this.ctx = ctx;
     this.practice = isPractice(this.id);
     this.lastExhaustions = ctx.health.exhaustions;
-    ctx.scene.background = new THREE.Color(0x1b2d57);
-    ctx.scene.fog = new THREE.Fog(0x253b61, 35, 100);
-    ctx.root.add(new THREE.HemisphereLight(0xc5d8ff, 0x89929f, 1.35));
-    const moon = new THREE.DirectionalLight(0xc4dcff, 1.5);
-    moon.position.set(-14, 24, 8);
-    ctx.root.add(moon);
+    // Twilight sky arena: warm low sun, violet dusk; feathers (cold blue / warm red) stay the brightest things.
+    ctx.scene.background = new THREE.Color(EAGLE_SKY.mid);
+    ctx.scene.fog = new THREE.Fog(EAGLE_SKY.fog, 38, 120);
+    ctx.root.add(new THREE.HemisphereLight(0xdccfff, 0xa89bbf, 1.45));
+    const sun = new THREE.DirectionalLight(0xffd7aa, 1.7);
+    sun.position.set(-14, 20, -10);
+    ctx.root.add(sun);
     this.buildNightCity(ctx);
+    this.scenery = new EagleScenery(ctx.root);
+    ctx.onDispose(() => this.scenery?.dispose());
     ctx.physics.addFixedCuboid({ x: 32, y: 0.5, z: 32 }, { x: 0, y: -0.5, z: 0 });
     ctx.game.setPlayerMode('superglen', false);
     ctx.game.setTransformAllowed(false);
@@ -43,6 +48,10 @@ export class EagleArena implements Level {
     ctx.game.preloadCinematic('elang');
     ctx.game.preloadCinematic('elang-defeat');
     ctx.game.debugInfo.elangStage = 'fight';
+    if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) {
+      (window as unknown as { __elang?: unknown }).__elang = this.boss;
+      ctx.onDispose(() => { delete (window as unknown as { __elang?: unknown }).__elang; });
+    }
     if (this.practice) {
       const exit = document.createElement('button');
       exit.className = 'arena-return';
@@ -63,6 +72,7 @@ export class EagleArena implements Level {
 
   fixedUpdate(dt: number): void {
     const ctx = this.ctx;
+    this.scenery?.update(dt);
     if (ctx.health.exhaustions !== this.lastExhaustions && !this.finishing) {
       this.lastExhaustions = ctx.health.exhaustions;
       this.boss.reset();
@@ -87,10 +97,10 @@ export class EagleArena implements Level {
   /** A rooftop above lit streets: scenery stays outside the flight space, with no crowd/city simulation. */
   private buildNightCity(ctx: LevelContext): void {
     const box = new THREE.BoxGeometry(1, 1, 1);
-    const roofMat = new THREE.MeshStandardMaterial({ color: 0x7b8eaa, roughness: 0.9 });
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x354c70, roughness: 0.9 });
-    const streetMat = new THREE.MeshStandardMaterial({ color: 0x26374b });
-    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffdb8b });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0xa9a0cc, roughness: 0.9 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x6a5b98, roughness: 0.9 });
+    const streetMat = new THREE.MeshStandardMaterial({ color: 0x5a4d80 });
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffe3a0 });
     const roof = new THREE.Mesh(box, roofMat);
     roof.position.y = -0.3;
     roof.scale.set(42, 0.6, 42);
@@ -134,15 +144,12 @@ export class EagleArena implements Level {
       }
     }
     ctx.root.add(buildings, windows);
-    const moonDisc = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffefcc }));
-    moonDisc.position.set(-35, 35, -55);
-    ctx.root.add(moonDisc);
     const canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 128;
     const paint = canvas.getContext('2d');
     if (paint) {
-      paint.fillStyle = '#24395a'; paint.fillRect(0, 0, 512, 128);
-      paint.fillStyle = '#ffe3a1'; paint.font = 'bold 72px sans-serif';
+      paint.fillStyle = '#3d3470'; paint.fillRect(0, 0, 512, 128);
+      paint.fillStyle = '#ffe9b0'; paint.font = 'bold 72px sans-serif';
       paint.textAlign = 'center'; paint.fillText('BANK', 256, 92);
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.25), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), side: THREE.DoubleSide }));
       sign.position.set(0, 2, -21);

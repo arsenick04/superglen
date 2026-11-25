@@ -4,6 +4,7 @@ import { Combat } from '../../config/combat';
 import type { HitInfo, Target } from '../../gameplay/Targets';
 import { box, cone, merge, sph } from './ColorMesh';
 import { enemyModels } from './EnemyModels';
+import { buildGarden } from './SnakeGarden';
 
 /** Body segments (index 0 is the neck, the last one the tail tip). */
 const N = 20;
@@ -71,6 +72,41 @@ function headGeo(friendly: boolean): THREE.BufferGeometry {
     { g: cone(0.04, 0.1, 4), c: dark, p: [0, -0.2, 1.0] as const },
   ]);
 }
+
+/**
+ * The lunge telegraph: a glowing path on the ground. Soft warm glow, bright edges, little chevrons that run along it towards the far
+ * end (where the head will land, a bright cap). Warm yellow while it is only a hint, hot pink once the line is locked.
+ */
+const STRIPE_VERT = `
+attribute float aAlong;
+attribute float aAcross;
+varying float vAlong;
+varying float vAcross;
+void main() {
+  vAlong = aAlong;
+  vAcross = aAcross;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const STRIPE_FRAG = `
+uniform float uTime;
+uniform float uLock;
+uniform float uLen;
+uniform float uOpacity;
+varying float vAlong;
+varying float vAcross;
+void main() {
+  float c = abs(vAcross - 0.5) * 2.0;
+  float edge = smoothstep(0.62, 0.95, c) * (1.0 - smoothstep(0.95, 1.0, c));
+  float body = 0.22 + 0.3 * (1.0 - c * c);
+  float ph = fract(vAlong * uLen / 1.5 + c * 0.55 - uTime * (1.2 + uLock * 1.6));
+  float chev = smoothstep(0.0, 0.12, ph) * (1.0 - smoothstep(0.3, 0.46, ph)) * (1.0 - c * 0.25);
+  float cap = smoothstep(0.9, 0.985, vAlong) * (1.0 - smoothstep(0.985, 1.0, vAlong)) * 0.5;
+  float head = smoothstep(0.0, 0.06, vAlong);
+  float a = (body + chev * 0.85 + edge * 0.6 + cap) * head * uOpacity;
+  vec3 warm = mix(vec3(1.0, 0.78, 0.3), vec3(1.0, 0.3, 0.42), uLock);
+  vec3 col = mix(warm, vec3(1.0, 0.97, 0.85), chev * 0.65 + edge * 0.35);
+  gl_FragColor = vec4(col, a);
+}`;
 
 /** Camo colours sampled from the model's texture (olive green, mustard yellow, cream belly). */
 const CAMO_GREEN = new THREE.Color(0x66804a);
@@ -155,7 +191,10 @@ export class SnakeBoss {
   private readonly glow: THREE.Mesh;
   private readonly glowMat: THREE.MeshBasicMaterial;
   private readonly stripe: THREE.Mesh;
-  private readonly stripeMat: THREE.MeshBasicMaterial;
+  private readonly stripeMat: THREE.ShaderMaterial;
+  /** The garden around the arena (shown only during the fight). */
+  private readonly garden: THREE.Group;
+  private removeShadow: (() => void) | null = null;
   private readonly arcStripe: THREE.Mesh;
   private readonly arcPos: THREE.BufferAttribute;
   /** Curvature (1/m) of the lunge now, a second lunge of the double lunge is waiting, wind-up length of this lunge (s). */
@@ -225,13 +264,35 @@ export class SnakeBoss {
     this.mats.push(this.glowMat);
     this.glow = new THREE.Mesh(new THREE.SphereGeometry(1.5, 12, 8), this.glowMat);
     this.glow.visible = false;
-    this.stripeMat = new THREE.MeshBasicMaterial({ color: 0xff5a4a, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide, fog: false });
-    this.stripeMat.polygonOffset = true;
-    this.stripeMat.polygonOffsetFactor = -2;
+    this.stripeMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uLock: { value: 0 }, uLen: { value: 10 }, uOpacity: { value: 0.5 } },
+      vertexShader: STRIPE_VERT,
+      fragmentShader: STRIPE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+      toneMapped: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
     this.mats.push(this.stripeMat);
     const sg = new THREE.PlaneGeometry(1, 1);
     sg.rotateX(-Math.PI / 2);
     sg.translate(0, 0, 0.5); // runs from the origin along +z
+    {
+      const sp = sg.getAttribute('position');
+      const al = new Float32Array(sp.count);
+      const ac = new Float32Array(sp.count);
+      for (let i = 0; i < sp.count; i++) {
+        al[i] = sp.getZ(i);
+        ac[i] = sp.getX(i) + 0.5;
+      }
+      sg.setAttribute('aAlong', new THREE.BufferAttribute(al, 1));
+      sg.setAttribute('aAcross', new THREE.BufferAttribute(ac, 1));
+    }
     this.stripe = new THREE.Mesh(sg, this.stripeMat);
     this.stripe.visible = false;
     this.stripe.renderOrder = 3;
@@ -240,6 +301,17 @@ export class SnakeBoss {
     const ag = new THREE.BufferGeometry();
     this.arcPos = new THREE.BufferAttribute(new Float32Array((ASEG + 1) * 2 * 3), 3);
     ag.setAttribute('position', this.arcPos);
+    {
+      const al = new Float32Array((ASEG + 1) * 2);
+      const ac = new Float32Array((ASEG + 1) * 2);
+      for (let i = 0; i <= ASEG; i++) {
+        al[i * 2] = al[i * 2 + 1] = i / ASEG;
+        ac[i * 2] = 0;
+        ac[i * 2 + 1] = 1;
+      }
+      ag.setAttribute('aAlong', new THREE.BufferAttribute(al, 1));
+      ag.setAttribute('aAcross', new THREE.BufferAttribute(ac, 1));
+    }
     const idx: number[] = [];
     for (let i = 0; i < ASEG; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
     ag.setIndex(idx);
@@ -253,6 +325,10 @@ export class SnakeBoss {
     }
     this.group.add(this.bodyMesh, this.headMesh, this.glow, this.stripe, this.arcStripe);
     ctx.root.add(this.group);
+    // A themed garden around the fight (hidden until the fight starts).
+    this.garden = buildGarden(x, z, 15);
+    this.garden.visible = false;
+    ctx.root.add(this.garden);
 
     this.target = ctx.targets.add({
       id: 'ularMelar',
@@ -294,6 +370,19 @@ export class SnakeBoss {
   /** The star counter shows while the fight is on. */
   showHud(on: boolean): void {
     this.hud.classList.toggle('show', on);
+    this.garden.visible = on;
+    this.removeShadow?.();
+    this.removeShadow = null;
+    if (on) {
+      const sh = { x: 0, y: 0, z: 0, r: 1, a: 1 };
+      this.removeShadow = this.ctx.battle?.bfx?.addShadow(() => {
+        if (this.phase === 'gone' || this.phase === 'tamed') return null;
+        sh.x = this.head.x;
+        sh.z = this.head.z;
+        sh.r = 1.25 * this.scale * (0.85 + 0.15 * Math.max(0, 1 - this.head.y / 4));
+        return sh;
+      }) ?? null;
+    }
   }
 
   private paintHud(): void {
@@ -427,6 +516,8 @@ export class SnakeBoss {
     if (kind === 'miss') this.missed++;
     this.ctx.fx.stars.show(this.head, 1.1 * this.scale, this.dizzyLeft, 0.7);
     this.ctx.sfx.pop();
+    this.ctx.battle?.bfx?.dust(this.head.x, 0, this.head.z, 1.2, 0xe9e2c0);
+    this.ctx.battle?.bfx?.ring(this.head.x, 0.5, this.head.z, 2.2 * this.scale, 0.5, 0xffe9a0, 0.8);
     this.hooks.onEvent('dizzy');
   }
 
@@ -763,9 +854,12 @@ export class SnakeBoss {
       this.stripe.position.set(this.x, 0.06, this.z);
       this.stripe.rotation.y = Math.atan2(dx, dz);
       this.stripe.scale.set(wd, 1, C.reach * sc);
-      const pulse = 0.5 + 0.5 * Math.sin(t * (this.locked ? 22 : 9));
-      this.stripeMat.opacity = this.locked ? 0.55 + 0.25 * pulse : 0.28 + 0.2 * pulse;
-      this.stripeMat.color.setHex(this.locked ? 0xff3b2e : 0xff8a6a);
+      const pulse = 0.5 + 0.5 * Math.sin(t * (this.locked ? 16 : 7));
+      const u = this.stripeMat.uniforms;
+      u.uTime.value = t;
+      u.uLock.value += ((this.locked ? 1 : 0) - u.uLock.value) * 0.25;
+      u.uLen.value = C.reach * sc;
+      u.uOpacity.value = this.locked ? 0.8 + 0.2 * pulse : 0.55 + 0.15 * pulse;
     }
   }
 

@@ -35,6 +35,9 @@ interface Fire {
   gone: boolean;
   group: THREE.Group;
   steamT: number;
+  /** Index in the fire system and the steam puff level (1 right after a hit, fades out). */
+  idx: number;
+  steam: number;
 }
 
 /** A reused pool of water drops flying from a nozzle to a point (one InstancedMesh, no per-frame allocation). */
@@ -90,7 +93,6 @@ export class FirefightLevel implements Level {
   private readonly marker = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly npcAim: (Fire | null)[] = [null, null];
-  private readonly flame: THREE.Mesh[][] = [];
   private readonly feet = new THREE.Vector3();
 
   build(ctx: LevelContext): void {
@@ -116,18 +118,15 @@ export class FirefightLevel implements Level {
     for (const [lx, lz, len, rot] of F.logs) kit.solid([len, 1.2, 0.9], [lx, 0.6, lz], 0x7a5230, [0, rot, 0]);
     kit.build(ctx.root);
     buildForestScenery(ctx, true);
-    this.fireFx = new ForestFireEffects(ctx);
+    this.fireFx = new ForestFireEffects(ctx, layout.fires.map((f) => ({ x: f.x, y: f.y + 0.1, z: f.z, scale: 0.55 })));
     ctx.game.preloadCinematic('ending');
 
-    // Fire spots: three overlapping flame cones each, shared geometry and materials.
-    const cone = new THREE.ConeGeometry(0.5, 1, 7);
-    cone.translate(0, 0.5, 0);
+    // Fire spots: the flames themselves live in the shared FireSystem (ForestFireEffects); here only the charred ground disc.
     const disc = new THREE.CircleGeometry(1, 14);
     disc.rotateX(-Math.PI / 2);
-    const flameMats = [0xff3d12, 0xff9a1f, 0xffe061].map((c) => new THREE.MeshBasicMaterial({ color: c, fog: false }));
     const charMat = new THREE.MeshBasicMaterial({ color: 0x2a211b });
-    ctx.onDispose(() => { cone.dispose(); disc.dispose(); flameMats.forEach((m) => m.dispose()); charMat.dispose(); });
-    for (const spot of layout.fires) {
+    ctx.onDispose(() => { disc.dispose(); charMat.dispose(); });
+    layout.fires.forEach((spot, i) => {
       const { x, y, z } = spot;
       const group = new THREE.Group();
       group.position.set(x, y, z);
@@ -135,17 +134,9 @@ export class FirefightLevel implements Level {
       char.position.set(x, y + 0.14, z);
       char.scale.setScalar(1.1);
       ctx.root.add(char);
-      const parts: THREE.Mesh[] = [];
-      for (let k = 0; k < 3; k++) {
-        const m = new THREE.Mesh(cone, flameMats[k]);
-        m.position.set((k - 1) * 0.45, 0, k === 1 ? 0.2 : -0.1);
-        group.add(m);
-        parts.push(m);
-      }
       ctx.root.add(group);
-      this.flame.push(parts);
-      this.fires.push({ x, y, z, s: 1, gone: false, group, steamT: 0 });
-    }
+      this.fires.push({ x, y, z, s: 1, gone: false, group, steamT: 0, idx: this.fireFx.ringCount + i, steam: 0 });
+    });
 
     // Water streams: 0 = player, 1 = Aara, 2 = Nino.
     const drop = new THREE.SphereGeometry(1, 6, 4);
@@ -235,6 +226,7 @@ export class FirefightLevel implements Level {
 
   private hit(f: Fire, rate: number, dt: number): void {
     f.s = Math.max(0, f.s - rate * dt);
+    f.steam = 1;
     f.steamT -= dt;
     if (f.steamT <= 0 && f.s > 0) {
       f.steamT = 0.35;
@@ -350,16 +342,11 @@ export class FirefightLevel implements Level {
     const dlg = this.ctx.dialog.active;
     if (dlg !== this.dlgOpen) { this.dlgOpen = dlg; this.hud.style.visibility = dlg ? 'hidden' : ''; }
     this.fireFx.update(dt);
-    const t = this.time;
-    for (let i = 0; i < this.fires.length; i++) {
-      const f = this.fires[i];
-      if (f.gone) continue;
-      const k = 0.25 + 0.75 * f.s, h = F.fireHeight * k;
-      for (let j = 0; j < 3; j++) {
-        const m = this.flame[i][j];
-        const w = 1 + 0.18 * Math.sin(t * (7 + j * 2) + i + j);
-        m.scale.set((1.5 - j * 0.3) * k * w, h * (1 - j * 0.22) * (0.9 + 0.2 * Math.sin(t * 9 + j * 2 + i)), (1.5 - j * 0.3) * k * w);
-      }
+    const sys = this.fireFx.system;
+    for (const f of this.fires) {
+      f.steam = Math.max(0, f.steam - 1.4 * dt);
+      sys.setIntensity(f.idx, f.gone ? 0 : 0.2 + 0.8 * f.s);
+      sys.setSteam(f.idx, f.steam);
     }
     const pl = this.ctx.player, vp = pl.visualPosition;
     // Nozzles: player at the wrist, helpers beside them.

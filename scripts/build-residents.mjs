@@ -9,6 +9,8 @@
  * fixed frame count, once per gender. Each variant is a skinned mesh simplified to ~TRIS triangles with baked kid-friendly vertex
  * colours and a per-vertex `_ZONE` (0 fixed colour, 1 skin, 2 top / dress, 3 trousers, 4 hair) that the runtime tints per instance
  * (src/world/kota/Crowd.ts bakes the clips into a bone matrix texture and skins on the GPU, one draw call per variant).
+ * Each head is simplified separately (HEAD_TRIS) and a small cartoon face (eyes, brows, nose, mouth, blush; 3 styles per gender, ~130 tris)
+ * is added in addFace(), skinned 100% to the Head bone and laid on the head surface.
  * Models are normalised: facing +z, feet on y = 0, HEIGHT m tall. The clips' ground speed (m/s of the stance foot) is stored in
  * `extras.clipSpeed` of the scene so the runtime can sync the cycle to the walking speed (no foot sliding).
  */
@@ -24,8 +26,10 @@ const MEN = process.env.RES_MEN;
 const WOMEN = process.env.RES_WOMEN;
 if (!MEN || !WOMEN) throw new Error('set RES_MEN and RES_WOMEN to the folders with the FBX files of the two packs');
 const OUT = process.env.RES_OUT ?? 'public/models/residents/residents.glb';
-const TRIS = Number(process.env.RES_TRIS ?? 900);
+const TRIS = Number(process.env.RES_TRIS ?? 800);
 const HEIGHT = 1.6;
+const HEAD_TRIS = Number(process.env.RES_HEAD_TRIS ?? 420);
+const HEAD_CUT = 0.0; // metres below the Head bone origin where the head part starts
 await MeshoptSimplifier.ready;
 await MeshoptEncoder.ready;
 
@@ -111,7 +115,8 @@ function extract(v) {
   const bones = sk.bones;
   const bindWorld = bones.map((b, i) => new M4().copy(sk.boneInverses[i]).invert().premultiply(fix));
   const parent = bones.map((b) => { let a = b.parent; while (a && !bones.includes(a)) a = a.parent; return a ? bones.indexOf(a) : -1; });
-  return { root, sm, sk, g, si, sw, verts, mat, mats, bones, bindWorld, parent, fix, k, flip, height: maxY - minY };
+  const headIdx = head;
+  return { headIdx, root, sm, sk, g, si, sw, verts, mat, mats, bones, bindWorld, parent, fix, k, flip, height: maxY - minY };
 }
 
 /** Sample every clip: world matrices (final space) per frame per bone. */
@@ -194,22 +199,53 @@ function buildMesh(ex) {
     }
     remap[i] = id;
   }
+  // The source's own eyebrows / eyelashes (Hair material around the eyes) are dropped: the drawn face has its own.
+  const eyeV = [];
+  for (let i = 0; i < verts.length; i++) {
+    if (!/^Eyes?/.test(mats[mat[i]].name)) continue;
+    let hw = 0;
+    for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === ex.headIdx) hw += sw.getComponent(i, k);
+    if (hw > 0.9) eyeV.push(verts[i]);
+  }
+  const eyeLo = Math.min(...eyeV.map((q) => q.y)), eyeHi = Math.max(...eyeV.map((q) => q.y));
+  const browJunk = (i) => /Hair/.test(mats[mat[i]].name) && verts[i].y > eyeLo - 0.01 && verts[i].y < eyeHi + 0.02 && verts[i].z > 0.04 && Math.abs(verts[i].x) < 0.075;
   const idx = [];
   for (let i = 0; i < verts.length; i += 3) {
+    if (browJunk(i) && browJunk(i + 1) && browJunk(i + 2)) continue;
     const a = remap[i], b = remap[i + 1], c = remap[i + 2];
+    if (/^Eyes?/.test(mats[mat[i]].name)) continue; // replaced by the drawn face (addFace)
     if (a !== b && b !== c && a !== c) idx.push(a, b, c);
   }
   const n = P.length / 3;
   const attr = new Float32Array(n * 5);
   for (let i = 0; i < n; i++) { attr[i * 5] = C[i * 3]; attr[i * 5 + 1] = C[i * 3 + 1]; attr[i * 5 + 2] = C[i * 3 + 2]; attr[i * 5 + 3] = Z[i] * 0.25; attr[i * 5 + 4] = W[i * 4]; }
-  const pos = Float32Array.from(P);
-  const target = TRIS * 3;
-  const all = Uint32Array.from(idx);
-  let out = all;
-  for (const e of [0.01, 0.02, 0.04, 0.08, 0.15]) {
-    out = MeshoptSimplifier.simplifyWithAttributes(all, pos, 3, attr, 5, [1, 1, 1, 3, 0.5], null, target, e, [])[0];
-    if (out.length <= target * 1.1) break;
+  // The head is simplified separately (HEAD_TRIS) so the face has a surface to sit on; seam vertices are locked so it stays watertight.
+  const headY = new V3().setFromMatrixPosition(ex.bindWorld[ex.bones.findIndex((b) => b.name === 'Head')]).y - HEAD_CUT;
+  const isH = new Uint8Array(n);
+  for (let i = 0; i < n; i++) isH[i] = P[i * 3 + 1] >= headY ? 1 : 0;
+  const hIdx = [], bIdx = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const h = isH[idx[t]] && isH[idx[t + 1]] && isH[idx[t + 2]];
+    (h ? hIdx : bIdx).push(idx[t], idx[t + 1], idx[t + 2]);
   }
+  const inH = new Uint8Array(n), inB = new Uint8Array(n);
+  for (const i of hIdx) inH[i] = 1;
+  for (const i of bIdx) inB[i] = 1;
+  const lock = new Uint8Array(n);
+  for (let i = 0; i < n; i++) lock[i] = inH[i] && inB[i] ? 1 : 0;
+  const pos = Float32Array.from(P);
+  const simp = (list, tris) => {
+    const target = tris * 3;
+    const all = Uint32Array.from(list);
+    let r = all;
+    for (const e of [0.01, 0.02, 0.04, 0.08, 0.15]) {
+      r = MeshoptSimplifier.simplifyWithAttributes(all, pos, 3, attr, 5, [1, 1, 1, 3, 0.5], lock, target, e, [])[0];
+      if (r.length <= target * 1.1) break;
+    }
+    return r;
+  };
+  const bodyPart = simp(bIdx, TRIS);
+  const out = Uint32Array.from([...bodyPart, ...simp(hIdx, HEAD_TRIS)]);
   // Compact.
   const map = new Map();
   const m = { P: [], C: [], Z: [], J: [], W: [], I: [] };
@@ -240,12 +276,164 @@ function buildMesh(ex) {
       acc.set(k, cur);
     }
   }
+  m.headFrom = bodyPart.length; // indices from here on are the head part
   m.N = [];
   for (let i = 0; i < m.P.length / 3; i++) {
     const nrm = (acc.get(pk(i)) ?? new V3(0, 1, 0)).clone().normalize();
     m.N.push(nrm.x, nrm.y, nrm.z);
   }
   return m;
+}
+
+
+// ---- Face ---------------------------------------------------------------------------------------------------------------------
+// Cartoon face skinned 100% to the Head bone, laid on the front of the (simplified) head surface: every vertex is projected onto
+// the rendered head triangles with a ray along -z and lifted a little along the surface normal. Because the face is rigidly bound
+// to Head it follows every clip and scales with the baked head scale (Crowd.ts Cartoon.head). Layers are stacked a few millimetres
+// apart (no coplanar overlap, so no z-fighting). Zones: 0 fixed colour, 1 skin (blush / nose follow the skin tint), 4 hair tint (brows).
+const FACE_STYLES = [
+  { eye: [0.3, 0.36], iris: 0.74, irisCol: 0x6a3f24, mouth: 'arc', smile: 0.9, width: 0.3, brow: 0.9, blush: true },
+  { eye: [0.34, 0.4], iris: 0.8, irisCol: 0x2f2a33, mouth: 'open', smile: 0.5, width: 0.24, brow: 1.0, blush: true },
+  { eye: [0.28, 0.33], iris: 0.72, irisCol: 0x3f6f5a, mouth: 'arc', smile: 1.1, width: 0.33, brow: 0.7, blush: false, lashes: true },
+];
+
+function addFace(ex, m, style, female) {
+  const S = FACE_STYLES[style % FACE_STYLES.length];
+  const head = ex.bones.findIndex((b) => b.name === 'Head');
+  // Rendered head surface: triangles of the simplified mesh bound mostly to Head (skin first, any zone as fallback).
+  const tris = { skin: [], any: [] };
+  const vtx = (i) => new V3(m.P[i * 3], m.P[i * 3 + 1], m.P[i * 3 + 2]);
+  const nrm = (i) => new V3(m.N[i * 3], m.N[i * 3 + 1], m.N[i * 3 + 2]);
+  for (let t = m.headFrom; t < m.I.length; t += 3) {
+    const [a, b, c] = [m.I[t], m.I[t + 1], m.I[t + 2]];
+    const e = { a, b, c, A: vtx(a), B: vtx(b), C: vtx(c) };
+    tris.any.push(e);
+    if (m.Z[a] === 1 && m.Z[b] === 1 && m.Z[c] === 1) tris.skin.push(e);
+  }
+  const ray = new THREE.Ray(new V3(), new V3(0, 0, -1));
+  const hit = new V3(), bc = new V3();
+  const surface = (x, y) => {
+    for (const list of [tris.skin, tris.any]) {
+      let best = null, bz = -Infinity;
+      for (const e of list) {
+        ray.origin.set(x, y, 3);
+        if (ray.intersectTriangle(e.A, e.B, e.C, false, hit) && hit.z > bz) {
+          bz = hit.z;
+          THREE.Triangle.getBarycoord(hit, e.A, e.B, e.C, bc);
+          best = { p: hit.clone(), n: nrm(e.a).multiplyScalar(bc.x).addScaledVector(nrm(e.b), bc.y).addScaledVector(nrm(e.c), bc.z).normalize() };
+        }
+      }
+      if (best) return best;
+    }
+    throw new Error(`${ex.v.name}: no head surface at ${x.toFixed(3)}, ${y.toFixed(3)}`);
+  };
+  // Layout from the source eyes (centroid per side) and the chin.
+  const eyeSide = [new V3(), new V3()], en = [0, 0];
+  for (let i = 0; i < ex.verts.length; i++) {
+    if (!/^Eyes?/.test(ex.mats[ex.mat[i]].name)) continue;
+    let hw = 0;
+    for (let k = 0; k < 4; k++) if (ex.si.getComponent(i, k) === head) hw += ex.sw.getComponent(i, k);
+    if (hw < 0.9) continue;
+    const side = ex.verts[i].x < 0 ? 0 : 1;
+    eyeSide[side].add(ex.verts[i]);
+    en[side]++;
+  }
+  if (!en[0] || !en[1]) throw new Error(`${ex.v.name}: no eye vertices`);
+  const ex0 = eyeSide[0].divideScalar(en[0]), ex1 = eyeSide[1].divideScalar(en[1]);
+  const eyeX = (Math.abs(ex0.x) + Math.abs(ex1.x)) / 2, eyeY = (ex0.y + ex1.y) / 2;
+  let chin = Infinity;
+  for (let i = 0; i < ex.verts.length; i++) {
+    if (!/^Skin/.test(ex.mats[ex.mat[i]].name) || Math.abs(ex.verts[i].x) > 0.03 || ex.verts[i].y < eyeY - 0.15 || ex.verts[i].z < 0) continue;
+    let hw = 0;
+    for (let k = 0; k < 4; k++) if (ex.si.getComponent(i, k) === head) hw += ex.sw.getComponent(i, k);
+    if (hw > 0.9) chin = Math.min(chin, ex.verts[i].y);
+  }
+  const u = eyeY - chin; // eye-to-chin distance
+  const eyeXs = Math.min(eyeX, u * 0.5) * 0.95;
+  const mm = u / 22; // roughly one cm of source scale
+  const before = m.I.length / 3;
+  const put = (x, y, off, col, zone) => {
+    const s = surface(x, y);
+    const p = s.p.addScaledVector(s.n, off * mm * 0.1);
+    const v = m.P.length / 3;
+    m.P.push(p.x, p.y, p.z);
+    m.N.push(s.n.x, s.n.y, s.n.z);
+    m.C.push(...lin(col));
+    m.Z.push(zone);
+    m.J.push(head, 0, 0, 0);
+    m.W.push(1, 0, 0, 0);
+    return v;
+  };
+  const tri = (a, b, c) => m.I.push(a, b, c);
+  const disc = (cx, cy, rx, ry, n, off, col, zone = 0, rot = 0) => {
+    const c = put(cx, cy, off, col, zone);
+    const ring = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const dx = Math.cos(a) * rx, dy = Math.sin(a) * ry;
+      ring.push(put(cx + dx * Math.cos(rot) - dy * Math.sin(rot), cy + dx * Math.sin(rot) + dy * Math.cos(rot), off, col, zone));
+    }
+    for (let i = 0; i < n; i++) tri(c, ring[i], ring[(i + 1) % n]);
+  };
+  /** Thick polyline (points [x, y], half thickness per point) as a triangle strip. */
+  const stroke = (pts, half, off, col, zone = 0) => {
+    const L = [], R = [];
+    pts.forEach((p, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let tx = b[0] - a[0], ty = b[1] - a[1];
+      const l = Math.hypot(tx, ty) || 1;
+      tx /= l; ty /= l;
+      const h = typeof half === 'function' ? half(i / (pts.length - 1)) : half;
+      L.push(put(p[0] - ty * h, p[1] + tx * h, off, col, zone));
+      R.push(put(p[0] + ty * h, p[1] - tx * h, off, col, zone));
+    });
+    for (let i = 0; i < pts.length - 1; i++) { tri(L[i], R[i], L[i + 1]); tri(R[i], R[i + 1], L[i + 1]); }
+  };
+  const SCLERA = 0xfdfdfb, DARK = 0x1c141c, MOUTH = 0x6b2230, BROW = 0x5a4a44;
+  const [rx, ry] = [S.eye[0] * u, S.eye[1] * u];
+  for (const sx of [-1, 1]) {
+    const cx = sx * eyeXs;
+    disc(cx, eyeY, rx, ry, 10, 3.5, SCLERA);
+    // Iris (the eye looks a touch inwards and down: friendly), pupil, highlight.
+    const ix = cx - sx * rx * 0.08, iy = eyeY - ry * 0.05;
+    disc(ix, iy, rx * S.iris, ry * S.iris * 0.98, 10, 5.5, S.irisCol);
+    disc(ix, iy, rx * S.iris * 0.52, ry * S.iris * 0.52, 8, 7.2, DARK);
+    disc(ix + rx * 0.2, iy + ry * 0.26, rx * 0.2, rx * 0.2, 6, 8.8, 0xffffff);
+    disc(ix - rx * 0.22, iy - ry * 0.28, rx * 0.09, rx * 0.09, 5, 8.8, 0xffffff);
+    // Eyebrow: a soft arch above the eye, rising a little to the outer side.
+    const by = eyeY + ry * 1.35;
+    const arch = [-1, -0.5, 0, 0.5, 1].map((t, i) => [cx + t * rx * 1.05, by + (0.18 - 0.18 * t * t) * ry * S.brow + (t * sx) * 0.0 + (i === 0 ? 0 : 0)]);
+    stroke(arch, (t) => ry * 0.13 * (1 - Math.abs(t - 0.5) * 0.7), 3.5, BROW, 4);
+    if (S.lashes) {
+      // Two little lashes at the outer corner (girls' style 3).
+      const ox = cx + sx * rx * 0.95, oy = eyeY + ry * 0.2;
+      stroke([[ox, oy], [ox + sx * rx * 0.45, oy + ry * 0.35]], ry * 0.07, 7, DARK);
+      stroke([[ox - sx * rx * 0.1, oy - ry * 0.25], [ox + sx * rx * 0.45, oy - ry * 0.12]], ry * 0.06, 7, DARK);
+    }
+    if (S.blush) disc(sx * eyeXs * 1.25, eyeY - u * 0.36, u * 0.17, u * 0.1, 8, 2.5, 0xff9a9a, 1);
+  }
+  // Nose: a small rounded bump (skin tone, slightly pinker), drawn as a few stacked ellipses so it reads from the side too.
+  const ny = eyeY - u * 0.3;
+  disc(0, ny, u * 0.12, u * 0.09, 8, 4, 0xffd9d0, 1);
+  disc(0, ny + u * 0.012, u * 0.07, u * 0.055, 6, 9, 0xfff0ea, 1);
+  // Mouth.
+  const my = eyeY - u * 0.55, mw = S.width * u;
+  if (S.mouth === 'arc') {
+    const pts = [];
+    for (let i = 0; i <= 6; i++) { const t = (i / 6) * 2 - 1; pts.push([t * mw, my + (t * t - 0.35) * u * 0.1 * S.smile * 2]); }
+    stroke(pts, (t) => u * (0.04 + 0.014 * Math.sin(t * Math.PI)), 4.5, MOUTH);
+  } else {
+    // Open smile: a D shape (flat top, round bottom) with a tongue.
+    const topY = my + u * 0.05, depth = u * 0.17;
+    const pts = [];
+    for (let i = 0; i <= 8; i++) { const a = (i / 8) * Math.PI; pts.push([Math.cos(a) * mw, topY - Math.sin(a) * depth]); }
+    const c = put(0, topY - depth * 0.3, 4.5, MOUTH);
+    const ring = pts.map((p) => put(p[0], p[1] + (Math.abs(p[0]) > mw * 0.9 ? 0 : 0), 4.5, MOUTH));
+    for (let i = 0; i < ring.length - 1; i++) tri(c, ring[i + 1], ring[i]);
+    tri(c, ring[0], ring[ring.length - 1]);
+    disc(0, topY - depth * 0.78, mw * 0.42, depth * 0.2, 7, 6.2, 0xf26b7a);
+  }
+  return m.I.length / 3 - before;
 }
 
 // ---- Document ---------------------------------------------------------------------------------------------------------------
@@ -264,7 +452,9 @@ for (const gender of ['m', 'f']) {
   for (const v of list) {
     const ex = extract(v);
     const mesh = buildMesh(ex);
-    console.log(`${v.name.padEnd(14)} height ${(ex.height / 100).toFixed(2)} flip ${ex.flip} tris ${mesh.I.length / 3} verts ${mesh.P.length / 3}`);
+    ex.v = v;
+    const faceTris = addFace(ex, mesh, list.indexOf(v), gender === 'f');
+    console.log(`${v.name.padEnd(14)} height ${(ex.height / 100).toFixed(2)} flip ${ex.flip} tris ${mesh.I.length / 3} (face ${faceTris}) verts ${mesh.P.length / 3}`);
     if (!base) {
       base = ex;
       // Skeleton nodes.

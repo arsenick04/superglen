@@ -97,7 +97,7 @@ export class PracticeArena implements Level {
     b.setEnabled(false);
     b.showHud(true);
     if (this.kind === 'ular') {
-      ctx.battle.enter({ id: 'ular_melar', name: 'Ular Melar', focus: () => ({ x: 0, y: 1.1, z: 0 }), arena: { x: 0, z: 0, r: 15 }, isolated: true, stars: () => ({ left: b.stars, max: b.maxStars }), aura: 0x6fe08a });
+      ctx.battle.enter({ id: 'ular_melar', name: 'Ular Melar', focus: () => ({ x: 0, y: 1.1, z: 0 }), arena: { x: 0, z: 0, r: 15 }, isolated: true, stars: () => ({ left: b.stars, max: b.maxStars }), aura: 0x6fe08a, stage: { floor: 0x7ccf5f, wall: 0xa9dcef, light: 0xfff0c0 } });
     } else {
       const rb = b as RakusBoss;
       ctx.battle.enter({ id: 'tikus_rakus', name: 'Tikus Rakus', focus: () => ({ x: 0, y: rb.headAt.y * 0.7, z: 0 }), arena: { x: 0, z: 0, r: Combat.rakus.arenaRadius + 3.5 }, isolated: true, stars: () => ({ left: b.stars, max: b.maxStars }) });
