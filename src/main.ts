@@ -9,6 +9,7 @@ import { preloadSky } from './world/kota/Sky';
 import { enemyModels } from './world/kota/EnemyModels';
 import { loadBikeTemplate } from './world/kota/BikeModel';
 import { preloadCityNature } from './world/kota/CityNature';
+import { TitleMenu, shouldShowTitle } from './ui/TitleMenu';
 import { compatibilityMode, isPlayStationBrowser } from './core/Platform';
 
 function showFatal(err: unknown): void {
@@ -54,9 +55,26 @@ async function boot(): Promise<void> {
   await loadBikeTemplate(); // never rejects; the bike visual then builds during the level build, before the shader prewarm
   const container = document.getElementById('game');
   if (!container) throw new Error('#game container missing');
-  const game = new Game(container);
-  if (!document.hidden) game.start();
-  void versionGuard.check(); // on the start screen a newer build reloads right away
+  const ui = document.getElementById('ui');
+  const launch = (mode: 'plain' | 'new' | 'continue' | 'parents'): Game => {
+    const game = new Game(container);
+    if (!document.hidden) game.start();
+    void versionGuard.check(); // on the start screen a newer build reloads right away
+    if (mode === 'new' || mode === 'continue') game.startFromMenu();
+    else if (mode === 'parents') game.openParents();
+    return game;
+  };
+  if (ui && shouldShowTitle()) {
+    // Title menu first (Main Baru / Lanjutkan / Pengaturan). The pick creates the Game inside the tap, so audio can unlock.
+    const title: { menu: TitleMenu | null } = { menu: null };
+    title.menu = new TitleMenu(ui, (choice) => {
+      title.menu?.remove();
+      launch(choice.mode);
+    });
+    (window as unknown as { __sgTitleMenu?: unknown }).__sgTitleMenu = title.menu.debugHandle();
+  } else {
+    launch('plain');
+  }
 }
 
 boot().catch((err: unknown) => {

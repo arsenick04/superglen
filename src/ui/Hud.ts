@@ -221,6 +221,20 @@ export class Hud {
     this.beginStart();
   };
 
+  /** The title menu picked a game: this tap is the start (same as the old start tap; also asks for the mouse on PC). */
+  startFromMenu(): void {
+    if (touchMode.active) this.onStartTap();
+    else {
+      try {
+        const r = this.canvas.requestPointerLock() as unknown;
+        if (r instanceof Promise) r.catch(() => undefined);
+      } catch {
+        // the card asks for a click later
+      }
+      this.beginStart();
+    }
+  }
+
   private readonly onLockChange = (): void => {
     if (document.pointerLockElement === this.canvas && !touchMode.active) this.beginStart();
     this.syncCard();

@@ -7760,16 +7760,24 @@ async function settingsScenario(page, check, touch) {
 
   // Save / load.
   await menuHit(page, '.set-gear', touch);
-  const loadOff = await page.evaluate(() => document.querySelector('[data-act=load]').disabled);
-  check(`settings ${tag}: "Muat" is disabled while there is no slot`, loadOff);
+  // "Muat" opens the slot picker; the slot being played has no saved spot yet, so picking it only asks (nothing moves).
+  const before = await menuSt(page);
   await menuHit(page, '[data-act=load]', touch);
-  check(`settings ${tag}: pressing the disabled "Muat" does nothing`, (await menuSt(page)).open);
+  check(`settings ${tag}: "Muat" opens the slot picker (3 cards, the empty ones cannot be picked)`, (await page.evaluate(() => window.__superglen.settings.view)) === 'load' && (await page.evaluate(() => document.querySelectorAll('.settings-slots .slot-main').length)) === 3 && (await page.evaluate(() => [...document.querySelectorAll('.settings-slots .slot-main.empty')].every((b) => b.disabled))));
+  await menuHit(page, '.settings-slots .slot-main[data-slot="1"]', touch);
+  s = await menuSt(page);
+  check(`settings ${tag}: picking the slot without a saved spot only asks "Muat ulang slot ini?" and moves nothing`, s.confirming && s.open && near(s, before.x, before.z, 0.5) && (await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent)) === 'Muat ulang slot ini?', JSON.stringify(s));
+  await menuHit(page, '[data-act=no]', touch);
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  check(`settings ${tag}: Esc leaves the picker back to the panel`, (await page.evaluate(() => window.__superglen.settings.view)) === 'main' && (await menuSt(page)).open);
   await page.evaluate(() => window.__superglen.settings.hide());
   await page.evaluate(() => { const g = window.__superglen; g.game.setPlayerMode('superglen'); g.placePlayer(-50, 30); });
   await sleep(1200);
   const at = await menuSt(page);
   await menuHit(page, '.set-gear', touch);
   await menuHit(page, '[data-act=save]', touch);
+  await menuHit(page, '.settings-slots .slot-main[data-slot="1"]', touch);
   s = await menuSt(page);
   check(`settings ${tag}: "Simpan" shows "Tersimpan" and fills the slot (level, position, mode)`, s.toast === 'Tersimpan' && s.slot && s.slot.level === 'kota' && s.slot.mode === 'superglen' && Math.hypot(s.slot.x + 50, s.slot.z - 30) < 2, JSON.stringify(s.slot));
   check(`settings ${tag}: "Muat" is enabled once a slot exists`, await page.evaluate(() => !document.querySelector('[data-act=load]').disabled));
@@ -7781,6 +7789,7 @@ async function settingsScenario(page, check, touch) {
   await sleep(1000);
   await menuHit(page, '.set-gear', touch);
   await menuHit(page, '[data-act=load]', touch);
+  await menuHit(page, '.settings-slots .slot-main[data-slot="1"]', touch);
   await sleep(900);
   s = await menuSt(page);
   check(`settings ${tag}: "Muat" brings the player back to the saved spot and mode`, near(s, -50, 30, 2) && s.mode === 'superglen' && !s.open && s.y < 5, JSON.stringify({ x: s.x, z: s.z, mode: s.mode, y: s.y }));
@@ -7792,6 +7801,7 @@ async function settingsScenario(page, check, touch) {
   const homeTest = (await menuSt(page)).homeLabel;
   check(`settings ${tag}: outside the city the button says "Kembali ke tempat aman"`, homeTest === 'Kembali ke tempat aman', homeTest);
   await menuHit(page, '[data-act=load]', touch);
+  await menuHit(page, '.settings-slots .slot-main[data-slot="1"]', touch);
   await page.waitForFunction(() => window.__superglen.level === 'kota' && !window.__superglen.loading, null, { timeout: 30000 });
   await sleep(900);
   s = await menuSt(page);
@@ -12289,7 +12299,9 @@ async function runScenario(browser, name, ctxOpts, body, query = '?level=test') 
   page.on('pageerror', (e) => result.errors.push(`pageerror: ${e.message}`));
   try {
     await page.goto(URL + query);
-    await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
+    // `?menu=1`: the title menu is up first and the Game only exists after a pick.
+    if (/[?&]menu=1/.test(query)) await page.waitForSelector('.title-menu', { timeout: 60000 });
+    else await page.waitForFunction(() => !!window.__superglen, null, { timeout: 30000 });
     await body(page, check);
     result.fps = await sampleFps(page);
   } catch (e) {
@@ -12344,6 +12356,146 @@ async function versionInGameScenario(page, check) {
   const r1 = await page.evaluate(() => ({ n: window.__sgReloads || 0, txt: document.querySelector('.settings-version')?.textContent || '' }));
   check('in game: opening the menu applies the reload', r1.n === 1, JSON.stringify(r1));
   check('settings panel shows the build id', /^Versi \S+/.test(r1.txt), r1.txt);
+}
+
+
+// ---- Save slots + title menu (group `save-slots`) --------------------------------------------------------------------------------
+const LEGACY_SAVE = JSON.stringify({ version: 1, chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'], skills: { laser: true, shield: true, fly: true }, lastMode: 'superglen', where: 'kota', quiz: { coins: 42 }, doneAt: { bab5: 1700000000000 } });
+/** Seeds the old single save once per tab (reloads keep it) and marks the opening as seen so the cinematic does not play. */
+const slotsInit = `(() => { try { if (!sessionStorage.getItem('__seeded')) { sessionStorage.setItem('__seeded', '1'); localStorage.setItem('superglen.save.v1', ${JSON.stringify(LEGACY_SAVE)}); localStorage.setItem('superglen.opening-seen.v1', '1'); } } catch (e) {} })();`;
+const slotRaw = (page, n) => page.evaluate((n) => localStorage.getItem(n === 1 ? 'superglen.save.v1' : 'superglen.save.slot' + n), n);
+const slotJson = async (page, n) => { const t = await slotRaw(page, n); return t ? JSON.parse(t) : null; };
+
+async function saveSlotsScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop 1280x720';
+  const shotName = (n) => `slots-${touch ? 'touch' : 'desktop'}-${n}`;
+  const titleScreen = () => page.evaluate(() => document.querySelector('.title-menu') && document.querySelector('.title-menu').dataset.screen);
+  const cardText = (n) => page.evaluate((n) => (document.querySelector(`.slot-main[data-slot="${n}"]`) || { textContent: '' }).textContent, n);
+  const hit = (sel) => menuHit(page, sel, touch);
+  const started = () => page.waitForFunction(() => window.__superglen && window.__superglen.started, null, { timeout: 30000 });
+
+  // 1. Title screen: logo and three big buttons; the game itself is not created yet.
+  const t = await page.evaluate(() => ({ logo: !!document.querySelector('.title-logo'), game: !!window.__superglen, btns: [...document.querySelectorAll('.title-buttons .title-btn')].map((b) => { const r = b.getBoundingClientRect(); return { label: b.textContent.trim(), w: r.width, h: r.height, off: b.disabled }; }) }));
+  check(`slots ${tag}: title screen shows the logo and "Main Baru", "Lanjutkan / Muat", "Pengaturan"`, t.logo && !t.game && t.btns.map((b) => b.label).join('|') === 'Main Baru|Lanjutkan / Muat|Pengaturan', JSON.stringify(t));
+  check(`slots ${tag}: the title buttons are at least 80 x 80 and "Lanjutkan" is usable (a save exists)`, t.btns.every((b) => b.w >= 80 && b.h >= 80) && !t.btns[1].off, JSON.stringify(t.btns));
+  await uiShot(page, shotName('title'));
+
+  // 2. The old single save is slot 1 (untouched) and shows chapter, mode, coins and a date; the other slots are empty.
+  check(`slots ${tag}: the old save sits in slot 1 unchanged (migration loses nothing)`, (await slotRaw(page, 1)) === LEGACY_SAVE && !(await slotRaw(page, 2)) && !(await slotRaw(page, 3)));
+  await page.keyboard.press('Enter'); // the default focus is "Lanjutkan / Muat"
+  await sleep(250);
+  check(`slots ${tag}: Enter on the focused "Lanjutkan / Muat" opens the slot list`, (await titleScreen()) === 'load');
+  const c1 = await cardText(1);
+  check(`slots ${tag}: slot 1 card shows "Chapter 6 · Kota", Superglen, 42 coins and a date`, /Chapter 6 · Kota/.test(c1) && /Superglen/.test(c1) && /42/.test(c1) && /\d+ [A-Z][a-z]{2} \d\d:\d\d/.test(c1), c1);
+  check(`slots ${tag}: slots 2 and 3 say "Kosong" and cannot be picked when loading`, /Kosong/.test(await cardText(2)) && /Kosong/.test(await cardText(3)) && (await page.evaluate(() => [2, 3].every((n) => document.querySelector(`.slot-main[data-slot="${n}"]`).disabled))));
+  await uiShot(page, shotName('load'));
+  await page.keyboard.press('Escape');
+  await sleep(200);
+  check(`slots ${tag}: Esc goes back to the main title buttons`, (await titleScreen()) === 'main');
+
+  // 3. Continue slot 1: the game starts with that save.
+  await hit('[data-act=load]');
+  await hit('.slot-main[data-slot="1"]');
+  await started();
+  await sleep(1500);
+  let g = await page.evaluate(() => ({ slot: window.__superglen.save.activeSlot, coins: window.__superglen.save.data.quiz.coins, done: window.__superglen.save.data.chaptersDone.join(), title: !!document.querySelector('.title-menu'), overlay: !!document.querySelector('.start-overlay'), level: window.__superglen.level }));
+  check(`slots ${tag}: "Lanjutkan" slot 1 starts the game on that save (title gone, started)`, g.slot === 1 && g.coins === 42 && g.done === 'bab1,bab2,bab3,bab4,bab5' && !g.title && !g.overlay, JSON.stringify(g));
+
+  // 4. Pause menu: "Simpan" into the empty slot 2.
+  await hit('.set-gear');
+  const labels = await page.evaluate(() => [...document.querySelectorAll('.settings-grid .menu-btn')].map((b) => b.getAttribute('aria-label')));
+  check(`slots ${tag}: the pause menu has Simpan, Muat, Kembali ke Menu Utama and the settings`, ['Simpan', 'Muat', 'Kembali ke Menu Utama', 'Atur ulang zoom kamera'].every((l) => labels.includes(l)) && (await page.evaluate(() => !!document.querySelector('.set-slider'))), labels.join(','));
+  await uiShot(page, shotName('pause'));
+  await hit('[data-act=save]');
+  await uiShot(page, shotName('pause-save'));
+  check(`slots ${tag}: "Simpan" shows 3 slot cards with the playing slot highlighted`, (await page.evaluate(() => document.querySelectorAll('.settings-slots .slot-main').length)) === 3 && (await page.evaluate(() => document.querySelector('.settings-slots .slot-card.active').dataset.slot)) === '1');
+  await hit('.settings-slots .slot-main[data-slot="2"]');
+  let s2 = await slotJson(page, 2);
+  check(`slots ${tag}: saving into the empty slot 2 copies the progress at once and makes it the active slot`, s2 && s2.quiz.coins === 42 && s2.chaptersDone.length === 5 && s2.slot && (await page.evaluate(() => localStorage.getItem('superglen.save.active'))) === '2' && (await menuSt(page)).toast === 'Tersimpan', JSON.stringify(s2 && s2.quiz));
+  // Autosave now writes slot 2 only.
+  await page.evaluate(() => { const g = window.__superglen; g.save.data.quiz.coins = 99; g.save.persist(); });
+  check(`slots ${tag}: autosave keeps writing to the active slot (2), slot 1 stays at 42`, (await slotJson(page, 2)).quiz.coins === 99 && (await slotJson(page, 1)).quiz.coins === 42);
+
+  // 5. Overwrite confirm in the pause menu.
+  await hit('[data-act=save]');
+  await hit('.settings-slots .slot-main[data-slot="1"]');
+  const q1 = await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent);
+  check(`slots ${tag}: saving over a filled slot asks "Timpa slot 1?" first and writes nothing yet`, /^Timpa slot 1\?/.test(q1) && (await slotJson(page, 1)).quiz.coins === 42, q1);
+  await hit('[data-act=no]');
+  check(`slots ${tag}: "Tidak" keeps slot 1 as it was`, (await slotJson(page, 1)).quiz.coins === 42);
+  await hit('.settings-slots .slot-main[data-slot="1"]');
+  await hit('[data-act=yes]');
+  check(`slots ${tag}: "Ya" overwrites slot 1 with the current progress (99 coins)`, (await slotJson(page, 1)).quiz.coins === 99 && (await page.evaluate(() => localStorage.getItem('superglen.save.active'))) === '1');
+  // Make the slots differ again: slot 2 = 99 (already), slot 1 now gets 7 coins.
+  await page.evaluate(() => { const g = window.__superglen; g.save.data.quiz.coins = 7; g.save.persist(); });
+  check(`slots ${tag}: slot 1 (active) now 7, slot 2 still 99`, (await slotJson(page, 1)).quiz.coins === 7 && (await slotJson(page, 2)).quiz.coins === 99);
+
+  // 6. Load another slot: confirm, then the page restarts on slot 2.
+  await page.evaluate(() => window.__superglen.settings.hide());
+  await hit('.set-gear');
+  await hit('[data-act=load]');
+  await uiShot(page, shotName('pause-load'));
+  await hit('.settings-slots .slot-main[data-slot="2"]');
+  const q2 = await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent);
+  check(`slots ${tag}: loading another slot asks before leaving the current progress`, /^Pindah ke slot 2\?/.test(q2) && (await page.evaluate(() => window.__superglen.save.activeSlot)) === 1, q2);
+  await hit('[data-act=yes]');
+  await page.waitForFunction(() => window.__superglen && window.__superglen.save.activeSlot === 2, null, { timeout: 60000 });
+  await sleep(800);
+  g = await page.evaluate(() => ({ coins: window.__superglen.save.data.quiz.coins, title: !!document.querySelector('.title-menu'), started: window.__superglen.started }));
+  check(`slots ${tag}: after "Ya" slot 2 is loaded (99 coins), no title menu, the normal "tap to start" screen waits`, g.coins === 99 && !g.title && !g.started && !!(await page.evaluate(() => document.querySelector('.start-overlay'))), JSON.stringify(g));
+  if (touch) await page.touchscreen.tap(422, 195); else await page.mouse.click(640, 360);
+  await started();
+  await sleep(1000);
+
+  // 7. Back to the main menu.
+  await hit('.set-gear');
+  await hit('[data-act=menu]');
+  const q3 = await page.evaluate(() => document.querySelector('.settings-confirm-q').textContent);
+  check(`slots ${tag}: "Kembali ke Menu Utama" asks first`, /^Kembali ke menu utama/.test(q3), q3);
+  await hit('[data-act=yes]');
+  await page.waitForSelector('.title-menu', { timeout: 180000 }); // a full page load of all models; slow with the software renderer
+  await sleep(500);
+  check(`slots ${tag}: the title menu is back`, (await titleScreen()) === 'main' && !(await page.evaluate(() => !!window.__superglen)));
+
+  // 8. Delete with confirmation (slot 2), then New Game over slot 1 with the overwrite question.
+  await hit('[data-act=load]');
+  await hit('[data-act=del2]');
+  const qd = await page.evaluate(() => document.querySelector('.title-confirm-q').textContent);
+  check(`slots ${tag}: the trash button asks "Hapus slot 2?"`, qd === 'Hapus slot 2?' && !!(await slotRaw(page, 2)), qd);
+  await hit('.title-confirm [data-act=no]');
+  check(`slots ${tag}: "Tidak" keeps slot 2`, !!(await slotRaw(page, 2)) && (await titleScreen()) === 'load');
+  await hit('[data-act=del2]');
+  await hit('.title-confirm [data-act=yes]');
+  await sleep(250);
+  check(`slots ${tag}: "Ya" deletes slot 2 and the card says "Kosong"`, !(await slotRaw(page, 2)) && /Kosong/.test(await cardText(2)));
+  await hit('[data-act=back]');
+  await hit('[data-act=new]');
+  check(`slots ${tag}: "Main Baru" lists all three slots, empty ones included`, (await titleScreen()) === 'new' && (await page.evaluate(() => [...document.querySelectorAll('.slot-main')].every((b) => !b.disabled))));
+  await uiShot(page, shotName('new'));
+  const before1 = await slotRaw(page, 1);
+  await hit('.slot-main[data-slot="1"]');
+  const qn = await page.evaluate(() => document.querySelector('.title-confirm-q').textContent);
+  check(`slots ${tag}: a new game on a filled slot asks "Timpa slot 1?" with big Ya / Tidak`, /^Timpa slot 1\?/.test(qn) && (await page.evaluate(() => ['yes', 'no'].every((a) => { const r = document.querySelector(`.title-confirm [data-act=${a}]`).getBoundingClientRect(); return r.width >= 80 && r.height >= 80; }))), qn);
+  await hit('.title-confirm [data-act=no]');
+  check(`slots ${tag}: "Tidak" stays on the list and slot 1 is untouched`, (await titleScreen()) === 'new' && (await slotRaw(page, 1)) === before1);
+  await hit('.slot-main[data-slot="1"]');
+  await hit('.title-confirm [data-act=yes]');
+  await started();
+  await sleep(1000);
+  const fresh = await page.evaluate(() => ({ slot: window.__superglen.save.activeSlot, done: window.__superglen.save.data.chaptersDone.length, coins: window.__superglen.save.data.quiz.coins }));
+  const s1 = await slotJson(page, 1);
+  check(`slots ${tag}: "Ya" starts a fresh game in slot 1 (no chapters, 0 coins) and the old data is gone`, fresh.slot === 1 && fresh.done === 0 && fresh.coins === 0 && s1.chaptersDone.length === 0 && s1.quiz.coins === 0, JSON.stringify(fresh));
+}
+
+/** Debug URLs keep the plain start screen and never touch the slots. */
+async function saveSlotsDebugScenario(page, check) {
+  await sleep(1500);
+  const r = await page.evaluate(() => ({ title: !!document.querySelector('.title-menu'), overlay: !!document.querySelector('.start-overlay'), s1: localStorage.getItem('superglen.save.v1'), s2: localStorage.getItem('superglen.save.slot2'), s3: localStorage.getItem('superglen.save.slot3'), active: localStorage.getItem('superglen.save.active') }));
+  check('slots debug: ?level=kota skips the title menu (plain tap-to-start screen) and slots 2 and 3 stay empty', !r.title && r.overlay && !r.s2 && !r.s3 && !r.active);
+  const g = await page.evaluate(() => ({ coins: window.__superglen.save.data.quiz.coins, slot: window.__superglen.save.activeSlot }));
+  check('slots debug: the old save is still slot 1 and is what the debug level plays on, as before', g.slot === 1 && g.coins === 42, JSON.stringify(g));
+  await page.evaluate(() => { const gm = window.__superglen; gm.save.data.quiz.coins = 43; gm.save.persist(); });
+  check('slots debug: autosave of the debug level writes slot 1 only', JSON.parse(await slotRaw(page, 1)).quiz.coins === 43 && !(await slotRaw(page, 2)));
 }
 
 async function main() {
@@ -12426,6 +12578,9 @@ async function main() {
     for (const h of [390, 281]) {
       results.push(await runScenario(browser, `framework-touch-${h}`, { viewport: { width: 844, height: h }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, frameworkTouchScenario, '?level=demo&fps=0'));
     }
+    results.push(await runScenario(browser, 'save-slots-desktop', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, false), '?menu=1&fps=0'));
+    results.push(await runScenario(browser, 'save-slots-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3, initScript: slotsInit }, (p, c) => saveSlotsScenario(p, c, true), '?menu=1&fps=0'));
+    results.push(await runScenario(browser, 'save-slots-debug', { viewport: { width: 1280, height: 720 }, initScript: slotsInit }, saveSlotsDebugScenario, '?level=kota&fps=0'));
     results.push(await runScenario(browser, 'steering-desktop', { viewport: { width: 1280, height: 720 } }, steeringDesktopScenario));
     const iphone = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
     results.push(await runScenario(browser, 'steering-touch', iphone, steeringTouchScenario));
