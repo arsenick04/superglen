@@ -11781,7 +11781,8 @@ async function forestCinScenario(page, check) {
   const log = await page.evaluate(() => window.__cinLog);
   check('forest-cin: gorilla-meet is requested while still in the rescue level', log.length === 1 && /cin_gorilla-meet\.mp4\|forest-rescue$/.test(log[0]), JSON.stringify(log));
   await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
-  await page.waitForFunction(() => window.__superglen.level === 'battle-gorilla', null, { timeout: 30000 });
+  for (let i = 0; i < 60 && (await page.evaluate(() => window.__superglen.level)) !== 'battle-gorilla'; i++) await sleep(500);
+  if ((await page.evaluate(() => window.__superglen.level)) !== 'battle-gorilla') throw new Error('battle-gorilla never loaded');
   check('forest-cin: battle loads after the cinematic ends', true);
 }
 
@@ -12129,7 +12130,8 @@ async function gorillaWinScenario(page, check) {
   const log = await page.evaluate(() => window.__cinLog);
   check('gorilla-win: the cinematic is requested in the gorilla arena after the win dialog', log.length === 1 && /cin_gorilla-win\.mp4\|battle-gorilla$/.test(log[0]), JSON.stringify(log));
   await page.evaluate(() => document.querySelector('video').dispatchEvent(new Event('ended')));
-  await page.waitForFunction(() => window.__superglen.level === 'forest-firefight', null, { timeout: 30000, polling: 250 });
+  for (let i = 0; i < 60 && (await page.evaluate(() => window.__superglen.level)) !== 'forest-firefight'; i++) await sleep(500);
+  if ((await page.evaluate(() => window.__superglen.level)) !== 'forest-firefight') throw new Error('forest-firefight never loaded');
   check('gorilla-win: the fire hose level loads after the cinematic', true);
 }
 
