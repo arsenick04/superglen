@@ -9,6 +9,7 @@
  *   understands (Arrow keys, Enter, Escape), then lets the TV controls (input/TvControls.ts) look at them first.
  * The preference lives on the device (not in a save slot) and every storage access is wrapped in try/catch.
  */
+import './TvDebug'; // registers its raw event recorder before any handler below can swallow an event
 import { backState } from './BackTrap';
 
 export type TvPref = 'auto' | 'on' | 'off';
@@ -89,6 +90,8 @@ class TvMode {
   hook: TvKeyHook | null = null;
   /** True only while a remote alias is being re-sent as its standard key (the hook may use that synthetic event). */
   relaying = false;
+  /** Set by input/GamepadHub.ts: true when a trusted key event is only the browser echoing a pad button (the pad is read directly). */
+  echoGuard: ((e: KeyboardEvent) => boolean) | null = null;
 
   constructor() {
     try {
@@ -141,6 +144,11 @@ class TvMode {
 
   private readonly onKey = (e: KeyboardEvent): void => {
     if (!this._active || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.isTrusted && this.echoGuard?.(e)) {
+      e.preventDefault();
+      e.stopImmediatePropagation(); // the Gamepad API reports this pad: its own key echo must not drive the menus a second time
+      return;
+    }
     const kind = tvKindOf(e);
     if (!kind) return;
     const down = e.type === 'keydown';

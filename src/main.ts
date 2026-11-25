@@ -12,6 +12,7 @@ import { preloadCityNature } from './world/kota/CityNature';
 import { TitleMenu, shouldShowTitle } from './ui/TitleMenu';
 import { installBackTrap } from './core/BackTrap';
 import { tvMode } from './core/TvMode';
+import { installTvFullscreen } from './core/TvFullscreen';
 import { compatibilityMode, isPlayStationBrowser } from './core/Platform';
 
 function showFatal(err: unknown): void {
@@ -51,6 +52,7 @@ async function loadAssets(compat: boolean): Promise<void> {
 }
 
 async function boot(): Promise<void> {
+  installTvFullscreen();
   installBackTrap(() => {
     // The browser said "Back": answer it as the in-game Back (Escape). tvMode.relaying lets the TV controls accept the synthetic key.
     tvMode.relaying = true;

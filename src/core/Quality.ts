@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { compatibilityMode } from './Platform';
 import { tvMode } from './TvMode';
 import {
-  TIERS, TIER_ORDER, QualityGovernor, guessTier, hasStoredMode, readHints, readStoredMode, storeMode, urlMode,
+  TIERS, TIER_ORDER, GovernorConfig, QualityGovernor, guessTier, hasStoredMode, readHints, readStoredMode, storeMode, urlMode,
   type QualityMode, type Tier, type TierSpec,
 } from '../config/quality';
 
@@ -22,7 +22,6 @@ export interface QualityPreset extends TierSpec {
   mode: QualityMode;
   /** True when the primary input is touch (phones/tablets). */
   readonly isTouch: boolean;
-  shadows: boolean;
   shadowMapType: THREE.ShadowMapType;
   /** Frame rate the adaptive resolution tries to hold. */
   targetFps: number;
@@ -43,8 +42,9 @@ const isTouch = detectTouch();
 const compat = compatibilityMode();
 const fromUrl = urlMode();
 /** A URL override is for tests: fixed tier (or 'auto'), never stored. */
-// TV: a TV browser is slow, so 'low' is the default (unless the player chose a mode in Settings).
-const initialMode: QualityMode = fromUrl ?? (compat ? 'low' : tvMode.active && !hasStoredMode() ? 'low' : readStoredMode());
+// TV: a TV browser is slow, so the 'TV ringan' tier is the default (unless the player chose a mode in Settings). The governor
+// can also step a TV that is still under 20 fps at 'low' down to it (see observeQualityFrame).
+const initialMode: QualityMode = fromUrl ?? (compat ? 'low' : tvMode.active && !hasStoredMode() ? 'tv' : readStoredMode());
 
 function initialTier(mode: QualityMode): Tier {
   if (mode !== 'auto') return mode;
@@ -62,7 +62,6 @@ export const Quality: QualityPreset = {
   tier: startTier,
   mode: initialMode,
   isTouch,
-  shadows: true,
   shadowMapType: compat ? THREE.BasicShadowMap : THREE.PCFShadowMap, // PCFSoftShadowMap was removed in three r18x; PCF is soft-filtered now
   targetFps: compat ? 30 : 60,
   version: 0,
@@ -81,6 +80,7 @@ syncDom();
 function applyTvCaps(): void {
   if (!tvMode.active) return;
   Quality.maxPixelRatio = Math.min(Quality.maxPixelRatio, 1);
+  Quality.renderScale = Math.min(Quality.renderScale, Quality.tier === 'low' ? 0.8 : 1);
   Quality.shadowMapSize = Math.min(Quality.shadowMapSize, 1024);
   Quality.crowdSim = Math.min(Quality.crowdSim, 0.5);
   Quality.crowdRadius = Math.min(Quality.crowdRadius, 0.6);
@@ -139,6 +139,10 @@ export function observeQualityFrame(dt: number): void {
   if (Quality.mode !== 'auto') return;
   const next = governor.observe(dt, Quality.tier);
   if (next) applyTier(next);
+  else if (tvMode.active && Quality.tier === 'low' && governor.verySlow >= GovernorConfig.tvWindows) {
+    governor.reset();
+    applyTier('tv');
+  }
 }
 
 /** Debug / smoke test hook (window.__superglen.quality). Getters only: nothing is computed per frame. */
