@@ -58,14 +58,14 @@ bool sgIn(vec2 uv, vec4 r) { return uv.x > r.x && uv.x < r.z && uv.y > r.y && uv
 
 /** Atlas rectangles (u0, v0, u1, v1; glTF uv, origin top-left) of the face islands that must keep their colours. */
 const FACE_GLEN = ['vec4(0.12, 0.76, 0.40, 0.95)', 'vec4(0.04, 0.86, 0.13, 0.93)'];
-const FACE_SUPER = ['vec4(0.42, 0.37, 0.64, 0.56)'];
+const FACE_SUPER = ['vec4(0.435, 0.385, 0.555, 0.47)', 'vec4(0.47, 0.465, 0.55, 0.54)'];
 
 function fragment(kind: LookKind): string {
   const faces = (kind === 'glen' ? FACE_GLEN : FACE_SUPER).map((r) => `sgIn(vMapUv, ${r})`).join(' || ');
   const mask =
     kind === 'glen'
       ? 'hsv.y > 0.7 && hsv.x > 0.035 && hsv.x < 0.115 && hsv.z > 0.35'
-      : 'hsv.y > 0.5 && (hsv.x < 0.035 || hsv.x > 0.94) && hsv.z > 0.18';
+      : 'hsv.z > 0.12 && ((hsv.y > 0.5 && (hsv.x < 0.035 || hsv.x > 0.94)) || (hsv.y > 0.8 && hsv.x >= 0.035 && hsv.x < 0.052))';
   return /* glsl */ `
 #include <map_fragment>
 if (uSgLook.x > 0.5) {

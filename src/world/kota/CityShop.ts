@@ -99,7 +99,11 @@ export class CityShop {
     const plane = new THREE.PlaneGeometry(4.6, 1.15);
     this.sign = new THREE.Mesh(plane, mat);
     const [fx, fz] = [Math.sin(S.yaw), Math.cos(S.yaw)];
-    this.sign.position.set(S.facade.x + fx * 0.14, 3.95, S.facade.z + fz * 0.14);
+    // Lower and a little to the right (local +x), so the camera sees it whole from the plaza: the neighbouring tower hides the left
+    // end of the facade and the screen top cuts off anything above ~3.5 m.
+    const [sx, sz] = [Math.cos(S.yaw), -Math.sin(S.yaw)];
+    this.sign.scale.setScalar(0.72);
+    this.sign.position.set(S.facade.x + fx * 0.14 + sx * 2.2, 3.2, S.facade.z + fz * 0.14 + sz * 2.2);
     this.sign.rotation.y = S.yaw;
     ctx.root.add(this.sign);
 
