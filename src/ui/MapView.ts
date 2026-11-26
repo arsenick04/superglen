@@ -93,6 +93,7 @@ const LEGEND: readonly (readonly [string, string])[] = [
   ['\u{1F3E6}', 'Bank'],
   ['\u{1F3E0}', 'Rumah Glen'],
   ['\u{1F6B2}', 'Sepeda'],
+  ['\u{1F381}', 'Toko Mainan'],
 ];
 
 /** Round north-up local map centred on Glen (cached city layer, throttled markers) and a separate illustrated full map. */

@@ -65,6 +65,8 @@ export class BikeVisual implements RideRig {
   private readonly crank: THREE.Object3D;
   private readonly steerBase = new THREE.Quaternion();
   readonly geometries: THREE.BufferGeometry[] = [];
+  /** Frame and fork colour attributes (their whole mesh is one colour): `setPaint` rewrites them. */
+  private readonly paintAttrs: THREE.BufferAttribute[] = [];
   stand = 0;
   footDown = 1;
   roll = 0;
@@ -100,6 +102,7 @@ export class BikeVisual implements RideRig {
         const g = m.geometry.clone();
         const c = g.getAttribute('color') as THREE.BufferAttribute;
         for (let i = 0; i < c.count; i++) c.setXYZ(i, col.r, col.g, col.b);
+        this.paintAttrs.push(c);
         m.geometry = g;
         this.geometries.push(g);
       }
@@ -115,6 +118,15 @@ export class BikeVisual implements RideRig {
     this.pedalR = must(this.root, 'pedal_r');
     this.steerBase.copy(this.steer.quaternion);
     this.applyPose();
+  }
+
+  /** Repaint the frame and the fork (Toko Mainan bike colours). */
+  setPaint(paint: number): void {
+    const col = new THREE.Color(paint);
+    for (const c of this.paintAttrs) {
+      for (let i = 0; i < c.count; i++) c.setXYZ(i, col.r, col.g, col.b);
+      c.needsUpdate = true;
+    }
   }
 
   /** Advance the animation by `dt` (rendered-frame time) from the rider's motion. */

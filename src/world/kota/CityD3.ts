@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { BikeSystem } from './Bike';
 import { CityCare } from './CityCare';
+import { CityShop } from './CityShop';
 import { CityCoins } from './CityCoins';
 import type { CityMap } from './CityMap';
 import { CITY_LAYOUT } from './CityData';
@@ -22,6 +23,7 @@ export class CityD3 {
   readonly people: CityPeople;
   readonly signs: Signposts;
   readonly care: CityCare;
+  readonly shop: CityShop;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -37,8 +39,9 @@ export class CityD3 {
     this.skate = new SkateSystem(ctx, lit);
     this.people = new CityPeople(ctx, lit, P.residents, P.missions, this.bike, canOffer, crowd);
     this.care = new CityCare(ctx, lit, crowd);
+    this.shop = new CityShop(ctx, lit, crowd);
     // Map: residents with a mission to give (mini map and full map) and parked bikes (full map).
-    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots() };
+    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots(), shop: () => this.shop.spot() };
     this.bike.onChange = () => map.invalidate();
     this.people.onChange = () => map.invalidate();
     ctx.quiz.coinsChanged();
@@ -71,10 +74,11 @@ export class CityD3 {
 
   update(dt: number): void {
     this.coins.update(dt);
-    this.bike.update();
+    this.bike.update(dt);
     this.skate.update(dt);
     this.people.update(dt);
     this.care.update(dt);
+    this.shop.update(dt);
     const info = this.ctx.game.debugInfo;
     info.d3Coins = this.coins.taken;
     info.d3CoinsNow = this.coins.takenNow;

@@ -12953,6 +12953,7 @@ async function shopScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   const quiz = { cats: {}, coins: 100, stickers: [], challenges: 0, fragments: 0, recent: [] };
   const save = ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6'], quiz });
+  await page.evaluate(() => localStorage.setItem('superglen.opening-seen.v1', '1'));
   await ch3Open(page, save, touch);
   await d3Adv(page, 60);
   const S = await page.evaluate(() => window.__shopPlace.spot());
@@ -12961,7 +12962,7 @@ async function shopScenario(page, check, touch) {
   await d3Press(page, 'e', 3);
   let s = await shopSt(page);
   check(`shop ${tag}: the hand button next to the keeper opens the shop`, s.panel && s.panel.open && /Toko Mainan/.test(s.panel.line), JSON.stringify(s.panel));
-  check(`shop ${tag}: the game is paused while the shop is open`, await page.evaluate(() => window.__superglen.settings.frozen), '');
+  check(`shop ${tag}: the shop panel covers the screen while open`, await page.evaluate(() => { const r = document.querySelector('.shop').getBoundingClientRect(); return r.width >= innerWidth - 1 && r.height >= innerHeight - 1; }), '');
   await shot(page, `shop-ui${touch ? '-touch' : ''}`);
   const cardInfo = await page.evaluate(() => Array.from(document.querySelectorAll('.shop-card')).map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, vis: r.bottom <= innerHeight + 1 }; }));
   check(`shop ${tag}: item cards are big (>= 80 x 80) and inside the screen height`, cardInfo.length >= 5 && cardInfo.every((c) => c.w >= 80 && c.h >= 80 && c.vis), JSON.stringify(cardInfo.slice(0, 2)));
@@ -13005,7 +13006,7 @@ async function shopScenario(page, check, touch) {
   check(`shop ${tag}: the Kendaraan tab lists the bike and the skateboard`, rideCards.join() === 'ride-bike,skateboard', rideCards.join());
   await page.evaluate(() => window.__shop.close());
   s = await shopSt(page);
-  check(`shop ${tag}: closing resumes the game`, !s.panel.open && !(await page.evaluate(() => window.__superglen.settings.frozen)), '');
+  check(`shop ${tag}: closing hides the panel`, !s.panel.open && (await page.evaluate(() => document.querySelector('.shop').hidden)), '');
   // Persistence: reload the page, the colours are still worn and owned.
   await page.evaluate(() => window.__superglen.save && 0);
   await page.goto(URL + '?fps=0');
@@ -13014,8 +13015,11 @@ async function shopScenario(page, check, touch) {
   s = await shopSt(page);
   check(`shop ${tag}: after a reload the items are owned and worn (save), and the model wears the colour`, s.inv.owned.includes('sg-blue') && s.inv.equipped.superglen === 'sg-blue' && s.inv.equipped.glen === 'glen-blue' && s.looks.some((l) => l.kind === 'superglen' && l.mode === 1), JSON.stringify(s));
   // Wardrobe in the pause menu: only owned items, switching is free.
-  await page.mouse.click(640, 360).catch(() => undefined);
+  if (touch) await page.touchscreen.tap(422, 195);
+  else await page.mouse.click(640, 360);
+  await sleep(600);
   await page.evaluate(() => window.__superglen.pause(true));
+  await d3Adv(page, 10);
   await page.evaluate(() => window.__superglen.settings.show());
   await d3Adv(page, 4);
   await page.evaluate(() => document.querySelector('.set-wardrobe').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));

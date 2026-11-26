@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { figureMaterial } from './Figure';
 import { Avatar } from './CharacterModels';
+import { getInventory, onInventoryChanged } from '../core/Save';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
@@ -1363,6 +1364,14 @@ export class Player {
       if (this._mode === 'superglen') this.superFig.shoot();
     });
     this.superFig.root.visible = false;
+    // Toko Mainan: the worn colours (also when they change later, e.g. bought or picked in the wardrobe).
+    const dress = (): void => {
+      const eq = getInventory().equipped;
+      this.glenFig.setLook(eq.glen);
+      this.superFig.setLook(eq.superglen);
+    };
+    dress();
+    onInventoryChanged(dress);
     // The capsule hovers skinOffset above the floor; the figure's soles are lowered to 1 cm above the floor surface (ground layers and
     // the hill path lie within +-1.6 cm of the collider, so the feet are never inside them and never float).
     this.glenFig.root.position.y = -CENTER_TO_FEET - FEET_DROP;

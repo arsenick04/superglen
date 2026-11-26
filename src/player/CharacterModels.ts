@@ -5,6 +5,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { Figure, figureMaterial, type FigureKind, type FigureState } from './Figure';
 import { Quality } from '../core/Quality';
 import { RideLayer, type RideRig } from './RideLayer';
+import { patchLookMaterial, type LookHandle } from './CostumeLook';
 
 /**
  * The owner's animated characters (Mixamo rig, Meshopt + WebP GLBs in public/models). One template per character is loaded once
@@ -180,6 +181,8 @@ if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__characters = {
     info: () => ({ bytes: characterModels.bytes, ms: Math.round(characterModels.loadMs), failed: characterModels.failed }),
     clips: () => [...characterModels.avatars].filter((a) => a.visible).map((a) => `${a.kindName}:${a.rig ? a.rig.clipName : 'figure'}`),
+    /** Shop colours worn by the animated avatars (Glen / Superglen). */
+    looks: () => [...characterModels.avatars].filter((a) => a.rig?.look).map((a) => ({ kind: a.kindName, visible: a.visible, ...a.rig!.look!.params })),
     jump: () => [...characterModels.avatars].filter((a) => a.visible && a.rig).map((a) => a.rig!.jumpLayer.dump()),
     /** Force a one-shot on the visible Glen/Superglen avatar. */
     emote: (c: 'cheer' | 'wave') => [...characterModels.avatars].filter((a) => a.visible).forEach((a) => a.emote(c, 3)),
@@ -379,6 +382,8 @@ export class CharacterRig {
   readonly root = new THREE.Group();
   readonly material: THREE.MeshStandardMaterial;
   readonly mesh: THREE.SkinnedMesh;
+  /** Shop colours (Glen / Superglen only): see CostumeLook. */
+  readonly look: LookHandle | null;
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions = new Map<string, THREE.AnimationAction>();
   private cur: THREE.AnimationAction | null = null;
@@ -422,6 +427,7 @@ export class CharacterRig {
     this.material.emissive.setHex(tint);
     this.material.emissiveIntensity = tint ? 1 : 0;
     m.material = this.material;
+    this.look = kind === 'glen' || kind === 'superglen' ? patchLookMaterial(this.material, kind) : null;
     this.mesh = m;
     this.root.add(scene);
     this.root.scale.setScalar(MODEL_SCALE[kind]);
@@ -429,6 +435,11 @@ export class CharacterRig {
     scene.updateMatrixWorld(true);
     this.jumpLayer = new JumpLayer(scene);
     this.rideLayer = new RideLayer(scene);
+  }
+
+  /** Wear the shop item `id` (a colour of the costume / outfit). */
+  setLook(id: string): void {
+    this.look?.set(id);
   }
 
   hasClip(name: string): boolean {
@@ -584,6 +595,7 @@ export class Avatar {
   private waitT = 0;
   private onRig: ((rig: CharacterRig) => void) | null = null;
   private rideRig: RideRig | null = null;
+  private lookId = '';
 
   constructor(
     private readonly kind: ModelKind,
@@ -622,10 +634,17 @@ export class Avatar {
     this.fallbackObj?.removeFromParent();
     this.fallbackObj = null;
     this.rig = rig;
+    if (this.lookId) rig.setLook(this.lookId);
     rig.rideLayer.attach(this.rideRig);
     this.onRig?.(rig);
     this.root.add(rig.root);
     rig.loop('idle', 0, 1);
+  }
+
+  /** Wear the shop colour `id` (kept when the model arrives later). */
+  setLook(id: string): void {
+    this.lookId = id;
+    this.rig?.setLook(id);
   }
 
   /** Put the rider on a bike (null: off). The pose is procedural, see RideLayer; without a bike model the old 'ride' clip plays. */

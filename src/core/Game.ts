@@ -43,6 +43,7 @@ import { TouchSource } from '../input/TouchSource';
 import { GamepadSource } from '../input/GamepadSource';
 import { padHub, PadConfig } from '../input/GamepadHub';
 import { PadUi } from '../input/PadUi';
+import { initShopPanel, type ShopPanel } from '../ui/ShopPanel';
 import { tvPerf } from './TvPerf';
 import { tvDebug } from './TvDebug';
 import { TvControls, type TvRadialItem } from '../input/TvControls';
@@ -335,6 +336,8 @@ export class Game {
   readonly quiz: QuizEngine;
   readonly parents: ParentsPage;
   readonly settings: SettingsMenu;
+  /** Toko Mainan / wardrobe overlay (pauses like the settings panel). */
+  readonly shopPanel: ShopPanel;
   readonly maps: MapView;
   /** The settings panel is open: the game loop is paused (audio keeps playing so a volume slider can be heard). */
   private menuOpen = false;
@@ -655,11 +658,19 @@ export class Game {
     this.maps = new MapView(uiRoot);
     this.maps.onMiniOpen = () => this.settings.toggleMap();
     this.maps.onFullClose = () => this.settings.mapClosed();
+    this.shopPanel = initShopPanel({
+      ui: uiRoot,
+      save: this.save,
+      onOpenChange: (open) => this.syncMenuOpen(open || this.settings.opened),
+      coinsChanged: () => this.quiz.coinsChanged(),
+      sfx: { coin: () => this.sfx.coin(), bling: () => this.sfx.bling(), pop: () => this.sfx.pop() },
+    });
     this.settings = new SettingsMenu({
       ui: uiRoot,
       save: this.save,
-      canOpen: () => startGate.started && !this.quizLocked && !this.fading && !this.parents.open,
-      onOpenChange: (open) => this.setMenuOpen(open),
+      canOpen: () => startGate.started && !this.quizLocked && !this.fading && !this.parents.open && !this.shopPanel.opened,
+      onOpenChange: (open) => this.syncMenuOpen(open || this.shopPanel.opened),
+      openWardrobe: () => this.shopPanel.open('wardrobe'),
       onVolumes: () => {
         this.audio.applyVolumes();
         this.synth.setVolume(this.save.data.settings.sfxVol);
@@ -683,6 +694,7 @@ export class Game {
       settings: this.settings,
       maps: this.maps,
       quizOpen: () => this.quizLocked,
+      shop: () => ({ open: this.shopPanel.opened, confirming: this.shopPanel.confirmOpen }),
       resumeAudio: () => {
         // A pad press may not count as a user gesture: keep asking quietly until the context runs.
         const c = this.synth.audioContext;
@@ -1375,6 +1387,10 @@ export class Game {
   // ---- Settings panel actions ----
 
   /** The panel opened / closed: pause the game loop, free the mouse, drop held input. */
+  private syncMenuOpen(open: boolean): void {
+    if (open !== this.menuOpen) this.setMenuOpen(open);
+  }
+
   private setMenuOpen(open: boolean): void {
     this.menuOpen = open;
     if (open) {

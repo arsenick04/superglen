@@ -9,6 +9,8 @@ export interface PadUiDeps {
   maps: MapView;
   /** The quiz overlay is open. */
   quizOpen: () => boolean;
+  /** Toko Mainan / wardrobe: panel and its buy question (null scope = closed). */
+  shop?: () => { open: boolean; confirming: boolean };
   /** Retry waking up the AudioContext (browsers may not count a pad press as a user gesture). Cheap when it is running. */
   resumeAudio: () => void;
 }
@@ -151,6 +153,8 @@ export class PadUi {
   private findScope(): HTMLElement | null {
     const d = this.deps;
     if (d.quizOpen()) return this.query('.qp');
+    const sh = d.shop?.();
+    if (sh?.open) return this.query(sh.confirming ? '.shop-confirm' : '.shop');
     if (d.maps.isFullOpen) return this.query('.fullmap');
     if (d.settings.opened) return this.query(d.settings.confirmOpen ? '.settings-confirm' : '.settings');
     return null;
@@ -183,6 +187,11 @@ export class PadUi {
     this.focus?.classList.remove('pad-focus');
     this.focus = e;
     e?.classList.add('pad-focus');
+    try {
+      e?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } catch {
+      // old browsers
+    }
   }
 
   private clearFocus(): void {

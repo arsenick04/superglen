@@ -51,7 +51,7 @@ export class CityMap implements MapSource {
   })();
 
   /** D3: residents with a mission to give (both maps) and parked bikes (full map only). Null: nothing of that yet. */
-  d3: { residents(): { x: number; z: number }[]; bikes(): { x: number; z: number }[]; care?(): { x: number; z: number; kind: 'stall' | 'rs' }[] } | null = null;
+  d3: { residents(): { x: number; z: number }[]; bikes(): { x: number; z: number }[]; care?(): { x: number; z: number; kind: 'stall' | 'rs' }[]; shop?(): { x: number; z: number } } | null = null;
 
   /** Objective star (set by the level); undefined = follow the objective beam. */
   goal: (() => { x: number; z: number } | null) | undefined = undefined;
@@ -145,6 +145,20 @@ export class CityMap implements MapSource {
     if (this.d3) {
       for (const q of this.d3.residents()) this.questGlyph(g, X(q.x), Z(q.z), R * (big ? 0.6 : 0.5));
       for (const c of this.d3.care?.() ?? []) this.careGlyph(g, X(c.x), Z(c.z), R * (big ? 0.7 : 0.55), c.kind);
+      const shop = this.d3.shop?.();
+      if (shop) this.shopGlyph(g, X(shop.x), Z(shop.z), R * (big ? 0.75 : 0.6));
+      if (shop && big) {
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        const fs = Math.round(px * 0.026);
+        g.font = `800 ${fs}px system-ui, sans-serif`;
+        g.lineJoin = 'round';
+        g.lineWidth = fs * 0.3;
+        g.strokeStyle = 'rgba(255,255,255,0.95)';
+        g.fillStyle = '#3b2f22';
+        g.strokeText('Toko Mainan', X(shop.x), Z(shop.z) + R * 1.1);
+        g.fillText('Toko Mainan', X(shop.x), Z(shop.z) + R * 1.1);
+      }
     }
 
     if (big) {
@@ -196,6 +210,23 @@ export class CityMap implements MapSource {
     g.beginPath();
     g.arc(x, y + r * 0.5, r * 0.17, 0, Math.PI * 2);
     g.fill();
+  }
+
+  /** Toko Mainan: a white disc with a purple ring and a red-and-yellow gift box. */
+  private shopGlyph(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fillStyle = '#fff';
+    g.fill();
+    g.lineWidth = Math.max(1.5, r * 0.3);
+    g.strokeStyle = '#8e4fd8';
+    g.stroke();
+    g.fillStyle = '#ff5a5f';
+    g.fillRect(x - r * 0.5, y - r * 0.15, r, r * 0.65);
+    g.fillStyle = '#ff7b7f';
+    g.fillRect(x - r * 0.58, y - r * 0.4, r * 1.16, r * 0.3);
+    g.fillStyle = '#ffc94d';
+    g.fillRect(x - r * 0.09, y - r * 0.4, r * 0.18, r * 0.9);
   }
 
   /** Healing places: a white disc with a red heart (food stall: orange ring; Rumah Sakit: red ring and a small cross). */
