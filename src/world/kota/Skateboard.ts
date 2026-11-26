@@ -99,9 +99,20 @@ export class SkateSystem {
     else this.summon();
   }
 
+  /** The ride slot is 'none' (the child chose to walk): nothing is summoned by the interact button. */
+  private rideNone(): boolean {
+    if (this.grant) return false;
+    try {
+      const save = this.ctx.save as unknown as { data?: { inventory?: { equipped?: { ride?: string } } } };
+      return save.data?.inventory?.equipped?.ride === 'none';
+    } catch {
+      return false;
+    }
+  }
+
   private canSummon(): boolean {
     const { player, game, dialog } = this.ctx;
-    return !this.riding && this.owned() && player.mode === 'glen' && !player.ride && !player.flight.isFlying && game.controlsEnabled && !dialog.active && player.grounded;
+    return !this.riding && !this.rideNone() && this.owned() && player.mode === 'glen' && !player.ride && !player.flight.isFlying && game.controlsEnabled && !dialog.active && player.grounded;
   }
 
   fixedUpdate(dt: number): void {

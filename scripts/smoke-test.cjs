@@ -10562,6 +10562,7 @@ const careSt = (page) => page.evaluate(() => { const h = window.__superglen.heal
 async function careScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
   const quiz = { cats: {}, coins: 12, stickers: [], challenges: 0, fragments: 0, recent: [] };
+  await page.evaluate(() => localStorage.setItem('superglen.opening-seen.v1', '1'));
   await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6'], quiz, hearts: 3 }), touch);
   await d3Adv(page, 60);
   const spots = await page.evaluate(() => window.__care.spots());
