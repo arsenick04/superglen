@@ -56,6 +56,9 @@ class TvDebug {
     this.stats = stats;
   }
 
+  /** The gamepad hub registers its diagnostic lines here (avoids an import cycle through TvMode). */
+  hubInfo: (() => string[]) | null = null;
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled && this.el) {
@@ -115,6 +118,7 @@ class TvDebug {
       L.push(` ${p.index}: ${p.id.slice(0, 60)} map "${p.mapping}" b${p.buttons.length} a${p.axes.length}`);
       L.push(`   pressed ${pressed.length ? pressed.join(' ') : '-'}  axes ${Array.from(p.axes, (v) => v.toFixed(1)).join(' ')}`);
     }
+    if (this.hubInfo) for (const ln of this.hubInfo()) L.push(ln);
     L.push(`pointer: moves ${this.moves}  last ${this.lastPointer}`);
     L.push('keys (newest last):');
     for (const k of this.keys) {

@@ -51,6 +51,7 @@ async function sampleFps(page, n = 6) {
   const vals = [];
   for (let i = 0; i < n; i++) {
     const s = await page.evaluate(state);
+    if (!s) return { min: 0, avg: 0 };
     vals.push(s.fps);
     await sleep(550);
   }
@@ -7971,7 +7972,7 @@ const PAD_STUB = () => {
   const mk = (kind) => {
     const std = kind === 'std';
     const p = {
-      id: std ? 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)' : 'Wireless Controller (054c-0ce6)',
+      id: std ? 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)' : 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',
       index: 0, connected: true, mapping: std ? 'standard' : '', timestamp: 0,
       buttons: Array.from({ length: std ? 18 : 14 }, () => ({ pressed: false, value: 0, touched: false })),
       axes: new Array(std ? 4 : 10).fill(0),
@@ -8015,6 +8016,40 @@ async function padTap(page, name, frames = 3) {
   await padAdv(page, 2);
 }
 const padCss = (page, sel, prop) => page.evaluate(([s, p]) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[p] : 'missing'; }, [sel, prop]);
+
+/** Title menu with a non-standard DualSense (mapping "", hat-axis D-pad): navigation, confirm and back all work, and the hub profile is reported. */
+async function gamepadTitleScenario(page, check) {
+  const tag = 'ds title 1280x720';
+  const scr = () => page.evaluate(() => document.querySelector('.title-menu') && document.querySelector('.title-menu').dataset.screen);
+  const foc = () => page.evaluate(() => (document.querySelector('.title-menu .pad-focus') || { textContent: '' }).textContent.trim());
+  // Pad present BEFORE load without a gamepadconnected event (silent): a button press must still be noticed.
+  await page.evaluate(() => window.__pad.on('ds', true));
+  await sleep(500);
+  await page.evaluate(() => window.__pad.btn('square', true));
+  await sleep(300);
+  await page.evaluate(() => window.__pad.btn('square', false));
+  await sleep(200);
+  // Square is not a menu key; hat down moves the focus onto a button.
+  const tap = async (fn) => { await page.evaluate(fn[0], fn[1]); await sleep(250); await page.evaluate(() => { window.__pad.dpad(null); window.__pad.btn('cross', false); window.__pad.btn('circle', false); }); await sleep(250); };
+  await tap([() => window.__pad.dpad('down')]);
+  const f1 = await foc();
+  check(`gamepad ${tag}: pad found without gamepadconnected; the hat D-pad focuses a title button`, f1.length > 0, f1);
+  await tap([() => window.__pad.dpad('up')]);
+  const f2 = await foc();
+  check(`gamepad ${tag}: hat D-pad up moves the focus on`, f2.length > 0 && f2 !== f1, `${f1} -> ${f2}`);
+  await tap([() => window.__pad.left(0, 1)]);
+  await page.evaluate(() => window.__pad.left(0, 0));
+  const f3 = await foc();
+  check(`gamepad ${tag}: left stick down moves the focus again`, f3 === f1, `${f2} -> ${f3}`);
+  // Focus "Pengaturan"-like screen: go to a sub screen with Cross, back with Circle.
+  await tap([() => window.__pad.btn('cross', true)]);
+  const s1 = await scr();
+  check(`gamepad ${tag}: Cross confirms (opens a sub screen or starts)`, s1 !== 'main' || !(await page.evaluate(() => !!document.querySelector('.title-menu'))), String(s1));
+  if (s1 && s1 !== 'main') {
+    await tap([() => window.__pad.btn('circle', true)]);
+    check(`gamepad ${tag}: Circle goes back to the main title buttons`, (await scr()) === 'main', String(await scr()));
+  }
+}
 
 async function gamepadScenario(page, check, kind, touch) {
   const tag = `${kind} ${touch ? 'touch 844x390' : 'desktop 1280x720'}`;
@@ -12872,6 +12907,7 @@ async function main() {
     const phone390 = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
     results.push(await runScenario(browser, 'gamepad-desktop', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'std', false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'gamepad-dualsense', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'ds', false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'gamepad-title', { viewport: { width: 1280, height: 720 }, initScript: `(${PAD_STUB.toString()})();` + slotsInit }, gamepadTitleScenario, '?menu=1&fps=0'));
     results.push(await runScenario(browser, 'gamepad-touch', { ...phone390, initScript: PAD_STUB }, (p, c) => gamepadScenario(p, c, 'std', true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'gamepad-nopad', { viewport: { width: 1280, height: 720 }, initScript: PAD_STUB }, (p, c) => gamepadNoneScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'gamepad-noapi', { viewport: { width: 1280, height: 720 }, initScript: () => { Object.defineProperty(Navigator.prototype, 'getGamepads', { value: undefined, configurable: true }); } }, (p, c) => gamepadNoneScenario(p, c, true), '?level=kota&fps=0&reset=1'));
