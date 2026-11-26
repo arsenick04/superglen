@@ -1,5 +1,6 @@
 import { deleteSlot, getActiveSlot, readAllSlots, readPrefs, setActiveSlot, startNewSlot, writePrefs, type SlotSummary } from '../core/Save';
 import { tvMode, type TvPref } from '../core/TvMode';
+import { padHub, PadBtn } from '../input/GamepadHub';
 import { MenuIcons } from './MenuIcons';
 import { QuizIcons } from './QuizIcons';
 import { ModeIcons, bindPress, make, slotCard } from './SlotCards';
@@ -397,28 +398,24 @@ export class TitleMenu {
     this.raf = requestAnimationFrame(this.padLoop);
     const dt = this.lastPadT ? Math.min(0.1, (now - this.lastPadT) / 1000) : 0;
     this.lastPadT = now;
-    let pad: Gamepad | null = null;
-    try {
-      const list = navigator.getGamepads?.() ?? [];
-      for (const g of list) if (g && g.connected) { pad = g; break; }
-    } catch {
-      return;
-    }
-    if (!pad) return;
-    const down = (i: number): boolean => !!pad.buttons[i]?.pressed;
+    // Shared hub: it maps DualSense / DualShock / unknown pads (non-standard mapping, hat D-pad) to logical buttons.
+    const h = padHub;
+    h.poll(now);
+    if (!h.connected) return;
+    const down = (i: number): boolean => h.down[i] === 1;
     const edge = (i: number): boolean => {
       const d = down(i);
       const f = d && !this.padPrev[i];
       this.padPrev[i] = d;
       return f;
     };
-    const ax = pad.axes[0] ?? 0;
-    const ay = pad.axes[1] ?? 0;
+    const ax = h.leftRaw.x;
+    const ay = h.leftRaw.y;
     let dir = '';
-    if (down(12) || ay < -0.6) dir = '0';
-    else if (down(13) || ay > 0.6) dir = '1';
-    else if (down(14) || ax < -0.6) dir = '2';
-    else if (down(15) || ax > 0.6) dir = '3';
+    if (down(PadBtn.up) || ay < -0.6) dir = '0';
+    else if (down(PadBtn.down) || ay > 0.6) dir = '1';
+    else if (down(PadBtn.left) || ax < -0.6) dir = '2';
+    else if (down(PadBtn.right) || ax > 0.6) dir = '3';
     if (dir !== this.padDir) {
       this.padDir = dir;
       this.padTimer = 0.4;
@@ -430,8 +427,8 @@ export class TitleMenu {
         this.move(Number(dir));
       }
     }
-    const cross = edge(0);
-    const circle = edge(1);
+    const cross = edge(PadBtn.cross);
+    const circle = edge(PadBtn.circle);
     if (cross) {
       if (!this.focus) this.move(1);
       else this.activate();

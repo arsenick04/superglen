@@ -11,6 +11,7 @@
  * - Presses are COUNTERS, so every consumer keeps its own "seen" count and no one steals another's press.
  */
 import { tvMode } from '../core/TvMode';
+import { tvDebug } from '../core/TvDebug';
 
 /** All tunables in one place. */
 export const PadConfig = {
@@ -74,7 +75,9 @@ const DUALSENSE_BUTTONS: readonly number[] = [1, 2, 0, 3, 4, 5, 6, 7, 8, 9, 10, 
 const DUALSENSE_AXES = { lx: 0, ly: 1, rx: 2, ry: 5, hat: 9 } as const;
 const STANDARD_AXES = { lx: 0, ly: 1, rx: 2, ry: 3, hat: -1 } as const;
 
-const DUALSENSE_ID = /dualsense|054c|0ce6|wireless controller/i;
+const DUALSENSE_ID = /dualsense|dualshock|054c|0ce6|0df2|05c4|09cc|wireless controller|ps5 controller|ps4 controller/i;
+/** Generic non-standard pad: standard button order, but Cross is ANY face button (0..3) so some press always confirms / jumps. */
+const GENERIC_AXES = { lx: 0, ly: 1, rx: 2, ry: 3, hat: -1 } as const;
 
 type AxisMap = { readonly lx: number; readonly ly: number; readonly rx: number; readonly ry: number; readonly hat: number };
 
@@ -91,6 +94,8 @@ class GamepadHub {
   mapping = '';
   /** Which table is used: 'standard' | 'dualsense' | 'standard-guess'. */
   table = '';
+  /** Human readable remap profile in use (debug overlay). */
+  profile = '';
   index = -1;
   /** Incremented by every poll that read a pad (consumers use it to apply per-poll values once). */
   seq = 0;
@@ -293,16 +298,19 @@ class GamepadHub {
     this.mapping = pad.mapping;
     if (pad.mapping === 'standard') {
       this.table = 'standard';
+      this.profile = 'standard (identity)';
       this.buttonMap = STANDARD_BUTTONS;
       this.axisMap = STANDARD_AXES;
     } else if (DUALSENSE_ID.test(pad.id)) {
       this.table = 'dualsense';
+      this.profile = 'DualSense/DS4 non-standard (btn 0 Sq,1 X,2 O; axes 0,1 / 2,5; hat axis 9)';
       this.buttonMap = DUALSENSE_BUTTONS;
       this.axisMap = DUALSENSE_AXES;
     } else {
       this.table = 'standard-guess';
+      this.profile = 'generic (axes 0,1 move; any face button = confirm/jump)';
       this.buttonMap = STANDARD_BUTTONS;
-      this.axisMap = STANDARD_AXES;
+      this.axisMap = pad.axes.length >= 4 ? GENERIC_AXES : STANDARD_AXES;
     }
     this.down.fill(0);
     this.prevDown.fill(0);
@@ -339,6 +347,10 @@ class GamepadHub {
         if (b.pressed || b.value > PadConfig.triggerThreshold) d = 1;
       }
       this.down[i] = d;
+    }
+    if (this.table === 'standard-guess') {
+      // Unknown layout: any of the first four buttons counts as Cross (jump / confirm).
+      for (let i = 0; i < 4 && i < btns.length; i++) if (i !== 1 && (btns[i].pressed || btns[i].value > 0.5)) this.down[PadBtn.cross] = 1;
     }
     const ax = pad.axes;
     const am = this.axisMap;
@@ -456,3 +468,9 @@ function shape(ax: number, ay: number, dead: number, curve: number, out: PadVec)
 }
 
 export const padHub = new GamepadHub();
+tvDebug.hubInfo = () => {
+  const h = padHub;
+  const out = [`hub: ${h.connected ? 'connected' : 'no pad'}  profile ${h.profile || '-'}  table ${h.table || '-'}  active ${h.deviceActive}  mouseSuppressed ${h.mouseSuppressed()}`];
+  if (h.connected) out.push(`   logical down ${Array.from(h.down).map((v, i) => (v ? i : -1)).filter((i) => i >= 0).join(' ') || '-'}  move ${h.move.x.toFixed(1)},${h.move.y.toFixed(1)}`);
+  return out;
+};
