@@ -58,6 +58,12 @@ export function splitIntoN(samples, rate, n, opts = {}) {
     const segs = findSegments(samples, rate, { ...opts, minSilence: ms });
     last = segs;
     if (segs.length === n) return { ok: true, segments: segs, minSilence: ms };
+    // Gemini sometimes speaks a long preamble (the instructions) before line 1: drop leading
+    // segments only when they are clearly longer than any line (>= 3 s) and exactly n remain.
+    if (segs.length > n && segs.length <= n + 2) {
+      const extra = segs.length - n;
+      if (segs.slice(0, extra).every((s) => s.dur >= 3)) return { ok: true, segments: segs.slice(extra), minSilence: ms, droppedPreamble: extra };
+    }
   }
   return { ok: false, segments: last, reason: `segment count ${last.length} != ${n}` };
 }
