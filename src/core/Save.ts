@@ -2,6 +2,7 @@ import type { PlayerMode } from '../player/PlayerConfig';
 import { Parkour } from '../config/parkour';
 import { Combat } from '../config/combat';
 import { CATEGORIES, isCategory, type Category } from '../quiz/types';
+import { Emitter } from './Emitter';
 
 /**
  * Progress storage. One versioned JSON blob in localStorage under `superglen.save.v1`.
@@ -208,10 +209,66 @@ export interface SaveData {
   bab5: { step: string };
   /** Chapter 6 ("Tikus Rakus") progress: `step` is '' (not started), 'city' (to the Gudang Pasar), 'fight' (the big rat was met) (finished = 'bab6' in `chaptersDone`). */
   bab6: { step: string };
+  /** Toko Mainan: what the child owns and what is worn / used now (see `isOwned`, `own`, `equip` below). */
+  inventory: InventorySave;
   /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
   hearts: number;
   /** Shown on the slot card: when this was last written and how long the child has played (seconds). */
   meta: { savedAt: number; playSec: number };
+}
+
+/** Equipment slots: Superglen costume, Glen outfit, Glen's own bike paint, and which vehicle the ride button uses. */
+export type EquipSlot = 'superglen' | 'glen' | 'bike' | 'ride';
+export type RideChoice = 'bike' | 'skateboard' | 'none';
+
+export interface InventorySave {
+  /** Ids of owned shop items (the free defaults are always in it). */
+  owned: string[];
+  equipped: { superglen: string; glen: string; bike: string; ride: RideChoice };
+}
+
+export const DEFAULT_OWNED: readonly string[] = ['sg-red', 'glen-orange', 'bike-default'];
+
+function defaultInventory(): InventorySave {
+  return { owned: [...DEFAULT_OWNED], equipped: { superglen: 'sg-red', glen: 'glen-orange', bike: 'bike-default', ride: 'bike' } };
+}
+
+function sanitizeInventory(raw: unknown): InventorySave {
+  const out = defaultInventory();
+  if (typeof raw !== 'object' || raw === null) return out;
+  const r = raw as Record<string, unknown>;
+  const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length < 40;
+  if (Array.isArray(r.owned)) out.owned = [...new Set([...DEFAULT_OWNED, ...r.owned.filter(id)])].slice(0, 200);
+  if (typeof r.equipped === 'object' && r.equipped !== null) {
+    const e = r.equipped as Record<string, unknown>;
+    for (const k of ['superglen', 'glen', 'bike'] as const) if (id(e[k]) && out.owned.includes(e[k] as string)) out.equipped[k] = e[k] as string;
+    if (e.ride === 'bike' || e.ride === 'skateboard' || e.ride === 'none') out.equipped.ride = e.ride === 'skateboard' && !out.owned.includes('skateboard') ? 'bike' : e.ride;
+  }
+  return out;
+}
+
+/** The store the module-level helpers below work on (the game creates exactly one). */
+let currentStore: SaveStore | null = null;
+
+/** Fired (also as a window `inventory-changed` CustomEvent) when an item was gained or the worn / used items changed. */
+export const inventoryEvents = new Emitter<{ 'inventory-changed': InventorySave }>();
+
+export function getInventory(): InventorySave {
+  return currentStore?.data.inventory ?? defaultInventory();
+}
+export function isOwned(id: string): boolean {
+  return getInventory().owned.includes(id);
+}
+/** Give an item (no coins involved: the shop charges first). Returns true when it was new. */
+export function own(id: string): boolean {
+  return currentStore ? currentStore.ownItem(id) : false;
+}
+/** Wear / use an owned item in `slot` (ride: 'bike' and 'none' are always allowed). Returns false when not owned. */
+export function equip(slot: EquipSlot, id: string): boolean {
+  return currentStore ? currentStore.equipItem(slot, id) : false;
+}
+export function onInventoryChanged(fn: () => void): () => void {
+  return inventoryEvents.on('inventory-changed', fn);
 }
 
 /** Where the "Simpan" button put the player: level, feet position on safe ground, facing and mode. */
@@ -285,6 +342,7 @@ function defaults(): SaveData {
     bab4: { step: '', clue: 0 },
     bab5: { step: '' },
     bab6: { step: '' },
+    inventory: defaultInventory(),
     hearts: Combat.hearts.max,
     meta: { savedAt: 0, playSec: 0 },
   };
@@ -357,6 +415,7 @@ function sanitize(raw: unknown): SaveData {
     const b = r.bab6 as Record<string, unknown>;
     if (typeof b.step === 'string' && ['', 'city', 'fight'].includes(b.step)) out.bab6.step = b.step;
   }
+  out.inventory = sanitizeInventory(r.inventory);
   if (typeof r.meta === 'object' && r.meta !== null) {
     const m = r.meta as Record<string, unknown>;
     out.meta.savedAt = nat(m.savedAt, 1e15);
@@ -423,6 +482,7 @@ export class SaveStore {
     this.previewFirefight = this.previewChapter === 8 && query.get('firefight') === '1';
     const letters = query.getAll('letters');
     this.previewLetters = this.previewChapter === 6 && letters.length === 1 && letters[0] === '1';
+    currentStore = this;
     this.previewLabDone = !this.previewChapter && query.get('lab') === '1' && query.get('done') === '1';
     if (this.previewChapter || this.previewLabDone || query.get('reset') === '1') this.reset();
     else this.reload();
@@ -470,6 +530,7 @@ export class SaveStore {
     const prefs = readPrefs();
     if (prefs.musicVol !== undefined) this.data.settings.musicVol = prefs.musicVol;
     if (prefs.sfxVol !== undefined) this.data.settings.sfxVol = prefs.sfxVol;
+    this.inventoryChanged();
   }
 
   /** Count play time (only while the child is really playing); written out with the next save and at least every 30 s. */
@@ -591,6 +652,45 @@ export class SaveStore {
     if (this.data.settings.zoom === z) return;
     this.data.settings.zoom = z;
     this.persist();
+  }
+
+  /** Toko Mainan: add an item to the inventory (true when it was new). */
+  ownItem(id: string): boolean {
+    if (!id || id.length >= 40) return false;
+    const inv = this.data.inventory;
+    if (inv.owned.includes(id)) return false;
+    inv.owned.push(id);
+    this.persist();
+    this.inventoryChanged();
+    return true;
+  }
+
+  /** Toko Mainan: wear / use an owned item. */
+  equipItem(slot: EquipSlot, id: string): boolean {
+    const inv = this.data.inventory;
+    if (slot === 'ride') {
+      if (id !== 'bike' && id !== 'none' && id !== 'skateboard') return false;
+      if (id === 'skateboard' && !inv.owned.includes('skateboard')) return false;
+      if (inv.equipped.ride === id) return true;
+      inv.equipped.ride = id;
+    } else {
+      if (slot !== 'superglen' && slot !== 'glen' && slot !== 'bike') return false;
+      if (!inv.owned.includes(id)) return false;
+      if (inv.equipped[slot] === id) return true;
+      inv.equipped[slot] = id;
+    }
+    this.persist();
+    this.inventoryChanged();
+    return true;
+  }
+
+  private inventoryChanged(): void {
+    inventoryEvents.emit('inventory-changed', this.data.inventory);
+    try {
+      window.dispatchEvent(new CustomEvent('inventory-changed', { detail: this.data.inventory }));
+    } catch {
+      // no DOM events: the emitter above still fired
+    }
   }
 
   /** Spend coins (healing). Returns false and changes nothing when there are not enough. */

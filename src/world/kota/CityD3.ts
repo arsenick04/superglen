@@ -2,12 +2,14 @@ import type * as THREE from 'three';
 import type { LevelContext } from '../Level';
 import { BikeSystem } from './Bike';
 import { CityCare } from './CityCare';
+import { CityShop } from './CityShop';
 import { CityCoins } from './CityCoins';
 import type { CityMap } from './CityMap';
 import { CITY_LAYOUT } from './CityData';
 import { CityPeople } from './CityPeople';
 import type { Crowd } from './Crowd';
 import { Signposts } from './Signposts';
+import { SkateSystem } from './Skateboard';
 
 /**
  * PACKAGE D3: what fills Kota Botanica once Chapter 1 is done (and in the `?level=kota` free roam): coins, bikes, residents with
@@ -17,9 +19,11 @@ import { Signposts } from './Signposts';
 export class CityD3 {
   readonly coins: CityCoins;
   readonly bike: BikeSystem;
+  readonly skate: SkateSystem;
   readonly people: CityPeople;
   readonly signs: Signposts;
   readonly care: CityCare;
+  readonly shop: CityShop;
 
   constructor(
     private readonly ctx: LevelContext,
@@ -32,10 +36,12 @@ export class CityD3 {
     this.signs = new Signposts(ctx, P.signs, P.signDests);
     this.coins = new CityCoins(ctx, P.coins);
     this.bike = new BikeSystem(ctx, lit, P.bikes);
+    this.skate = new SkateSystem(ctx, lit);
     this.people = new CityPeople(ctx, lit, P.residents, P.missions, this.bike, canOffer, crowd);
     this.care = new CityCare(ctx, lit, crowd);
+    this.shop = new CityShop(ctx, lit, crowd);
     // Map: residents with a mission to give (mini map and full map) and parked bikes (full map).
-    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots() };
+    map.d3 = { residents: () => this.people.availableSpots(), bikes: () => this.bike.parked(), care: () => this.care.spots(), shop: () => this.shop.spot() };
     this.bike.onChange = () => map.invalidate();
     this.people.onChange = () => map.invalidate();
     ctx.quiz.coinsChanged();
@@ -49,6 +55,8 @@ export class CityD3 {
         places: () => P,
         drop: () => this.people.drop(),
         ring: () => this.bike.ring(),
+        skate: () => this.skate.info(),
+        skateToggle: () => this.skate.toggle(),
       };
       ctx.onDispose(() => {
         delete w.__d3;
@@ -58,6 +66,7 @@ export class CityD3 {
 
   fixedUpdate(dt: number): void {
     this.bike.fixedUpdate(dt);
+    this.skate.fixedUpdate(dt);
     this.people.fixedUpdate(dt);
     this.coins.fixedUpdate(dt);
     this.care.fixedUpdate();
@@ -65,9 +74,11 @@ export class CityD3 {
 
   update(dt: number): void {
     this.coins.update(dt);
-    this.bike.update();
+    this.bike.update(dt);
+    this.skate.update(dt);
     this.people.update(dt);
     this.care.update(dt);
+    this.shop.update(dt);
     const info = this.ctx.game.debugInfo;
     info.d3Coins = this.coins.taken;
     info.d3CoinsNow = this.coins.takenNow;
@@ -77,6 +88,10 @@ export class CityD3 {
     info.d3Mounts = this.bike.mounts;
     info.d3Dismounts = this.bike.dismounts;
     info.d3Bells = this.bike.bells;
+    info.skateRiding = this.skate.isRiding;
+    info.skateMounts = this.skate.mounts;
+    info.skateBumps = this.skate.bumps;
+    info.skateRolls = this.skate.rolls;
     info.d3Mission = this.people.activeId;
     info.d3Finished = this.people.finished;
     info.d3Dropped = this.people.dropped;

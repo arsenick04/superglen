@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { figureMaterial } from './Figure';
 import { Avatar } from './CharacterModels';
+import { getInventory, onInventoryChanged } from '../core/Save';
 import RAPIER from '@dimforge/rapier3d-compat';
 import type { Physics } from '../core/Physics';
 import type { Input } from '../input/Input';
 import { PlayerConfig as C, ModeTunings, type ModeTuning, type PlayerMode } from './PlayerConfig';
-import { LaunchSpeeds, Parkour, tableAt } from '../config/parkour';
+import { LaunchSpeeds, Parkour, launchSpeed, tableAt } from '../config/parkour';
 import { Flight, FlightConfig } from './skills/Flight';
 import { SkillHub } from './skills/Skills';
 import { Rhythm, type RhythmQuality } from './Rhythm';
@@ -134,7 +135,12 @@ export class Player {
    * Riding a bike (city): faster, gentler start and stop, wide smooth turns, and no jumping (the jump button is the bell).
    * Set by the city's bike system, null on foot. The numbers are `BikeConfig.ride`.
    */
-  ride: { runSpeed: number; accel: number; decel: number; turnSpeed: number; hopApex: number; uphillLoss: number; downhillGain: number; minSlopeScale: number; maxSlopeScale: number } | null = null;
+  ride: { runSpeed: number; accel: number; decel: number; turnSpeed: number; hopApex: number; uphillLoss: number; downhillGain: number; minSlopeScale: number; maxSlopeScale: number; ollie?: number } | null = null;
+  /** Skateboard: an ollie press is remembered this long (s); `ollies` counts them (tests). */
+  private ollieBuffer = 0;
+  ollies = 0;
+  /** Buffer time of an ollie press (set by the skateboard system). */
+  ollieBufferTime = 0.12;
   /** Slope under the bike (rad, + uphill), measured from the last physics step; smoothed for the visual tilt. */
   private ridePitchTarget = 0;
   private ridePitch = 0;
@@ -586,12 +592,19 @@ export class Player {
     }
 
     // ---- Vertical ------------------------------------------------------------
+    if (this.ride?.ollie && this.inputEnabled && this.input.wasPressed('jump')) this.ollieBuffer = this.ollieBufferTime;
+    else if (this.ollieBuffer > 0) this.ollieBuffer -= dt;
     // The jump step moves with exactly the launch speed (no gravity yet): see launchSpeed().
     if (!jumped) {
       if (flying) {
         this.verticalVelocity = F.vy;
       } else if (this.headBouncePending) {
         // The contact step stopped at the head; this first rising step uses the full launch speed.
+        jumped = true;
+      } else if (this.ride?.ollie && this.ollieBuffer > 0 && wasGrounded && this.verticalVelocity <= 0) {
+        this.verticalVelocity = launchSpeed(this.ride.ollie); // skateboard ollie: a small hop
+        this.ollieBuffer = 0;
+        this.ollies++;
         jumped = true;
       } else if (this.ride && wasGrounded && this.verticalVelocity <= 0 && this.rideNeedsHop()) {
         this.verticalVelocity = Math.sqrt(2 * Parkour.gravityUp * this.ride.hopApex); // the bike hops a low obstacle by itself
@@ -1351,6 +1364,14 @@ export class Player {
       if (this._mode === 'superglen') this.superFig.shoot();
     });
     this.superFig.root.visible = false;
+    // Toko Mainan: the worn colours (also when they change later, e.g. bought or picked in the wardrobe).
+    const dress = (): void => {
+      const eq = getInventory().equipped;
+      this.glenFig.setLook(eq.glen);
+      this.superFig.setLook(eq.superglen);
+    };
+    dress();
+    onInventoryChanged(dress);
     // The capsule hovers skinOffset above the floor; the figure's soles are lowered to 1 cm above the floor surface (ground layers and
     // the hill path lie within +-1.6 cm of the collider, so the feet are never inside them and never float).
     this.glenFig.root.position.y = -CENTER_TO_FEET - FEET_DROP;

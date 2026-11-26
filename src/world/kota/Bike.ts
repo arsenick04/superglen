@@ -4,6 +4,8 @@ import type { StaticBodyHandle } from '../../core/Physics';
 import type { CityBike } from './CityPlaces';
 import { box, cyl, merge, sph, type Part } from './ColorMesh';
 import { BikeVisual, bikeTemplateNow, loadBikeTemplate } from './BikeModel';
+import { getInventory, onInventoryChanged } from '../../core/Save';
+import { ITEM_BY_ID, RacingBike } from '../../config/shop';
 
 /**
  * Bike tuning, in ONE place. Glen only (Superglen flies; the bike dismounts when he transforms or lifts off).
@@ -35,8 +37,14 @@ export const BikeConfig = {
   /** Parked bikes farther than this are hidden (m). */
   showRadius: 70,
   wheelRadius: 0.32,
+  /** Sepeda Balap (Toko Mainan): the ride numbers with a higher top speed and a quicker start (see `RacingBike` in config/shop.ts). */
+  racing: { ...RacingBike },
   colors: [0xe8453c, 0x2ec4b6, 0xff9f43, 0xffd23f, 0x9b6bff, 0x4dabf7],
 } as const;
+
+/** Sparkle bike (Toko Mainan): pink paint and a small glitter burst every so often while riding. */
+const SPARKLE_PINK = 0xff6fb5;
+const SPARKLE_EVERY = 0.22;
 
 const SKIN = 0.55; // capsule centre to feet (PlayerConfig.height / 2)
 
@@ -124,11 +132,17 @@ export class BikeSystem {
         radius: BikeConfig.mountRadius,
         icon: 'hand',
         promptHeight: 1.3,
-        enabled: () => this.riding < 0 && this.cooldown <= 0 && ctx.player.mode === 'glen' && this.bikes[i].group.parent === ctx.root,
+        enabled: () => this.riding < 0 && this.cooldown <= 0 && !ctx.player.ride && ctx.player.mode === 'glen' && this.bikes[i].group.parent === ctx.root,
         onInteract: () => this.mount(i),
       });
     });
-    ctx.onDispose(() => this.dispose());
+    const off = onInventoryChanged(() => {
+      if (this.riding >= 0) this.dress(this.riding);
+    });
+    ctx.onDispose(() => {
+      off();
+      this.dispose();
+    });
     const attach = (tpl: THREE.Object3D | null): void => {
       if (!tpl || this.disposed) return;
       this.bikes.forEach((b, i) => {
@@ -137,7 +151,10 @@ export class BikeSystem {
         b.group.remove(b.fallback);
         b.group.add(v.root);
         b.visual = v;
-        if (this.riding === i) ctx.player.avatar.setRide(v);
+        if (this.riding === i) {
+          this.dress(i);
+          ctx.player.avatar.setRide(v);
+        }
         else v.rest();
       });
     };
@@ -148,6 +165,22 @@ export class BikeSystem {
   }
 
   private disposed = false;
+  private glitter = 0;
+
+  /** The worn bike item: its paint ('sparkle' = pink) or null for each bike's own colour; racing bikes are faster. */
+  private worn(): { paint: number | 'sparkle' | null; racing: boolean; sparkle: boolean } {
+    const it = ITEM_BY_ID.get(getInventory().equipped.bike);
+    const paint = it?.paint ?? null;
+    return { paint: paint === 'sparkle' ? SPARKLE_PINK : paint, racing: it?.id === 'bike-racing', sparkle: paint === 'sparkle' };
+  }
+
+  /** Paint bike `i` with the worn item and set the ride numbers (called when getting on and when the worn item changes). */
+  private dress(i: number): void {
+    const w = this.worn();
+    const b = this.bikes[i];
+    b.visual?.setPaint(typeof w.paint === 'number' ? w.paint : BikeConfig.colors[i % BikeConfig.colors.length]);
+    this.ctx.player.ride = w.racing ? { ...BikeConfig.ride, ...BikeConfig.racing } : BikeConfig.ride;
+  }
 
   get isRiding(): boolean {
     return this.riding >= 0;
@@ -178,7 +211,15 @@ export class BikeSystem {
   }
 
   /** Per rendered frame: far parked bikes are hidden (one mesh per bike). */
-  update(): void {
+  update(dt = 0): void {
+    if (this.riding >= 0 && dt > 0 && this.worn().sparkle) {
+      this.glitter -= dt;
+      if (this.glitter <= 0) {
+        this.glitter = SPARKLE_EVERY;
+        const q = this.ctx.player.visualPosition;
+        this.ctx.fx.sparkles.burst(q.x, q.y - 0.3, q.z, 3, 1.1, 0xffd6f0, { gravity: 0.4, life: 0.6, up: 0.5 });
+      }
+    }
     const p = this.ctx.player.visualPosition;
     for (let i = 0; i < this.bikes.length; i++) {
       const b = this.bikes[i];
@@ -235,7 +276,7 @@ export class BikeSystem {
     b.group.rotation.set(0, 0, 0);
     b.group.visible = true;
     player.object.add(b.group);
-    player.ride = BikeConfig.ride;
+    this.dress(i);
     player.rideLift = BikeConfig.lift;
     if (b.visual) {
       b.visual.rest();

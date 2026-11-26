@@ -37,6 +37,8 @@ export interface SettingsDeps {
   restart: () => void;
   /** Camera zoom back to the default distance. */
   resetZoom: () => void;
+  /** Lemari: the wardrobe panel (owned shop items) opens over the pause menu. */
+  openWardrobe: () => void;
 }
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: string): HTMLElementTagNameMap[K] {
@@ -259,6 +261,8 @@ export class SettingsMenu {
       this.toastText('Zoom kembali normal');
     });
     btnZoom.dataset.act = 'zoom';
+    const btnWardrobe = this.button('menu-btn set-wardrobe', MenuIcons.wardrobe, 'Lemari', () => deps.openWardrobe());
+    btnWardrobe.dataset.act = 'wardrobe';
     this.btnMenu = this.button('menu-btn set-menu', MenuIcons.home, 'Kembali ke Menu Utama', () =>
       this.askQ('Kembali ke menu utama? Permainan tersimpan.', () => {
         this.close();
@@ -266,7 +270,7 @@ export class SettingsMenu {
       }),
     );
     this.btnMenu.dataset.act = 'menu';
-    grid.append(this.btnMap, this.btnHome, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
+    grid.append(this.btnMap, this.btnHome, btnWardrobe, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
 
     this.slotsView = make('div', 'settings-slots');
 

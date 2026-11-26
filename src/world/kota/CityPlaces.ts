@@ -107,6 +107,8 @@ export interface CityPlaces {
   signDests: SignDest[];
   /** Healing with coins (L5): the food stall in the Pasar and the doctor in front of the Rumah Sakit. */
   care: { stall: { x: number; z: number; yaw: number }; doctor: { x: number; z: number; yaw: number } };
+  /** Toko Mainan: the ruko on the plaza that became the toy shop: its centre, the facade line, the keeper's spot and facing. */
+  shop: { x: number; z: number; yaw: number; face: number; keeper: { x: number; z: number }; facade: { x: number; z: number } };
   /** Coins and mission items for the reach checker. */
   reachCoins: ReachCoin[];
 }
@@ -481,5 +483,11 @@ export function generatePlaces(L: CityLayout, k: PlacesKit): CityPlaces {
   const docAt = findFree(hf.x - hfz * 2.6, hf.z + hfx * 2.6, 1.0, 6);
   const doctor = { x: docAt.x, z: docAt.z, yaw: r2(Math.atan2(hfx, hfz)) };
 
-  return { coins, bikes, residents, missions, signs, signDests, care: { stall, doctor }, reachCoins: reach };
+  // ---- Toko Mainan: the plaza ruko nearest to (4, north row) becomes the toy shop; the keeper stands in front of its door ----
+  const shopB = L.buildings.filter((b) => b.district === 'alun' && b.kind === 'ruko' && b.face === 0 && b.z < 0).sort((a, b) => Math.abs(a.x - 4.2) - Math.abs(b.x - 4.2))[0] ?? L.buildings[0];
+  const [sfx, sfz] = FACE[shopB.face];
+  const kp = findFree(frontOf(shopB, 2.6).x + 1.6, frontOf(shopB, 2.6).z, 0.9, 3);
+  const shop = { x: shopB.x, z: shopB.z, yaw: r2(Math.atan2(sfx, sfz)), face: shopB.face, keeper: kp, facade: frontOf(shopB, 0) };
+
+  return { coins, bikes, residents, missions, signs, signDests, care: { stall, doctor }, shop, reachCoins: reach };
 }
