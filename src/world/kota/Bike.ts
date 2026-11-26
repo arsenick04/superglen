@@ -124,7 +124,7 @@ export class BikeSystem {
         radius: BikeConfig.mountRadius,
         icon: 'hand',
         promptHeight: 1.3,
-        enabled: () => this.riding < 0 && this.cooldown <= 0 && ctx.player.mode === 'glen' && this.bikes[i].group.parent === ctx.root,
+        enabled: () => this.riding < 0 && this.cooldown <= 0 && !ctx.player.ride && ctx.player.mode === 'glen' && this.bikes[i].group.parent === ctx.root,
         onInteract: () => this.mount(i),
       });
     });

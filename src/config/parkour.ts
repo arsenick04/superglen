@@ -29,6 +29,8 @@ export const Parkour = {
   // ---- Jump heights --------------------------------------------------------------------------------------
   /** Glen (school mode): one small jump, no rhythm, no air jump. Apex above the takeoff point (m). */
   glenApex: 0.9,
+  /** Skateboard ollie apex (m): a small hop on the board (Player.ride.ollie, SkateConfig). */
+  ollieApex: 0.42,
   /** Superglen air jump: extra height above the point where it is pressed (m). From any rhythm level. */
   doubleJumpApex: 1.2,
   /**

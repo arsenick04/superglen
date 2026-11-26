@@ -12342,6 +12342,159 @@ async function kotaBikeScenario(page, check, touch) {
   }
 }
 
+// ---- Skateboard (SkateSystem, SkateboardModel, RideLayer): group `skate` (URL ?skate=1 grants the board) ------------------------------
+async function skateScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const info = () => page.evaluate(() => window.__d3.skate());
+  const tap = async (action) => {
+    if (!touch) return;
+    const r = await page.evaluate((a) => { const b = document.querySelector(`.tc-button[data-action="${a}"]`).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }, action);
+    await page.touchscreen.tap(r[0], r[1]);
+    await d3Adv(page, 8);
+  };
+  await kotaBoot(page, touch);
+  await page.waitForSelector('.cinematic-skip', { state: 'visible', timeout: 8000 }).catch(() => undefined);
+  if (await page.locator('.cinematic-skip:visible').count()) await menuHit(page, '.cinematic-skip', touch);
+  await page.waitForFunction(() => !document.querySelector('.cinematic-layer:not([hidden])'), null, { timeout: 8000 }).catch(() => undefined);
+  if (!touch) { await page.mouse.click(640, 360); await sleep(400); }
+  await d3Adv(page, 20);
+  await page.evaluate(() => { const g = window.__superglen; g.audio.followPause = false; g.sfx.reset(); g.game.setPlayerMode('glen'); });
+  // A flat spot: the plaza next to a bike, a few metres away from every prompt.
+  const bk = await page.evaluate(() => window.__d3.places().bikes[1]);
+  await d3Go(page, bk.x + 7, bk.z + 7, 30);
+  await page.evaluate(() => window.__superglen.setCameraYaw(0));
+  const sk0 = await page.evaluate(() => window.__superglen.levelInfo.skateRiding);
+  check(`skate ${tag}: not riding at first`, sk0 === false, String(sk0));
+  if (!touch) await d3Press(page, 'e', 6); else await tap('interact');
+  await d3Adv(page, 40);
+  let s = await info();
+  const pr = await page.evaluate(() => ({ ride: window.__superglen.levelInfo.skateRiding }));
+  check(`skate ${tag}: the interact button takes the skateboard out, Glen stands on it (ride pose fully on)`, s && s.riding && s.w > 0.99 && pr.ride, JSON.stringify({ s, pr }));
+  check(`skate ${tag}: standing on the board: both feet on the deck, hands out`, s && Math.max(...s.miss) < 0.07, JSON.stringify(s));
+  const side = async (d = 2.4) => {
+    const a = await d3Player(page);
+    await d3Adv(page, 1);
+    const b = await d3Player(page);
+    let hx = b.x - a.x, hz = b.z - a.z;
+    const l = Math.hypot(hx, hz);
+    if (l < 1e-5) { hx = side.hx ?? 0; hz = side.hz ?? -1; } else { hx /= l; hz /= l; }
+    side.hx = hx; side.hz = hz;
+    await page.evaluate(([x, y, z, sx, sz, d]) => window.__superglen.lookFrom([x + sx * d, y + 0.3, z + sz * d, x, y - 0.05, z]), [b.x, b.feet + 0.5, b.z, hz, -hx, d]);
+    await page.evaluate(() => window.__superglen.advance(1, true));
+  };
+  await side();
+  await uiShot(page, `skate-${touch ? 'touch' : 'desktop'}-1-stand`);
+  // Push off and ride.
+  await page.keyboard.down('w');
+  let sawKick = false, maxKickDown = 0, shotKick = false;
+  for (let i = 0; i < 24; i++) {
+    await d3Adv(page, 4);
+    s = await info();
+    maxKickDown = Math.max(maxKickDown, s.kickDown);
+    if (!shotKick && s.kickDown > 0.95 && s.kick > 0.3) { shotKick = true; await side(); await uiShot(page, `skate-${touch ? 'touch' : 'desktop'}-2-push`); }
+  }
+  sawKick = maxKickDown > 0.9;
+  await d3Adv(page, 80);
+  s = await info();
+  const w0 = s.wheel;
+  await d3Adv(page, 10);
+  const s1 = await info();
+  const wd = Math.abs(Math.atan2(Math.sin(s1.wheel - w0), Math.cos(s1.wheel - w0)));
+  const pl = await page.evaluate(() => { const v = window.__superglen.player; return Math.hypot(v.velocity?.x ?? 0, v.velocity?.z ?? 0); });
+  console.log(`   [skate ${tag}] speed ${s1.speed.toFixed(2)} (player ${pl.toFixed(2)}), pushes ${s1.pushes}, wheel turn ${wd.toFixed(2)}, worst foot miss ${Math.max(...s1.miss).toFixed(3)}`);
+  check(`skate ${tag}: Glen kicks off (foot on the ground), speed between walking (5) and the bike (8.5)`, sawKick && s1.pushes >= 1 && s1.speed > 4.5 && s1.speed < 8, JSON.stringify(s1));
+  check(`skate ${tag}: the wheels spin`, wd > 0.5, wd.toFixed(2));
+  check(`skate ${tag}: wheel-rolling ticks play while riding`, (await page.evaluate(() => window.__superglen.levelInfo.skateRolls)) > 3);
+  await side();
+  await uiShot(page, `skate-${touch ? 'touch' : 'desktop'}-3-cruise`);
+  // Carve left and right.
+  const turn = async (key, frames, shot) => {
+    await page.keyboard.down(key);
+    let best = null;
+    for (let i = 0; i < frames / 5; i++) {
+      await d3Adv(page, 5);
+      const q = await info();
+      if (!best || Math.abs(q.roll) > Math.abs(best.roll)) best = q;
+      if (shot && i === 6) { await side(); await uiShot(page, `skate-${touch ? 'touch' : 'desktop'}-${shot}`); }
+    }
+    await page.keyboard.up(key);
+    return best;
+  };
+  const tl = await turn('a', 60, '4-carve-left');
+  await d3Adv(page, 30);
+  const tr = await turn('d', 60);
+  check(`skate ${tag}: the board leans into turns (opposite signs left / right)`, Math.abs(tl.roll) > 0.03 && Math.abs(tr.roll) > 0.03 && tl.roll * tr.roll < 0, JSON.stringify({ tl: tl.roll, tr: tr.roll }));
+  check(`skate ${tag}: the front foot stays on the deck in a carve`, Math.max(tl.miss[0], tr.miss[0]) < 0.08, JSON.stringify({ tl: tl.miss, tr: tr.miss }));
+  // Ollie.
+  await d3Adv(page, 20);
+  const f0 = (await d3Player(page)).feet;
+  const o0 = (await info()).ollies;
+  if (!touch) await d3Press(page, 'Space', 2); else await tap('jump');
+  let maxUp = 0, shotAir = false, airFrames = 0;
+  for (let i = 0; i < 40; i++) {
+    await d3Adv(page, 2);
+    const p = await d3Player(page);
+    maxUp = Math.max(maxUp, p.feet - f0);
+    if (!p.grounded) airFrames += 2;
+    if (!shotAir && p.feet - f0 > 0.25) { shotAir = true; await side(); await uiShot(page, `skate-${touch ? 'touch' : 'desktop'}-5-ollie`); }
+  }
+  const pa = await d3Player(page);
+  const sa = await info();
+  console.log(`   [skate ${tag}] ollie rise ${maxUp.toFixed(2)} m, air ${airFrames} frames, landed ${pa.grounded}, ollies ${sa.ollies - o0}`);
+  check(`skate ${tag}: the jump button is an ollie: the board leaves the ground (0.2 to 0.7 m) and lands again`, maxUp > 0.2 && maxUp < 0.7 && pa.grounded && sa.ollies - o0 === 1 && sa.riding, JSON.stringify({ maxUp, pa, sa }));
+  await page.keyboard.up('w');
+  await d3Adv(page, 60);
+  // The hill path (reuses the bike's slope logic).
+  {
+    const poly = [[78, -62], [78, -76], [90, -82], [100, -88], [100.5, -97]];
+    const wps = [];
+    for (let i = 0; i + 1 < poly.length; i++) {
+      const n = Math.max(1, Math.round(Math.hypot(poly[i + 1][0] - poly[i][0], poly[i + 1][1] - poly[i][1]) / 3));
+      for (let k = 0; k < n; k++) wps.push([poly[i][0] + ((poly[i + 1][0] - poly[i][0]) * k) / n, poly[i][1] + ((poly[i + 1][1] - poly[i][1]) * k) / n]);
+    }
+    wps.push(poly[poly.length - 1]);
+    await page.evaluate(([x, z]) => { const g = window.__superglen; g.teleportFeet(x, 0, z + 6); g.advance(30, false); }, wps[0]);
+    let stuck = 0, maxY = 0, t = 0, done = false;
+    for (let w = 0; w < wps.length && !done; w++) {
+      let last = null, still = 0;
+      await page.evaluate(([x, z]) => window.__superglen.walkTo(x, z), wps[w]);
+      for (let k = 0; k < 200; k++) {
+        await d3Adv(page, 10);
+        t += 10 / 60;
+        const p = await d3Player(page);
+        maxY = Math.max(maxY, p.feet);
+        if (p.feet >= 5.5 && Math.hypot(p.x - 100.5, p.z + 97) < 9) { done = true; break; }
+        if (Math.hypot(p.x - wps[w][0], p.z - wps[w][1]) < (w === wps.length - 1 ? 1.5 : 1.8)) break;
+        if (last && Math.hypot(p.x - last.x, p.z - last.z) < 0.4) { still++; if (still >= 6) { stuck++; break; } } else still = 0;
+        last = p;
+        if (t > 60) break;
+      }
+      if (stuck || t > 60) break;
+    }
+    await page.evaluate(() => window.__superglen.cancelWalk());
+    const rid = (await info()).riding;
+    console.log(`   [skate ${tag}] hill: ${t.toFixed(1)} s, top ${maxY.toFixed(2)}, stuck ${stuck}, still riding ${rid}`);
+    check(`skate ${tag}: rides up the hill path to the old building plateau (y >= 5.5) in under 50 s, never stuck, still on the board`, !stuck && maxY >= 5.5 && t < 50 && rid, JSON.stringify({ t, stuck, maxY, rid }));
+  }
+  // Put away with the same button.
+  await page.keyboard.up('w');
+  await d3Adv(page, 20);
+  if (!touch) await d3Press(page, 'e', 6); else await tap('interact');
+  await d3Adv(page, 40);
+  const pr2 = await page.evaluate(() => ({ ride: window.__superglen.levelInfo.skateRiding, riding: window.__superglen.levelInfo.skateRiding }));
+  check(`skate ${tag}: the same button puts the board away; Glen walks again`, !pr2.ride && pr2.riding === false, JSON.stringify(pr2));
+  // The wardrobe / shop event path.
+  await page.evaluate(() => window.__superglen.lookFrom(null));
+  await d3Go(page, bk.x + 7, bk.z + 7, 30);
+  await page.evaluate(() => window.__superglen.cancelWalk());
+  await page.evaluate(() => window.__d3.skateToggle());
+  await d3Adv(page, 40);
+  check(`skate ${tag}: can be taken out again (toggle event path)`, (await info()).riding);
+  await page.evaluate(() => window.__d3.skateToggle());
+  await d3Adv(page, 30);
+  check(`skate ${tag}: put away again`, !(await info()).riding);
+}
+
 async function runScenario(browser, name, ctxOpts, body, query = '?level=test') {
   if (process.env.ONLY && !new RegExp('^(' + process.env.ONLY + ')').test(name)) return { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
   const result = { name, checks: [], errors: [], fps: { min: 0, avg: 0 } };
@@ -12791,6 +12944,95 @@ async function tvModeScenario(page, check) {
   check('tv-mode: OK answers the quiz', q1.index > q0.index || q1.wrong > q0.wrong || q1.state !== q0.state || q1.view !== q0.view, JSON.stringify({ q0: [q0.index, q0.wrong, q0.state], q1: [q1.index, q1.wrong, q1.state] }));
 }
 
+// ---- Toko Mainan (shop, wardrobe, inventory): groups `shop`, `shop-touch` ---------------------------------------------------------
+const shopSt = (page) => page.evaluate(() => {
+  const d = JSON.parse(localStorage.getItem('superglen.save.v1') || '{}');
+  return { coins: d.quiz && d.quiz.coins, inv: d.inventory, panel: window.__shop ? { open: window.__shop.open, confirming: window.__shop.confirming, line: window.__shop.line, counts: window.__shop.counts } : null, looks: window.__characters ? window.__characters.looks() : [] };
+});
+async function shopScenario(page, check, touch) {
+  const tag = touch ? 'touch 844x390' : 'desktop';
+  const quiz = { cats: {}, coins: 100, stickers: [], challenges: 0, fragments: 0, recent: [] };
+  const save = ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6'], quiz });
+  await ch3Open(page, save, touch);
+  await d3Adv(page, 60);
+  const S = await page.evaluate(() => window.__shopPlace.spot());
+  check(`shop ${tag}: the shop exists on the plaza (inside the city, near the centre)`, !!S && Math.abs(S.keeper.x) < 40 && Math.abs(S.keeper.z) < 40, JSON.stringify(S));
+  await d3Go(page, S.keeper.x, S.keeper.z + 1.8, 8);
+  await d3Press(page, 'e', 3);
+  let s = await shopSt(page);
+  check(`shop ${tag}: the hand button next to the keeper opens the shop`, s.panel && s.panel.open && /Toko Mainan/.test(s.panel.line), JSON.stringify(s.panel));
+  check(`shop ${tag}: the game is paused while the shop is open`, await page.evaluate(() => window.__superglen.settings.frozen), '');
+  await shot(page, `shop-ui${touch ? '-touch' : ''}`);
+  const cardInfo = await page.evaluate(() => Array.from(document.querySelectorAll('.shop-card')).map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, vis: r.bottom <= innerHeight + 1 }; }));
+  check(`shop ${tag}: item cards are big (>= 80 x 80) and inside the screen height`, cardInfo.length >= 5 && cardInfo.every((c) => c.w >= 80 && c.h >= 80 && c.vis), JSON.stringify(cardInfo.slice(0, 2)));
+  const tabs = await page.evaluate(() => Array.from(document.querySelectorAll('.shop-tab')).map((e) => { const r = e.getBoundingClientRect(); return [e.getAttribute('aria-label'), Math.round(r.width), Math.round(r.height)]; }));
+  check(`shop ${tag}: four tabs (Kostum Superglen, Baju Glen, Sepeda, Kendaraan), each >= 80 x 80`, tabs.length === 4 && tabs.every((t) => t[1] >= 80 && t[2] >= 80), JSON.stringify(tabs));
+  // Buy with enough coins: question first, nothing charged until Ya.
+  await page.evaluate(() => window.__shop.pick('sg-blue'));
+  s = await shopSt(page);
+  check(`shop ${tag}: tapping an unowned item asks "Beli? Ya / Tidak" and charges nothing yet`, s.panel.confirming === 'sg-blue' && s.coins === 100, JSON.stringify(s));
+  const yn = await page.evaluate(() => ['.shop-yes', '.shop-no'].map((q) => { const r = document.querySelector(q).getBoundingClientRect(); return [r.width, r.height]; }));
+  check(`shop ${tag}: Ya and Tidak are at least 80 x 80`, yn.every((b) => b[0] >= 80 && b[1] >= 80), JSON.stringify(yn));
+  await shot(page, `shop-confirm${touch ? '-touch' : ''}`);
+  if (touch) {
+    const b = await page.evaluate(() => { const r = document.querySelector('.shop-yes').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await page.touchscreen.tap(b.x, b.y);
+  } else await page.click('.shop-yes');
+  await d3Adv(page, 4);
+  s = await shopSt(page);
+  check(`shop ${tag}: Ya buys it: 40 coins paid, owned, and worn at once`, s.coins === 60 && s.inv.owned.includes('sg-blue') && s.inv.equipped.superglen === 'sg-blue' && !s.panel.confirming, JSON.stringify(s.inv));
+  check(`shop ${tag}: the Superglen material is recoloured (look mode 1, blue hue)`, s.looks.some((l) => l.kind === 'superglen' && l.mode === 1 && Math.abs(l.hue - 0.6) < 0.01), JSON.stringify(s.looks));
+  // Too few coins: friendly line with the missing amount, nothing charged.
+  await page.evaluate(() => window.__shop.pick('sg-merahputih'));
+  s = await shopSt(page);
+  check(`shop ${tag}: not enough coins (60 < 200): friendly line says 140 more, no question, nothing charged`, /Kurang 140 koin/.test(s.panel.line) && !s.panel.confirming && s.coins === 60 && !s.inv.owned.includes('sg-merahputih'), JSON.stringify(s.panel));
+  // Tidak: nothing happens.
+  await page.evaluate(() => window.__shop.pick('sg-green'));
+  await page.evaluate(() => document.querySelector('.shop-no').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' })));
+  s = await shopSt(page);
+  check(`shop ${tag}: Tidak closes the question without buying`, !s.panel.confirming && s.coins === 60 && !s.inv.owned.includes('sg-green'), JSON.stringify(s.panel));
+  // Other tabs: Glen outfit, bike paint, racing bike, skateboard (contract with the skateboard code: equip('ride','skateboard')).
+  await page.evaluate(() => { window.__shop.tab('glen'); window.__shop.pick('glen-blue'); window.__shop.yes(); });
+  s = await shopSt(page);
+  check(`shop ${tag}: a Glen outfit (25 coins) is bought and worn; Glen's look is tinted`, s.coins === 35 && s.inv.equipped.glen === 'glen-blue' && s.looks.some((l) => l.kind === 'glen' && l.mode === 1), JSON.stringify([s.coins, s.inv.equipped]));
+  await page.evaluate(() => { window.__shop.tab('bike'); window.__shop.pick('bike-red'); window.__shop.yes(); });
+  s = await shopSt(page);
+  check(`shop ${tag}: a bike colour (20 coins) is bought and worn`, s.coins === 15 && s.inv.equipped.bike === 'bike-red', JSON.stringify([s.coins, s.inv.equipped]));
+  const prices = await page.evaluate(() => Array.from(document.querySelectorAll('.shop-card')).length);
+  check(`shop ${tag}: the Sepeda tab lists 8 items (default, 5 colours + sparkle, racing)`, prices === 8, String(prices));
+  await page.evaluate(() => window.__shop.tab('ride'));
+  const rideCards = await page.evaluate(() => Array.from(document.querySelectorAll('.shop-card')).map((e) => e.dataset.item));
+  check(`shop ${tag}: the Kendaraan tab lists the bike and the skateboard`, rideCards.join() === 'ride-bike,skateboard', rideCards.join());
+  await page.evaluate(() => window.__shop.close());
+  s = await shopSt(page);
+  check(`shop ${tag}: closing resumes the game`, !s.panel.open && !(await page.evaluate(() => window.__superglen.settings.frozen)), '');
+  // Persistence: reload the page, the colours are still worn and owned.
+  await page.evaluate(() => window.__superglen.save && 0);
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(1200);
+  s = await shopSt(page);
+  check(`shop ${tag}: after a reload the items are owned and worn (save), and the model wears the colour`, s.inv.owned.includes('sg-blue') && s.inv.equipped.superglen === 'sg-blue' && s.inv.equipped.glen === 'glen-blue' && s.looks.some((l) => l.kind === 'superglen' && l.mode === 1), JSON.stringify(s));
+  // Wardrobe in the pause menu: only owned items, switching is free.
+  await page.mouse.click(640, 360).catch(() => undefined);
+  await page.evaluate(() => window.__superglen.pause(true));
+  await page.evaluate(() => window.__superglen.settings.show());
+  await d3Adv(page, 4);
+  await page.evaluate(() => document.querySelector('.set-wardrobe').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await d3Adv(page, 4);
+  const w = await page.evaluate(() => ({ open: window.__shop.open, cards: Array.from(document.querySelectorAll('.shop-card')).map((e) => e.dataset.item), settings: window.__superglen.settings.open }));
+  check(`shop ${tag}: "Lemari" in the pause menu opens the wardrobe with the owned items only (red + blue costume)`, w.open && w.cards.join() === 'sg-red,sg-blue', JSON.stringify(w));
+  await shot(page, `shop-wardrobe${touch ? '-touch' : ''}`);
+  await page.evaluate(() => window.__shop.pick('sg-red'));
+  s = await shopSt(page);
+  check(`shop ${tag}: wearing the classic costume again is free and instant (look off)`, s.inv.equipped.superglen === 'sg-red' && s.coins === 15 && s.looks.some((l) => l.kind === 'superglen' && l.mode === 0), JSON.stringify([s.inv.equipped, s.looks]));
+  await page.evaluate(() => window.__shop.close());
+  const after = await page.evaluate(() => ({ shop: window.__shop.open, settings: window.__superglen.settings.open }));
+  check(`shop ${tag}: closing the wardrobe returns to the pause menu`, !after.shop && after.settings, JSON.stringify(after));
+  // Contract helper: equip ride skateboard needs ownership.
+  await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
+}
+
 async function main() {
   if (!fs.existsSync(path.join(ROOT, 'dist', 'index.html'))) {
     console.error('dist/ not found. Run `npm run build` first.');
@@ -12924,6 +13166,8 @@ async function main() {
     results.push(await runScenario(browser, 'kota-d3-reload', { viewport: { width: 1280, height: 720 } }, kotaD3ReloadScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-bike', { viewport: { width: 1280, height: 720 } }, (p, c) => kotaBikeScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'kota-bike-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, (p, c) => kotaBikeScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'skate', { viewport: { width: 1280, height: 720 } }, (p, c) => skateScenario(p, c, false), '?level=kota&fps=0&reset=1&skate=1'));
+    results.push(await runScenario(browser, 'skate-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, (p, c) => skateScenario(p, c, true), '?level=kota&fps=0&reset=1&skate=1'));
     // Package D4: Chapter 3 (market)
     results.push(await runScenario(browser, 'bab3-flow', { viewport: { width: 1280, height: 720 } }, bab3FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab3-start', { viewport: { width: 1280, height: 720 } }, (p, c) => bab3StartScenario(p, c, false), '?level=kota&fps=0&reset=1'));
@@ -12943,6 +13187,8 @@ async function main() {
     results.push(await runScenario(browser, 'curut-arena-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => curutArenaScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care', { viewport: { width: 1280, height: 720 } }, (p, c) => careScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => careScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'shop', { viewport: { width: 1280, height: 720 } }, (p, c) => shopScenario(p, c, false), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'shop-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => shopScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara', { viewport: { width: 1280, height: 720 } }, (p, c) => bab4AaraScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-aara-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => bab4AaraScenario(p, c, true), '?level=kota&fps=0&reset=1'));

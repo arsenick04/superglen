@@ -27,6 +27,8 @@ export interface RideRig {
   twist: number;
   /** Crank phase (rad), for the hip bob. */
   phase: number;
+  /** Optional torso lean forward (rad) instead of the bike's `rider.lean` (skateboard). */
+  lean?: number;
   /** Animate the bike (wheels, crank, steer) for this frame. Called right before the pose. */
   tick(dt: number): void;
 }
@@ -210,7 +212,7 @@ export class RideLayer {
     hips.position.set(hx, hy, hz);
     // Torso: roll with the bike, lean forward (more when standing), head stays up.
     this.rotAxis(0, AZ, rig.roll);
-    const lean = R.lean + rig.stand * C.standLean;
+    const lean = (rig.lean ?? R.lean) + rig.stand * C.standLean;
     for (let i = 1; i <= 3; i++) {
       this.rotAxis(i, AX, lean / 3);
       this.rotAxis(i, AY, rig.twist / 3);
