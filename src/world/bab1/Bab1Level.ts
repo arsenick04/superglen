@@ -213,7 +213,7 @@ export class Bab1Level implements Level {
         else if (ctx.save.data.interlude === 'forest_quiz') ctx.seq.run(async () => {
           await ctx.seq.waitUntil(() => startGate.started);
           this.forestAara?.emote('cheer');
-          await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Lima lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
+          await ctx.dialog.say({ id: 'forest_nino_return', speaker: 'nino', text: 'Tiga lintasan selesai! Kalian sudah kembali dengan selamat.' }, { lockControls: true });
           await ctx.dialog.say({ id: 'forest_aara_quiz_ready', speaker: 'aara', text: 'Sambil istirahat, ayo bermain tebak-tebakan lagi, {nama}!' }, { lockControls: true });
           const result = await ctx.quiz.run({ category: 'mix', count: 5, reason: 'story', questionSet: 'forest', promptSpeaker: 'aara' });
           if (!result.completed) return;

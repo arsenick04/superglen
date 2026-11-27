@@ -1429,7 +1429,7 @@ export class Game {
       objective: this.objectives.active,
       challenges: save.data.quiz.challenges,
       transformAllowed: this.transformAllowed,
-      flyUnlocked: save.data.skills.fly,
+      flyUnlocked: save.isChapterDone('flight-training-unlocked'),
     };
   }
 

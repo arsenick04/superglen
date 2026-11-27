@@ -7653,7 +7653,7 @@ async function menuBoot(page, touch) {
 
 /** Press a DOM element at its centre (touch: tap, PC: let go of the pointer lock first, then click). */
 async function menuHit(page, sel, touch, fx = 0.5) {
-  const c = await page.evaluate(([sel, fx]) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
+  const c = await page.evaluate(([sel, fx]) => { const all = [...document.querySelectorAll(sel)]; const el = all.find((x) => x.offsetParent !== null) || all[0]; el.scrollIntoView({ block: 'center', inline: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
   if (touch) await page.touchscreen.tap(c.x, c.y);
   else {
     await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
@@ -11670,7 +11670,7 @@ async function dlgFitScenario(page, check, touch) {
     aara: ['aara', 'Aara'],
     rakus: ['tikus_rakus', 'Tikus Rakus'],
     ular: ['ular_melar', 'Ular Melar'],
-    res_guru: [null, 'Bu Guru'],
+    res_guru: [null, 'Pak Guru'],
     lina: [null, 'Bu Lina'],
   };
   const whoBad = [];

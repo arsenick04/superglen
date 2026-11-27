@@ -172,21 +172,22 @@ export class QuizEngine {
    * One story question that is not from the bank (Chapter 3's market count). Same panel, same coins and statistics as a
    * normal question; no sticker or end screen. Resolves with `completed: false` when the overlay was closed.
    */
-  runQuestion(q: Question, reason: QuizReason = 'story'): Promise<QuizResult> {
+  runQuestion(q: Question, reason: QuizReason = 'story', host: 'nino' | 'aara' = 'nino'): Promise<QuizResult> {
     if (this.running) return this.running;
-    const p = this.runOne(q, reason).finally(() => {
+    const p = this.runOne(q, reason, host).finally(() => {
       this.running = null;
     });
     this.running = p;
     return p;
   }
 
-  private async runOne(q: Question, reason: QuizReason): Promise<QuizResult> {
+  private async runOne(q: Question, reason: QuizReason, host: 'nino' | 'aara'): Promise<QuizResult> {
     const result: QuizResult = { category: q.category, reason, completed: false, answers: [], coins: 0, sticker: null, stickerNew: false, fragment: false };
-    this.panel.openChallenge(reason, false);
-    this.deps.audio.preload([...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()]);
+    this.panel.openChallenge(reason, false, host);
+    const hostIds = [...Object.values(QuizLines).map((l) => l.id), ...ninoVariasiIds()];
+    this.deps.audio.preload(host === 'aara' ? hostIds.map((id) => `aara_${id}`) : hostIds);
     this.deps.audio.preload(this.audioIds(q));
-    const out = await this.panel.ask(this.prepare(q), 0, 1, (wrong) => {
+    const out = await this.panel.ask(this.prepare(q, host), 0, 1, (wrong) => {
       const rec = this.record(q, wrong);
       result.answers.push(rec.answer);
       result.coins += rec.coins;
@@ -296,7 +297,7 @@ export class QuizEngine {
 
   /** Shuffle the on-screen order of the three choices (the answer is tracked by position). */
   prepare(q: Question, promptSpeaker: 'nino' | 'aara' = 'nino'): PreparedQuestion {
-    if (promptSpeaker === 'aara') q = { ...q, audio_id: `aara_${q.audio_id}` };
+    if (promptSpeaker === 'aara') q = { ...q, audio_id: `aara_${q.audio_id}`, prompt: q.prompt.replace(/\bNino\b/g, 'Aara') };
     const order = this.shuffle([...q.choices]) as [Choice, Choice, Choice];
     const correctIndex = order.findIndex((c) => c.id === q.answer) as 0 | 1 | 2;
     return { q, order, correctIndex };
@@ -521,9 +522,9 @@ export class QuizEngine {
         return false;
       },
       /** Start a challenge without a promise handle; the outcome appears in `lastResult`. */
-      start(category: Category | 'mix', count = 3, reason: 'unlock' | 'terminal' | 'story' = 'terminal'): void {
+      start(category: Category | 'mix', count = 3, reason: 'unlock' | 'terminal' | 'story' = 'terminal', promptSpeaker: 'nino' | 'aara' = 'nino'): void {
         self.lastResult = null;
-        void self.run({ category, count, reason }).then((r) => {
+        void self.run({ category, count, reason, promptSpeaker }).then((r) => {
           self.lastResult = r;
         });
       },

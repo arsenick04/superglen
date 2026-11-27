@@ -206,7 +206,7 @@ export class Chapter4 {
         let done = false;
         while (!done) {
           this.quizRuns++;
-          const res = await ctx.quiz.runQuestion(q);
+          const res = await ctx.quiz.runQuestion(q, 'story', 'aara');
           done = res.completed;
           if (!done) await seq.wait(0.5);
         }
@@ -318,7 +318,7 @@ export class Chapter4 {
       let done = false;
       while (!done) {
         this.quizRuns++;
-        const res = await ctx.quiz.runQuestion(q);
+        const res = await ctx.quiz.runQuestion(q, 'story', 'aara');
         done = res.completed;
         if (!done) await seq.wait(0.4);
       }

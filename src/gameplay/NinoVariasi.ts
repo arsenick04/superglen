@@ -15,11 +15,11 @@ export interface VariasiLine {
 const praise = data.pujian.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text }));
 const cheers = data.semangat.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text }));
 const pools: Record<VariasiKind, VariasiLine[]> = {
-  // Successful attempts receive a natural mix of acknowledgement and encouragement—not praise every time.
-  pujian: [...praise, ...cheers],
-  pujian_kuis: [...praise.filter((l) => !/sasaran/i.test(l.text)), ...cheers],
+  // Pure praise only (never mix pre-success encouragement like "hampir sampai" / "pelan-pelan" into right answers).
+  pujian: [...praise],
+  pujian_kuis: praise.filter((l) => !/sasaran/i.test(l.text)),
   coba_lagi: data.coba_lagi.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
-  semangat: data.semangat.map((l) => ({ id: l.id, speaker: 'nino' as const, text: l.text })),
+  semangat: [...cheers],
 };
 const last: Partial<Record<VariasiKind, string>> = {};
 

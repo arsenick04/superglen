@@ -93,7 +93,7 @@ export const ForestTrainingLines = {
   introNino: { id: 'forest_nino_three', speaker: 'nino', text: 'Ada tiga lintasan: mudah, menengah, dan sulit. Selesaikan satu per satu, ya!' },
   nextMedium: { id: 'forest_nino_medium', speaker: 'nino', text: 'Lintasan mudah selesai! Sekarang pijakannya lebih kecil dan lebih berjauhan.' },
   nextHard: { id: 'forest_aara_hard', speaker: 'aara', text: 'Berikutnya lintasan sulit! Gunakan double jump untuk mencapai dahan yang tinggi.' },
-  done: { id: 'forest_nino_done', speaker: 'nino', text: 'Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.' },
+  done: { id: 'forest_nino_done', speaker: 'nino', text: 'Tiga lintasan selesai! Ayo kembali ke Lab dan beristirahat bersama.' },
 } as const;
 
 /** Chapter 8 opening: three tree-jumping courses with Nino and Aara. */

@@ -232,8 +232,8 @@ export const TIPS: readonly TipDef[] = [
     speaker: 'nino',
     lines: [
       'Selamat datang di Ruang Latihan, {nama}! Semua lawanmu jadi hologram di sini.',
-      'Berjalanlah ke hologram yang kamu mau, lalu injak tombol oranye di lantai.',
-      'Atau tekan tombol tangan. Latihan pun dimulai!',
+      'Dekati tombol oranye di depan hologram yang kamu mau.',
+      'Lalu tekan tombol aksi. Latihan pun dimulai!',
     ],
     visual: [{ kind: 'icon', icon: 'training' }, { kind: 'button', action: 'interact', set: 'glen' }],
     seenFlag: 'training-tutorial',
