@@ -1,0 +1,33 @@
+{
+  "name": "Superglen — Pahlawan Barongsai Super",
+  "short_name": "Superglen",
+  "description": "Petualangan 3D seru dan Tantangan Pintar persiapan SD bersama Superglen, Nino, dan Aara di Kota Botanica.",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#8fd3ff",
+  "theme_color": "#8fd3ff",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

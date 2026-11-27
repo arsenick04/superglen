@@ -18,13 +18,19 @@
     "audio:import": "node scripts/import-voice.mjs",
     "audio:audit": "node scripts/audit-voice.mjs",
     "models": "node scripts/build-models.mjs",
-    "env-assets": "node scripts/build-env-assets.mjs"
+    "env-assets": "node scripts/build-env-assets.mjs",
+    "icons": "node scripts/make-app-icons.mjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run android:sync && ./android/gradlew -p android assembleDebug"
   },
   "dependencies": {
+    "@capacitor/core": "^8.6.3",
     "@dimforge/rapier3d-compat": "^0.21.0",
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/cli": "^8.6.3",
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "@gltf-transform/functions": "^4.5.1",
