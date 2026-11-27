@@ -308,8 +308,13 @@ export class FirefightLevel implements Level {
     for (const s of this.streams) { s.on = false; s.mesh.visible = false; }
     this.fireFx.setStrength(0);
     ctx.objectives.clear();
+    const firstFinish = !ctx.save.isChapterDone('bab8');
     ctx.save.markChapterDone('forest-firefight');
     ctx.save.markChapterDone('bab8');
+    if (firstFinish) {
+      ctx.save.finishCityMission('bab8', 30);
+      ctx.quiz.coinsChanged();
+    }
     ctx.game.debugInfo.firefightDone = true;
     ctx.seq.run(async () => {
       await ctx.seq.wait(F.endDelay);

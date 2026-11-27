@@ -5722,7 +5722,7 @@ async function quizDesktopScenario(page, check) {
   await sleep(1500);
   await page.mouse.click(640, 360);
   await sleep(500);
-  await page.evaluate(() => { window.__superglen.save.resetProgress(); window.__superglen.pause(true); });
+  await page.evaluate(() => { window.__superglen.save.resetProgress(); window.__superglen.save.markTipSeen('koin'); window.__superglen.pause(true); });
   let z = await quizSt(page);
   const src = z.bankSource;
   const real = Object.values(src).every((v) => v === 'file');
@@ -5772,7 +5772,7 @@ async function quizDesktopScenario(page, check) {
     await page.keyboard.press(String(z.key));
     await adv(8);
     z = await quizSt(page);
-    check(`quiz: question ${i + 1} right via key ${i === 0 ? z.key : 'n'}: solved, +3 coins, Nino praises with a varied line`, z.state === 'solved' && z.coins === c0 + 3 && PRAISE.includes(z.bubble), `${z.state} coins ${c0}->${z.coins} "${z.bubble}"`);
+    check(`quiz: question ${i + 1} right via key ${i === 0 ? z.key : 'n'}: solved, +5 coins, Nino praises with a varied line`, z.state === 'solved' && z.coins === c0 + 5 && PRAISE.includes(z.bubble), `${z.state} coins ${c0}->${z.coins} "${z.bubble}"`);
     await adv(10);
     await page.keyboard.press('Enter');
     await adv(4);
@@ -5788,14 +5788,14 @@ async function quizDesktopScenario(page, check) {
   await sleep(1000);
   await shot(page, 'quiz-end');
   const endUi = await page.evaluate(() => ({ coin: document.querySelector('.qp-end-coin')?.textContent, sticker: !!document.querySelector('.qp-end-sticker.reveal'), ok: (() => { const r = document.querySelector('.qp-ok').getBoundingClientRect(); return Math.min(r.width, r.height); })() }));
-  check('quiz: the end screen shows +9 coins, the revealed sticker and a big OK button', endUi.coin === '+9' && endUi.sticker && endUi.ok >= 80, JSON.stringify(endUi));
+  check('quiz: the end screen shows +20 coins, the revealed sticker and a big OK button', endUi.coin === '+20' && endUi.sticker && endUi.ok >= 80, JSON.stringify(endUi));
   await page.keyboard.press('Enter');
   await adv(10);
   z = await quizSt(page);
   check('quiz: Enter closes the end screen and gives the controls back', !z.open && (await page.evaluate(() => window.__superglen.controlsEnabled)));
-  check('quiz: result: completed, 3 first-try answers, 9 coins, 1 sticker', !!z.result && z.result.completed && z.result.answers.length === 3 && z.result.answers.every((a) => a.firstTry) && z.result.coins === 9 && !!z.result.sticker && z.result.stickerNew, JSON.stringify(z.result && { c: z.result.completed, coins: z.result.coins, st: z.result.sticker }));
+  check('quiz: result: completed, 3 first-try answers, 20 coins, 1 sticker', !!z.result && z.result.completed && z.result.answers.length === 3 && z.result.answers.every((a) => a.firstTry) && z.result.coins === 20 && !!z.result.sticker && z.result.stickerNew, JSON.stringify(z.result && { c: z.result.completed, coins: z.result.coins, st: z.result.sticker }));
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).quiz);
-  check('quiz: coins, sticker, statistics and recent ids are saved in localStorage', stored.coins === 9 && stored.stickers.length === 1 && stored.cats[cat0].asked === 3 && stored.cats[cat0].firstTry === 3 && stored.recent.length === 3 && stored.challenges === 1, JSON.stringify({ coins: stored.coins, st: stored.stickers.length, asked: stored.cats[cat0].asked }));
+  check('quiz: coins, sticker, statistics and recent ids are saved in localStorage', stored.coins === 20 && stored.stickers.length === 1 && stored.cats[cat0].asked === 3 && stored.cats[cat0].firstTry === 3 && stored.recent.length === 3 && stored.challenges === 1, JSON.stringify({ coins: stored.coins, st: stored.stickers.length, asked: stored.cats[cat0].asked }));
   check('quiz: adaptive level: three first-try answers in a row raised the level (1 -> 2)', z.levels[cat0] === 2, JSON.stringify(z.levels));
   check('quiz: the 3 questions of a challenge are all different', new Set(allIds).size === 3, allIds.join());
 
@@ -5842,7 +5842,7 @@ async function quizDesktopScenario(page, check) {
   await sleep(350);
   await shot(page, 'quiz-right');
   z = await quizSt(page);
-  check('quiz: the right pick after two wrongs: solved, only +1 coin (no first-try bonus)', z.state === 'solved' && z.coins === c0 + 1, `${c0} -> ${z.coins}`);
+  check('quiz: the right pick after two wrongs: solved, only +2 coins (no first-try bonus)', z.state === 'solved' && z.coins === c0 + 2, `${c0} -> ${z.coins}`);
   const sparks = await page.evaluate(() => document.querySelectorAll('.qp-spark').length);
   check('quiz: the right pick shows fireworks (sparks) and plays the drum', sparks >= 20, `${sparks} sparks`);
   await adv(60);
@@ -5853,7 +5853,7 @@ async function quizDesktopScenario(page, check) {
   await page.keyboard.press('Enter');
   await adv(8);
   z = await quizSt(page);
-  check('quiz: result of challenge B: question 1 not first try (2 wrong), others first try', !!z.result && z.result.answers[0].firstTry === false && z.result.answers[0].wrong === 2 && z.result.answers[1].firstTry && z.result.coins === 7, JSON.stringify(z.result && z.result.answers));
+  check('quiz: result of challenge B: question 1 not first try (2 wrong), others first try', !!z.result && z.result.answers[0].firstTry === false && z.result.answers[0].wrong === 2 && z.result.answers[1].firstTry && z.result.coins === 17, JSON.stringify(z.result && z.result.answers));
   check('quiz: no question repeats within 6 asked in a row', new Set(allIds).size === allIds.length, allIds.join());
   const stB = await page.evaluate(() => window.__superglen.save.data.quiz.cats.berhitung);
   check('quiz: statistics: asked 6, first try 5, wrong 2', stB.asked === 6 && stB.firstTry === 5 && stB.wrong === 2, JSON.stringify({ a: stB.asked, f: stB.firstTry, w: stB.wrong }));
@@ -6113,7 +6113,7 @@ async function quizTerminalScenario(page, check) {
   await page.keyboard.press('Enter');
   await d.adv(10);
   z = await quizSt(page);
-  check('terminal (lab): closed; coins and sticker earned', !z.open && z.coins === 9 && z.stickers === 1, `coins ${z.coins} stickers ${z.stickers}`);
+  check('terminal (lab): closed; coins and sticker earned', !z.open && z.coins === 20 && z.stickers === 1, `coins ${z.coins} stickers ${z.stickers}`);
   s = await d.st();
   check('terminal (lab): the player is free again and can use the terminal once more', s.controlsEnabled && s.prompt.inRange);
 
@@ -6161,7 +6161,7 @@ async function quizTerminalScenario(page, check) {
   await page.keyboard.press('Enter');
   await d.adv(10);
   z = await quizSt(page);
-  check('terminal (hall): the picker challenge finished and closed (one more completed challenge, 9 coins)', !z.open && z.challenges === ch0 + 1 && z.coins >= 9, `challenges ${ch0} -> ${z.challenges}, coins ${z.coins}`);
+  check('terminal (hall): the picker challenge finished and closed (one more completed challenge, 20 coins)', !z.open && z.challenges === ch0 + 1 && z.coins >= 20, `challenges ${ch0} -> ${z.challenges}, coins ${z.coins}`);
   // picker: tap a different icon; close it without playing
   await d.tap('e');
   await d.adv(8);
@@ -10116,7 +10116,7 @@ async function bab5FightScenario(page, check, touch) {
   await d3Adv(page, 120);
   const fin = await ch5Info(page);
   b = await ch5Boss(page);
-  check(`bab5-fight ${tag}: Chapter 5 is done and saved (bab5 in chaptersDone, step cleared), 12 coins, the snake is gone`, fin.save.chaptersDone.includes('bab5') && fin.save.bab5.step === '' && fin.save.quiz.coins === coins0 + 12 && b.phase === 'gone', JSON.stringify([fin.save.chaptersDone, fin.save.bab5, fin.save.quiz.coins, coins0, b.phase]));
+  check(`bab5-fight ${tag}: Chapter 5 is done and saved (bab5 in chaptersDone, step cleared), 20 coins, the snake is gone`, fin.save.chaptersDone.includes('bab5') && fin.save.bab5.step === '' && fin.save.quiz.coins === coins0 + 20 && b.phase === 'gone', JSON.stringify([fin.save.chaptersDone, fin.save.bab5, fin.save.quiz.coins, coins0, b.phase]));
   const ppl3 = await page.evaluate(() => window.__d3.people());
   check(`bab5-fight ${tag}: Chapter 6 starts right after, so the residents' missions still wait (star counter hidden)`, ppl3.every((p) => !p.available) && (await page.evaluate(() => !document.querySelector('.ch5-stars.show'))), JSON.stringify(ppl3.map((p) => p.available)));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
@@ -10524,7 +10524,7 @@ async function bab6FightScenario(page, check, touch) {
   await d3Adv(page, 150);
   const fin = await ch6Info(page);
   b = await ch6Boss(page);
-  check(`bab6-fight ${tag}: Chapter 6 is done and saved (bab6 in chaptersDone, step cleared), 15 coins, he trotted home, the food is back`, fin.save.chaptersDone.includes('bab6') && fin.save.bab6.step === '' && fin.save.quiz.coins === coins0 + 15 && b.phase === 'gone' && b.level === 0, JSON.stringify([fin.save.chaptersDone, fin.save.bab6, fin.save.quiz.coins, coins0, b.phase, b.level]));
+  check(`bab6-fight ${tag}: Chapter 6 is done and saved (bab6 in chaptersDone, step cleared), 25 coins, he trotted home, the food is back`, fin.save.chaptersDone.includes('bab6') && fin.save.bab6.step === '' && fin.save.quiz.coins === coins0 + 25 && b.phase === 'gone' && b.level === 0, JSON.stringify([fin.save.chaptersDone, fin.save.bab6, fin.save.quiz.coins, coins0, b.phase, b.level]));
   const ppl3 = await page.evaluate(() => window.__d3.people());
   check(`bab6-fight ${tag}: the residents offer missions again, star counter hidden`, ppl3.every((p) => p.available) && (await page.evaluate(() => !document.querySelector('.ch6-stars.show'))), JSON.stringify(ppl3.map((p) => p.available)));
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));

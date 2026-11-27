@@ -319,7 +319,7 @@ export class Chapter5 {
       ctx.save.setInterlude('snake_lab');
       ctx.save.markChapterDone('bab5');
       ctx.save.setBab5('');
-      ctx.save.finishCityMission('bab5', 12);
+      ctx.save.finishCityMission('bab5', 20);
       ctx.quiz.coinsChanged();
       await ctx.dialog.say(L.ninoPanggilLab, { lockControls: true });
       this.returningToLab = true;

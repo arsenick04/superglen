@@ -107,6 +107,10 @@ export class CurutArena implements Level {
     // preferred Continue slot after the encounter has ended.
     if (ctx.save.data.slot?.level === 'battle-curut') ctx.save.setSlot(null);
     ctx.battle.exit(won);
+    if (this.practice && won) {
+      ctx.save.addCoins(10);
+      ctx.quiz.coinsChanged();
+    }
     if (this.practice) void backToTraining(ctx.game);
     else void travel(ctx.game, 'kota', 'marketBattle');
   }

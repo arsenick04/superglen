@@ -23,6 +23,7 @@ import { Projectiles } from '../gameplay/Projectiles';
 import { Laser } from '../player/skills/Laser';
 import { Shield } from '../player/skills/Shield';
 import type { PlayerMode } from '../player/PlayerConfig';
+import { tickCostumeLook } from '../player/CostumeLook';
 import { getLayout, type ControlProfile, type TouchButtonDef } from '../ui/TouchControls';
 import { Hud } from '../ui/Hud';
 import { DialogBubble } from '../ui/DialogBubble';
@@ -671,6 +672,7 @@ export class Game {
       onOpenChange: (open) => this.syncMenuOpen(open || this.settings.opened),
       coinsChanged: () => this.quiz.coinsChanged(),
       sfx: { coin: () => this.sfx.coin(), bling: () => this.sfx.bling(), pop: () => this.sfx.pop() },
+      hasSuperglen: () => this.save.isChapterDone('bab1') || this.player.mode === 'superglen',
     });
     this.settings = new SettingsMenu({
       ui: uiRoot,
@@ -1190,6 +1192,7 @@ export class Game {
 
   /** Per rendered frame: skill visuals (particles, rings, balls, beams, dome) and the touch "jets" button state. */
   private skillFrame(dt: number): void {
+    tickCostumeLook(dt);
     this.sparkles.update(dt);
     this.flashes.update(dt);
     this.stars.update(dt);

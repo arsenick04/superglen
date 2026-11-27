@@ -31,9 +31,10 @@ export const QuizConfig = {
   /** Level down when this many of the last `window` answers were not first try. */
   levelDownMisses: 3,
   window: 5,
-  /** Coins: per answered question, plus a bonus for a first-try answer. */
-  coinPerQuestion: 1,
-  coinFirstTryBonus: 2,
+  /** Coins: per answered question, plus a bonus for a first-try answer and a completion bonus for a full challenge. */
+  coinPerQuestion: 2,
+  coinFirstTryBonus: 3,
+  coinChallengeBonus: 5,
   /** Questions remembered to avoid repeats. */
   recentMax: 40,
   /** Wrong picks after which only the right card remains. */
@@ -243,8 +244,12 @@ export class QuizEngine {
       }
     }
     result.completed = true;
-    // ---- Rewards: sticker, fragment ----
+    // ---- Rewards: completion bonus, sticker, fragment ----
     const d = this.data;
+    if (count >= QuizConfig.count) {
+      d.coins += QuizConfig.coinChallengeBonus;
+      result.coins += QuizConfig.coinChallengeBonus;
+    }
     d.challenges++;
     if (d.challenges % QuizConfig.fragmentEvery === 0) {
       d.fragments++;
@@ -257,6 +262,7 @@ export class QuizEngine {
       result.stickerNew = true;
     }
     this.deps.save.persist();
+    this.panel.coinsChanged();
     await this.panel.showEnd({ coins: result.coins, sticker: result.sticker, fragment: result.fragment, allowAlbum: reason === 'terminal' });
     this.panel.close();
     return result;

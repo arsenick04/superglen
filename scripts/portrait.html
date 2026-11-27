@@ -37,14 +37,18 @@ try {
     mixer.update(0.05);
   }
   gltf.scene.updateMatrixWorld(true);
+  const params = new URLSearchParams(location.search);
+  const zoom = Number(params.get('zoom')) || 1;
+  const shiftY = Number(params.get('shiftY')) || 0;
   const box = new THREE.Box3().setFromObject(gltf.scene);
   const height = box.max.y - box.min.y;
   // Head and shoulders: the top ~50% of the body, centered on the model's x/z.
   const cx = (box.min.x + box.max.x) / 2;
   const cz = (box.min.z + box.max.z) / 2;
   const top = box.max.y + height * 0.02;
-  const span = height * 0.5;
-  const cy = top - span / 2;
+  const baseSpan = height * 0.5;
+  const span = baseSpan / zoom;
+  const cy = top - baseSpan / 2 + shiftY * baseSpan;
   const cam = new THREE.OrthographicCamera(-span / 2, span / 2, span / 2, -span / 2, 0.01, 50);
   cam.position.set(cx, cy, cz + 5);
   cam.lookAt(cx, cy, cz);

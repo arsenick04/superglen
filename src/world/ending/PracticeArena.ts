@@ -115,6 +115,8 @@ export class PracticeArena implements Level {
     ctx.battle.exit(true);
     await b.tameLook();
     if (b instanceof SnakeBoss) await b.slitherAway(-1, -1, 1.2); else b.finishAfterCinematic();
+    ctx.save.addCoins(10);
+    ctx.quiz.coinsChanged();
     ctx.synth.cheer();
     await new Celebration(ctx, 'Latihan selesai!', ctx.fx.sparkles).play();
     await this.leave();

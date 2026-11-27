@@ -40,6 +40,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   { id: 'sg-purple', tab: 'superglen', name: 'Ungu', price: 50, slot: 'superglen', value: 'sg-purple', colors: ['#8e4fd8'], art: 'costume' },
   { id: 'sg-gold', tab: 'superglen', name: 'Emas', price: 80, slot: 'superglen', value: 'sg-gold', colors: ['#f2b632'], art: 'costume' },
   { id: 'sg-merahputih', tab: 'superglen', name: 'Merah Putih', price: 200, slot: 'superglen', value: 'sg-merahputih', colors: ['#e8202a', '#ffffff'], art: 'costume' },
+  { id: 'sg-holo', tab: 'superglen', name: 'Hologram', price: 300, slot: 'superglen', value: 'sg-holo', colors: ['#22e6ff', '#7c6cff', '#ff5fd2'], art: 'costume' },
 
   { id: 'glen-orange', tab: 'glen', name: 'Oranye', price: 0, slot: 'glen', value: 'glen-orange', colors: ['#f26b00'], art: 'shirt' },
   { id: 'glen-blue', tab: 'glen', name: 'Biru', price: 25, slot: 'glen', value: 'glen-blue', colors: ['#2a7de1'], art: 'shirt' },
@@ -58,7 +59,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   { id: 'bike-racing', tab: 'bike', name: 'Sepeda Balap', price: 90, slot: 'bike', value: 'bike-racing', colors: ['#ffffff', '#e8302a'], art: 'racer', paint: 0xf2f2f2 },
 
   { id: 'ride-bike', tab: 'ride', name: 'Sepeda', price: 0, slot: 'ride', value: 'bike', colors: ['#2ec4b6'], art: 'bike' },
-  { id: 'skateboard', tab: 'ride', name: 'Papan Luncur', price: 150, slot: 'ride', value: 'skateboard', colors: ['#ff9f43', '#4dabf7'], art: 'skateboard' },
+  { id: 'skateboard', tab: 'ride', name: 'Papan Luncur', price: 100, slot: 'ride', value: 'skateboard', colors: ['#ff9f43', '#4dabf7'], art: 'skateboard' },
 ];
 
 export const ITEM_BY_ID: ReadonlyMap<string, ShopItem> = new Map(SHOP_ITEMS.map((i) => [i.id, i]));

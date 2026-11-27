@@ -42,7 +42,7 @@ export class PracticeGorilla implements Level {
     const game = new Proxy(ctx.game, {
       get: (t, k) => {
         if (k === 'playCinematic') return () => Promise.resolve();
-        if (k === 'loadLevel') return () => backToTraining(t);
+        if (k === 'loadLevel') return () => { ctx.save.addCoins(10); ctx.quiz.coinsChanged(); return backToTraining(t); };
         return pass(t, k);
       },
     });

@@ -142,7 +142,7 @@ export const TIPS: readonly TipDef[] = [
     lines: ['Barang baru! Mau dipakai? Buka Pengaturan, lalu tekan Lemari.', 'Di Lemari kamu bisa ganti kostum Superglen, baju Glen, dan warna sepeda.'],
     visual: [{ kind: 'pause' }, { kind: 'icon', icon: 'wardrobe' }],
     levels: ['kota', 'lab', 'jump-training', 'flight-training', 'forest-training'],
-    when: (c) => c.owned('sg-blue') || c.owned('sg-green') || c.owned('sg-purple') || c.owned('sg-gold') || c.owned('sg-merahputih') || c.owned('glen-blue') || c.owned('glen-green') || c.owned('glen-yellow') || c.owned('glen-red') || c.owned('glen-striped') || c.owned('bike-red') || c.owned('bike-blue') || c.owned('bike-green') || c.owned('bike-yellow') || c.owned('bike-purple') || c.owned('bike-sparkle') || c.owned('bike-racing') || c.owned('skateboard'),
+    when: (c) => c.owned('sg-blue') || c.owned('sg-green') || c.owned('sg-purple') || c.owned('sg-gold') || c.owned('sg-merahputih') || c.owned('sg-holo') || c.owned('glen-blue') || c.owned('glen-green') || c.owned('glen-yellow') || c.owned('glen-red') || c.owned('glen-striped') || c.owned('bike-red') || c.owned('bike-blue') || c.owned('bike-green') || c.owned('bike-yellow') || c.owned('bike-purple') || c.owned('bike-sparkle') || c.owned('bike-racing') || c.owned('skateboard'),
   },
   {
     id: 'papan',

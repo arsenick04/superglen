@@ -30,6 +30,7 @@
   box-shadow: 0 4px 0 #d9b98a; color: #3b2f22; font-weight: 800; font-size: 12px; line-height: 1.05;
 }
 .shop-tab.on { background: #4dabf7; color: #fff; box-shadow: 0 4px 0 #2a7de1; }
+.shop-tab[hidden] { display: none; }
 .shop-tab-ico { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
 .shop-tab-ico svg, .shop-card-art svg, .shop-confirm-art svg, .shop-thumb-fallback, .shop-thumb-fallback svg { width: 100%; height: 100%; display: block; }
 .shop-thumb { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 4px rgba(59, 47, 34, 0.22)); }

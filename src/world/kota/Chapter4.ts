@@ -449,7 +449,7 @@ export class Chapter4 {
       this.over = true;
       ctx.save.markChapterDone('bab4');
       ctx.save.setBab4('', 0);
-      ctx.save.finishCityMission('bab4', 5);
+      ctx.save.finishCityMission('bab4', 15);
       ctx.quiz.coinsChanged();
       ctx.game.setControlsEnabled(true);
       info.ch4Scene = 'done';
