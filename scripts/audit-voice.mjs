@@ -73,7 +73,7 @@ for (const name of ['berhitung', 'inggris', 'mandarin', 'hewan', 'membaca']) {
   const f = `src/data/quiz/${name}.json`;
   for (const q of rd(f, [])) {
     if (q.audio_id && q.prompt) addLine({ id: q.audio_id, speaker: 'nino', text: q.prompt, src: f, lang: 'id', quiz: true, cat: 'quiz_' + ({ berhitung: 'hitung', membaca: 'baca' }[name] || name) });
-    if (q.set === 'forest' && q.audio_id && q.prompt) addLine({ id: `aara_${q.audio_id}`, speaker: 'aara', text: q.prompt, src: f, lang: 'id', quiz: true, cat: 'quiz_aara' });
+    if ((q.set === 'forest' || q.set === 'aara_sekolah' || q.set === 'aara_taman') && q.audio_id && q.prompt) addLine({ id: `aara_${q.audio_id}`, speaker: 'aara', text: q.prompt, src: f, lang: 'id', quiz: true, cat: 'quiz_aara' });
     const d = q.display;
     if (d?.kind === 'speak' && d.speak_audio_id && d.text) { const zh = d.lang === 'zh'; addLine({ id: d.speak_audio_id, speaker: zh ? 'mandarin' : 'english', text: d.text, src: f, lang: d.lang, quiz: true, cat: zh ? 'speak_zh' : 'speak_en' }); }
   }

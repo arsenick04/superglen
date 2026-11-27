@@ -29,7 +29,7 @@ import { ROOT, api, getSubscription, keySource, sleep, readJson } from './_eleve
 
 const arg = (n) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
 const flag = (n) => process.argv.includes(`--${n}`);
-const DRY = flag('dry-run'), FORCE = flag('force'), SAMPLE = flag('sample');
+const DRY = flag('dry-run'), FORCE = flag('force'), SAMPLE = flag('sample'), DEDUPE = flag('dedupe');
 const LIMIT = arg('limit') ? parseInt(arg('limit'), 10) : Infinity;
 const CATS = arg('category')?.split(',');
 const ONLY = arg('only')?.split(',');
@@ -48,10 +48,14 @@ const QUIZ_FILES = ['berhitung', 'inggris', 'mandarin', 'hewan', 'membaca'];
 function collect() {
   const jobs = new Map();
   const add = (j) => { if (j.id && j.text && !jobs.has(j.id)) jobs.set(j.id, j); };
+  const nl = readJson(path.join(AUDIO_DIR, 'name-lines.json'), { lines: [] });
+  const nlIds = new Set(nl.lines.map((l) => l.id));
   const dialog = readJson(path.join(AUDIO_DIR, 'dialog.json'), []);
   for (const d of dialog) {
+    // Base lines already split into _g / _sg in name-lines.json are played via those variants, not the base id.
+    if (nlIds.has(d.id) && !fs.existsSync(path.join(OUT_DIR, `${d.id}.mp3`))) continue;
     const cat = d.id.startsWith('bab1_') ? 'bab1' : d.id.startsWith('bab2_') ? 'bab2' : d.id.startsWith('quiz_nino') ? 'quiz_nino'
-      : d.id.startsWith('bab') ? d.id.split('_')[0] : 'lainnya';
+      : d.id.startsWith('tip_') ? 'tips' : d.id.startsWith('bab') ? d.id.split('_')[0] : 'lainnya';
     add({ id: d.id, speaker: d.speaker, lang: d.lang || 'id', text: d.text, delivery: d.delivery, pitchSemitones: d.pitchSemitones, source: 'audio/dialog.json', category: cat, recorded: d.source === 'recorded' });
   }
   for (const name of QUIZ_FILES) {
@@ -61,7 +65,9 @@ function collect() {
       const src = `src/data/quiz/${name}.json`;
       const cat = CAT_OF_QUIZ[q.id.split('_')[0]] || 'quiz_nino';
       if (q.audio_id && q.prompt) add({ id: q.audio_id, speaker: 'nino', lang: 'id', text: q.prompt, source: src, category: cat, recorded: q.source === 'recorded' });
-      if (q.set === 'forest' && q.audio_id && q.prompt) add({ id: `aara_${q.audio_id}`, speaker: 'aara', lang: 'id', text: q.prompt, source: src, category: 'quiz_aara', recorded: false });
+      if ((q.set === 'forest' || q.set === 'aara_sekolah' || q.set === 'aara_taman') && q.audio_id && q.prompt) {
+        add({ id: `aara_${q.audio_id}`, speaker: 'aara', lang: 'id', text: q.prompt, source: src, category: 'quiz_aara', recorded: false });
+      }
       const d = q.display;
       if (d?.kind === 'speak' && d.speak_audio_id && d.text) {
         const zh = d.lang === 'zh';
@@ -70,11 +76,10 @@ function collect() {
     }
   }
   // Name variants: audio/name-lines.json -> <id>_g (Glen) and <id>_sg (Superglen), same speaker voice.
-  const nl = readJson(path.join(AUDIO_DIR, 'name-lines.json'), { lines: [] });
   for (const l of nl.lines) {
     for (const [suffix, nama] of [['_g', 'Glen'], ['_sg', 'Superglen']]) {
       const fill = (t) => t.replaceAll('{nama}', nama);
-      add({ id: l.id + suffix, speaker: l.speaker, lang: 'id', text: fill(l.template), delivery: l.delivery ? fill(l.delivery) : undefined, source: 'audio/name-lines.json', category: 'nama', recorded: false });
+      add({ id: l.id + suffix, speaker: l.speaker, lang: 'id', text: fill(l.template), delivery: l.delivery ? fill(l.delivery) : undefined, source: 'audio/name-lines.json', category: l.id.startsWith('tip_') ? 'tips' : 'nama', recorded: false });
     }
   }
   return [...jobs.values()];
@@ -114,7 +119,7 @@ const voiceReady = (v) => v && v.voice_id && !v.voice_id.startsWith('ISI_');
 function status(j) {
   const m = manifest[j.id];
   if (j.recorded || m?.source === 'recorded') return 'recorded';
-  if (m?.source === 'gemini' && fs.existsSync(mp3(j.id))) return 'current'; // made by scripts/generate-gemini.mjs
+  if (m?.source === 'gemini' && fs.existsSync(mp3(j.id)) && m.hash === hash(j.text)) return 'current'; // made by scripts/generate-gemini.mjs
   const exists = fs.existsSync(mp3(j.id));
   if (exists && !m) return 'handmade';
   if (!exists) return 'new';
@@ -180,6 +185,9 @@ async function say() {
   console.log(`ok ${OUT_ARG} (${FROM_RAW ? 0 : job.tts.length} chars billed, model ${modelOf(v)})`);
 }
 
+const dedupeKey = (j, v) => `${j.speaker}|${v?.voice_id || ''}|${pitchOf(v || {}, j)}|${j.lang}|${j.text.trim()}`;
+const catOrder = (c) => (c.startsWith('bab') || c === 'lainnya' ? 0 : c === 'tips' ? 1 : c === 'quiz_aara' ? 2 : c === 'quiz_inggris' ? 3 : 4);
+
 async function main() {
   if (SAY) return say();
   const all = collect();
@@ -199,6 +207,15 @@ async function main() {
   }
   const force = FORCE || !!ONLY;
   const skipped = { recorded: 0, handmade: 0, current: 0 };
+  const existingByKey = new Map();
+  if (DEDUPE) {
+    for (const j of all) {
+      if (status(j) === 'current' && fs.existsSync(mp3(j.id))) {
+        const k = dedupeKey(j, voiceOf(j));
+        if (!existingByKey.has(k)) existingByKey.set(k, j.id);
+      }
+    }
+  }
   let todo = [];
   for (const j of jobs) {
     const s = status(j);
@@ -207,31 +224,56 @@ async function main() {
     if (s === 'current' && !force) { skipped.current++; continue; }
     todo.push(j);
   }
+  todo.sort((a, b) => catOrder(a.category) - catOrder(b.category));
   if (Number.isFinite(LIMIT)) todo = todo.slice(0, LIMIT);
 
-  const chars = (a) => a.reduce((n, j) => n + j.tts.length, 0);
   const sub = await getSubscription();
   console.log(`Key: ${keySource}`);
   console.log(sub.ok ? `Quota: ${sub.used}/${sub.limit} used (${sub.tier}), ${sub.remaining} remaining`
     : `Quota: unavailable (${sub.status} ${sub.text})`);
   console.log(`\nPlan: ${todo.length} to generate of ${jobs.length} selected (${all.length} lines total). Skipped: ${skipped.current} current, ${skipped.recorded} recorded, ${skipped.handmade} hand-made.`);
   const by = {};
-  for (const j of todo) (by[j.category] ||= { n: 0, c: 0 }), by[j.category].n++, by[j.category].c += j.tts.length;
-  for (const [k, v] of Object.entries(by)) console.log(`  ${k.padEnd(15)} ${String(v.n).padStart(4)} lines ${String(v.c).padStart(6)} chars`);
-  const total = chars(todo);
-  console.log(`  ${'TOTAL'.padEnd(15)} ${String(todo.length).padStart(4)} lines ${String(total).padStart(6)} chars` +
-    (sub.ok ? `  (${((total / sub.limit) * 100).toFixed(1)}% of quota limit, ${((total / Math.max(sub.remaining, 1)) * 100).toFixed(1)}% of remaining)` : ''));
+  const seenKeys = new Set(DEDUPE ? existingByKey.keys() : []);
+  let billedTotal = 0, uniqueCalls = 0, reusedCount = 0;
+  for (const j of todo) {
+    const k = dedupeKey(j, voiceOf(j));
+    const willReuse = DEDUPE && seenKeys.has(k);
+    if (!willReuse) {
+      seenKeys.add(k);
+      billedTotal += j.tts.length;
+      uniqueCalls++;
+    } else reusedCount++;
+    (by[j.category] ||= { n: 0, c: 0, r: 0 }), by[j.category].n++, by[j.category].c += willReuse ? 0 : j.tts.length, by[j.category].r += willReuse ? 1 : 0;
+  }
+  for (const [k, v] of Object.entries(by)) console.log(`  ${k.padEnd(15)} ${String(v.n).padStart(4)} lines ${String(v.c).padStart(6)} chars${v.r ? ` (${v.r} reused)` : ''}`);
+  console.log(`  ${'TOTAL'.padEnd(15)} ${String(todo.length).padStart(4)} lines ${String(billedTotal).padStart(6)} chars${DEDUPE ? ` (${uniqueCalls} API calls, ${reusedCount} reused)` : ''}` +
+    (sub.ok ? `  (${((billedTotal / sub.limit) * 100).toFixed(1)}% of quota limit, ${((billedTotal / Math.max(sub.remaining, 1)) * 100).toFixed(1)}% of remaining)` : ''));
   const missing = [...new Set(todo.filter((j) => !voiceReady(voiceOf(j))).map((j) => j.speaker))];
   if (missing.length) console.log(`\nVoices not set in audio/voices.json for: ${missing.join(', ')} (run npm run audio:voices)`);
   if (DRY) return console.log('\n--dry-run: nothing generated.');
   if (!sub.ok) { console.error('\nCannot reach ElevenLabs / credentials refused. Nothing generated.'); process.exit(2); }
   if (missing.length) todo = todo.filter((j) => voiceReady(voiceOf(j)));
 
-  let budget = sub.remaining, done = 0, failed = 0, used = 0;
+  let budget = sub.remaining, done = 0, reused = 0, failed = 0, used = 0;
   fs.mkdirSync(OUT_DIR, { recursive: true });
   for (const j of todo) {
-    if (j.tts.length > budget) { console.log(`Quota exhausted: stopping before ${j.id}.`); break; }
     const v = voiceOf(j);
+    const dk = dedupeKey(j, v);
+    if (DEDUPE && existingByKey.has(dk)) {
+      const srcId = existingByKey.get(dk);
+      const srcBuf = fs.readFileSync(mp3(srcId));
+      const srcM = manifest[srcId] || {};
+      fs.writeFileSync(mp3(j.id), srcBuf);
+      manifest[j.id] = { id: j.id, speaker: j.speaker, voice_id: v.voice_id, voice: v.name, model: modelOf(v), settings: settingsOf(v), pitchSemitones: pitchOf(v, j), lang: j.lang,
+        hash: sig(j, v), tts: j.tts, chars: 0, bytes: srcBuf.length, duration: srcM.duration || 0, lufs: srcM.lufs || TARGET_LUFS, peak_dbtp: srcM.peak_dbtp || -1.5,
+        reusedFrom: srcId, generated_at: new Date().toISOString(), normalized: srcM.normalized || `reused from ${srcId}` };
+      saveManifest();
+      reused++;
+      done++;
+      console.log(`copy ${j.id} <- ${srcId} (0 chars)`);
+      continue;
+    }
+    if (j.tts.length > budget) { console.log(`Quota exhausted: stopping before ${j.id}.`); break; }
     try {
       const raw = await tts(j, v);
       if (KEEP_RAW) { fs.mkdirSync(KEEP_RAW, { recursive: true }); fs.writeFileSync(path.join(KEEP_RAW, `${j.id}.raw.mp3`), raw); }
@@ -241,12 +283,13 @@ async function main() {
       manifest[j.id] = { id: j.id, speaker: j.speaker, voice_id: v.voice_id, voice: v.name, model: modelOf(v), settings: settingsOf(v), pitchSemitones: pitchOf(v, j), lang: j.lang,
         hash: sig(j, v), tts: j.tts, chars: j.tts.length, bytes: p.buf.length, duration: +p.dur.toFixed(2), lufs: p.lufs, peak_dbtp: p.peak, generated_at: new Date().toISOString(),
         normalized: `loudnorm ${TARGET_LUFS} LUFS, silence trimmed, mono 96k${pitchOf(v, j) ? `, pitch +${pitchOf(v, j)} st (rubberband)` : ''}` };
+      if (DEDUPE) existingByKey.set(dk, j.id);
       saveManifest();
       done++;
       console.log(`ok   ${j.id} (${j.tts.length} chars, ${p.buf.length} bytes, ${p.dur.toFixed(2)}s, ${p.lufs} LUFS)`);
     } catch (e) { failed++; console.error(`FAIL ${j.id}: ${e.message}`); }
     await sleep(300);
   }
-  console.log(`\nSummary: generated ${done}, skipped ${skipped.current + skipped.recorded + skipped.handmade}, failed ${failed}, characters used ${used}`);
+  console.log(`\nSummary: generated ${done} (${done - reused} TTS + ${reused} reused), skipped ${skipped.current + skipped.recorded + skipped.handmade}, failed ${failed}, characters used ${used}`);
 }
 main().catch((e) => { console.error(e.message); process.exit(1); });
