@@ -8,6 +8,8 @@ import { ModeIcons, slotCard } from './SlotCards';
 import { tvDebug } from '../core/TvDebug';
 import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
 import { tvMode, type TvPref } from '../core/TvMode';
+import { TIP_BULB, tipTile } from './TipsUi';
+import type { TipIconName } from '../config/tips';
 import './menu.css';
 
 export interface SettingsDeps {
@@ -39,6 +41,8 @@ export interface SettingsDeps {
   resetZoom: () => void;
   /** Lemari: the wardrobe panel (owned shop items) opens over the pause menu. */
   openWardrobe: () => void;
+  tipsList: () => { id: string; title: string; icon: TipIconName }[];
+  replayTip: (id: string) => void;
 }
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: string): HTMLElementTagNameMap[K] {
@@ -76,7 +80,7 @@ export class SettingsMenu {
   private readonly slotsView: HTMLDivElement;
   private readonly confirmQ: HTMLElement;
   private readonly qualityBtns: { mode: QualityMode; el: HTMLButtonElement }[] = [];
-  private view: 'main' | 'save' | 'load' = 'main';
+  private view: 'main' | 'save' | 'load' | 'tips' = 'main';
   private confirmYes: () => void = () => undefined;
   private readonly confirm: HTMLDivElement;
   private readonly btnNo: HTMLButtonElement;
@@ -263,6 +267,8 @@ export class SettingsMenu {
     btnZoom.dataset.act = 'zoom';
     const btnWardrobe = this.button('menu-btn set-wardrobe', MenuIcons.wardrobe, 'Lemari', () => deps.openWardrobe());
     btnWardrobe.dataset.act = 'wardrobe';
+    const btnTips = this.button('menu-btn set-tips', TIP_BULB, 'Petunjuk', () => this.openTips());
+    btnTips.dataset.act = 'tips';
     this.btnMenu = this.button('menu-btn set-menu', MenuIcons.home, 'Kembali ke Menu Utama', () =>
       this.askQ('Kembali ke menu utama? Permainan tersimpan.', () => {
         this.close();
@@ -270,7 +276,7 @@ export class SettingsMenu {
       }),
     );
     this.btnMenu.dataset.act = 'menu';
-    grid.append(this.btnMap, this.btnHome, btnWardrobe, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
+    grid.append(this.btnMap, this.btnHome, btnWardrobe, btnTips, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
 
     this.slotsView = make('div', 'settings-slots');
 
@@ -413,7 +419,7 @@ export class SettingsMenu {
     this.ask(true);
   }
 
-  private showView(v: 'main' | 'save' | 'load'): void {
+  private showView(v: 'main' | 'save' | 'load' | 'tips'): void {
     this.view = v;
     this.card.classList.toggle('picking', v !== 'main');
     if (v === 'main') this.slotsView.replaceChildren();
@@ -441,6 +447,34 @@ export class SettingsMenu {
       row.append(c);
     }
     this.slotsView.append(head, row);
+  }
+
+  private openTips(): void {
+    this.showView('tips');
+    this.slotsView.replaceChildren();
+    const head = make('div', 'settings-slots-head');
+    const back = this.button('menu-btn set-back', ModeIcons.back, 'Kembali', () => this.showView('main'));
+    back.dataset.act = 'slots-back';
+    head.append(back, make('div', 'settings-slots-q', 'Petunjuk'));
+    const list = this.deps.tipsList();
+    const grid = make('div', 'tips-grid');
+    if (list.length === 0) grid.append(make('div', 'tips-empty', 'Belum ada petunjuk. Ayo bermain dulu, nanti Nino memberi tahu!'));
+    list.forEach((t, i) => {
+      const b = make('button', 'tip-item');
+      b.type = 'button';
+      b.dataset.tip = t.id;
+      b.setAttribute('aria-label', t.title);
+      if (i === 0) b.dataset.padDefault = '1';
+      b.append(tipTile(t.icon, t.title));
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.close();
+        this.deps.replayTip(t.id);
+      });
+      grid.append(b);
+    });
+    this.slotsView.append(head, grid);
   }
 
   private pickSave(slot: number, empty: boolean, active: number): void {

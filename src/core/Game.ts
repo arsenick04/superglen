@@ -65,6 +65,9 @@ import { BattleMode } from '../gameplay/BattleMode';
 import { ZoomButtons } from '../ui/ZoomButtons';
 import { CinematicPlayer, cinematicsForLevel } from '../ui/CinematicPlayer';
 import type { SlotSave } from './Save';
+import { Tips } from '../gameplay/Tips';
+import { TipConfig, type TipCtx } from '../config/tips';
+import { CITY_LAYOUT } from '../world/kota/CityData';
 
 /** Max frame delta fed into the accumulator (s): avoids a "spiral of death" after a hitch. */
 const MAX_FRAME_DT = 0.1;
@@ -133,6 +136,8 @@ export interface DebugHandle {
   testFall: () => void;
   /** Test helper: make dialog lines show as the small fight call-out (without a fight). */
   forceCompactDialog: (on: boolean) => void;
+  /** Tips (Petunjuk): live values and test helpers (see gameplay/Tips.ts). */
+  tips?: Record<string, unknown>;
   /** Live save store (tests round-trip it). */
   save: SaveStore;
   /** The level-control API levels get (setPlayerMode, setSkillButtons, ...), for tests. */
@@ -306,6 +311,8 @@ export class Game {
   readonly dialog: Dialog;
   readonly health: Health;
   readonly battle: BattleMode;
+  private tips!: Tips;
+  private rhythmGood = 0;
   private fadeUi!: Fade;
   private resting = false;
   readonly interactions: Interactions;
@@ -671,6 +678,8 @@ export class Game {
       canOpen: () => startGate.started && !this.quizLocked && !this.fading && !this.parents.open && !this.shopPanel.opened,
       onOpenChange: (open) => this.syncMenuOpen(open || this.shopPanel.opened),
       openWardrobe: () => this.shopPanel.open('wardrobe'),
+      tipsList: () => this.tips.seenList(),
+      replayTip: (id) => this.tips.replay(id),
       onVolumes: () => {
         this.audio.applyVolumes();
         this.synth.setVolume(this.save.data.settings.sfxVol);
@@ -827,6 +836,19 @@ export class Game {
     };
     this.battle = new BattleMode({ ui: uiRoot, scene: this.scene, cameraRig: this.cameraRig, player: this.player, audio: this.audio, sfx: this.sfx, save: this.save, health: this.health, sparkles: this.sparkles, rings: this.rings });
     this.debug.battle = this.battle.debugHandle();
+    this.player.events.on('rhythmJump', (e) => {
+      if (e.quality === 'perfect' || e.quality === 'good') this.rhythmGood++;
+    });
+    this.tips = new Tips({
+      ui: uiRoot,
+      save: this.save,
+      dialog: this.dialog,
+      pulse: (action, on) => this.touch?.controls.setPulse(action, on),
+      calm: () => this.tipsCalm(),
+      ctx: () => this.tipCtx(),
+      closeMenu: () => this.settings.close(),
+    });
+    this.debug.tips = Object.assign(this.tips.debugHandle(), { addRhythm: (n: number) => { this.rhythmGood += n; } });
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
@@ -1162,6 +1184,7 @@ export class Game {
     this.player.postStep();
     this.projectiles.fixedUpdate(dt);
     this.health.fixedUpdate(dt);
+    this.tips.update(dt);
     this.input.endFixedStep();
   }
 
@@ -1370,6 +1393,44 @@ export class Game {
   private updateControls(): void {
     this.player.inputEnabled = this.controlsEnabled;
     this.refreshTransform();
+  }
+
+  /** Tips wait for this: nothing else is asking for the child's attention (no fight, cinematic, dialog, quiz, menu, fade or load). */
+  private tipsCalm(): boolean {
+    const id = this.levels.currentId;
+    return startGate.started && !this.menuOpen && !this.shopPanel.opened && !this.parents.open && !this.quizLocked && !this.fading && this.levelControls
+      && !this.dialogLocked && !this.dialog.active && !this.battle.active && !this.levels.loading && !this.health.resting && !this.resting
+      && !/^(battle-|practice-)/.test(id) && id !== 'ending' && !document.querySelector('.care-panel:not([hidden])');
+  }
+
+  /** What the tips look at (read about four times a second). */
+  private tipCtx(): TipCtx {
+    const save = this.save;
+    const level = this.levels.currentId;
+    const p = this.player.visualPosition;
+    const near = (x: number, z: number, r: number): boolean => (p.x - x) ** 2 + (p.z - z) ** 2 < r * r;
+    const city = level === 'kota';
+    const pl = CITY_LAYOUT.places;
+    let nearBike = false;
+    if (city && !this.player.ride) for (const b of pl.bikes) if (near(b.x, b.z, TipConfig.near.bike)) { nearBike = true; break; }
+    return {
+      level,
+      mode: this.player.mode,
+      done: (c) => save.isChapterDone(c),
+      owned: (i) => save.data.inventory.owned.includes(i),
+      coins: save.data.quiz.coins,
+      heartLost: this.health.hits > 0,
+      rhythmGood: this.rhythmGood,
+      nearStall: city && near(pl.care.stall.x, pl.care.stall.z, TipConfig.near.stall),
+      nearHospital: city && near(pl.care.doctor.x, pl.care.doctor.z, TipConfig.near.hospital),
+      nearShop: city && near(pl.shop.keeper.x, pl.shop.keeper.z, TipConfig.near.shop),
+      nearBike,
+      hasMap: this.maps.hasMap,
+      objective: this.objectives.active,
+      challenges: save.data.quiz.challenges,
+      transformAllowed: this.transformAllowed,
+      flyUnlocked: save.data.skills.fly,
+    };
   }
 
   /** Is the star / Q switch usable right now (the story allows it and no sequence, dialog or fade holds the controls)? */
