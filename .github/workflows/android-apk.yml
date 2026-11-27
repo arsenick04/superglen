@@ -27,12 +27,15 @@ jobs:
       - run: npm run android:sync
       - name: Build Debug APK
         run: ./android/gradlew -p android assembleDebug
-      - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Superglen-test.apk
+      - name: Rename APK with version
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          echo "APK_NAME=Superglen-v${VER}.apk" >> "$GITHUB_ENV"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "Superglen-v${VER}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: Superglen-test-apk
-          path: Superglen-test.apk
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK_NAME }}
           retention-days: 30
       - name: Publish APK to GitHub Pre-Release
         env:
@@ -43,7 +46,7 @@ jobs:
             TAG="android-latest"
           fi
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$TAG" Superglen-test.apk \
+          gh release create "$TAG" "${APK_NAME}" \
             --prerelease \
-            --title "Superglen APK ($TAG)" \
-            --notes "APK uji coba offline untuk tablet/HP Android (Android 7.0+). Unduh Superglen-test.apk lalu tap untuk install."
+            --title "Superglen APK (${APK_NAME})" \
+            --notes "APK uji coba offline untuk tablet/HP Android (Android 7.0+). Unduh ${APK_NAME} lalu tap untuk install."
