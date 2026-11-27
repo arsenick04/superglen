@@ -1748,5 +1748,222 @@
     "lang": "id",
     "text": "Ini album stikermu!",
     "delivery": "[cheerful] Ini album stikermu!"
+  },
+  {
+    "id": "tip_irama_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lihat gendang di pojok kiri atas? Itu Lompat Irama Barongsai!",
+    "delivery": "[cheerful] Lihat gendang di pojok kiri atas? Itu Lompat Irama Barongsai!"
+  },
+  {
+    "id": "tip_irama_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tahan tombol lompat, atau tekan lagi tepat saat kakimu mendarat.",
+    "delivery": "[warm] Tahan tombol lompat, atau tekan lagi tepat saat kakimu mendarat."
+  },
+  {
+    "id": "tip_irama_3",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Makin banyak gendang menyala, makin tinggi lompatanmu. Sampai lima!",
+    "delivery": "[warm] Makin banyak gendang menyala, makin tinggi lompatanmu. Sampai lima!"
+  },
+  {
+    "id": "tip_hati_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Jatuh atau tertabrak membuat hati berkurang. Tidak apa-apa, kamu tidak kalah.",
+    "delivery": "[warm] Jatuh atau tertabrak membuat hati berkurang. Tidak apa-apa, kamu tidak kalah."
+  },
+  {
+    "id": "tip_hati_3",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kalau hatimu habis, kamu istirahat sebentar dan hatimu penuh lagi.",
+    "delivery": "[warm] Kalau hatimu habis, kamu istirahat sebentar dan hatimu penuh lagi."
+  },
+  {
+    "id": "tip_kios_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu kios makanan! Bayar 5 koin, hatimu bertambah satu.",
+    "delivery": "[cheerful] Itu kios makanan! Bayar 5 koin, hatimu bertambah satu."
+  },
+  {
+    "id": "tip_kios_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dekati kios, lalu tekan tombol tangan.",
+    "delivery": "[warm] Dekati kios, lalu tekan tombol tangan."
+  },
+  {
+    "id": "tip_rumahsakit_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ini Rumah Sakit. Dokter bisa mengisi semua hatimu sekaligus.",
+    "delivery": "[cheerful] Ini Rumah Sakit. Dokter bisa mengisi semua hatimu sekaligus."
+  },
+  {
+    "id": "tip_rumahsakit_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Harganya 15 koin. Dekati dokter, lalu tekan tombol tangan.",
+    "delivery": "[warm] Harganya 15 koin. Dekati dokter, lalu tekan tombol tangan."
+  },
+  {
+    "id": "tip_koin_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Belanjakan di Toko Mainan: kostum, baju, sepeda, dan papan luncur.",
+    "delivery": "[warm] Belanjakan di Toko Mainan: kostum, baju, sepeda, dan papan luncur."
+  },
+  {
+    "id": "tip_toko_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Itu Toko Mainan! Dekati penjualnya, lalu tekan tombol tangan.",
+    "delivery": "[cheerful] Itu Toko Mainan! Dekati penjualnya, lalu tekan tombol tangan."
+  },
+  {
+    "id": "tip_toko_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Pilih barang yang kamu suka. Koinmu yang membayar.",
+    "delivery": "[warm] Pilih barang yang kamu suka. Koinmu yang membayar."
+  },
+  {
+    "id": "tip_lemari_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Barang baru! Mau dipakai? Buka Pengaturan, lalu tekan Lemari.",
+    "delivery": "[cheerful] Barang baru! Mau dipakai? Buka Pengaturan, lalu tekan Lemari."
+  },
+  {
+    "id": "tip_lemari_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Di Lemari kamu bisa ganti kostum Superglen, baju Glen, dan warna sepeda.",
+    "delivery": "[warm] Di Lemari kamu bisa ganti kostum Superglen, baju Glen, dan warna sepeda."
+  },
+  {
+    "id": "tip_papan_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Papan luncurmu siap! Berdiri di tempat lega, lalu tekan tombol tangan.",
+    "delivery": "[cheerful] Papan luncurmu siap! Berdiri di tempat lega, lalu tekan tombol tangan."
+  },
+  {
+    "id": "tip_papan_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tekan lagi untuk menyimpannya. Di atas papan, tombol lompat membuat lompatan kecil.",
+    "delivery": "[warm] Tekan lagi untuk menyimpannya. Di atas papan, tombol lompat membuat lompatan kecil."
+  },
+  {
+    "id": "tip_papan_3",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Papan hanya dipakai saat kamu jadi Glen.",
+    "delivery": "[warm] Papan hanya dipakai saat kamu jadi Glen."
+  },
+  {
+    "id": "tip_sepeda_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ada sepeda! Dekati, lalu tekan tombol tangan untuk naik.",
+    "delivery": "[cheerful] Ada sepeda! Dekati, lalu tekan tombol tangan untuk naik."
+  },
+  {
+    "id": "tip_sepeda_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Di atas sepeda, tombol lompat membunyikan bel. Tekan tombol tangan lagi untuk turun.",
+    "delivery": "[warm] Di atas sepeda, tombol lompat membunyikan bel. Tekan tombol tangan lagi untuk turun."
+  },
+  {
+    "id": "tip_berubah_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tekan lagi untuk kembali jadi Glen. Superglen bisa lompat tinggi dan terbang.",
+    "delivery": "[warm] Tekan lagi untuk kembali jadi Glen. Superglen bisa lompat tinggi dan terbang."
+  },
+  {
+    "id": "tip_terbang_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tekan lagi untuk turun.",
+    "delivery": "[warm] Tekan lagi untuk turun."
+  },
+  {
+    "id": "tip_peta_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Ketuk peta kecil di pojok untuk melihat seluruh kota.",
+    "delivery": "[cheerful] Ketuk peta kecil di pojok untuk melihat seluruh kota."
+  },
+  {
+    "id": "tip_peta_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Bintang di peta menunjukkan tujuanmu. Peta juga ada di Pengaturan.",
+    "delivery": "[warm] Bintang di peta menunjukkan tujuanmu. Peta juga ada di Pengaturan."
+  },
+  {
+    "id": "tip_panah_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lihat panah emas? Ikuti panah itu menuju tujuanmu.",
+    "delivery": "[cheerful] Lihat panah emas? Ikuti panah itu menuju tujuanmu."
+  },
+  {
+    "id": "tip_panah_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Kalau tujuannya di luar layar, panahnya muncul di pinggir layar.",
+    "delivery": "[warm] Kalau tujuannya di luar layar, panahnya muncul di pinggir layar."
+  },
+  {
+    "id": "tip_simpan_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Permainanmu tersimpan sendiri. Tenang saja!",
+    "delivery": "[cheerful] Permainanmu tersimpan sendiri. Tenang saja!"
+  },
+  {
+    "id": "tip_simpan_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Mau menyimpan di slot lain? Buka Pengaturan, tekan Simpan, lalu pilih slot.",
+    "delivery": "[warm] Mau menyimpan di slot lain? Buka Pengaturan, tekan Simpan, lalu pilih slot."
+  },
+  {
+    "id": "tip_tantangan_1",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Tantangan Pintar memberi hadiah: koin dan stiker.",
+    "delivery": "[cheerful] Tantangan Pintar memberi hadiah: koin dan stiker."
+  },
+  {
+    "id": "tip_tantangan_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Setiap lima tantangan, kamu dapat satu kepingan memori ilmuwan.",
+    "delivery": "[warm] Setiap lima tantangan, kamu dapat satu kepingan memori ilmuwan."
+  },
+  {
+    "id": "tip_latihan_2",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Dekati tombol oranye di depan hologram yang kamu mau.",
+    "delivery": "[warm] Dekati tombol oranye di depan hologram yang kamu mau."
+  },
+  {
+    "id": "tip_latihan_3",
+    "speaker": "nino",
+    "lang": "id",
+    "text": "Lalu tekan tombol aksi. Latihan pun dimulai!",
+    "delivery": "[warm] Lalu tekan tombol aksi. Latihan pun dimulai!"
   }
 ]

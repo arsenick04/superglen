@@ -627,6 +627,61 @@
     "aara_nino_semangat_03_g",
     "aara_nino_semangat_03_sg"
    ]
+  },
+  {
+   "id": "tip_hati_1",
+   "speaker": "nino",
+   "template": "Aduh, hatimu berkurang satu! Hati merah itu tenagamu, {nama}.",
+   "delivery": "[warm] Aduh, hatimu berkurang satu! Hati merah itu tenagamu, {nama}.",
+   "file": "src/config/tips.ts",
+   "clips": [
+    "tip_hati_1_g",
+    "tip_hati_1_sg"
+   ]
+  },
+  {
+   "id": "tip_koin_1",
+   "speaker": "nino",
+   "template": "Wah, koinmu sudah banyak, {nama}!",
+   "delivery": "[cheerful] Wah, koinmu sudah banyak, {nama}!",
+   "file": "src/config/tips.ts",
+   "clips": [
+    "tip_koin_1_g",
+    "tip_koin_1_sg"
+   ]
+  },
+  {
+   "id": "tip_berubah_1",
+   "speaker": "nino",
+   "template": "Tombol bintang mengubahmu jadi Superglen, {nama}!",
+   "delivery": "[cheerful] Tombol bintang mengubahmu jadi Superglen, {nama}!",
+   "file": "src/config/tips.ts",
+   "clips": [
+    "tip_berubah_1_g",
+    "tip_berubah_1_sg"
+   ]
+  },
+  {
+   "id": "tip_terbang_1",
+   "speaker": "nino",
+   "template": "Tombol roket membuatmu terbang terus, {nama}.",
+   "delivery": "[cheerful] Tombol roket membuatmu terbang terus, {nama}.",
+   "file": "src/config/tips.ts",
+   "clips": [
+    "tip_terbang_1_g",
+    "tip_terbang_1_sg"
+   ]
+  },
+  {
+   "id": "tip_latihan_1",
+   "speaker": "nino",
+   "template": "Selamat datang di Ruang Latihan, {nama}! Semua lawanmu jadi hologram di sini.",
+   "delivery": "[cheerful] Selamat datang di Ruang Latihan, {nama}! Semua lawanmu jadi hologram di sini.",
+   "file": "src/config/tips.ts",
+   "clips": [
+    "tip_latihan_1_g",
+    "tip_latihan_1_sg"
+   ]
   }
  ],
  "skipped": [
