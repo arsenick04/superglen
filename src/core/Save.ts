@@ -712,6 +712,13 @@ export class SaveStore {
     return true;
   }
 
+  /** Award coins (practice boss wins, bonuses) into the shared total and persist. */
+  addCoins(n: number): void {
+    if (n <= 0) return;
+    this.data.quiz.coins += n;
+    this.persist();
+  }
+
   /** Parents' page: easy jump mode (default on). */
   setEasyJump(on: boolean): void {
     if (this.data.settings.easyJump === on) return;

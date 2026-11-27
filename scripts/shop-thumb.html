@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { SHOP_ITEMS } from '/src/config/shop.ts';
-import { patchLookMaterial } from '/src/player/CostumeLook.ts';
+import { patchLookMaterial, setCostumeLookTime } from '/src/player/CostumeLook.ts';
 import { BikeVisual } from '/src/world/kota/BikeModel.ts';
 import { SkateVisual } from '/src/world/kota/SkateboardModel.ts';
 
@@ -150,6 +150,7 @@ window.__renderItem = async (id) => {
   if (item.art === 'costume' || item.art === 'shirt') {
     const kind = item.art === 'costume' ? 'superglen' : 'glen';
     const rig = await getCharacterRig(kind);
+    setCostumeLookTime(item.id === 'sg-holo' ? 1.1 : 0);
     rig.look.set(item.id);
     const holder = new THREE.Group();
     holder.add(rig.root);

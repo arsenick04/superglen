@@ -175,6 +175,8 @@ export class EagleArena implements Level {
       ctx.game.setControlsEnabled(false);
       ctx.battle.exit(true);
       if (this.practice) {
+        ctx.save.addCoins(10);
+        ctx.quiz.coinsChanged();
         await ctx.seq.wait(1.2);
         await backToTraining(ctx.game);
         return;
@@ -183,6 +185,8 @@ export class EagleArena implements Level {
       ctx.game.setControlsEnabled(false);
       await ctx.dialog.say('elang_nino_menang', { lockControls: true });
       ctx.save.markChapterDone('bab7');
+      ctx.save.finishCityMission('bab7', 25);
+      ctx.quiz.coinsChanged();
       ctx.save.setInterlude('elang_home');
       if (ctx.save.data.slot?.level === 'battle-elang') ctx.save.setSlot(null);
       ctx.game.debugInfo.elangStage = 'tamed';

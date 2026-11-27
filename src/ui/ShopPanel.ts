@@ -17,6 +17,8 @@ export interface ShopDeps {
   coinsChanged: () => void;
   /** Small sounds (all optional, silent when muted). */
   sfx: { coin: () => void; bling: () => void; pop: () => void };
+  /** True once Glen has unlocked the Superglen costume (hides Superglen tab in Lemari before Chapter 1 finishes). */
+  hasSuperglen?: () => boolean;
 }
 
 const make = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: string): HTMLElementTagNameMap[K] => {
@@ -199,6 +201,10 @@ export class ShopPanel {
     return this.asking !== null;
   }
 
+  private showSuperglen(): boolean {
+    return this.mode !== 'wardrobe' || (this.deps.hasSuperglen ? this.deps.hasSuperglen() : this.deps.save.isChapterDone('bab1'));
+  }
+
   /** Show the panel. `shop`: buy and wear; `wardrobe`: only owned items, wear them. */
   open(mode: ShopMode): void {
     if (this.isOpen) return;
@@ -207,7 +213,7 @@ export class ShopPanel {
     this.asking = null;
     this.confirmEl.hidden = true;
     this.root.classList.toggle('wardrobe', mode === 'wardrobe');
-    this.tab = 'superglen';
+    this.tab = this.showSuperglen() ? 'superglen' : 'glen';
     this.say(mode === 'shop' ? 'hello' : 'wardrobe');
     this.render();
     this.root.hidden = false;
@@ -229,7 +235,9 @@ export class ShopPanel {
   /** Test hook: the same as tapping a card. */
   pick(id: string): void {
     const it = ITEM_BY_ID.get(id);
-    if (it && this.isOpen) this.choose(it);
+    if (!it || !this.isOpen) return;
+    if (it.tab === 'superglen' && !this.showSuperglen()) return;
+    this.choose(it);
   }
   confirmYesNow(): void {
     this.confirmYes();
@@ -243,6 +251,7 @@ export class ShopPanel {
   }
 
   private setTab(t: ShopTab): void {
+    if (t === 'superglen' && !this.showSuperglen()) return;
     this.tab = t;
     this.list.scrollLeft = 0;
     this.render();
@@ -250,8 +259,12 @@ export class ShopPanel {
 
   private render(): void {
     this.coins.textContent = String(this.deps.save.data.quiz.coins);
+    const allowSuperglen = this.showSuperglen();
+    if (!allowSuperglen && this.tab === 'superglen') this.tab = 'glen';
     for (const b of Array.from(this.tabsEl.children) as HTMLElement[]) {
-      const on = b.dataset.tab === this.tab;
+      const hide = b.dataset.tab === 'superglen' && !allowSuperglen;
+      b.hidden = hide;
+      const on = !hide && b.dataset.tab === this.tab;
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     }

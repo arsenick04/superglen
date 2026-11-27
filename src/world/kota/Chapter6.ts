@@ -318,7 +318,7 @@ export class Chapter6 {
       ctx.save.markChapterDone('bab6');
       ctx.save.setInterlude('rakus_home');
       ctx.save.setBab6('');
-      ctx.save.finishCityMission('bab6', 15);
+      ctx.save.finishCityMission('bab6', 25);
       ctx.quiz.coinsChanged();
       ctx.game.setControlsEnabled(true);
       ctx.game.setTransformAllowed(true);

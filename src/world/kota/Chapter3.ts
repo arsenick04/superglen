@@ -311,7 +311,7 @@ export class Chapter3 {
     game.setControlsEnabled(true);
     // The chapter is done: stars and confetti, a few coins, the city is free again.
     this.complete();
-    ctx.save.finishCityMission('bab3', 5);
+    ctx.save.finishCityMission('bab3', 15);
     ctx.quiz.coinsChanged();
     this.party = new Celebration(ctx, 'Chapter 3 selesai!', ctx.fx.sparkles);
     await this.party.play();
