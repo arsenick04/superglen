@@ -1,0 +1,12 @@
+{
+  "appId": "com.superglen.game",
+  "appName": "Superglen",
+  "webDir": "dist",
+  "backgroundColor": "#8fd3ff",
+  "android": {
+    "backgroundColor": "#8fd3ff",
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": true
+  }
+}

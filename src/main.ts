@@ -114,6 +114,22 @@ async function boot(): Promise<void> {
   }
 }
 
+function registerPwa(): void {
+  if (!('serviceWorker' in navigator)) return;
+  const w = window as unknown as { __SG_TEST?: boolean; Capacitor?: { isNativePlatform?: () => boolean } };
+  if (w.__SG_TEST || w.Capacitor?.isNativePlatform?.()) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+  window.addEventListener(
+    'load',
+    () => {
+      navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
+    },
+    { once: true },
+  );
+}
+
+registerPwa();
+
 boot().catch((err: unknown) => {
   console.error('Superglen failed to start:', err);
   showFatal(err);

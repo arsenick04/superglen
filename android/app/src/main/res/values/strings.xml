@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Superglen</string>
+    <string name="title_activity_main">Superglen</string>
+    <string name="package_name">com.superglen.game</string>
+    <string name="custom_url_scheme">com.superglen.game</string>
+</resources>
