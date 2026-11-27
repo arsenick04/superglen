@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>shop-thumb</title></head>
+<body style="margin:0;background:transparent">
+<canvas id="c" width="512" height="512"></canvas>
+<script type="module">
+// Renders crisp 3D store thumbnails from the game's own models & shaders for scripts/make-shop-thumbs.mjs.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { SHOP_ITEMS } from '/src/config/shop.ts';
+import { patchLookMaterial } from '/src/player/CostumeLook.ts';
+import { BikeVisual } from '/src/world/kota/BikeModel.ts';
+import { SkateVisual } from '/src/world/kota/SkateboardModel.ts';
+
+const SPARKLE_PINK = 0xff6fb5;
+const DEFAULT_BIKE_TEAL = 0x2ec4b6;
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+
+const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+
+const cache = new Map();
+async function loadGltf(url) {
+  if (!cache.has(url)) cache.set(url, loader.loadAsync(url));
+  return cache.get(url);
+}
+
+function makeScene() {
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xfffaf0, 0x8ea4c8, 1.55));
+  const key = new THREE.DirectionalLight(0xfff8ea, 2.2);
+  key.position.set(2.2, 3.4, 3.8);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xd9ecff, 1.25);
+  fill.position.set(-2.8, 1.8, 3.2);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffe6a3, 1.15);
+  rim.position.set(-1.5, 2.6, -3.0);
+  scene.add(rim);
+  return scene;
+}
+
+/** Build a small 4-point 3D sparkle star for special bikes (sparkle / racing). */
+function makeStar(size, color) {
+  const s = new THREE.Shape();
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4;
+    const r = i % 2 === 0 ? size : size * 0.34;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) s.moveTo(x, y);
+    else s.lineTo(x, y);
+  }
+  s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: size * 0.18, bevelEnabled: false });
+  geo.center();
+  const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.25, metalness: 0.2 });
+  return new THREE.Mesh(geo, mat);
+}
+
+/** Frame an object tightly with an orthographic camera from a normalized direction vector. */
+function frameOrtho(obj, dir, pad = 1.14) {
+  obj.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = box.getCenter(new THREE.Vector3());
+  const camDir = dir.clone().normalize();
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 50);
+  cam.position.copy(center).addScaledVector(camDir, 8);
+  cam.lookAt(center);
+  cam.updateMatrixWorld(true);
+
+  // Project all 8 bounding-box corners into camera space for tight, non-clipped framing.
+  const inv = cam.matrixWorldInverse;
+  const corners = [
+    new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+    new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+    new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+    new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+    new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+    new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+    new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+    new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+  ];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const c of corners) {
+    c.applyMatrix4(inv);
+    if (c.x < minX) minX = c.x;
+    if (c.x > maxX) maxX = c.x;
+    if (c.y < minY) minY = c.y;
+    if (c.y > maxY) maxY = c.y;
+  }
+  const span = Math.max(maxX - minX, maxY - minY) * pad;
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+  cam.left = midX - span / 2;
+  cam.right = midX + span / 2;
+  cam.top = midY + span / 2;
+  cam.bottom = midY - span / 2;
+  cam.updateProjectionMatrix();
+  return cam;
+}
+
+const characterRigs = {};
+async function getCharacterRig(kind) {
+  if (characterRigs[kind]) return characterRigs[kind];
+  const gltf = await loadGltf(`/public/models/${kind}.glb`);
+  let mat = null;
+  let look = null;
+  gltf.scene.traverse((o) => {
+    if (o.isMesh && !mat) {
+      mat = o.material.clone();
+      o.material = mat;
+      look = patchLookMaterial(mat, kind);
+    }
+  });
+  const idle = gltf.animations.find((a) => a.name === 'idle') ?? gltf.animations[0];
+  if (idle) {
+    const mixer = new THREE.AnimationMixer(gltf.scene);
+    mixer.clipAction(idle).play();
+    mixer.update(0.15);
+  }
+  gltf.scene.updateMatrixWorld(true);
+  characterRigs[kind] = { root: gltf.scene, look };
+  return characterRigs[kind];
+}
+
+let bikeTpl = null;
+async function getBikeTemplate() {
+  if (!bikeTpl) {
+    const gltf = await loadGltf('/public/env/bike/bike.glb');
+    bikeTpl = gltf.scene.getObjectByName('bike') ?? gltf.scene;
+  }
+  return bikeTpl;
+}
+
+window.__renderItem = async (id) => {
+  const item = SHOP_ITEMS.find((x) => x.id === id);
+  if (!item) throw new Error(`unknown shop item: ${id}`);
+  const scene = makeScene();
+  let cam;
+
+  if (item.art === 'costume' || item.art === 'shirt') {
+    const kind = item.art === 'costume' ? 'superglen' : 'glen';
+    const rig = await getCharacterRig(kind);
+    rig.look.set(item.id);
+    const holder = new THREE.Group();
+    holder.add(rig.root);
+    // Slight heroic 3/4 turn so depth, cape/arms and costume front all read clearly.
+    rig.root.rotation.set(0, item.art === 'costume' ? 0.24 : -0.22, 0);
+    scene.add(holder);
+    cam = frameOrtho(holder, new THREE.Vector3(0, 0.08, 1), 1.1);
+    renderer.render(scene, cam);
+    holder.remove(rig.root);
+    return true;
+  }
+
+  if (item.art === 'skateboard') {
+    const lit = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.15 });
+    const skate = new SkateVisual(lit, null);
+    const holder = new THREE.Group();
+    // Tilt dynamically so both the colourful striped top deck and chunky orange wheels shine.
+    skate.root.rotation.set(0.32, 0.72, -0.24);
+    holder.add(skate.root);
+    scene.add(holder);
+    cam = frameOrtho(holder, new THREE.Vector3(0, 0.42, 1), 1.18);
+    renderer.render(scene, cam);
+    lit.dispose();
+    for (const g of skate.geometries) g.dispose();
+    return true;
+  }
+
+  // Bike items (bike / racer / ride-bike)
+  const tpl = await getBikeTemplate();
+  const lit = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.22 });
+  const paint = item.paint === 'sparkle' ? SPARKLE_PINK : typeof item.paint === 'number' ? item.paint : DEFAULT_BIKE_TEAL;
+  const bike = new BikeVisual(tpl, lit, paint, null);
+  bike.rest();
+  const holder = new THREE.Group();
+  holder.add(bike.root);
+  // Crisp side-3/4 angle so frame, handlebar, saddle and both wheels read immediately.
+  bike.root.rotation.set(0, Math.PI * 0.42, 0);
+
+  if (item.id === 'bike-default') {
+    const cols = [0xe8453c, 0x2ec4b6, 0xff9f43];
+    cols.forEach((c, i) => {
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.068, 16, 16),
+        new THREE.MeshStandardMaterial({ color: c, roughness: 0.35, metalness: 0.1 }),
+      );
+      dot.position.set(-0.24 + i * 0.15, 0.78 + (i === 1 ? 0.04 : 0), 0.16);
+      holder.add(dot);
+    });
+  } else if (item.paint === 'sparkle') {
+    const stars = [
+      [0.34, 0.78, 0.22, 0.11, 0xffd23f],
+      [-0.36, 0.72, 0.2, 0.095, 0xffffff],
+      [0.02, 0.86, 0.2, 0.085, 0xffa8d8],
+      [-0.04, 0.22, 0.26, 0.08, 0xffd23f],
+    ];
+    for (const [x, y, z, sz, col] of stars) {
+      const st = makeStar(sz, col);
+      st.position.set(x, y, z);
+      holder.add(st);
+    }
+  } else if (item.art === 'racer') {
+    const star = makeStar(0.115, 0xffc94d);
+    star.position.set(0.32, 0.8, 0.22);
+    holder.add(star);
+    const bolt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.036, 0.036),
+      new THREE.MeshStandardMaterial({ color: 0xe8302a, emissive: 0xe8302a, emissiveIntensity: 0.25, roughness: 0.3 }),
+    );
+    bolt.position.set(-0.36, 0.7, 0.16);
+    bolt.rotation.z = 0.06;
+    holder.add(bolt);
+    const bolt2 = bolt.clone();
+    bolt2.scale.set(0.72, 0.85, 1);
+    bolt2.position.set(-0.4, 0.61, 0.16);
+    holder.add(bolt2);
+  }
+
+  scene.add(holder);
+  cam = frameOrtho(bike.root, new THREE.Vector3(0, 0.16, 1), 1.18);
+  renderer.render(scene, cam);
+  lit.dispose();
+  for (const g of bike.geometries) g.dispose();
+  return true;
+};
+
+window.__ids = SHOP_ITEMS.map((i) => i.id);
+window.__ready = true;
+</script>
+</body>
+</html>

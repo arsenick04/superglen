@@ -1,6 +1,7 @@
 import type { SaveStore } from '../core/Save';
 import type { QuizEngine } from '../quiz/QuizEngine';
 import { CATEGORY_NAMES } from './QuizIcons';
+import { attachScroll, bindTap, type ScrollHandle } from './Scrollable';
 
 export interface ParentsDeps {
   save: SaveStore;
@@ -30,6 +31,7 @@ export class ParentsPage {
   readonly element: HTMLDivElement;
   private shown = false;
   private confirming = false;
+  private bodyScroll: ScrollHandle | null = null;
 
   constructor(
     root: HTMLElement,
@@ -37,8 +39,7 @@ export class ParentsPage {
   ) {
     this.element = el('div', 'parents');
     this.element.hidden = true;
-    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.element.addEventListener(ev, (e) => e.stopPropagation());
-    this.element.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'wheel']) this.element.addEventListener(ev, (e) => e.stopPropagation());
     root.appendChild(this.element);
   }
 
@@ -60,11 +61,7 @@ export class ParentsPage {
 
   private button(label: string, cls: string, fn: () => void): HTMLButtonElement {
     const b = el('button', cls, label);
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      fn();
-    });
+    bindTap(b, fn);
     return b;
   }
 
@@ -72,6 +69,7 @@ export class ParentsPage {
     const { save, quiz } = this.deps;
     const q = save.data.quiz;
     const root = this.element;
+    const prevTop = root.querySelector<HTMLElement>('.parents-body')?.scrollTop ?? 0;
     root.replaceChildren();
 
     const head = el('div', 'parents-head');
@@ -79,6 +77,8 @@ export class ParentsPage {
 
     // ---- Left: progress per category ----
     const left = el('div', 'parents-col');
+    const tableWrap = el('div', 'parents-table-wrap');
+    tableWrap.dataset.scrollable = 'x';
     const table = el('table');
     table.innerHTML = '<thead><tr><th>Kategori</th><th>Level</th><th>Dijawab</th><th>Sekali benar</th><th>Status</th></tr></thead>';
     const tb = el('tbody');
@@ -93,6 +93,7 @@ export class ParentsPage {
       tb.appendChild(tr);
     }
     table.appendChild(tb);
+    tableWrap.appendChild(table);
     const sum = el('div', 'parents-sum');
     sum.append(
       el('span', 'p-coins', `Koin: ${q.coins}`),
@@ -100,7 +101,7 @@ export class ParentsPage {
       el('span', 'p-fragments', `Kepingan memori: ${q.fragments}`),
       el('span', 'p-challenges', `Tantangan selesai: ${q.challenges}`),
     );
-    left.append(table, sum, el('div', 'parents-note', 'Level naik pelan kalau anak sering benar di percobaan pertama, dan turun lagi kalau sering salah. Halaman ini dibuka dengan menekan lama logo (3 detik) di layar awal, atau roda gigi kecil di kartu bantuan PC.'));
+    left.append(tableWrap, sum, el('div', 'parents-note', 'Level naik pelan kalau anak sering benar di percobaan pertama, dan turun lagi kalau sering salah. Halaman ini dibuka dengan menekan lama logo (3 detik) di layar awal, atau roda gigi kecil di kartu bantuan PC.'));
 
     // ---- Right: settings, album, reset ----
     const right = el('div', 'parents-col');
@@ -147,7 +148,7 @@ export class ParentsPage {
       );
       right.appendChild(c);
     } else {
-      actions.appendChild(
+      actions.append(
         this.button('Reset progres', 'warn parents-reset', () => {
           this.confirming = true;
           this.render();
@@ -155,9 +156,16 @@ export class ParentsPage {
       );
     }
 
+    const wrap = el('div', 'parents-body-wrap');
     const body = el('div', 'parents-body');
     body.append(left, right);
-    root.append(head, body);
+    wrap.append(body);
+    this.bodyScroll = attachScroll(body, 'y', wrap);
+    root.append(head, wrap);
+    if (prevTop > 0) body.scrollTop = prevTop;
+    if (this.confirming) root.querySelector('.parents-confirm')?.scrollIntoView({ block: 'nearest' });
+    this.bodyScroll?.refresh();
+    requestAnimationFrame(() => this.bodyScroll?.refresh());
   }
 
   private toggle(label: string, id: string, on: boolean, set: (on: boolean) => void): HTMLElement {

@@ -283,7 +283,22 @@ export class PadUi {
         }
       }
     }
-    if (best) this.setFocus(best);
+    if (best) {
+      this.setFocus(best);
+      return;
+    }
+    this.scrollScope(scope, d);
+  }
+
+  private scrollScope(scope: HTMLElement, d: number): void {
+    const axis = d === DIR_UP || d === DIR_DOWN ? 'y' : 'x';
+    const delta = d === DIR_UP || d === DIR_LEFT ? -120 : 120;
+    const scroller = scope.matches(`[data-scrollable="${axis}"]`)
+      ? scope
+      : scope.querySelector<HTMLElement>(`[data-scrollable="${axis}"]`);
+    if (!scroller) return;
+    if (axis === 'y' && scroller.scrollHeight > scroller.clientHeight + 2) scroller.scrollTop += delta;
+    else if (axis === 'x' && scroller.scrollWidth > scroller.clientWidth + 2) scroller.scrollLeft += delta;
   }
 
   private activate(): void {

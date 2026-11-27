@@ -40,7 +40,7 @@ export const SPEAKERS: Readonly<Record<string, SpeakerInfo>> = {
   res_sari: { name: 'Bu Sari' },
   res_joko: { name: 'Pak Joko' },
   res_dimas: { name: 'Dimas' },
-  res_guru: { name: 'Bu Guru' },
+  res_guru: { name: 'Pak Guru' },
   res_lala: { name: 'Lala' },
   res_pos: { name: 'Pak Pos' },
   res_ani: { name: 'Dokter Ani' },
@@ -65,8 +65,14 @@ const FACES: Readonly<Record<string, FaceStyle>> = {
 };
 const DEFAULT_FACE: FaceStyle = { bg: '#7bc96f', ring: '#ffffff', skin: '#f2c29b' };
 
+function speakerKey(speaker: string): string {
+  if (SPEAKERS[speaker] || FACES[speaker]) return speaker;
+  const res = `res_${speaker}`;
+  return SPEAKERS[res] || FACES[res] ? res : speaker;
+}
+
 export function faceSvg(speaker: string): string {
-  const f = FACES[speaker] ?? DEFAULT_FACE;
+  const f = FACES[speakerKey(speaker)] ?? DEFAULT_FACE;
   return (
     '<svg viewBox="0 0 64 64" aria-hidden="true">' +
     `<circle cx="32" cy="32" r="29" fill="${f.bg}" stroke="${f.ring}" stroke-width="5"/>` +
@@ -82,7 +88,7 @@ export function faceSvg(speaker: string): string {
 
 /** Name tag for a speaker id ('' for no speaker). */
 export function speakerName(speaker: string): string {
-  return SPEAKERS[speaker]?.name ?? '';
+  return SPEAKERS[speakerKey(speaker)]?.name ?? '';
 }
 
 function portraitUrl(id: string): string {
@@ -167,7 +173,7 @@ export class DialogBubble {
 
   /** Portrait image when the speaker has one (and it loads), else the drawn face. */
   private setFace(speaker: string): void {
-    const info = SPEAKERS[speaker];
+    const info = SPEAKERS[speakerKey(speaker)];
     this.nameEl.textContent = info?.name ?? '';
     this.nameEl.hidden = !info;
     this.face.innerHTML = '';

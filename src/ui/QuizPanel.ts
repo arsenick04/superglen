@@ -9,6 +9,7 @@ import { QuizLines, type QuizLine } from '../quiz/lines';
 import { soundWord } from '../quiz/soundWords';
 import { CATEGORIES, type AlbumPage, type Category, type Choice, type Display, type PreparedQuestion, type QuizReason, type StickerRef } from '../quiz/types';
 import { faceSvg } from './DialogBubble';
+import { attachScroll, type ScrollHandle } from './Scrollable';
 import { CATEGORY_COLORS, CATEGORY_NAMES, QuizIcons } from './QuizIcons';
 
 export interface PanelDeps {
@@ -72,6 +73,7 @@ export class QuizPanel {
 
   private readonly face: HTMLDivElement;
   private readonly bubbleEl: HTMLSpanElement;
+  private readonly dotsEl: HTMLDivElement;
   private readonly dots: HTMLElement[];
   private readonly coinsEl: HTMLElement;
   private readonly plusEl: HTMLElement;
@@ -84,6 +86,7 @@ export class QuizPanel {
   private readonly endEl: HTMLDivElement;
   private readonly pickerEl: HTMLDivElement;
   private readonly albumEl: HTMLDivElement;
+  private albumScroll: ScrollHandle | null = null;
   private readonly fx: HTMLDivElement;
   private readonly hud: HTMLDivElement;
   private readonly hudNum: HTMLElement;
@@ -123,19 +126,20 @@ export class QuizPanel {
     this.element = o;
     // ---- Top: Nino, speech bubble, progress dots, coins, close ----
     const top = el('div', 'qp-top');
-    this.face = el('div', 'qp-face', faceSvg('nino'));
+    this.face = el('div', 'qp-face');
+    this.setHostFace('nino');
     const bub = el('div', 'qp-bubble');
     this.bubbleEl = el('span', 'qp-bubble-text');
     bub.appendChild(this.bubbleEl);
-    const dots = el('div', 'qp-dots');
+    this.dotsEl = el('div', 'qp-dots');
     this.dots = [0, 1, 2].map(() => el('i'));
-    dots.append(...this.dots);
+    this.dotsEl.append(...this.dots);
     const coins = el('div', 'qp-coins', `<span class="coin-ico">${QuizIcons.coin}</span><b>0</b><em class="qp-plus"></em>`);
     this.coinsEl = coins.querySelector('b') as HTMLElement;
     this.plusEl = coins.querySelector('.qp-plus') as HTMLElement;
     this.closeBtn = el('button', 'qp-close', `${QuizIcons.close}<span class="qp-ring"></span>`);
     this.closeBtn.setAttribute('aria-label', 'Tutup');
-    top.append(this.face, bub, dots, coins, this.closeBtn);
+    top.append(this.face, bub, this.dotsEl, coins, this.closeBtn);
 
     // ---- Stage: repeat button, display, continue arrow ----
     const body = el('div', 'qp-body');
@@ -186,15 +190,34 @@ export class QuizPanel {
       this.closeBtn.classList.add('holding');
     });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) this.closeBtn.addEventListener(ev, () => this.releaseHold());
-    // The overlay swallows every touch / click so nothing reaches the game underneath.
-    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'contextmenu']) {
+    // The overlay swallows every touch / click / wheel so nothing reaches the game underneath, while allowing scrollable lists (album).
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'wheel', 'contextmenu']) {
       o.addEventListener(ev, (e) => {
         e.stopPropagation();
-        if (ev === 'touchstart' || ev === 'contextmenu') e.preventDefault();
+        if (ev === 'contextmenu') {
+          e.preventDefault();
+        } else if (ev === 'touchstart' && !(e.target instanceof Element && e.target.closest('[data-scrollable]'))) {
+          e.preventDefault();
+        }
       });
     }
     window.addEventListener('keydown', this.onKey, true);
     window.addEventListener('resize', this.onResize);
+  }
+
+  private setHostFace(host: 'nino' | 'aara'): void {
+    const img = document.createElement('img');
+    img.alt = host === 'aara' ? 'Aara' : 'Nino';
+    img.draggable = false;
+    img.src = `${import.meta.env.BASE_URL}portraits/${host}.webp`;
+    img.addEventListener(
+      'error',
+      () => {
+        this.face.innerHTML = faceSvg(host);
+      },
+      { once: true },
+    );
+    this.face.replaceChildren(img);
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -231,7 +254,7 @@ export class QuizPanel {
   openChallenge(reason: QuizReason, closable: boolean, host: 'nino' | 'aara' = 'nino'): void {
     this.host = host;
     this.element.dataset.host = host;
-    this.face.innerHTML = faceSvg(host);
+    this.setHostFace(host);
     this.element.dataset.reason = reason;
     this.element.classList.toggle('closable', closable);
     this.show();
@@ -412,6 +435,11 @@ export class QuizPanel {
       this.element.dataset.cat = prep.q.category;
       this.element.dataset.kind = prep.q.display.kind;
       this.element.dataset.state = 'answering';
+      while (this.dots.length < total) {
+        const d = el('i');
+        this.dots.push(d);
+        this.dotsEl.appendChild(d);
+      }
       this.dots.forEach((d, i) => {
         d.style.display = i < total ? '' : 'none';
         d.className = i < index ? 'done' : i === index ? 'now' : '';
@@ -810,6 +838,7 @@ export class QuizPanel {
       this.escape();
     });
     tabs.appendChild(ok);
+    const gridWrap = el('div', 'qp-grid-wrap');
     const grid = el('div', 'qp-grid');
     grid.dataset.owned = String(page.owned.size);
     grid.dataset.total = String(page.pool.length);
@@ -820,19 +849,27 @@ export class QuizPanel {
       cell.appendChild(this.picture(key, own ? '' : 'sil'));
       grid.appendChild(cell);
     }
-    a.append(tabs, grid, el('div', 'qp-album-count', `${page.owned.size} / ${page.pool.length}`));
-    // Slot size: as large as the free height allows (rows computed from the width).
+    gridWrap.appendChild(grid);
+    this.albumScroll = attachScroll(grid, 'y', gridWrap);
+    a.append(tabs, gridWrap, el('div', 'qp-album-count', `${page.owned.size} / ${page.pool.length}`));
+    // Slot size: keep stickers clearly readable and scroll vertically if a category has many rows on a short screen.
     const cols = page.pool.length > 12 ? 8 : 6;
     grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    requestAnimationFrame(() => this.sizeGrid(grid, cols, page.pool.length));
+    requestAnimationFrame(() => {
+      this.sizeGrid(grid, cols, page.pool.length);
+      this.albumScroll?.refresh();
+    });
     this.sizeGrid(grid, cols, page.pool.length);
+    this.albumScroll?.refresh();
   }
 
   private sizeGrid(grid: HTMLElement, cols: number, n: number): void {
     if (!this.isOpen || !grid.isConnected) return;
     const rows = Math.max(1, Math.ceil(n / cols));
     const side = Math.floor(Math.min(grid.clientWidth / cols, grid.clientHeight / rows)) - 6;
-    grid.style.setProperty('--slot', `${Math.max(24, side)}px`);
+    const minSide = window.innerHeight <= 360 ? 38 : 44;
+    const maxByW = Math.max(28, Math.floor(grid.clientWidth / cols) - 6);
+    grid.style.setProperty('--slot', `${Math.min(maxByW, Math.max(minSide, side))}px`);
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -878,6 +915,10 @@ export class QuizPanel {
       if (digit >= 1 && digit <= CATEGORIES.length) {
         this.albumTab = CATEGORIES[digit - 1];
         this.renderAlbum();
+        used = true;
+      } else if (k === 'ArrowDown' || k === 'ArrowUp') {
+        const g = this.albumEl.querySelector<HTMLElement>('.qp-grid');
+        if (g) g.scrollTop += k === 'ArrowDown' ? 96 : -96;
         used = true;
       } else if (k === 'Enter' || k === ' ' || k === 'Escape') {
         this.escape();

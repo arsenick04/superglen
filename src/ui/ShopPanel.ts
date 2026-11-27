@@ -3,6 +3,7 @@ import { equip, getInventory, isOwned, own } from '../core/Save';
 import { FREE_IDS, ITEM_BY_ID, SHOP_ITEMS, SHOP_TABS, ShopLines, fill, type ShopItem, type ShopTab } from '../config/shop';
 import { MenuIcons } from './MenuIcons';
 import { QuizIcons } from './QuizIcons';
+import { attachScroll, bindTap, type ScrollHandle } from './Scrollable';
 import './shop.css';
 
 export type ShopMode = 'shop' | 'wardrobe';
@@ -25,7 +26,7 @@ const make = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: st
   return e;
 };
 
-// ---- Preview art (flat SVG, tinted with the item's colours) -------------------------------------------------------------------
+// ---- Preview art (3D model renders in public/img/shop/<id>.webp, with flat SVG fallback) --------------------------------------
 
 let gradId = 0;
 function fillFor(colors: string[], defs: string[]): string {
@@ -65,6 +66,25 @@ export function itemArt(item: ShopItem): string {
   return `<svg viewBox="0 0 64 64" aria-hidden="true"><defs>${defs.join('')}</defs>${body}</svg>`;
 }
 
+/** 3D render of the real in-game model (`public/img/shop/<id>.webp`); falls back to the SVG icon if offline / missing. */
+function itemThumb(item: ShopItem): HTMLElement {
+  const img = document.createElement('img');
+  img.className = 'shop-thumb';
+  img.alt = '';
+  img.draggable = false;
+  img.decoding = 'async';
+  img.src = `${import.meta.env.BASE_URL}img/shop/${item.id}.webp`;
+  img.addEventListener(
+    'error',
+    () => {
+      const wrap = make('span', 'shop-thumb-fallback', itemArt(item));
+      img.replaceWith(wrap);
+    },
+    { once: true },
+  );
+  return img;
+}
+
 const owned = (it: ShopItem): boolean => it.price === 0 || FREE_IDS.includes(it.id) || isOwned(it.id);
 const worn = (it: ShopItem): boolean => {
   const e = getInventory().equipped;
@@ -83,6 +103,7 @@ export class ShopPanel {
   private readonly coins: HTMLElement;
   private readonly tabsEl: HTMLDivElement;
   private readonly list: HTMLDivElement;
+  private readonly listScroll: ScrollHandle;
   private readonly confirmEl: HTMLDivElement;
   private readonly confirmArt: HTMLElement;
   private readonly confirmQ: HTMLElement;
@@ -108,14 +129,17 @@ export class ShopPanel {
     const close = this.button('shop-close', MenuIcons.close, 'Tutup', () => this.close());
     close.dataset.act = 'shop-close';
     this.tabsEl = make('div', 'shop-tabs');
+    this.tabsEl.dataset.scrollable = 'x';
     for (const t of SHOP_TABS) {
       const b = make('button', 'shop-tab');
       b.type = 'button';
       b.dataset.tab = t.id;
       b.dataset.act = `tab-${t.id}`;
       b.setAttribute('aria-label', t.label);
-      const first = SHOP_ITEMS.find((i) => i.tab === t.id);
-      b.append(make('span', 'shop-tab-ico', first ? itemArt({ ...first, colors: [first.colors[0]] }) : ''), make('span', 'shop-tab-name', t.label));
+      const iconItem = t.id === 'ride' ? SHOP_ITEMS.find((i) => i.id === 'skateboard') : SHOP_ITEMS.find((i) => i.tab === t.id);
+      const ico = make('span', 'shop-tab-ico');
+      if (iconItem) ico.append(itemThumb(iconItem));
+      b.append(ico, make('span', 'shop-tab-name', t.label));
       this.tap(b, () => this.setTab(t.id));
       this.tabsEl.append(b);
     }
@@ -126,7 +150,10 @@ export class ShopPanel {
     top.append(close, this.tabsEl, coinBox);
 
     this.line = make('div', 'shop-line');
+    const shelf = make('div', 'shop-shelf');
     this.list = make('div', 'shop-list');
+    shelf.append(this.list);
+    this.listScroll = attachScroll(this.list, 'x', shelf);
 
     this.confirmEl = make('div', 'shop-confirm');
     this.confirmEl.hidden = true;
@@ -146,7 +173,7 @@ export class ShopPanel {
     box.append(this.confirmArt, mid, row);
     this.confirmEl.append(box);
 
-    root.append(top, this.line, this.list, this.confirmEl);
+    root.append(top, this.line, shelf, this.confirmEl);
     deps.ui.appendChild(root);
 
     if ((window as unknown as { __SG_TEST?: boolean }).__SG_TEST === true) (window as unknown as { __shop?: unknown }).__shop = this.debugHandle();
@@ -184,6 +211,8 @@ export class ShopPanel {
     this.say(mode === 'shop' ? 'hello' : 'wardrobe');
     this.render();
     this.root.hidden = false;
+    this.list.scrollLeft = 0;
+    requestAnimationFrame(() => this.listScroll.refresh());
     this.deps.onOpenChange(true);
   }
 
@@ -215,6 +244,7 @@ export class ShopPanel {
 
   private setTab(t: ShopTab): void {
     this.tab = t;
+    this.list.scrollLeft = 0;
     this.render();
   }
 
@@ -238,7 +268,9 @@ export class ShopPanel {
       card.dataset.act = `item-${it.id}`;
       card.setAttribute('aria-label', it.name);
       if (idx === defIdx) card.dataset.padDefault = '1';
-      card.append(make('div', 'shop-card-art', itemArt(it)), make('div', 'shop-card-name', it.name));
+      const art = make('div', 'shop-card-art');
+      art.append(itemThumb(it));
+      card.append(art, make('div', 'shop-card-name', it.name));
       const foot = make('div', 'shop-card-foot');
       if (on) foot.innerHTML = `<span class="shop-badge">${MenuIcons.yes}</span><span>Dipakai</span>`;
       else if (have) foot.innerHTML = '<span>Pakai</span>';
@@ -248,6 +280,8 @@ export class ShopPanel {
       this.list.append(card);
     });
     if (items.length === 0) this.list.append(make('div', 'shop-empty', fill(ShopLines.empty.text, {})));
+    this.listScroll.refresh();
+    requestAnimationFrame(() => this.listScroll.refresh());
   }
 
   private choose(it: ShopItem): void {
@@ -269,7 +303,7 @@ export class ShopPanel {
       return;
     }
     this.asking = it;
-    this.confirmArt.innerHTML = itemArt(it);
+    this.confirmArt.replaceChildren(itemThumb(it));
     this.confirmQ.textContent = `Beli ${it.name}?`;
     this.confirmPrice.innerHTML = `<span class="shop-price-ico">${QuizIcons.coin}</span><b>${it.price}</b>`;
     this.say('ask', { item: it.name });
@@ -304,34 +338,7 @@ export class ShopPanel {
 
   /** A control that reacts to a mouse / pad press at once and to a finger only when it was a tap (so the card list can scroll). */
   private tap(el: HTMLElement, fn: () => void): void {
-    let sx = 0;
-    let sy = 0;
-    let id = -1;
-    el.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
-      if (e.pointerType === 'touch') {
-        id = e.pointerId;
-        sx = e.clientX;
-        sy = e.clientY;
-        return;
-      }
-      e.preventDefault();
-      fn();
-    });
-    el.addEventListener('pointerup', (e) => {
-      if (e.pointerId !== id) return;
-      id = -1;
-      if (Math.abs(e.clientX - sx) < 12 && Math.abs(e.clientY - sy) < 12) fn();
-    });
-    el.addEventListener('pointercancel', () => {
-      id = -1;
-    });
-    el.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      e.stopPropagation();
-      fn();
-    });
+    bindTap(el, fn);
   }
 
   private button(cls: string, icon: string, label: string, fn: () => void): HTMLButtonElement {

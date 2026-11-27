@@ -1,5 +1,6 @@
 import type { SlotSummary } from '../core/Save';
 import { MenuIcons } from './MenuIcons';
+import { bindTap } from './Scrollable';
 
 /** Shared by the title menu and the pause menu: one card per save slot, Indonesian text, big touch targets. */
 
@@ -48,22 +49,14 @@ export function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', ht
 
 /** `evt` is 'click' on the title screen and 'pointerdown' in the pause menu (touch there does not synthesise clicks). */
 export function bindPress(b: HTMLElement, evt: 'click' | 'pointerdown', fn: () => void): void {
-  b.addEventListener(evt, (e) => {
-    if (evt === 'pointerdown') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  if (evt === 'pointerdown') {
+    bindTap(b, fn);
+    return;
+  }
+  b.addEventListener('click', () => {
     if ((b as HTMLButtonElement).disabled) return;
     fn();
   });
-  if (evt === 'pointerdown') {
-    b.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (!(b as HTMLButtonElement).disabled) fn();
-    });
-  }
 }
 
 export interface CardOpts {

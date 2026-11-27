@@ -1250,17 +1250,27 @@ html.game-started .set-gear {
 .minimap[hidden] {
   display: none;
 }
-.settings-card {
+.settings-shell {
   position: relative;
+  display: flex;
   width: min(100%, 760px);
   max-height: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.settings-card {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
   overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
-  padding: 10px 16px 14px;
+  padding: 10px 16px 26px;
   border-radius: 22px;
   background: #f7fbff;
   color: #25324a;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
   font-family: system-ui, sans-serif;
 }
 .settings-head {
@@ -1288,7 +1298,7 @@ html.game-started .set-gear {
   text-align: left;
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  touch-action: none;
+  touch-action: pan-y;
 }
 .menu-btn:focus-visible,
 .set-track:focus-visible {
@@ -1428,6 +1438,7 @@ html.game-started .set-gear {
 .settings-confirm {
   position: absolute;
   inset: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1540,6 +1551,8 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
   position: relative;
   display: flex;
   align-items: stretch;
+  max-height: calc(100vh - 20px);
+  box-sizing: border-box;
   gap: 12px;
   padding: 8px;
   border-radius: 20px;
@@ -1559,14 +1572,23 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
   inset: 0;
   display: block;
 }
-.fullmap-side {
+.fullmap-side-wrap {
   width: 150px;
   flex: none;
   display: flex;
+  min-height: 0;
+  position: relative;
+}
+.fullmap-side {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 3px;
-  padding-right: 4px;
+  padding: 2px 4px 24px 0;
+  box-sizing: border-box;
   font-family: system-ui, sans-serif;
   color: #4a3320;
 }
@@ -1595,7 +1617,7 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
   color: #e8453c;
   font-size: 18px;
 }
-.fullmap.narrow .fullmap-side {
+.fullmap.narrow .fullmap-side-wrap {
   display: none;
 }
 .fullmap-close {
@@ -1608,7 +1630,8 @@ html.touch-ui:has(.dlg:not([hidden]):not(.compact)) .minimap {
   padding: 10px;
 }
 @media (max-height: 500px) {
-  .fullmap-side { width: 128px; gap: 1px; }
+  .fullmap-side-wrap { width: 128px; }
+  .fullmap-side { gap: 1px; }
   .fullmap-title { font-size: 14px; }
   .fullmap-row { font-size: 14px; }
   .fullmap-pic { width: 26px; font-size: 19px; }

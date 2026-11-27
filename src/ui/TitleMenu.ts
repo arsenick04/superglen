@@ -4,6 +4,7 @@ import { padHub, PadBtn } from '../input/GamepadHub';
 import { MenuIcons } from './MenuIcons';
 import { QuizIcons } from './QuizIcons';
 import { ModeIcons, bindPress, make, slotCard } from './SlotCards';
+import { attachScroll, ensureInView, type ScrollHandle } from './Scrollable';
 import './menu.css';
 
 /**
@@ -61,6 +62,8 @@ const ICON_PLAY = ModeIcons.play;
 export class TitleMenu {
   private readonly root: HTMLDivElement;
   private readonly body: HTMLDivElement;
+  private readonly scrollBox: HTMLDivElement;
+  private readonly bodyScroll: ScrollHandle;
   private screen: Screen = 'main';
   private confirm: HTMLDivElement | null = null;
   private focus: HTMLElement | null = null;
@@ -90,6 +93,9 @@ export class TitleMenu {
     img.src = `${import.meta.env.BASE_URL}img/logo.webp`;
     stage.append(img);
     this.body = make('div', 'title-body');
+    this.scrollBox = make('div', 'title-scroll');
+    this.body.append(this.scrollBox);
+    this.bodyScroll = attachScroll(this.scrollBox, 'y', this.body);
     this.root.append(bg, stage, this.body);
     host.appendChild(this.root);
 
@@ -158,12 +164,15 @@ export class TitleMenu {
     this.screen = screen;
     this.confirm = null;
     this.focus = null;
-    this.body.replaceChildren();
+    this.scrollBox.replaceChildren();
+    this.scrollBox.scrollTop = 0;
     this.body.dataset.screen = screen;
     if (screen === 'main') this.buildMain();
     else if (screen === 'settings') this.buildSettings();
     else this.buildSlots(screen);
     this.root.dataset.screen = screen;
+    this.bodyScroll.refresh();
+    requestAnimationFrame(() => this.bodyScroll.refresh());
   }
 
   private header(title: string): HTMLElement {
@@ -184,7 +193,7 @@ export class TitleMenu {
       bLoad.classList.add('off');
     }
     col.append(bNew, bLoad, bSet);
-    this.body.append(col);
+    this.scrollBox.append(col);
     this.setFocus(any ? bLoad : bNew);
   }
 
@@ -206,9 +215,9 @@ export class TitleMenu {
       });
       row.append(card);
     }
-    this.body.append(head, row);
+    this.scrollBox.append(head, row);
     const first = slots.find((s) => (kind === 'load' ? !s.empty && s.slot === active : s.slot === active)) ?? slots.find((s) => (kind === 'load' ? !s.empty : true));
-    const el = first ? this.body.querySelector<HTMLElement>(`.slot-main[data-slot="${first.slot}"]`) : null;
+    const el = first ? this.scrollBox.querySelector<HTMLElement>(`.slot-main[data-slot="${first.slot}"]`) : null;
     this.setFocus(el);
   }
 
@@ -280,8 +289,8 @@ export class TitleMenu {
     }
     paintTv();
     rows.append(tvRow);
-    this.body.append(head, rows);
-    this.setFocus(this.body.querySelector<HTMLElement>('[data-act="music-up"]'));
+    this.scrollBox.append(head, rows);
+    this.setFocus(this.scrollBox.querySelector<HTMLElement>('[data-act="music-up"]'));
   }
 
   /** Big "Ya" / "Tidak" question; "Tidak" has the focus. */
@@ -308,7 +317,7 @@ export class TitleMenu {
     this.confirm?.remove();
     this.confirm = null;
     // Back to the screen's first control.
-    const first = this.body.querySelector<HTMLElement>('.slot-main:not([disabled]), .title-btn:not([disabled])');
+    const first = this.scrollBox.querySelector<HTMLElement>('.slot-main:not([disabled]), .title-btn:not([disabled])');
     this.setFocus(first);
   }
 
@@ -320,7 +329,7 @@ export class TitleMenu {
   // ---- keyboard and gamepad ---------------------------------------------------------------------------------------
 
   private scope(): HTMLElement {
-    return this.confirm ?? this.body;
+    return this.confirm ?? this.scrollBox;
   }
 
   private candidates(): HTMLElement[] {
@@ -332,6 +341,7 @@ export class TitleMenu {
     this.focus = e;
     if (e) {
       e.classList.add('pad-focus');
+      ensureInView(e);
       try {
         e.focus({ preventScroll: true });
       } catch {

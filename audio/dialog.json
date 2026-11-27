@@ -808,22 +808,22 @@
     "id": "bab4_aara_bola",
     "speaker": "aara",
     "lang": "id",
-    "text": "Bola! Tempat bermain berkilau. Ayo ke sana!",
-    "delivery": "[excited] Bola! Tempat bermain berkilau. Ayo ke sana!"
+    "text": "Betul! Tempat bermain berkilau. Ayo ke sana!",
+    "delivery": "[excited] Betul! Tempat bermain berkilau. Ayo ke sana!"
   },
   {
     "id": "bab4_aara_pohon",
     "speaker": "aara",
     "lang": "id",
-    "text": "Pohon! Pohonnya berkilau. Ayo ke sana!",
-    "delivery": "[excited] Pohon! Pohonnya berkilau. Ayo ke sana!"
+    "text": "Hebat! Pohonnya berkilau. Ayo ke sana!",
+    "delivery": "[excited] Hebat! Pohonnya berkilau. Ayo ke sana!"
   },
   {
     "id": "bab4_aara_kolam",
     "speaker": "aara",
     "lang": "id",
-    "text": "Kolam! Kolamnya berkilau. Ayo ke sana!",
-    "delivery": "[excited] Kolam! Kolamnya berkilau. Ayo ke sana!"
+    "text": "Pintar! Kolamnya berkilau. Ayo ke sana!",
+    "delivery": "[excited] Pintar! Kolamnya berkilau. Ayo ke sana!"
   },
   {
     "id": "bab4_aara_lagi",
@@ -1543,8 +1543,8 @@
     "id": "forest_nino_done",
     "speaker": "nino",
     "lang": "id",
-    "text": "Lima tingkat selesai! Ayo kembali ke Lab dan beristirahat bersama.",
-    "delivery": "[excited] Lima tingkat selesai! [warm] Ayo kembali ke Lab dan beristirahat bersama."
+    "text": "Tiga lintasan selesai! Ayo kembali ke Lab dan beristirahat bersama.",
+    "delivery": "[excited] Tiga lintasan selesai! [warm] Ayo kembali ke Lab dan beristirahat bersama."
   },
   {
     "id": "forest_gorilla_accuse",
@@ -1592,8 +1592,8 @@
     "id": "forest_nino_return",
     "speaker": "nino",
     "lang": "id",
-    "text": "Lima lintasan selesai! Kalian sudah kembali dengan selamat.",
-    "delivery": "[proud] Lima lintasan selesai! [warm] Kalian sudah kembali dengan selamat."
+    "text": "Tiga lintasan selesai! Kalian sudah kembali dengan selamat.",
+    "delivery": "[proud] Tiga lintasan selesai! [warm] Kalian sudah kembali dengan selamat."
   },
   {
     "id": "forest_nino_hurry",
@@ -1648,8 +1648,8 @@
     "id": "lab_nino_latihan_3",
     "speaker": "nino",
     "lang": "id",
-    "text": "Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!",
-    "delivery": "[excited] Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!"
+    "text": "Dekati tombol oranye di lantai, lalu tekan tombol aksi. Latihan pun dimulai!",
+    "delivery": "[excited] Dekati tombol oranye di lantai, lalu tekan tombol aksi. Latihan pun dimulai!"
   },
   {
     "id": "lab_nino_latihan_4",

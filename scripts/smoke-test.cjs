@@ -7653,7 +7653,7 @@ async function menuBoot(page, touch) {
 
 /** Press a DOM element at its centre (touch: tap, PC: let go of the pointer lock first, then click). */
 async function menuHit(page, sel, touch, fx = 0.5) {
-  const c = await page.evaluate(([sel, fx]) => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
+  const c = await page.evaluate(([sel, fx]) => { const all = [...document.querySelectorAll(sel)]; const el = all.find((x) => x.offsetParent !== null) || all[0]; el.scrollIntoView({ block: 'center', inline: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height / 2 }; }, [sel, fx]);
   if (touch) await page.touchscreen.tap(c.x, c.y);
   else {
     await page.evaluate(() => document.exitPointerLock && document.exitPointerLock());
@@ -10651,6 +10651,113 @@ async function careScenario(page, check, touch) {
   await page.evaluate(() => localStorage.removeItem('superglen.save.v1'));
 }
 
+// ---- Tips / Petunjuk: Nino's hints shown once per save slot, replayable from the pause menu: groups `tips`, `tips-touch` --------------
+const TIP_SEEN_ALL = ['irama', 'papan', 'sepeda', 'berubah', 'terbang', 'peta', 'panah', 'simpan', 'tantangan', 'rumahsakit', 'toko'];
+const tipSt = (page) => page.evaluate(() => { const t = window.__superglen.tips; const d = window.__superglen.dialog; return { active: t.active, card: t.cardVisible, shown: t.shown, replays: t.replays, seen: t.seen, line: d.open ? d.text : '' }; });
+/** Step the game until the tip `id` is the one on screen (false when it never shows). */
+async function tipUntil(page, id, max = 900) {
+  for (let f = 0; f < max; f += 20) {
+    if ((await tipSt(page)).active === id) return true;
+    await d3Adv(page, 20);
+  }
+  return false;
+}
+/** Let the tip on screen finish (its lines advance by themselves). */
+async function tipDrain(page, max = 1500) {
+  for (let f = 0; f < max; f += 30) {
+    const s = await tipSt(page);
+    if (!s.active && !s.card) return true;
+    await d3Adv(page, 30);
+  }
+  return false;
+}
+async function tipsOpen(page, seen, touch, extra = {}) {
+  const quiz = { cats: {}, coins: 12, stickers: [], challenges: 0, fragments: 0, recent: [] };
+  await page.evaluate(() => localStorage.setItem('superglen.opening-seen.v1', '1'));
+  await ch3Open(page, ch3Save({ chaptersDone: ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'bab6'], quiz, hearts: 5, tips: seen, ...extra }), touch);
+  await page.evaluate(() => { window.__superglen.tips.fast = true; });
+  await d3Adv(page, 20);
+}
+async function tipsScenario(page, check) {
+  await tipsOpen(page, TIP_SEEN_ALL, false);
+  check('tips: the first coin milestone (12 coins) shows the Koin tip', await tipUntil(page, 'koin'), JSON.stringify(await tipSt(page)));
+  let s = await tipSt(page);
+  check('tips: the hint card is up with the tip and the line is Nino text with the name filled in', s.card && /koinmu sudah banyak, (Glen|Superglen)/.test(s.line), JSON.stringify(s));
+  const lock = await page.evaluate(() => window.__superglen.controlsEnabled);
+  check('tips: the tip does not lock the controls (the child keeps playing)', lock === true, String(lock));
+  check('tips: the tip ends by itself and hides its card', await tipDrain(page), JSON.stringify(await tipSt(page)));
+  await page.evaluate(() => window.__superglen.health.fall());
+  check('tips: losing the first heart shows the Hati tip', await tipUntil(page, 'hati'), JSON.stringify(await tipSt(page)));
+  await tipDrain(page);
+  const sp = await page.evaluate(() => window.__care.spots());
+  await d3Go(page, sp.stall.x + Math.sin(sp.stall.yaw) * 1.8, sp.stall.z + Math.cos(sp.stall.yaw) * 1.8, 8);
+  check('tips: walking up to the food stall shows the Kios tip', await tipUntil(page, 'kios'), JSON.stringify(await tipSt(page)));
+  await tipDrain(page);
+  await page.evaluate(() => window.__superglen.save.ownItem('sg-blue'));
+  check('tips: the first purchase shows the Lemari tip', await tipUntil(page, 'lemari'), JSON.stringify(await tipSt(page)));
+  await tipDrain(page);
+  s = await tipSt(page);
+  check('tips: the four tips are saved as seen and each showed exactly once', s.shown === 4 && ['koin', 'hati', 'kios', 'lemari'].every((id) => s.seen.includes(id)), JSON.stringify(s));
+  await d3Adv(page, 900);
+  s = await tipSt(page);
+  check('tips: nothing repeats while the triggers stay true (coins, stall, purchase)', s.shown === 4 && !s.active && new Set(s.seen).size === s.seen.length, JSON.stringify(s));
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('superglen.save.v1')).tips);
+  check('tips: the flags are in the save slot', ['koin', 'hati', 'kios', 'lemari'].every((id) => stored.includes(id)), JSON.stringify(stored));
+  // Reload: nothing comes back.
+  await page.goto(URL + '?fps=0');
+  await page.waitForFunction(() => !!window.__superglen && !window.__superglen.loading && window.__superglen.level === 'kota', null, { timeout: 30000 });
+  await sleep(900);
+  await page.mouse.click(640, 360);
+  await sleep(500);
+  await page.evaluate(() => { window.__superglen.pause(true); window.__superglen.tips.fast = true; });
+  await d3Adv(page, 20);
+  await d3Adv(page, 900);
+  s = await tipSt(page);
+  check('tips: after a reload the seen tips stay seen and none shows again', s.shown === 0 && s.seen.includes('koin') && s.seen.includes('lemari'), JSON.stringify(s));
+  // Petunjuk list in the pause menu and replay.
+  await page.evaluate(() => window.__superglen.settings.show());
+  await d3Adv(page, 4);
+  const hasBtn = await page.evaluate(() => !!document.querySelector('.settings [data-act="tips"]'));
+  check('tips: the pause menu has a Petunjuk button', hasBtn, '');
+  await page.click('.settings [data-act="tips"]');
+  await d3Adv(page, 4);
+  const tiles = await page.evaluate(() => [...document.querySelectorAll('.tip-item')].map((e) => ({ id: e.dataset.tip, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height })));
+  check('tips: the list shows every seen tip (and nothing else) as a big tile', tiles.length === (await tipSt(page)).seen.length && tiles.every((t) => t.w >= 80 && t.h >= 80) && tiles.some((t) => t.id === 'papan'), JSON.stringify(tiles));
+  await shot(page, 'tips-list');
+  const seenBefore = (await tipSt(page)).seen.length;
+  await page.click('.tip-item[data-tip="papan"]');
+  await d3Adv(page, 4);
+  check('tips: choosing a tile closes the menu', await page.evaluate(() => !window.__superglen.settings.open), '');
+  check('tips: the chosen tip plays again (Papan luncur)', await tipUntil(page, 'papan', 400), JSON.stringify(await tipSt(page)));
+  s = await tipSt(page);
+  check('tips: the replay does not add a new flag', s.seen.length === seenBefore && s.replays === 1, JSON.stringify(s));
+}
+async function tipsTouchScenario(page, check) {
+  await tipsOpen(page, [...TIP_SEEN_ALL.filter((id) => id !== 'irama'), 'koin', 'hati', 'lemari'], true, { lastMode: 'superglen' });
+  await page.evaluate(() => window.__superglen.tips.addRhythm(2));
+  check('tips-touch: two good rhythm jumps show the Irama tip', await tipUntil(page, 'irama'), JSON.stringify(await tipSt(page)));
+  await d3Adv(page, 40);
+  const info = await page.evaluate(() => {
+    const card = document.querySelector('.tip-card');
+    const r = card.getBoundingClientRect();
+    const vis = (sel) => { const e = card.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none'; };
+    const j = document.querySelector('.tc-button[data-action="jump"]');
+    return { x: r.left, y: r.top, w: r.width, h: r.height, vw: innerWidth, vh: innerHeight, touch: vis('.tk-touch'), kbd: vis('.tk-kbd'), drums: !!card.querySelector('.tip-drums'), pulse: !!j && j.classList.contains('pulse') };
+  });
+  check('tips-touch: the card is on screen with the touch button (no key cap), the drums and a pulsing real jump button', info.x >= 0 && info.y >= 0 && info.x + info.w <= info.vw && info.y + info.h <= info.vh && info.touch && !info.kbd && info.drums && info.pulse, JSON.stringify(info));
+  await shot(page, 'tips-irama-touch');
+  await tipDrain(page);
+  const pulseOff = await page.evaluate(() => { const j = document.querySelector('.tc-button[data-action="jump"]'); return !!j && !j.classList.contains('pulse'); });
+  check('tips-touch: the button stops pulsing when the tip ends', pulseOff, '');
+  const sp = await page.evaluate(() => window.__care.spots());
+  await d3Go(page, sp.stall.x + Math.sin(sp.stall.yaw) * 1.8, sp.stall.z + Math.cos(sp.stall.yaw) * 1.8, 8);
+  check('tips-touch: the food stall tip shows too', await tipUntil(page, 'kios'), JSON.stringify(await tipSt(page)));
+  await d3Adv(page, 40);
+  const btn = await page.evaluate(() => { const e = document.querySelector('.tip-card .tip-btn[data-action="interact"] .tk-touch'); const r = e && e.getBoundingClientRect(); return { shown: !!e && getComputedStyle(e).display !== 'none', w: r ? r.width : 0 }; });
+  check('tips-touch: the stall card shows the touch hand button', btn.shown && btn.w >= 40, JSON.stringify(btn));
+  await shot(page, 'tips-kios-touch');
+}
+
 // ---- HUD layout: hearts, place pill, boss stars, food counter, map, gear, dialog bubble, touch buttons never overlap: group `hud-layout` ----
 async function hudLayoutScenario(page, check, touch) {
   const tag = touch ? 'touch 844x390' : 'desktop';
@@ -11563,7 +11670,7 @@ async function dlgFitScenario(page, check, touch) {
     aara: ['aara', 'Aara'],
     rakus: ['tikus_rakus', 'Tikus Rakus'],
     ular: ['ular_melar', 'Ular Melar'],
-    res_guru: [null, 'Bu Guru'],
+    res_guru: [null, 'Pak Guru'],
     lina: [null, 'Bu Lina'],
   };
   const whoBad = [];
@@ -13192,6 +13299,8 @@ async function main() {
     results.push(await runScenario(browser, 'curut-arena-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => curutArenaScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care', { viewport: { width: 1280, height: 720 } }, (p, c) => careScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'care-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => careScenario(p, c, true), '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'tips', { viewport: { width: 1280, height: 720 } }, tipsScenario, '?level=kota&fps=0&reset=1'));
+    results.push(await runScenario(browser, 'tips-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, tipsTouchScenario, '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'shop', { viewport: { width: 1280, height: 720 } }, (p, c) => shopScenario(p, c, false), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'shop-touch', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 }, (p, c) => shopScenario(p, c, true), '?level=kota&fps=0&reset=1'));
     results.push(await runScenario(browser, 'bab4-flow', { viewport: { width: 1280, height: 720 } }, bab4FlowScenario, '?level=kota&fps=0&reset=1'));

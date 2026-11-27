@@ -213,6 +213,8 @@ export interface SaveData {
   inventory: InventorySave;
   /** Glen's hearts (1..Combat.hearts.max; running out refills at the Rumah Sakit, so 0 is never saved). */
   hearts: number;
+  /** Ids of the tips (Petunjuk, see config/tips.ts) already shown in this slot. */
+  tips: string[];
   /** Shown on the slot card: when this was last written and how long the child has played (seconds). */
   meta: { savedAt: number; playSec: number };
 }
@@ -344,6 +346,7 @@ function defaults(): SaveData {
     bab6: { step: '' },
     inventory: defaultInventory(),
     hearts: Combat.hearts.max,
+    tips: [],
     meta: { savedAt: 0, playSec: 0 },
   };
 }
@@ -421,6 +424,7 @@ function sanitize(raw: unknown): SaveData {
     out.meta.savedAt = nat(m.savedAt, 1e15);
     out.meta.playSec = nat(m.playSec, 1e9);
   }
+  if (Array.isArray(r.tips)) out.tips = [...new Set(r.tips.filter((x): x is string => typeof x === 'string' && x.length < 40))].slice(0, 100);
   if (typeof r.hearts === 'number' && Number.isInteger(r.hearts) && r.hearts >= 1 && r.hearts <= Combat.hearts.max) out.hearts = r.hearts;
   if (typeof r.settings === 'object' && r.settings !== null) {
     const st = r.settings as Record<string, unknown>;
@@ -691,6 +695,13 @@ export class SaveStore {
     } catch {
       // no DOM events: the emitter above still fired
     }
+  }
+
+  /** A tip (Petunjuk) was shown: never show it on its own again in this slot. */
+  markTipSeen(id: string): void {
+    if (!id || id.length >= 40 || this.data.tips.includes(id)) return;
+    this.data.tips.push(id);
+    this.persist();
   }
 
   /** Spend coins (healing). Returns false and changes nothing when there are not enough. */

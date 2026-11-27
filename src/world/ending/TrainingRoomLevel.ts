@@ -18,7 +18,7 @@ export const TrainingLines = {
   tutorial: [
     { id: 'lab_nino_latihan_1', speaker: 'nino', text: 'Selamat datang di Ruang Latihan, {nama}! Semua lawanmu tersimpan di sini sebagai hologram.' },
     { id: 'lab_nino_latihan_2', speaker: 'nino', text: 'Pilih lawan yang kamu mau, lalu berjalanlah ke depan hologramnya.' },
-    { id: 'lab_nino_latihan_3', speaker: 'nino', text: 'Injak tombol oranye di lantai, atau tekan tombol tangan. Latihan pun dimulai!' },
+    { id: 'lab_nino_latihan_3', speaker: 'nino', text: 'Dekati tombol oranye di lantai, lalu tekan tombol aksi. Latihan pun dimulai!' },
     { id: 'lab_nino_latihan_4', speaker: 'nino', text: 'Setelah selesai, kamu kembali ke sini. Selamat berlatih!' },
   ],
 } as const;

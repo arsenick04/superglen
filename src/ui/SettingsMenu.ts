@@ -8,6 +8,9 @@ import { ModeIcons, slotCard } from './SlotCards';
 import { tvDebug } from '../core/TvDebug';
 import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
 import { tvMode, type TvPref } from '../core/TvMode';
+import { TIP_BULB, tipTile } from './TipsUi';
+import type { TipIconName } from '../config/tips';
+import { attachScroll, bindTap, type ScrollHandle } from './Scrollable';
 import './menu.css';
 
 export interface SettingsDeps {
@@ -39,6 +42,8 @@ export interface SettingsDeps {
   resetZoom: () => void;
   /** Lemari: the wardrobe panel (owned shop items) opens over the pause menu. */
   openWardrobe: () => void;
+  tipsList: () => { id: string; title: string; icon: TipIconName }[];
+  replayTip: (id: string) => void;
 }
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html?: string): HTMLElementTagNameMap[K] {
@@ -73,10 +78,11 @@ export class SettingsMenu {
   private readonly btnRestart: HTMLButtonElement;
   private readonly btnMenu: HTMLButtonElement;
   private readonly card: HTMLDivElement;
+  private readonly cardScroll: ScrollHandle;
   private readonly slotsView: HTMLDivElement;
   private readonly confirmQ: HTMLElement;
   private readonly qualityBtns: { mode: QualityMode; el: HTMLButtonElement }[] = [];
-  private view: 'main' | 'save' | 'load' = 'main';
+  private view: 'main' | 'save' | 'load' | 'tips' = 'main';
   private confirmYes: () => void = () => undefined;
   private readonly confirm: HTMLDivElement;
   private readonly btnNo: HTMLButtonElement;
@@ -101,7 +107,8 @@ export class SettingsMenu {
 
     this.panel = make('div', 'settings');
     this.panel.hidden = true;
-    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.panel.addEventListener(ev, stop);
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'wheel']) this.panel.addEventListener(ev, stop);
+    const shell = make('div', 'settings-shell');
     const card = make('div', 'settings-card');
     this.card = card;
     const head = make('div', 'settings-head');
@@ -139,20 +146,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Kualitas grafis: ${label}`);
       b.dataset.act = `quality-${mode}`;
-      const pick = (): void => {
+      bindTap(b, () => {
         setQualityMode(mode);
         this.refreshQuality();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       qrow.append(b);
       this.qualityBtns.push({ mode, el: b });
@@ -175,20 +171,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Mode TV: ${label}`);
       b.dataset.act = `tv-${pref}`;
-      const pick = (): void => {
+      bindTap(b, () => {
         tvMode.setPref(pref);
         paintTv();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       trow.append(b);
       tvBtns.push({ pref, el: b });
@@ -210,20 +195,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Tampilkan FPS: ${label}`);
       b.dataset.act = v ? 'fps-on' : 'fps-off';
-      const pick = (): void => {
+      bindTap(b, () => {
         fpsPref.set(v);
         paintFps();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       frow.append(b);
       fpsBtns.push({ v, el: b });
@@ -263,6 +237,8 @@ export class SettingsMenu {
     btnZoom.dataset.act = 'zoom';
     const btnWardrobe = this.button('menu-btn set-wardrobe', MenuIcons.wardrobe, 'Lemari', () => deps.openWardrobe());
     btnWardrobe.dataset.act = 'wardrobe';
+    const btnTips = this.button('menu-btn set-tips', TIP_BULB, 'Petunjuk', () => this.openTips());
+    btnTips.dataset.act = 'tips';
     this.btnMenu = this.button('menu-btn set-menu', MenuIcons.home, 'Kembali ke Menu Utama', () =>
       this.askQ('Kembali ke menu utama? Permainan tersimpan.', () => {
         this.close();
@@ -270,7 +246,7 @@ export class SettingsMenu {
       }),
     );
     this.btnMenu.dataset.act = 'menu';
-    grid.append(this.btnMap, this.btnHome, btnWardrobe, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
+    grid.append(this.btnMap, this.btnHome, btnWardrobe, btnTips, this.btnRestart, this.btnSave, this.btnLoad, btnZoom, this.btnMenu);
 
     this.slotsView = make('div', 'settings-slots');
 
@@ -294,8 +270,10 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, quality, tvBox, fpsBox, grid, this.slotsView, this.confirm, ver);
-    this.panel.append(card);
+    card.append(head, sliders, grid, quality, tvBox, fpsBox, this.slotsView, ver);
+    shell.append(card, this.confirm);
+    this.cardScroll = attachScroll(card, 'y', shell);
+    this.panel.append(shell);
     ui.appendChild(this.panel);
 
     this.toast = make('div', 'set-toast');
@@ -327,6 +305,9 @@ export class SettingsMenu {
     this.showView('main');
     this.refresh();
     this.panel.hidden = false;
+    this.card.scrollTop = 0;
+    this.cardScroll.refresh();
+    requestAnimationFrame(() => this.cardScroll.refresh());
     this.deps.onOpenChange(true);
   }
 
@@ -369,7 +350,10 @@ export class SettingsMenu {
     if (this.mapFromPlay) {
       this.mapFromPlay = false;
       this.close();
-    } else this.panel.hidden = false;
+    } else {
+      this.panel.hidden = false;
+      requestAnimationFrame(() => this.cardScroll.refresh());
+    }
   }
 
   /** Re-read the state shown (sliders, which buttons apply). Call when the level changed. */
@@ -413,10 +397,12 @@ export class SettingsMenu {
     this.ask(true);
   }
 
-  private showView(v: 'main' | 'save' | 'load'): void {
+  private showView(v: 'main' | 'save' | 'load' | 'tips'): void {
     this.view = v;
     this.card.classList.toggle('picking', v !== 'main');
     if (v === 'main') this.slotsView.replaceChildren();
+    this.card.scrollTop = 0;
+    requestAnimationFrame(() => this.cardScroll.refresh());
   }
 
   /** "Simpan" / "Muat": three slot cards (the slot being played is highlighted and has the controller focus). */
@@ -441,6 +427,34 @@ export class SettingsMenu {
       row.append(c);
     }
     this.slotsView.append(head, row);
+    requestAnimationFrame(() => this.cardScroll.refresh());
+  }
+
+  private openTips(): void {
+    this.showView('tips');
+    this.slotsView.replaceChildren();
+    const head = make('div', 'settings-slots-head');
+    const back = this.button('menu-btn set-back', ModeIcons.back, 'Kembali', () => this.showView('main'));
+    back.dataset.act = 'slots-back';
+    head.append(back, make('div', 'settings-slots-q', 'Petunjuk'));
+    const list = this.deps.tipsList();
+    const grid = make('div', 'tips-grid');
+    if (list.length === 0) grid.append(make('div', 'tips-empty', 'Belum ada petunjuk. Ayo bermain dulu, nanti Nino memberi tahu!'));
+    list.forEach((t, i) => {
+      const b = make('button', 'tip-item');
+      b.type = 'button';
+      b.dataset.tip = t.id;
+      b.setAttribute('aria-label', t.title);
+      if (i === 0) b.dataset.padDefault = '1';
+      b.append(tipTile(t.icon, t.title));
+      bindTap(b, () => {
+        this.close();
+        this.deps.replayTip(t.id);
+      });
+      grid.append(b);
+    });
+    this.slotsView.append(head, grid);
+    requestAnimationFrame(() => this.cardScroll.refresh());
   }
 
   private pickSave(slot: number, empty: boolean, active: number): void {
@@ -485,19 +499,7 @@ export class SettingsMenu {
     const ic = make('span', 'menu-ico', icon);
     b.append(ic, make('span', 'menu-label', label));
     b.setAttribute('aria-label', label);
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (b.disabled) return;
-      fn();
-    });
-    // Keyboard (Tab to a button, Enter / Space): the same action. A mouse click is already handled by pointerdown.
-    b.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (!b.disabled) fn();
-    });
+    bindTap(b, fn);
     return b;
   }
 
