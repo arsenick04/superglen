@@ -6,6 +6,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -25,9 +28,22 @@ jobs:
       - name: Build Debug APK
         run: ./android/gradlew -p android assembleDebug
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Superglen-android-debug.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Superglen-test.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Superglen-android-debug-apk
-          path: Superglen-android-debug.apk
+          name: Superglen-test-apk
+          path: Superglen-test.apk
           retention-days: 30
+      - name: Publish APK to GitHub Pre-Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            TAG="android-latest"
+          fi
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" Superglen-test.apk \
+            --prerelease \
+            --title "Superglen APK ($TAG)" \
+            --notes "APK uji coba offline untuk tablet/HP Android (Android 7.0+). Unduh Superglen-test.apk lalu tap untuk install."
