@@ -1,0 +1,94 @@
+/* Shared scrolling rules and subtle "more below / more to the side" hint pills for menus (Shop, Settings, Parents, Slots, Album, Map legend). */
+
+[data-scrollable='y'] {
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+[data-scrollable='x'] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+[data-scrollable='y'] button,
+[data-scrollable='y'] .menu-btn,
+[data-scrollable='y'] .slot-main,
+[data-scrollable='y'] .slot-del,
+[data-scrollable='y'] .tip-item {
+  touch-action: pan-y;
+}
+[data-scrollable='x'] button,
+[data-scrollable='x'] .shop-card,
+[data-scrollable='x'] .shop-tab {
+  touch-action: pan-x;
+}
+
+.sg-scroll-host {
+  position: relative;
+}
+
+.sg-scroll-hint {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(37, 50, 74, 0.78);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28), 0 0 0 2px rgba(255, 255, 255, 0.85);
+  transition: opacity 0.18s ease;
+  opacity: 0;
+}
+.sg-scroll-hint.show {
+  opacity: 1;
+}
+.sg-scroll-hint svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.sg-scroll-hint.down {
+  left: 50%;
+  bottom: 6px;
+  width: 38px;
+  height: 24px;
+  transform: translateX(-50%);
+  animation: sg-scroll-bob-y 1.4s ease-in-out infinite;
+}
+.sg-scroll-hint.right {
+  right: 6px;
+  top: 50%;
+  width: 28px;
+  height: 44px;
+  transform: translateY(-50%);
+  animation: sg-scroll-bob-x 1.4s ease-in-out infinite;
+}
+.sg-scroll-hint.left {
+  left: 6px;
+  top: 50%;
+  width: 28px;
+  height: 44px;
+  transform: translateY(-50%);
+}
+
+@keyframes sg-scroll-bob-y {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 3px); }
+}
+@keyframes sg-scroll-bob-x {
+  0%, 100% { transform: translate(0, -50%); }
+  50% { transform: translate(3px, -50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-scroll-hint.down,
+  .sg-scroll-hint.right {
+    animation: none;
+  }
+}

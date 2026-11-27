@@ -23,15 +23,16 @@
 }
 .shop-close .menu-ico, .shop-yes .menu-ico, .shop-no .menu-ico { display: block; width: 100%; height: 100%; }
 .shop-close svg, .shop-yes svg, .shop-no svg { width: 100%; height: 100%; }
-.shop-tabs { flex: 1; display: flex; gap: 8px; min-width: 0; }
+.shop-tabs { flex: 1; display: flex; gap: 8px; min-width: 0; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
 .shop-tab {
-  flex: 1; min-width: 80px; height: 80px; border: 0; border-radius: 22px; background: #fff; cursor: pointer;
+  flex: 1 0 84px; min-width: 80px; height: 80px; border: 0; border-radius: 22px; background: #fff; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px;
   box-shadow: 0 4px 0 #d9b98a; color: #3b2f22; font-weight: 800; font-size: 12px; line-height: 1.05;
 }
 .shop-tab.on { background: #4dabf7; color: #fff; box-shadow: 0 4px 0 #2a7de1; }
-.shop-tab-ico { width: 38px; height: 38px; display: block; }
-.shop-tab-ico svg, .shop-card-art svg, .shop-confirm-art svg { width: 100%; height: 100%; display: block; }
+.shop-tab-ico { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+.shop-tab-ico svg, .shop-card-art svg, .shop-confirm-art svg, .shop-thumb-fallback, .shop-thumb-fallback svg { width: 100%; height: 100%; display: block; }
+.shop-thumb { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 3px 4px rgba(59, 47, 34, 0.22)); }
 .shop-tab-name { text-align: center; }
 .shop-coins {
   flex: none; display: flex; align-items: center; gap: 6px; padding: 0 14px; border-radius: 22px; background: #fff7d6;
@@ -44,22 +45,25 @@
   font-size: 18px; font-weight: 700; line-height: 1.15; box-shadow: 0 3px 0 #d9b98a;
 }
 .shop-line.short { background: #fff0d0; color: #a45a00; }
+.shop-shelf {
+  flex: 1; min-height: 0; display: flex; position: relative;
+}
 .shop-list {
-  flex: 1; min-height: 0; display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 14px 14px 18px;
-  touch-action: pan-x; -webkit-overflow-scrolling: touch; align-items: flex-start;
+  flex: 1; min-height: 0; min-width: 0; display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 10px 14px 14px;
+  touch-action: pan-x; -webkit-overflow-scrolling: touch; align-items: stretch;
 }
 .shop-card {
-  flex: none; width: 150px; height: 100%; max-height: 300px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 8px 6px;
+  flex: none; width: 156px; height: 100%; max-height: 300px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 8px 6px;
   border: 4px solid transparent; border-radius: 24px; background: #fff; box-shadow: 0 5px 0 #d9b98a; cursor: pointer;
-  font-family: inherit; color: inherit;
+  font-family: inherit; color: inherit; box-sizing: border-box;
 }
 .shop-card.on { border-color: #34a853; background: #eaffee; }
 .shop-card:not(.have) { background: #fffdf4; }
-.shop-card-art { width: 100%; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-.shop-card-art svg { max-height: 100%; width: auto; aspect-ratio: 1; }
-.shop-card-name { font-size: 16px; font-weight: 800; text-align: center; line-height: 1.05; min-height: 34px; display: flex; align-items: center; }
+.shop-card-art { width: 100%; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 2px; box-sizing: border-box; }
+.shop-card-art svg, .shop-card-art .shop-thumb { max-height: 100%; max-width: 100%; width: auto; height: 100%; object-fit: contain; }
+.shop-card-name { font-size: 16px; font-weight: 800; text-align: center; line-height: 1.05; min-height: 32px; display: flex; align-items: center; }
 .shop-card-foot {
-  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; width: 100%; border-radius: 16px;
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; width: 100%; border-radius: 16px;
   background: #ffe59a; font-size: 24px; font-weight: 900;
 }
 .shop-card.have .shop-card-foot { background: #cfe8ff; font-size: 20px; }
@@ -69,14 +73,14 @@
 .shop-price-ico { width: 30px; height: 30px; display: block; }
 .shop-empty { align-self: center; font-size: 22px; font-weight: 800; padding: 20px; }
 .shop-confirm {
-  position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; background: rgba(40, 30, 20, 0.55);
+  position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: rgba(40, 30, 20, 0.55);
 }
 .shop-confirm[hidden] { display: none; }
 .shop-confirm-box {
   display: flex; align-items: center; gap: 18px; padding: 16px 22px; border-radius: 30px; background: #fff; box-shadow: 0 8px 0 #d9b98a;
   max-width: 92vw; box-sizing: border-box;
 }
-.shop-confirm-art { width: 110px; height: 110px; flex: none; }
+.shop-confirm-art { width: 120px; height: 120px; flex: none; display: flex; align-items: center; justify-content: center; }
 .shop-confirm-mid { display: flex; flex-direction: column; gap: 6px; align-items: center; min-width: 120px; }
 .shop-confirm-q { font-size: 24px; font-weight: 900; text-align: center; }
 .shop-confirm-price { display: flex; align-items: center; gap: 8px; font-size: 34px; font-weight: 900; }
@@ -88,11 +92,24 @@
 html.pad-ui .shop .pad-focus, .shop .pad-focus { outline: 6px solid #ffd23f; outline-offset: 2px; box-shadow: 0 0 0 4px #e8453c, 0 0 20px 8px rgba(255, 210, 63, 0.85); }
 @media (max-height: 420px) {
   .shop { gap: 4px; }
-  .shop-line { font-size: 16px; min-height: 28px; padding: 2px 12px; }
-  .shop-card { width: 136px; }
-  .shop-confirm-art { width: 84px; height: 84px; }
+  .shop-line { font-size: 16px; min-height: 26px; padding: 2px 12px; }
+  .shop-list { padding: 6px 12px 10px; }
+  .shop-card { width: 140px; padding: 6px 6px 5px; }
+  .shop-card-name { font-size: 14px; min-height: 26px; }
+  .shop-card-foot { min-height: 36px; font-size: 20px; }
+  .shop-confirm-art { width: 88px; height: 88px; }
   .shop-confirm-q { font-size: 20px; }
   .shop-confirm-price { font-size: 28px; }
+}
+@media (max-height: 340px) {
+  .shop-close { width: 64px; height: 64px; padding: 10px; border-radius: 18px; }
+  .shop-tab { height: 64px; min-width: 72px; border-radius: 18px; font-size: 11px; }
+  .shop-tab-ico { width: 32px; height: 32px; }
+  .shop-coins { font-size: 24px; padding: 0 10px; border-radius: 18px; }
+  .shop-coin-ico { width: 30px; height: 30px; }
+  .shop-card { width: 128px; gap: 2px; }
+  .shop-card-foot { min-height: 32px; font-size: 18px; }
+  .shop-card.on .shop-card-foot { font-size: 15px; gap: 4px; }
 }
 .shop-hint {
   position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20; pointer-events: none;

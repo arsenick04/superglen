@@ -299,7 +299,9 @@ export class TouchSource implements InputSource {
   private readonly onReset = (): void => this.reset();
 
   private readonly onTouchDefault = (e: TouchEvent): void => {
-    if (this.isTouchUi() && e.cancelable) e.preventDefault();
+    if (!this.isTouchUi() || !e.cancelable) return;
+    if (e.touches.length <= 1 && e.target instanceof Element && e.target.closest('[data-scrollable]')) return;
+    e.preventDefault();
   };
 
   private readonly onPrevent = (e: Event): void => e.preventDefault();

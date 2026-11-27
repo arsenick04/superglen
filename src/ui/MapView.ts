@@ -2,6 +2,7 @@ import { touchMode } from '../core/TouchMode';
 import { Quality } from '../core/Quality';
 import type { MapSource } from '../world/MapSource';
 import { MenuIcons } from './MenuIcons';
+import { attachScroll, type ScrollHandle } from './Scrollable';
 
 /** Backing resolution of the mini map is this many canvas px per CSS px (capped: it is a small picture). */
 const MINI_DPR = 2;
@@ -109,6 +110,7 @@ export class MapView {
   private readonly fullBase: HTMLCanvasElement;
   private readonly fullMark: HTMLCanvasElement;
   private fullBox!: HTMLDivElement;
+  private readonly sideScroll: ScrollHandle;
   private lastDraw = -1e9;
   private drawX = 1e9;
   private drawZ = 1e9;
@@ -155,6 +157,7 @@ export class MapView {
     this.fullMark = make('canvas', 'fullmap-mark');
     const mapBox = make('div', 'fullmap-box');
     mapBox.append(this.fullBase, this.fullMark);
+    const sideWrap = make('div', 'fullmap-side-wrap');
     const side = make('div', 'fullmap-side');
     const title = make('div', 'fullmap-title');
     title.textContent = 'Peta Kota Botanica';
@@ -169,7 +172,9 @@ export class MapView {
       row.append(i, w);
       side.appendChild(row);
     }
-    frame.append(mapBox, side);
+    sideWrap.append(side);
+    this.sideScroll = attachScroll(side, 'y', sideWrap);
+    frame.append(mapBox, sideWrap);
     this.fullBox = mapBox;
     const close = make('button', 'menu-btn fullmap-close');
     close.setAttribute('aria-label', 'Tutup peta');
@@ -180,7 +185,7 @@ export class MapView {
       this.closeFull();
     });
     this.full.append(frame, close);
-    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.full.addEventListener(ev, (e) => e.stopPropagation());
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'wheel']) this.full.addEventListener(ev, (e) => e.stopPropagation());
     root.appendChild(this.full);
     touchMode.onChange(() => this.sizeMini());
   }
@@ -342,6 +347,8 @@ export class MapView {
       this.fullVersion = src.version;
     }
     this.drawFullMarks();
+    this.sideScroll.refresh();
+    requestAnimationFrame(() => this.sideScroll.refresh());
   }
 
   private drawFullMarks(): void {

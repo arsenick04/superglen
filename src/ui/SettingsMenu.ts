@@ -10,6 +10,7 @@ import { Quality, setQualityMode, type QualityMode } from '../core/Quality';
 import { tvMode, type TvPref } from '../core/TvMode';
 import { TIP_BULB, tipTile } from './TipsUi';
 import type { TipIconName } from '../config/tips';
+import { attachScroll, bindTap, type ScrollHandle } from './Scrollable';
 import './menu.css';
 
 export interface SettingsDeps {
@@ -77,6 +78,7 @@ export class SettingsMenu {
   private readonly btnRestart: HTMLButtonElement;
   private readonly btnMenu: HTMLButtonElement;
   private readonly card: HTMLDivElement;
+  private readonly cardScroll: ScrollHandle;
   private readonly slotsView: HTMLDivElement;
   private readonly confirmQ: HTMLElement;
   private readonly qualityBtns: { mode: QualityMode; el: HTMLButtonElement }[] = [];
@@ -105,7 +107,8 @@ export class SettingsMenu {
 
     this.panel = make('div', 'settings');
     this.panel.hidden = true;
-    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart']) this.panel.addEventListener(ev, stop);
+    for (const ev of ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'wheel']) this.panel.addEventListener(ev, stop);
+    const shell = make('div', 'settings-shell');
     const card = make('div', 'settings-card');
     this.card = card;
     const head = make('div', 'settings-head');
@@ -143,20 +146,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Kualitas grafis: ${label}`);
       b.dataset.act = `quality-${mode}`;
-      const pick = (): void => {
+      bindTap(b, () => {
         setQualityMode(mode);
         this.refreshQuality();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       qrow.append(b);
       this.qualityBtns.push({ mode, el: b });
@@ -179,20 +171,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Mode TV: ${label}`);
       b.dataset.act = `tv-${pref}`;
-      const pick = (): void => {
+      bindTap(b, () => {
         tvMode.setPref(pref);
         paintTv();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       trow.append(b);
       tvBtns.push({ pref, el: b });
@@ -214,20 +195,9 @@ export class SettingsMenu {
       b.append(make('span', 'menu-label', label));
       b.setAttribute('aria-label', `Tampilkan FPS: ${label}`);
       b.dataset.act = v ? 'fps-on' : 'fps-off';
-      const pick = (): void => {
+      bindTap(b, () => {
         fpsPref.set(v);
         paintFps();
-      };
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
-      });
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        e.stopPropagation();
-        pick();
       });
       frow.append(b);
       fpsBtns.push({ v, el: b });
@@ -300,8 +270,10 @@ export class SettingsMenu {
     this.confirm.append(q);
 
     const ver = make('div', 'settings-version', `Versi ${versionGuard.buildId}`);
-    card.append(head, sliders, quality, tvBox, fpsBox, grid, this.slotsView, this.confirm, ver);
-    this.panel.append(card);
+    card.append(head, sliders, grid, quality, tvBox, fpsBox, this.slotsView, ver);
+    shell.append(card, this.confirm);
+    this.cardScroll = attachScroll(card, 'y', shell);
+    this.panel.append(shell);
     ui.appendChild(this.panel);
 
     this.toast = make('div', 'set-toast');
@@ -333,6 +305,9 @@ export class SettingsMenu {
     this.showView('main');
     this.refresh();
     this.panel.hidden = false;
+    this.card.scrollTop = 0;
+    this.cardScroll.refresh();
+    requestAnimationFrame(() => this.cardScroll.refresh());
     this.deps.onOpenChange(true);
   }
 
@@ -375,7 +350,10 @@ export class SettingsMenu {
     if (this.mapFromPlay) {
       this.mapFromPlay = false;
       this.close();
-    } else this.panel.hidden = false;
+    } else {
+      this.panel.hidden = false;
+      requestAnimationFrame(() => this.cardScroll.refresh());
+    }
   }
 
   /** Re-read the state shown (sliders, which buttons apply). Call when the level changed. */
@@ -423,6 +401,8 @@ export class SettingsMenu {
     this.view = v;
     this.card.classList.toggle('picking', v !== 'main');
     if (v === 'main') this.slotsView.replaceChildren();
+    this.card.scrollTop = 0;
+    requestAnimationFrame(() => this.cardScroll.refresh());
   }
 
   /** "Simpan" / "Muat": three slot cards (the slot being played is highlighted and has the controller focus). */
@@ -447,6 +427,7 @@ export class SettingsMenu {
       row.append(c);
     }
     this.slotsView.append(head, row);
+    requestAnimationFrame(() => this.cardScroll.refresh());
   }
 
   private openTips(): void {
@@ -466,15 +447,14 @@ export class SettingsMenu {
       b.setAttribute('aria-label', t.title);
       if (i === 0) b.dataset.padDefault = '1';
       b.append(tipTile(t.icon, t.title));
-      b.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      bindTap(b, () => {
         this.close();
         this.deps.replayTip(t.id);
       });
       grid.append(b);
     });
     this.slotsView.append(head, grid);
+    requestAnimationFrame(() => this.cardScroll.refresh());
   }
 
   private pickSave(slot: number, empty: boolean, active: number): void {
@@ -519,19 +499,7 @@ export class SettingsMenu {
     const ic = make('span', 'menu-ico', icon);
     b.append(ic, make('span', 'menu-label', label));
     b.setAttribute('aria-label', label);
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (b.disabled) return;
-      fn();
-    });
-    // Keyboard (Tab to a button, Enter / Space): the same action. A mouse click is already handled by pointerdown.
-    b.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (!b.disabled) fn();
-    });
+    bindTap(b, fn);
     return b;
   }
 
