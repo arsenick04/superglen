@@ -33,6 +33,7 @@ import { Kit } from '../bab1/Kit';
 import { JumpTutorial } from '../bab1/JumpTutorial';
 import { AaraActor } from './Aara';
 import { AaraFollower } from './AaraFollower';
+import { mountGlenHomeCar } from './GlenHomeCar';
 
 /** Recipes are CPU-only and identical on every visit: built once per page. */
 let BUILT: BuiltCity | null = null;
@@ -247,6 +248,7 @@ export class KotaLevel implements Level {
     this.dressing.update(this.spawn.x, this.spawn.z, true);
     this.trees = new CityNature(ctx);
     this.trees.update(this.spawn.x, this.spawn.z);
+    mountGlenHomeCar(ctx);
     // The spawn's neighbourhood is complete before the player is placed (LevelManager refreshes the queries after build).
     const sp = this.spawn;
     this.streamer.ensureNear(sp.x, sp.z, STREAM.colIn);
