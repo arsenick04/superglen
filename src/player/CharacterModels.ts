@@ -6,6 +6,7 @@ import { Figure, figureMaterial, type FigureKind, type FigureState } from './Fig
 import { Quality } from '../core/Quality';
 import { RideLayer, type RideRig } from './RideLayer';
 import { patchLookMaterial, type LookHandle } from './CostumeLook';
+import { CostumeAura } from './CostumeAura';
 
 /**
  * The owner's animated characters (Mixamo rig, Meshopt + WebP GLBs in public/models). One template per character is loaded once
@@ -398,6 +399,8 @@ export class CharacterRig {
   readonly jumpLayer: JumpLayer;
   /** Riding pose (bike): hips on the saddle, feet on the pedals, hands on the grips. */
   readonly rideLayer: RideLayer;
+  /** Animated 3D energy aura & lightning for special Superglen costumes (Merah Putih, Hologram). */
+  private readonly aura: CostumeAura | null;
 
   constructor(
     readonly kind: ModelKind,
@@ -428,8 +431,10 @@ export class CharacterRig {
     this.material.emissiveIntensity = tint ? 1 : 0;
     m.material = this.material;
     this.look = kind === 'glen' || kind === 'superglen' ? patchLookMaterial(this.material, kind) : null;
+    this.aura = kind === 'superglen' ? new CostumeAura() : null;
     this.mesh = m;
     this.root.add(scene);
+    if (this.aura) this.root.add(this.aura.group);
     this.root.scale.setScalar(MODEL_SCALE[kind]);
     this.mixer = new THREE.AnimationMixer(scene);
     scene.updateMatrixWorld(true);
@@ -440,6 +445,7 @@ export class CharacterRig {
   /** Wear the shop item `id` (a colour of the costume / outfit). */
   setLook(id: string): void {
     this.look?.set(id);
+    this.aura?.setLook(id);
   }
 
   hasClip(name: string): boolean {
@@ -554,9 +560,11 @@ export class CharacterRig {
     this.jumpLayer.update(dt);
     this.jumpLayer.apply();
     this.rideLayer.run(dt);
+    this.aura?.update(dt);
   }
 
   dispose(): void {
+    this.aura?.dispose();
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.mixer.getRoot());
     this.root.removeFromParent();

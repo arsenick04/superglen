@@ -10,6 +10,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { SHOP_ITEMS } from '/src/config/shop.ts';
 import { patchLookMaterial, setCostumeLookTime } from '/src/player/CostumeLook.ts';
+import { CostumeAura } from '/src/player/CostumeAura.ts';
 import { BikeVisual } from '/src/world/kota/BikeModel.ts';
 import { SkateVisual } from '/src/world/kota/SkateboardModel.ts';
 
@@ -150,15 +151,23 @@ window.__renderItem = async (id) => {
   if (item.art === 'costume' || item.art === 'shirt') {
     const kind = item.art === 'costume' ? 'superglen' : 'glen';
     const rig = await getCharacterRig(kind);
-    setCostumeLookTime(item.id === 'sg-holo' ? 1.1 : 0);
+    setCostumeLookTime(item.id === 'sg-holo' ? 1.1 : item.id === 'sg-merahputih' ? 0.65 : 0);
     rig.look.set(item.id);
     const holder = new THREE.Group();
     holder.add(rig.root);
     // Slight heroic 3/4 turn so depth, cape/arms and costume front all read clearly.
     rig.root.rotation.set(0, item.art === 'costume' ? 0.24 : -0.22, 0);
     scene.add(holder);
-    cam = frameOrtho(holder, new THREE.Vector3(0, 0.08, 1), 1.1);
+    cam = frameOrtho(holder, new THREE.Vector3(0, 0.08, 1), item.id === 'sg-merahputih' ? 1.24 : 1.1);
+    let aura = null;
+    if (item.id === 'sg-merahputih' || item.id === 'sg-holo') {
+      aura = new CostumeAura();
+      aura.setLook(item.id);
+      aura.update(0.85);
+      holder.add(aura.group);
+    }
     renderer.render(scene, cam);
+    if (aura) aura.dispose();
     holder.remove(rig.root);
     return true;
   }
