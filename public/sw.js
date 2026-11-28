@@ -3,7 +3,7 @@
 // - Never caches MP4 cinematics (preserves iOS Safari range requests).
 // - Network-first for HTML navigations so deploys take effect immediately, with offline fallback.
 // - Cache-first (lazy) for static bundles, 3D models, audio clips, portraits, and icons.
-const CACHE = 'superglen-pwa-v1';
+const CACHE = 'superglen-pwa-__BUILD_ID__';
 const CACHEABLE = /\.(?:js|css|webp|png|jpg|svg|mp3|glb|hdr|woff2?|json|webmanifest)$/i;
 
 self.addEventListener('install', (event) => {

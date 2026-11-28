@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /** Build id: git short hash + timestamp (unique per build). */
 export function makeBuildId() {
@@ -13,8 +15,8 @@ export function makeBuildId() {
 }
 
 /**
- * Build id guard: emits `version.json` ({ "id": "<build id>" }) into dist/ and serves it in dev, so a tab or cached
- * index.html from an older build can notice it is stale (see src/core/VersionGuard.ts).
+ * Build id guard: emits `version.json` ({ "id": "<build id>" }) into dist/, stamps `dist/sw.js` so PWA caches
+ * invalidate automatically on every deploy, and serves `version.json` in dev (see src/core/VersionGuard.ts).
  */
 export function versionPlugin(id) {
   const body = JSON.stringify({ id });
@@ -31,6 +33,12 @@ export function versionPlugin(id) {
     },
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'version.json', source: body });
+    },
+    writeBundle(opts) {
+      const sw = path.join(opts.dir ?? 'dist', 'sw.js');
+      if (fs.existsSync(sw)) {
+        fs.writeFileSync(sw, fs.readFileSync(sw, 'utf8').replaceAll('__BUILD_ID__', id));
+      }
     },
   };
 }
